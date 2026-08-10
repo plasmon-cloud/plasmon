@@ -20,7 +20,7 @@ import {
   type StoredNode,
 } from "./repository.ts";
 
-const ROOT_ID = "plasmon:fs:root";
+const ROOT_ID = "00000000-0000-4000-8000-000000000001";
 const DEFAULT_DIRECTORIES = ["Desktop", "Documents", "Downloads", "Videos", "Pictures", "Shared", "System"] as const;
 
 export interface PersistentFsServiceOptions {
@@ -374,7 +374,7 @@ export class PersistentFsService implements FsService, FsEventSource {
   }
 
   private nextId(): NodeId {
-    return `node:${this.randomUUID()}`;
+    return this.randomUUID();
   }
 
   private snapshotState(nodes: Map<NodeId, StoredNode>, blobs: Map<string, StoredBlob>, revision: Revision): RepositoryState {
