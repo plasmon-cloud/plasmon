@@ -60,7 +60,7 @@ class SnapshotMutationFs extends MemoryFs {
   }
 }
 
-test("publication rejects a multi-chunk source mutation instead of committing mixed bytes", async () => {
+test("source mutation aborts without a revision and a later stable publication contains the complete new bytes", async () => {
   const fs = new SnapshotMutationFs();
   const docs = await fs.mkdir(fs.rootId, "Documents");
   const initial = encoder.encode("abcdefgh");
@@ -76,25 +76,10 @@ test("publication rejects a multi-chunk source mutation instead of committing mi
   await expect(provider.publish(atom.id)).rejects.toThrow(
     "Filesystem source changed during publication snapshot",
   );
-  await expect(provider.publish(atom.id).catch((error) => { throw error; })).resolves;
-});
-
-test("source mutation aborts without a revision and a later stable publication contains the complete new bytes", async () => {
-  const fs = new SnapshotMutationFs();
-  const docs = await fs.mkdir(fs.rootId, "Documents");
-  const initial = encoder.encode("abcdefgh");
-  const replacement = encoder.encode("ABCDEFGH");
-  const atom = await makeAtom(fs, docs.id, initial);
-  const store = new MemorySharedResourceStore();
-  const provider = new StableSharedResourceProvider(fs, store, { chunkSize: 4 });
-
-  fs.mutateAfterFirstRangedRead = async () => {
-    await fs.write(atom.id, replacement, { truncate: true });
-  };
-
-  await expect(provider.publish(atom.id)).rejects.toBeInstanceOf(ResourceIntegrityError);
   expect(store.stats().resourceCount).toBe(0);
   expect(store.stats().revisionCount).toBe(0);
+  // Chunk uploads precede the final revision guard, so an aborted attempt can
+  // leave unreferenced content-addressed chunks for future reclamation.
   expect(store.stats().chunkCount).toBeGreaterThan(0);
 
   const published = await provider.publish(atom.id);
