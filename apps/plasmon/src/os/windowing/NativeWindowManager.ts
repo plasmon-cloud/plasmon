@@ -167,6 +167,7 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
   focus(id: WindowId): void {
     const state = this.windows.get(id);
     if (!state) return;
+    state.minimized = false;
     state.z = this.raiseZ();
     this.compactZIfNeeded();
     this.emit();
