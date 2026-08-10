@@ -87,13 +87,16 @@ export const FileEntry = memo(function FileEntry({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
+  const suppressBlurCommitRef = useRef(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (!isRenaming || !rename || !inputRef.current) {
       renameSelectionRef.current.reset();
+      suppressBlurCommitRef.current = false;
       return;
     }
+    suppressBlurCommitRef.current = false;
     renameSelectionRef.current.initialize(rename.session, inputRef.current, rename.initialName);
   }, [isRenaming, rename?.initialName, rename?.session]);
 
@@ -177,12 +180,15 @@ export const FileEntry = memo(function FileEntry({
               onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
               onChange={(event: ReactChangeEvent<HTMLInputElement>) => onRenameChange(event.target.value)}
-              onBlur={() => { if (!rename.busy) onRenameCommit(); }}
+              onBlur={() => {
+                if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit();
+              }}
               onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
                 const action = renameKeyAction(event.key);
                 if (!action) return;
                 event.preventDefault();
                 event.stopPropagation();
+                suppressBlurCommitRef.current = true;
                 if (action === "commit") onRenameCommit();
                 else onRenameCancel();
               }}
