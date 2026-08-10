@@ -92,6 +92,12 @@ function parseTiles(value: unknown): Array<{ id: string; title: string }> {
   return tiles;
 }
 
+function parseTray(value: unknown): ExternalElement["tray"] | undefined {
+  const tray = record(value);
+  if (!tray || typeof tray.title !== "string") return undefined;
+  return { title: tray.title };
+}
+
 function runningState(appId: string, runtime: RuntimeSnapshot): ExternalElement["running"] {
   if (!runtime.known) return "unknown";
   return runtime.liveAppIds.has(appId) ? "yes" : "no";
@@ -119,6 +125,7 @@ export function parseExternalElement(
     ? app.version
     : undefined;
   const description = text(app.description, fallbackDescription(hint));
+  const tray = parseTray(app.tray);
 
   return {
     id: hint.id,
@@ -126,6 +133,7 @@ export function parseExternalElement(
     description,
     ...(version === undefined ? {} : { version }),
     ...(icon ? { icon } : {}),
+    ...(tray === undefined ? {} : { tray }),
     tiles: parseTiles(app.tiles),
     running: runningState(hint.id, runtime),
   };
