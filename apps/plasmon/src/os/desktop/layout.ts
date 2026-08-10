@@ -1,6 +1,6 @@
 import type { FsNode, NodeId } from "../contracts/index.ts";
-import type { DesktopPosition } from "../file-manager/index.ts";
 
+export interface DesktopPosition { x: number; y: number }
 export type DesktopPositions = Record<NodeId, DesktopPosition>;
 
 const GRID_ORIGIN_X = 16;
