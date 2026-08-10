@@ -18,6 +18,7 @@ import {
   type InlineRenameState,
 } from "./rename.ts";
 import { canLoadImageThumbnail, loadImageThumbnail, type LoadedImageThumbnail } from "./thumbnail.ts";
+import "./polish.scss";
 
 export type FileEntryPresentation = "desktop" | "grid" | "list" | "details";
 export interface FileEntryPosition { x: number; y: number }
