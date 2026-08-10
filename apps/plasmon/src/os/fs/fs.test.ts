@@ -1,4 +1,5 @@
 import { test } from "bun:test";
+import { NEUTRON_TOOL_VISIBILITY_SAME_APP } from "neutron-tools/app";
 import assert from "node:assert/strict";
 import { MemoryFsRepository, createBrowserFsRepository, type FsRepository, type RepositoryCommit, type RepositoryState } from "./repository.ts";
 import { PersistentFsService } from "./service.ts";
@@ -8,10 +9,15 @@ import {
   FsRpcClient,
   FsRpcServer,
   TRANSPORT_CHUNK_BYTES,
+  decodeBase64,
+  encodeBase64,
+  sha256Hex,
   type FsToolName,
   type JsonObject,
 } from "./transport.ts";
 import type { JsonValue } from "../contracts/common.ts";
+import type { FsService } from "../contracts/fs.ts";
+import { FS_TOOL_DEFINITIONS } from "./toolDefinitions.ts";
 
 const text = (value: string) => new TextEncoder().encode(value);
 const decode = (value: Uint8Array) => new TextDecoder().decode(value);
@@ -29,6 +35,7 @@ test("persists state across service reinitialization", async () => {
   const file = await fs.createFile(desktop.id, "persistent.txt", { mime: "text/plain" });
   await fs.write(file.id, text("survives"), { truncate: true });
   const revision = await fs.revision();
+
   const reloaded = new PersistentFsService(repository);
   const resolved = await reloaded.resolvePath("/Desktop/persistent.txt");
   assert.equal(resolved?.id, file.id);
@@ -215,4 +222,134 @@ test("10+ MiB RPC roundtrip uses bounded transport messages", async () => {
   assert.ok(TRANSPORT_CHUNK_BYTES < 1024 * 1024);
   const read = await client.read(file.id);
   assert.deepEqual(read, bytes);
+});
+
+test("filesystem background tool descriptors are same-app only and preserve effects", () => {
+  const expectedNames = new Set(Object.values(FS_TOOLS));
+  assert.equal(FS_TOOL_DEFINITIONS.length, expectedNames.size);
+  for (const definition of FS_TOOL_DEFINITIONS) {
+    assert.ok(expectedNames.delete(definition.name), `duplicate or unknown filesystem tool ${definition.name}`);
+    assert.equal(definition.annotations["neutron:visibility"], NEUTRON_TOOL_VISIBILITY_SAME_APP);
+    assert.deepEqual(definition.annotations["neutron:effects"], [definition.write ? "write" : "read"]);
+  }
+  assert.equal(expectedNames.size, 0, `missing filesystem tool descriptors: ${[...expectedNames].join(", ")}`);
+});
+
+test("staged RPC write verifies the expected upload SHA-256 before mutation", async () => {
+  const { fs, desktop } = await fresh();
+  const file = await fs.createFile(desktop.id, "upload.bin");
+  await fs.write(file.id, text("original"), { truncate: true });
+  const server = new FsRpcServer(fs);
+  const client = new FsRpcClient((name, args) => server.call(name, args));
+  const valid = new Uint8Array(TRANSPORT_CHUNK_BYTES + 37);
+  for (let index = 0; index < valid.length; index += 1) valid[index] = index % 251;
+
+  const written = await client.write(file.id, valid, { truncate: true });
+  assert.equal(written.contentHash, await sha256Hex(valid));
+  assert.deepEqual(await fs.read(file.id), valid);
+
+  const beforeBytes = await fs.read(file.id);
+  const beforeRevision = await fs.revision();
+  let tampered = false;
+  const tamperingClient = new FsRpcClient(async (name, args) => {
+    if (name === FS_TOOLS.writeChunk && !tampered) {
+      tampered = true;
+      const changed = { ...args };
+      const chunk = decodeBase64(String(args.data));
+      chunk[0] ^= 0xff;
+      changed.data = encodeBase64(chunk);
+      return server.call(name, changed);
+    }
+    return server.call(name, args);
+  });
+  const attempted = new Uint8Array(TRANSPORT_CHUNK_BYTES + 11).fill(0x5a);
+  await assert.rejects(() => tamperingClient.write(file.id, attempted, { truncate: true }), /SHA-256 mismatch/);
+  assert.deepEqual(await fs.read(file.id), beforeBytes);
+  assert.equal(await fs.revision(), beforeRevision);
+});
+
+test("normal multi-chunk foreground read stays bound to one content identity", async () => {
+  const { fs, desktop } = await fresh();
+  const file = await fs.createFile(desktop.id, "snapshot.bin");
+  const bytes = new Uint8Array(TRANSPORT_CHUNK_BYTES * 2 + 29);
+  for (let index = 0; index < bytes.length; index += 1) bytes[index] = (index * 17) % 256;
+  await fs.write(file.id, bytes, { truncate: true });
+  const server = new FsRpcServer(fs);
+  const client = new FsRpcClient((name, args) => server.call(name, args));
+  assert.deepEqual(await client.read(file.id), bytes);
+});
+
+test("multi-chunk foreground read rejects instead of mixing concurrent file revisions", async () => {
+  const { fs, desktop } = await fresh();
+  const file = await fs.createFile(desktop.id, "changing.bin");
+  const first = new Uint8Array(TRANSPORT_CHUNK_BYTES * 2 + 41).fill(0x11);
+  const second = new Uint8Array(first.length).fill(0x22);
+  await fs.write(file.id, first, { truncate: true });
+  const server = new FsRpcServer(fs);
+  let readChunks = 0;
+  const client = new FsRpcClient(async (name, args) => {
+    if (name === FS_TOOLS.readChunk) {
+      readChunks += 1;
+      if (readChunks === 2) await fs.write(file.id, second, { truncate: true });
+    }
+    return server.call(name, args);
+  });
+
+  await assert.rejects(() => client.read(file.id), /changed during read; retry/i);
+  assert.equal(readChunks, 2);
+  assert.deepEqual(await fs.read(file.id), second);
+});
+
+test("read chunk post-check detects a content change during the underlying read", async () => {
+  const { fs, desktop } = await fresh();
+  const file = await fs.createFile(desktop.id, "racing.bin");
+  const first = new Uint8Array(TRANSPORT_CHUNK_BYTES + 19).fill(0x33);
+  const second = new Uint8Array(first.length).fill(0x44);
+  await fs.write(file.id, first, { truncate: true });
+  let injectChange = true;
+  const racingFs = new Proxy(fs, {
+    get(target, property, receiver) {
+      if (property === "read") {
+        return async (id: string, range?: { offset: number; length: number }) => {
+          const bytes = await target.read(id, range);
+          if (injectChange) {
+            injectChange = false;
+            await target.write(file.id, second, { truncate: true });
+          }
+          return bytes;
+        };
+      }
+      const value = Reflect.get(target, property, receiver) as unknown;
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as FsService;
+  const server = new FsRpcServer(racingFs);
+  const client = new FsRpcClient((name, args) => server.call(name, args));
+
+  await assert.rejects(() => client.read(file.id), /changed during read; retry/i);
+  assert.deepEqual(await fs.read(file.id), second);
+});
+
+test("reset revision lookup failure is contained and a later invalidation can recover", async () => {
+  let stateListener: (() => void) | undefined;
+  let revisionCalls = 0;
+  const client = new FsRpcClient(
+    async (name) => {
+      if (name !== FS_TOOLS.revision) throw new Error("unexpected tool");
+      revisionCalls += 1;
+      if (revisionCalls === 1) throw new Error("temporary revision lookup failure");
+      return { revision: "9" };
+    },
+    (_topic, listener) => {
+      stateListener = listener;
+      return () => { stateListener = undefined; };
+    },
+  );
+  const resets: bigint[] = [];
+  client.subscribe((event) => { if (event.type === "reset") resets.push(event.revision); });
+  stateListener?.();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  stateListener?.();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(resets, [9n]);
 });
