@@ -208,7 +208,7 @@ function atomMetadata(atomId = "atom-123"): Record<string, JsonValue> {
 }
 
 async function makeAtom(fs: TestFs, parent: NodeId, bytes: Uint8Array, atomId = "atom-123") {
-  const node = await fs.createFile(parent, "story.notepad2.atom", {
+  const node = await fs.createFile(parent, `${atomId}.notepad2.atom`, {
     kind: "atom",
     mime: "application/x-plasmon-atom",
     metadata: atomMetadata(atomId),
