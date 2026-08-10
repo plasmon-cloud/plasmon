@@ -179,7 +179,10 @@ export const FileEntry = memo(function FileEntry({
               disabled={rename.busy}
               onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event: ReactChangeEvent<HTMLInputElement>) => onRenameChange(event.target.value)}
+              onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
+                suppressBlurCommitRef.current = false;
+                onRenameChange(event.target.value);
+              }}
               onBlur={() => {
                 if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit();
               }}
