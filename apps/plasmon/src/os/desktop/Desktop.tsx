@@ -12,14 +12,19 @@ import type {
 import {
   FileManager,
   FileOperationClipboard,
-  type DesktopPosition,
   type FileManagerSnapshot,
 } from "../file-manager/index.ts";
+import {
+  allocateDesktopPositions,
+  defaultDesktopPosition,
+  hasDesktopPositionsForNodes,
+  type DesktopPositions,
+} from "./layout.ts";
 
 export const DESKTOP_PATH = "/Desktop";
 export const DESKTOP_POSITIONS_METADATA_KEY = "plasmon.desktop.positions.v1";
-
-export type DesktopPositions = Record<NodeId, DesktopPosition>;
+export { allocateDesktopPositions, defaultDesktopPosition } from "./layout.ts";
+export type { DesktopPositions } from "./layout.ts";
 
 function jsonObject(value: JsonValue | undefined): Record<string, JsonValue> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -40,11 +45,6 @@ export function parseDesktopPositions(value: JsonValue | undefined): DesktopPosi
     }
   }
   return positions;
-}
-
-export function defaultDesktopPosition(index: number): DesktopPosition {
-  const rows = 6;
-  return { x: 16 + Math.floor(index / rows) * 104, y: 16 + (index % rows) * 104 };
 }
 
 export function repositionDesktopNodes(
@@ -146,6 +146,15 @@ export function Desktop({
     });
   }, [desktop, fs, fsEvents]);
 
+  useEffect(() => {
+    if (!desktop || orderedNodes.length === 0 || hasDesktopPositionsForNodes(positions, orderedNodes)) return;
+    const next = allocateDesktopPositions(positions, orderedNodes);
+    setPositions(next);
+    void persistDesktopPositions(fs, desktop.id, next)
+      .then(() => setError(null))
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+  }, [desktop, fs, orderedNodes, positions]);
+
   const handleSnapshot = useCallback((snapshot: FileManagerSnapshot) => {
     setOrderedNodes(snapshot.nodes);
   }, []);
@@ -153,7 +162,15 @@ export function Desktop({
   if (!desktop) {
     return (
       <section className={`plasmon-desktop${className ? ` ${className}` : ""}`} aria-label="Desktop">
-        {error ? <div className="fm-error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => void initialize()}>Retry</button></div> : <p className="fm-empty">Loading Desktop…</p>}
+        {error ? (
+          <div className="fm-error-banner" role="alert">
+            <span>{error}</span>
+            <div className="fm-error-banner__actions">
+              <button type="button" onClick={() => setError(null)}>Dismiss</button>
+              <button type="button" onClick={() => void initialize()}>Retry</button>
+            </div>
+          </div>
+        ) : <p className="fm-empty">Loading Desktop…</p>}
       </section>
     );
   }
@@ -182,7 +199,11 @@ export function Desktop({
           }
         }}
       />
-      {error ? <div className="plasmon-desktop__notice fm-error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => setError(null)}>Dismiss</button></div> : null}
+      {error ? (
+        <div className="plasmon-desktop__notice fm-error-banner" role="alert">
+          <span>{error}</span><button type="button" onClick={() => setError(null)}>Dismiss</button>
+        </div>
+      ) : null}
     </section>
   );
 }
