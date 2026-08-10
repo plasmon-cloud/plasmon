@@ -8,6 +8,8 @@ Plasmon's filesystem remains browser-local by default. Creating, editing, renami
 
 The provider snapshots one resource at a time. It is not a browser/cloud filesystem synchronizer and it does not watch filesystem change events.
 
+An explicit publication is guarded by the filesystem's global `FsService.revision()`. The provider captures that revision before reading the source `FsNode`, derives resource identity and snapshot metadata from that guarded `stat()`, reads/hashes all ranged content, then verifies the filesystem revision is unchanged before committing a provider revision. If the filesystem changes during snapshot construction, publication fails and no provider resource revision is committed. This guard covers payload changes as well as rename/move/metadata/Atom identity changes during the attempt.
+
 ## Resource identity
 
 Provider persistence is independent of filesystem paths.
@@ -56,6 +58,8 @@ Production publication uses fixed chunks up to **1 MiB**. The browser provider r
 
 Each chunk is addressed by lowercase SHA-256. Before upload, the provider asks whether that digest already exists. Identical bytes therefore reuse one stored chunk across repeated publications and across resources.
 
+Chunk uploads can occur before the final filesystem-revision check and provider revision CAS. Therefore an aborted concurrent publication can leave content-addressed chunks that are not referenced by any committed resource revision. Phase A does not implement chunk refcounts or garbage collection for these orphaned chunks. This is an MVP storage-reclamation/storage-cost limitation only; such chunks do not permit an inconsistent provider revision to be committed and remain subject to normal hash verification if later reused.
+
 `NeutronStableMemorySharingTransport` uses Neutron's binary `querySelf` / `updateSelf` path, so chunk bytes travel as binary self-call fields rather than base64 inside the generic JSON tool bus.
 
 ## Integrity model
@@ -66,9 +70,10 @@ Integrity is checked at every storage boundary:
 2. the backend recomputes SHA-256 before accepting a chunk;
 3. a revision commit verifies that every referenced chunk exists and still matches its digest and expected size;
 4. revisions carry a domain-separated SHA-256 content root over byte length plus the ordered `(chunk hash, chunk size)` manifest;
-5. reads/imports re-verify chunk hashes and the content root instead of trusting stored locators.
+5. reads/imports re-verify chunk hashes and the content root instead of trusting stored locators;
+6. explicit filesystem publication verifies the global filesystem revision did not change between the start of the guarded snapshot attempt and completion of its metadata/content reads.
 
-Corrupt content fails closed with an integrity error.
+Corrupt content fails closed with an integrity error. A concurrent local filesystem mutation fails the publication before provider revision commit with a source-changed integrity error.
 
 ## Revisions and writes
 
@@ -107,6 +112,7 @@ This prevents an imported copy from pretending to own or be the provider's origi
 ## Implemented in Phase A
 
 - explicit file/Atom snapshot publication;
+- filesystem-revision guard preventing mixed local snapshots;
 - immutable AtomId-based provider identity;
 - persistent provider records and revisions;
 - 1 MiB bounded stable-memory chunks;
@@ -117,7 +123,7 @@ This prevents an imported copy from pretending to own or be the provider's origi
 - resource-scoped provider operation handle for future authorization binding;
 - versioned stable-memory sharing root and backend methods;
 - narrow provisional `ResourceRef` adapter;
-- focused tests for publication, dedupe, multi-chunk data, integrity failure, identity/path independence, revisions, persistence/schema handling, malformed refs, import/copy, and absence of capability material from provider persistence.
+- focused tests for publication, dedupe, multi-chunk data, concurrent payload/Atom metadata mutation, integrity failure, identity/path independence, revisions, persistence/schema handling, malformed refs, import/copy, and absence of capability material from provider persistence.
 
 ## MTN 0.2 integration still blocked
 
