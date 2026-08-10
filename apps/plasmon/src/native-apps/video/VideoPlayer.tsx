@@ -8,14 +8,19 @@ type Source = { kind: "video"; url: string; title: string; local: boolean } | { 
 
 async function resolveVideoSource(target: OpenTarget, fs: FsService): Promise<{ source: Source; cleanup: () => void }> {
   let url = target.url; let title = "Video Player";
-  if (!url && target.nodeId) {
+  if (target.nodeId) {
     const node = await fs.stat(target.nodeId); title = node.name || title;
-    if (node.kind === "shortcut" || node.name.toLowerCase().endsWith(".url")) { const shortcut = tryParseInternetShortcut(await fs.read(node.id)); if (!shortcut.ok) throw new Error(shortcut.error.message); url = shortcut.shortcut.url; }
-    else { const bytes = await fs.read(node.id); const blob = new Blob([bytes.slice().buffer], { type: inferVideoMime(node.name, node.mime) }); const lease = createObjectUrlLease(blob, URL); return { source: { kind: "video", url: lease.url, title, local: true }, cleanup: () => lease.release() }; }
+    if (!url && (node.kind === "shortcut" || node.name.toLowerCase().endsWith(".url"))) {
+      const shortcut = tryParseInternetShortcut(await fs.read(node.id)); if (!shortcut.ok) throw new Error(shortcut.error.message); url = shortcut.shortcut.url;
+    } else if (!url) {
+      const bytes = await fs.read(node.id); const blob = new Blob([bytes.slice().buffer], { type: inferVideoMime(node.name, node.mime) }); const lease = createObjectUrlLease(blob, URL); return { source: { kind: "video", url: lease.url, title, local: true }, cleanup: () => lease.release() };
+    }
   }
   if (!url) throw new Error("No video target was supplied");
-  const embed = youtubeEmbedUrl(url); if (embed) return { source: { kind: "youtube", url: embed, externalUrl: safeHttpUrl(url)!, title }, cleanup: () => {} };
-  const safe = safeHttpUrl(url); if (!safe) throw new Error("Video URL must use http:// or https://"); return { source: { kind: "video", url: safe, title, local: false }, cleanup: () => {} };
+  const safe = safeHttpUrl(url); if (!safe) throw new Error("Video URL must use http:// or https://");
+  if (title === "Video Player") title = new URL(safe).hostname || title;
+  const embed = youtubeEmbedUrl(safe); if (embed) return { source: { kind: "youtube", url: embed, externalUrl: safe, title }, cleanup: () => {} };
+  return { source: { kind: "video", url: safe, title, local: false }, cleanup: () => {} };
 }
 
 export default function VideoPlayer({ processId, target, fs, process }: VideoPlayerProps) {
