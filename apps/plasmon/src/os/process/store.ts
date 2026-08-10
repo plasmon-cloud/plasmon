@@ -1,8 +1,25 @@
 import type {
+  JsonValue,
   OpenTarget,
   ProcessId,
   ProcessRecord,
 } from "../contracts/index.ts";
+
+function cloneJsonValue(value: JsonValue): JsonValue {
+  if (Array.isArray(value)) return value.map(cloneJsonValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, cloneJsonValue(nested)]),
+    );
+  }
+  return value;
+}
+
+function cloneJsonRecord(values: Record<string, JsonValue>): Record<string, JsonValue> {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, cloneJsonValue(value)]),
+  );
+}
 
 function cloneTarget(target: OpenTarget): OpenTarget {
   return {
@@ -11,7 +28,9 @@ function cloneTarget(target: OpenTarget): OpenTarget {
       ? {
           atom: {
             ...target.atom,
-            ...(target.atom.metadata ? { metadata: { ...target.atom.metadata } } : {}),
+            ...(target.atom.metadata
+              ? { metadata: cloneJsonRecord(target.atom.metadata) }
+              : {}),
           },
         }
       : {}),
