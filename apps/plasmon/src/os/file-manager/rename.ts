@@ -1,4 +1,14 @@
+import type { NodeId } from "../contracts/index.ts";
 import { basenameSelectionRange } from "./model.ts";
+
+export interface InlineRenameState {
+  nodeId: NodeId;
+  value: string;
+  initialName: string;
+  session: number;
+  error: string | null;
+  busy: boolean;
+}
 
 export interface RenameInputLike {
   focus(options?: { preventScroll?: boolean }): void;
