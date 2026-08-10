@@ -48,6 +48,7 @@ import {
   type SearchTab,
   type ShellSearchResult,
 } from "./search.ts";
+import { openFilesystemSearchResult } from "./searchOpening.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
 import "./shell.scss";
 
@@ -299,14 +300,12 @@ export function Shell({
         await reloadElements(true);
       } else {
         if (!associations || !openService) throw new Error("File opening is unavailable until AssociationRegistry and OpenService are injected");
-        const handler = await associations.getDefault(result.node);
-        if (!handler) throw new Error(`No handler is associated with ${result.node.name}`);
-        await openService.open(handler.id, { nodeId: result.node.id });
+        await openFilesystemSearchResult(fs, associations, openService, result.node.id);
       }
       setFlyout(null);
     } catch (cause: unknown) { setActionError(`Could not open ${result.title}: ${formatError(cause)}`); }
     finally { setBusyId(null); }
-  }, [associations, neutron, openService, process, reloadElements]);
+  }, [associations, fs, neutron, openService, process, reloadElements]);
 
   const toggleFlyout = (next: Exclude<Flyout, null>) => setFlyout((current) => current === next ? null : next);
   const clockText = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(clock);
