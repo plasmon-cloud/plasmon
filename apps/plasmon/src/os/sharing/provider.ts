@@ -257,6 +257,7 @@ export class StableSharedResourceProvider implements SharedResourceProvider {
     if (options.mode !== "snapshot") throw new UnsupportedPublishedResourceError(`Unsupported publish mode: ${String(options.mode)}`);
     await this.store.schemaVersion();
 
+    const snapshotRevision = await this.fs.revision();
     const node = await this.fs.stat(nodeId);
     const { identity, resourceType, snapshot } = identityForNode(node);
     const before = await this.store.describe(identity);
@@ -277,6 +278,13 @@ export class StableSharedResourceProvider implements SharedResourceProvider {
     }
 
     const root = await computeContentRoot(node.size, chunks);
+    const completedRevision = await this.fs.revision();
+    if (completedRevision !== snapshotRevision) {
+      throw new ResourceIntegrityError(
+        `Filesystem source changed during publication snapshot: revision ${snapshotRevision.toString()} -> ${completedRevision.toString()}; no provider revision was committed`,
+      );
+    }
+
     const revision = await this.store.commitRevision({
       identity,
       resourceType,
