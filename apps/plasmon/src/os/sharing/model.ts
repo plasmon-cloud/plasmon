@@ -1,20 +1,18 @@
+import type { FsNodeKind } from "../contracts/fs.ts";
+
 export const SHARING_PROVIDER_SCHEMA_VERSION = 1 as const;
-export const SHARING_PROVIDER_ID = "plasmon-sharing";
+export const SHARING_PROVIDER_ID = "plasmon.shared-resource-provider";
 export const PLASMON_ATOM_NAMESPACE = "plasmon.atom";
 export const PLASMON_FILE_NAMESPACE = "plasmon.file";
 export const DEFAULT_STABLE_CHUNK_SIZE = 1024 * 1024;
+export const MAX_STABLE_CHUNK_SIZE = 1024 * 1024;
 
-export type ProviderResourceIdentity = {
-  namespace: typeof PLASMON_ATOM_NAMESPACE | typeof PLASMON_FILE_NAMESPACE;
+export interface ProviderResourceIdentity {
+  namespace: string;
   resourceId: string;
-};
+}
 
-export type ProviderChunkRef = {
-  hash: string;
-  size: number;
-};
-
-export type PublishedAtomMetadata = {
+export interface ProviderAtomSnapshot {
   format: "plasmon.atom";
   version: 1;
   atomId: string;
@@ -22,37 +20,43 @@ export type PublishedAtomMetadata = {
   atomType: string;
   schemaVersion: number;
   title?: string;
-};
+}
 
-export type ProviderSnapshotMetadata = {
+export interface ProviderSnapshotMetadata {
   displayName: string;
-  kind: "file" | "shortcut" | "atom";
+  kind: Exclude<FsNodeKind, "directory">;
   mime?: string;
-  atom?: PublishedAtomMetadata;
-};
+  atom?: ProviderAtomSnapshot;
+}
 
-export type ProviderResourceRecord = {
-  schemaVersion: typeof SHARING_PROVIDER_SCHEMA_VERSION;
-  identity: ProviderResourceIdentity;
-  resourceType: string;
-  currentRevision: string;
-  createdAt: number;
-  updatedAt: number;
-};
+export interface ProviderChunkRef {
+  /** Lower-case SHA-256 hex. */
+  hash: string;
+  size: number;
+}
 
-export type ProviderRevisionRecord = {
+export interface ProviderRevisionRecord {
   schemaVersion: typeof SHARING_PROVIDER_SCHEMA_VERSION;
   identity: ProviderResourceIdentity;
   resourceType: string;
   revision: string;
   byteLength: number;
   contentRootHash: string;
-  chunks: ProviderChunkRef[];
+  chunks: readonly ProviderChunkRef[];
   snapshot: ProviderSnapshotMetadata;
   createdAt: number;
-};
+}
 
-export type ProviderCommitRequest = {
+export interface ProviderResourceRecord {
+  schemaVersion: typeof SHARING_PROVIDER_SCHEMA_VERSION;
+  identity: ProviderResourceIdentity;
+  resourceType: string;
+  currentRevision: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProviderCommitRequest {
   identity: ProviderResourceIdentity;
   resourceType: string;
   expectedRevision: string | null;
@@ -61,21 +65,18 @@ export type ProviderCommitRequest = {
   chunks: readonly ProviderChunkRef[];
   snapshot: ProviderSnapshotMetadata;
   createdAt: number;
-};
+}
 
 export class SharingProviderError extends Error {}
 
-export class InvalidPublishedResourceError extends SharingProviderError {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidPublishedResourceError";
-  }
-}
+export class InvalidPublishedResourceError extends SharingProviderError {}
 
-export class UnsupportedPublishedResourceError extends SharingProviderError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnsupportedPublishedResourceError";
+export class UnsupportedPublishedResourceError extends SharingProviderError {}
+
+export class ProviderSchemaVersionError extends SharingProviderError {
+  constructor(readonly actualVersion: number) {
+    super(`Unsupported shared-resource provider schema version: ${actualVersion}`);
+    this.name = "ProviderSchemaVersionError";
   }
 }
 
@@ -94,23 +95,11 @@ export class ResourceIntegrityError extends SharingProviderError {
 }
 
 export class RevisionConflictError extends SharingProviderError {
-  readonly expectedRevision: string | null;
-  readonly actualRevision: string | null;
-
-  constructor(expectedRevision: string | null, actualRevision: string | null) {
-    super(`Revision conflict: expected ${expectedRevision ?? "unpublished"}, actual ${actualRevision ?? "unpublished"}`);
+  constructor(
+    readonly expectedRevision: string | null,
+    readonly actualRevision: string | null,
+  ) {
+    super(`Shared-resource revision conflict: expected ${expectedRevision ?? "none"}, current ${actualRevision ?? "none"}`);
     this.name = "RevisionConflictError";
-    this.expectedRevision = expectedRevision;
-    this.actualRevision = actualRevision;
-  }
-}
-
-export class ProviderSchemaVersionError extends SharingProviderError {
-  readonly actualVersion: number;
-
-  constructor(actualVersion: number) {
-    super(`Unsupported sharing provider schema version ${actualVersion}; expected ${SHARING_PROVIDER_SCHEMA_VERSION}`);
-    this.name = "ProviderSchemaVersionError";
-    this.actualVersion = actualVersion;
   }
 }
