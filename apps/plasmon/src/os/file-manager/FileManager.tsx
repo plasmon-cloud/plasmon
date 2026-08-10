@@ -43,6 +43,12 @@ import {
   type RectLike,
   type SelectionState,
 } from "./model.ts";
+import {
+  createDocument,
+  importFileIntoFs,
+  type NewDocumentKind,
+} from "./create-import.ts";
+import { finishEntryDragGesture } from "./drag.ts";
 import { OpenWithPanel, PropertiesPanel } from "./properties.tsx";
 import "./file-manager.scss";
 
@@ -92,6 +98,7 @@ interface EntryProps {
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onDoubleClick: () => void;
   onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   onRenameChange: (value: string) => void;
@@ -126,6 +133,7 @@ const FileEntry = memo(function FileEntry({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onPointerCancel,
   onDoubleClick,
   onContextMenu,
   onRenameChange,
@@ -157,6 +165,7 @@ const FileEntry = memo(function FileEntry({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
@@ -223,6 +232,7 @@ export function FileManager({
   const [propertiesNode, setPropertiesNode] = useState<FsNode | null>(null);
   const [marquee, setMarquee] = useState<MarqueeVisual>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const entriesRef = useRef(new Map<NodeId, HTMLDivElement>());
   const refreshGateRef = useRef(new RefreshGate());
   const dragFrameRef = useRef<number | null>(null);
@@ -375,6 +385,44 @@ export function FileManager({
     }
   };
 
+  const createNewDocument = async (kind: NewDocumentKind) => {
+    setContextMenu(null);
+    try {
+      const created = await createDocument(fs, directoryId, kind);
+      await refresh();
+      setSelection({ ids: new Set([created.id]), anchor: created.id, focus: created.id });
+      setRename({ nodeId: created.id, value: created.name, error: null, busy: false });
+      setError(null);
+    } catch (cause: unknown) {
+      reportError(cause);
+    }
+  };
+
+  const importFiles = async (files: readonly File[]) => {
+    if (files.length === 0) return;
+    setContextMenu(null);
+    const imported: FsNode[] = [];
+    const failures: string[] = [];
+    for (const file of files) {
+      try {
+        imported.push(await importFileIntoFs(fs, directoryId, file));
+      } catch (cause: unknown) {
+        failures.push(`${file.name}: ${cause instanceof Error ? cause.message : String(cause)}`);
+      }
+    }
+    await refresh();
+    if (imported.length > 0) {
+      const ids = imported.map((node) => node.id);
+      setSelection({ ids: new Set(ids), anchor: ids[0] ?? null, focus: ids.at(-1) ?? null });
+    }
+    setError(failures.length > 0 ? `Import failed — ${failures.join("; ")}` : null);
+  };
+
+  const triggerImport = () => {
+    setContextMenu(null);
+    fileInputRef.current?.click();
+  };
+
   const applyDragTransform = (dx: number, dy: number) => {
     const active = dragRef.current;
     if (!active) return;
@@ -445,18 +493,21 @@ export function FileManager({
     const active = dragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
     const { dx, dy } = dragPendingRef.current;
-    const moved = active.moved;
-    const ids = [...active.ids];
+    const outcome = finishEntryDragGesture(active, selection, false);
     if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
     dragFrameRef.current = null;
     clearDragVisual();
     dragRef.current = null;
     dragPendingRef.current = { dx: 0, dy: 0 };
-    if (!moved) {
-      if (active.releaseSelection) setSelection(active.releaseSelection);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (!outcome.shouldDrop) {
+      setSelection(outcome.selection);
       return;
     }
 
+    const ids = [...outcome.ids];
     const underPointer = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-fm-node-id]");
     const targetId = underPointer?.dataset.fmNodeId;
     const target = targetId ? nodes.find((node) => node.id === targetId) : undefined;
@@ -474,6 +525,21 @@ export function FileManager({
     } catch (cause: unknown) {
       reportError(cause);
     }
+  };
+
+  const handleEntryPointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = dragRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    const outcome = finishEntryDragGesture(active, selection, true);
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    dragFrameRef.current = null;
+    clearDragVisual();
+    dragRef.current = null;
+    dragPendingRef.current = { dx: 0, dy: 0 };
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setSelection(outcome.selection);
   };
 
   const processMarquee = () => {
@@ -600,10 +666,13 @@ export function FileManager({
   const contextNode = contextMenu?.nodeId ? nodes.find((node) => node.id === contextMenu.nodeId) ?? null : null;
   const canOpenWith = Boolean(contextNode && contextNode.kind !== "directory" && associations && openService);
 
-  const menuAction = (action: "open" | "openWith" | "cut" | "copy" | "rename" | "delete" | "properties" | "newFolder" | "paste") => {
+  const menuAction = (action: "open" | "openWith" | "cut" | "copy" | "rename" | "delete" | "properties" | "newFolder" | "newText" | "newMarkdown" | "import" | "paste") => {
     if (action === "newFolder") {
       setContextMenu(null); setCreatingFolder(true); setNewFolderName("New Folder"); setNewFolderError(null); return;
     }
+    if (action === "newText") { void createNewDocument("text"); return; }
+    if (action === "newMarkdown") { void createNewDocument("markdown"); return; }
+    if (action === "import") { triggerImport(); return; }
     if (action === "paste") { setContextMenu(null); void paste(); return; }
     if (!contextNode) return;
     if (action === "open") { void openNode(contextNode); return; }
@@ -645,9 +714,26 @@ export function FileManager({
         setContextMenu({ x: event.clientX, y: event.clientY, nodeId: id });
       }}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        hidden
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = "";
+          void importFiles(files);
+        }}
+      />
+
       {presentation !== "desktop" ? (
         <div className="fm-commandbar" role="toolbar" aria-label="File commands">
           <button type="button" onClick={() => { setCreatingFolder(true); setNewFolderName("New Folder"); setNewFolderError(null); }}>New Folder</button>
+          <button type="button" onClick={() => void createNewDocument("text")}>New Text Document</button>
+          <button type="button" onClick={() => void createNewDocument("markdown")}>New Markdown Document</button>
+          <button type="button" onClick={triggerImport}>Import Files…</button>
           <button type="button" onClick={() => clipboard.copy(selection.ids)} disabled={selection.ids.size === 0}>Copy</button>
           <button type="button" onClick={() => clipboard.cut(selection.ids)} disabled={selection.ids.size === 0}>Cut</button>
           <button type="button" onClick={() => void paste()} disabled={!clipboard.snapshot()}>Paste</button>
@@ -701,6 +787,7 @@ export function FileManager({
             onPointerDown={(event) => handleEntryPointerDown(node, event)}
             onPointerMove={handleEntryPointerMove}
             onPointerUp={(event) => void handleEntryPointerUp(event)}
+            onPointerCancel={handleEntryPointerCancel}
             onDoubleClick={() => void openNode(node)}
             onContextMenu={(event) => {
               event.preventDefault(); event.stopPropagation();
@@ -734,6 +821,10 @@ export function FileManager({
           ) : (
             <>
               <button type="button" role="menuitem" onClick={() => menuAction("newFolder")}>New Folder</button>
+              <button type="button" role="menuitem" onClick={() => menuAction("newText")}>New Text Document</button>
+              <button type="button" role="menuitem" onClick={() => menuAction("newMarkdown")}>New Markdown Document</button>
+              <button type="button" role="menuitem" onClick={() => menuAction("import")}>Import Files…</button>
+              <div className="fm-menu-separator" role="separator" />
               <button type="button" role="menuitem" disabled={!clipboard.snapshot()} onClick={() => menuAction("paste")}>Paste</button>
             </>
           )}
