@@ -45,6 +45,7 @@ interface UploadSession {
   offset: number;
   truncate: boolean;
   totalBytes: number;
+  expectedHash: string;
   chunks: Map<number, Uint8Array>;
   receivedBytes: number;
   createdAt: number;
@@ -101,7 +102,13 @@ export class FsRpcServer {
         if (length < 0 || length > TRANSPORT_CHUNK_BYTES) throw new Error("Filesystem RPC read chunk exceeds transport limit");
         const offset = requiredInteger(args, "offset");
         if (offset < 0) throw new Error("Filesystem RPC read offset cannot be negative");
-        const bytes = await this.fs.read(requiredString(args, "id"), { offset, length });
+        const id = requiredString(args, "id");
+        const expectedContentHash = requiredSha256(args, "expectedContentHash");
+        const expectedSize = requiredInteger(args, "expectedSize");
+        if (expectedSize < 0) throw new Error("Filesystem RPC expected read size cannot be negative");
+        await this.assertReadIdentity(id, expectedContentHash, expectedSize);
+        const bytes = await this.fs.read(id, { offset, length });
+        await this.assertReadIdentity(id, expectedContentHash, expectedSize);
         return { data: encodeBase64(bytes), byteLength: bytes.length };
       }
       case FS_TOOLS.writeBegin:
@@ -122,6 +129,7 @@ export class FsRpcServer {
   private writeBegin(args: JsonObject): JsonValue {
     const totalBytes = requiredInteger(args, "totalBytes");
     const offset = requiredInteger(args, "offset");
+    const expectedHash = requiredSha256(args, "expectedHash");
     if (totalBytes < 0 || totalBytes > MAX_UPLOAD_BYTES) throw new Error("Filesystem RPC upload size is invalid");
     if (offset < 0) throw new Error("Filesystem RPC write offset cannot be negative");
     const uploadId = `fs-upload:${this.randomUUID()}`;
@@ -131,6 +139,7 @@ export class FsRpcServer {
       offset,
       truncate: optionalBoolean(args, "truncate") ?? false,
       totalBytes,
+      expectedHash,
       chunks: new Map(),
       receivedBytes: 0,
       createdAt: this.now(),
@@ -168,8 +177,21 @@ export class FsRpcServer {
       bytes.set(chunk, offset);
       offset += chunk.length;
     }
+    const actualHash = await sha256Hex(bytes);
+    if (actualHash !== upload.expectedHash) {
+      this.uploads.delete(uploadId);
+      throw new Error("Filesystem RPC upload SHA-256 mismatch");
+    }
     this.uploads.delete(uploadId);
     return nodeToJson(await this.fs.write(upload.nodeId, bytes, { offset: upload.offset, truncate: upload.truncate }));
+  }
+
+  private async assertReadIdentity(id: NodeId, expectedContentHash: string, expectedSize: number): Promise<void> {
+    const node = await this.fs.stat(id);
+    if (node.kind === "directory") throw new Error("Cannot read a directory");
+    if (node.size !== expectedSize || node.contentHash !== expectedContentHash) {
+      throw new Error("Filesystem changed during read; retry the operation");
+    }
   }
 
   private writeAbort(args: JsonObject): JsonValue {
@@ -254,7 +276,14 @@ export class FsRpcClient implements FsService, FsEventSource {
     let copied = 0;
     while (copied < wanted) {
       const length = Math.min(TRANSPORT_CHUNK_BYTES, wanted - copied);
-      const response = asObject(await this.callTool(FS_TOOLS.readChunk, { id, offset: start + copied, length }));
+      if (!node.contentHash) throw new Error("Filesystem readable content is missing a content hash");
+      const response = asObject(await this.callTool(FS_TOOLS.readChunk, {
+        id,
+        offset: start + copied,
+        length,
+        expectedContentHash: node.contentHash,
+        expectedSize: node.size,
+      }));
       const bytes = decodeBase64(requiredString(response, "data"));
       const declared = requiredInteger(response, "byteLength");
       if (bytes.length !== declared || bytes.length > length) throw new Error("Invalid filesystem read chunk response");
@@ -269,11 +298,13 @@ export class FsRpcClient implements FsService, FsEventSource {
     if (!(bytes instanceof Uint8Array)) throw new Error("Filesystem writes require Uint8Array bytes");
     const offset = options.offset ?? 0;
     validateSafeNonNegative(offset, "Filesystem write offset");
+    const expectedHash = await sha256Hex(bytes);
     const begin = asObject(await this.callTool(FS_TOOLS.writeBegin, {
       id,
       offset,
       truncate: options.truncate ?? false,
       totalBytes: bytes.length,
+      expectedHash,
     }));
     const uploadId = requiredString(begin, "uploadId");
     const chunkBytes = requiredInteger(begin, "chunkBytes");
@@ -326,7 +357,7 @@ export class FsRpcClient implements FsService, FsEventSource {
     queueMicrotask(() => {
       void this.revision().then((revision) => {
         for (const listener of this.listeners) listener({ type: "reset", revision });
-      }).finally(() => { this.resetPending = false; });
+      }).catch(() => undefined).finally(() => { this.resetPending = false; });
     });
   }
 }
@@ -433,6 +464,12 @@ function requiredString(object: JsonObject, key: string): string {
   return value;
 }
 
+function requiredSha256(object: JsonObject, key: string): string {
+  const value = requiredString(object, key);
+  if (!/^[0-9a-f]{64}$/u.test(value)) throw new Error(`Filesystem RPC ${key} must be a lowercase SHA-256 hex digest`);
+  return value;
+}
+
 function requiredInteger(object: JsonObject, key: string): number {
   const value = object[key];
   if (typeof value !== "number" || !Number.isSafeInteger(value)) throw new Error(`Filesystem RPC ${key} must be a safe integer`);
@@ -448,4 +485,9 @@ function optionalBoolean(object: JsonObject, key: string): boolean | undefined {
 
 function validateSafeNonNegative(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new Error(`${label} must be a non-negative safe integer`);
+}
+
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
 }
