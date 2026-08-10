@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent as ReactChangeEvent, type FormEvent as ReactFormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent as ReactChangeEvent,
+  type FormEvent as ReactFormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import type {
   AssociationRegistry,
   FsEventSource,
@@ -18,9 +27,9 @@ import {
   type FileManagerSnapshot,
 } from "../../os/file-manager/index.ts";
 import { ExplorerHistory, type ExplorerLocation } from "./history.ts";
+import { resolveExplorerAddress } from "./navigation.ts";
 
 const FAVORITE_PATHS = ["/Desktop", "/Documents", "/Downloads", "/Pictures", "/Videos"] as const;
-
 type NavigationMode = "push" | "replace" | "history";
 
 export interface ExplorerAppProps {
@@ -54,9 +63,7 @@ async function resolveInitialLocation(fs: FsService, target: OpenTarget): Promis
     const directoryId = targetNode.kind === "directory" ? targetNode.id : targetNode.parentId;
     if (directoryId) return { nodeId: directoryId, path: await fs.pathOf(directoryId) };
   }
-  const root = await fs.resolvePath("/");
-  if (!root || root.kind !== "directory") throw new Error("Filesystem root is unavailable");
-  return { nodeId: root.id, path: "/" };
+  return resolveExplorerAddress(fs, "/");
 }
 
 export function ExplorerApp({
@@ -71,6 +78,7 @@ export function ExplorerApp({
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const historyRef = useRef(new ExplorerHistory());
+  const addressRef = useRef<HTMLInputElement | null>(null);
   const [location, setLocation] = useState<ExplorerLocation | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [address, setAddress] = useState("/");
@@ -82,21 +90,32 @@ export function ExplorerApp({
   const [selectedCount, setSelectedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const applyLocation = useCallback((next: ExplorerLocation, mode: NavigationMode = "push") => {
+    if (mode === "push") historyRef.current.push(next);
+    else if (mode === "replace") historyRef.current.replaceCurrent(next);
+    setLocation(next);
+    setAddress(next.path);
+    setHistoryVersion((value) => value + 1);
+    setError(null);
+  }, []);
+
   const navigate = useCallback(async (nextId: NodeId, mode: NavigationMode = "push") => {
     try {
       const node = await fs.stat(nextId);
       if (node.kind !== "directory") throw new Error(`${node.name} is not a folder`);
-      const next: ExplorerLocation = { nodeId: node.id, path: await fs.pathOf(node.id) };
-      if (mode === "push") historyRef.current.push(next);
-      else if (mode === "replace") historyRef.current.replaceCurrent(next);
-      setLocation(next);
-      setAddress(next.path);
-      setHistoryVersion((value) => value + 1);
-      setError(null);
+      applyLocation({ nodeId: node.id, path: await fs.pathOf(node.id) }, mode);
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [fs]);
+  }, [applyLocation, fs]);
+
+  const navigatePath = useCallback(async (path: string) => {
+    try {
+      applyLocation(await resolveExplorerAddress(fs, path));
+    } catch (cause: unknown) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }, [applyLocation, fs]);
 
   useEffect(() => {
     let active = true;
@@ -107,6 +126,7 @@ export function ExplorerApp({
         setLocation(initial);
         setAddress(initial.path);
         setHistoryVersion((value) => value + 1);
+        setError(null);
       })
       .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : String(cause)); });
     return () => { active = false; };
@@ -125,7 +145,7 @@ export function ExplorerApp({
 
   useEffect(() => {
     if (!location) return;
-    process.setTitle(processId, `Files — ${labelForPath(location.path)}`);
+    process.setTitle(processId, labelForPath(location.path));
   }, [location, process, processId]);
 
   useEffect(() => {
@@ -133,23 +153,16 @@ export function ExplorerApp({
     return fsEvents.subscribe((event) => {
       if (event.type === "moved" && event.node.id === location.nodeId || event.type === "changed" && event.node.id === location.nodeId || event.type === "reset") {
         void fs.pathOf(location.nodeId)
-          .then((path) => {
-            const next = { nodeId: location.nodeId, path };
-            historyRef.current.replaceCurrent(next);
-            setLocation(next);
-            setAddress(path);
-            setHistoryVersion((value) => value + 1);
-          })
+          .then((path) => applyLocation({ nodeId: location.nodeId, path }, "replace"))
           .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
       }
     });
-  }, [fs, fsEvents, location]);
+  }, [applyLocation, fs, fsEvents, location]);
 
   const goHistory = async (direction: "back" | "forward") => {
     const candidate = direction === "back" ? historyRef.current.back() : historyRef.current.forward();
     setHistoryVersion((value) => value + 1);
-    if (!candidate) return;
-    await navigate(candidate.nodeId, "history");
+    if (candidate) await navigate(candidate.nodeId, "history");
   };
 
   const goUp = async () => {
@@ -164,9 +177,8 @@ export function ExplorerApp({
 
   const goAddress = async () => {
     try {
-      const node = await fs.resolvePath(address.trim() || "/");
-      if (!node) throw new Error(`Folder not found: ${address}`);
-      await navigate(node.id);
+      const next = await resolveExplorerAddress(fs, address);
+      applyLocation(next);
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -181,24 +193,50 @@ export function ExplorerApp({
   void historyVersion;
 
   return (
-    <section className="explorer-app" aria-label="File Explorer">
+    <section
+      className="explorer-app"
+      aria-label="File Explorer"
+      onKeyDown={(event: ReactKeyboardEvent<HTMLElement>) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") {
+          event.preventDefault();
+          event.stopPropagation();
+          addressRef.current?.focus({ preventScroll: true });
+          addressRef.current?.select();
+        }
+      }}
+    >
       <header className="explorer-app__toolbar">
         <div className="explorer-app__nav" role="toolbar" aria-label="Navigation">
           <button type="button" aria-label="Back" disabled={!historyRef.current.canBack()} onClick={() => void goHistory("back")}>←</button>
           <button type="button" aria-label="Forward" disabled={!historyRef.current.canForward()} onClick={() => void goHistory("forward")}>→</button>
           <button type="button" aria-label="Up one level" disabled={!location || location.path === "/"} onClick={() => void goUp()}>↑</button>
         </div>
-        <nav className="explorer-app__breadcrumbs" aria-label="Breadcrumb">
+        <nav className="explorer-app__breadcrumbs" aria-label="Location breadcrumb">
           {(location ? breadcrumbPaths(location.path) : [{ label: "This Plasmon", path: "/" }]).map((crumb, index, all) => (
             <span key={crumb.path}>
-              <button type="button" onClick={() => void fs.resolvePath(crumb.path).then((node) => node && navigate(node.id))}>{crumb.label}</button>
+              <button type="button" onClick={() => void navigatePath(crumb.path)}>{crumb.label}</button>
               {index < all.length - 1 ? <span aria-hidden="true">›</span> : null}
             </span>
           ))}
         </nav>
         <form className="explorer-app__address" onSubmit={(event: ReactFormEvent<HTMLFormElement>) => { event.preventDefault(); void goAddress(); }}>
           <label className="sr-only" htmlFor={`explorer-address-${processId}`}>Address</label>
-          <input id={`explorer-address-${processId}`} value={address} onChange={(event: ReactChangeEvent<HTMLInputElement>) => setAddress(event.target.value)} spellCheck={false} />
+          <input
+            ref={addressRef}
+            id={`explorer-address-${processId}`}
+            value={address}
+            onChange={(event: ReactChangeEvent<HTMLInputElement>) => setAddress(event.target.value)}
+            onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setAddress(location?.path ?? "/");
+                setError(null);
+                event.currentTarget.select();
+              }
+            }}
+            aria-invalid={error ? "true" : undefined}
+            spellCheck={false}
+          />
         </form>
         <div className="explorer-app__search">
           <label className="sr-only" htmlFor={`explorer-search-${processId}`}>Search current folder</label>
@@ -220,21 +258,20 @@ export function ExplorerApp({
           <div className="explorer-app__viewbar" role="toolbar" aria-label="View options">
             <label>View
               <select value={presentation} onChange={(event: ReactChangeEvent<HTMLSelectElement>) => setPresentation(event.target.value as FileManagerPresentation)}>
-                <option value="grid">Grid</option>
-                <option value="list">List</option>
-                <option value="details">Details</option>
+                <option value="grid">Grid</option><option value="list">List</option><option value="details">Details</option>
               </select>
             </label>
             <label>Sort
               <select value={sort} onChange={(event: ReactChangeEvent<HTMLSelectElement>) => setSort(event.target.value as NonNullable<FsListOptions["sort"]>)}>
-                <option value="name">Name</option>
-                <option value="modified">Modified</option>
-                <option value="size">Size</option>
-                <option value="type">Type</option>
+                <option value="name">Name</option><option value="modified">Modified</option><option value="size">Size</option><option value="type">Type</option>
               </select>
             </label>
           </div>
-          {error ? <div className="fm-error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => setError(null)}>Dismiss</button></div> : null}
+          {error ? (
+            <div className="fm-error-banner" role="alert">
+              <span>{error}</span><button type="button" onClick={() => setError(null)}>Dismiss</button>
+            </div>
+          ) : null}
           {location ? (
             <FileManager
               directoryId={location.nodeId}
@@ -256,7 +293,7 @@ export function ExplorerApp({
 
       <footer className="explorer-app__status">
         <span>{itemCount} item{itemCount === 1 ? "" : "s"}</span>
-        <span>{selectedCount > 0 ? `${selectedCount} selected` : location?.path ?? ""}</span>
+        <span>{selectedCount > 0 ? `${selectedCount} selected` : "Ready"}</span>
         <span className="explorer-app__history-count" aria-hidden="true">{history.entries.length > 1 ? `${history.index + 1}/${history.entries.length}` : ""}</span>
       </footer>
     </section>
