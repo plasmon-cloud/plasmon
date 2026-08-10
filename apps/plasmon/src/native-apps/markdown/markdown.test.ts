@@ -1,0 +1,6 @@
+import { expect, test } from "bun:test";
+import { parseInlineMarkdown, parseMarkdown, safeMarkdownHref } from "./markdown.ts";
+
+test("Markdown parser supports headings, paragraphs, lists, fenced and inline code", () => { const blocks = parseMarkdown("# Title\n\nHello `code`.\n\n- one\n- two\n\n```ts\nconst x = 1;\n```"); expect(blocks.map((block) => block.type)).toEqual(["heading", "paragraph", "list", "code"]); expect(parseInlineMarkdown("Hello **strong** and `code`").map((part) => part.type)).toContain("strong"); expect(parseInlineMarkdown("Hello **strong** and `code`").map((part) => part.type)).toContain("code"); });
+test("unsafe Markdown links are neutralized", () => { expect(safeMarkdownHref("javascript:alert(1)")).toBeNull(); expect(safeMarkdownHref("data:text/html,boom")).toBeNull(); expect(safeMarkdownHref("https://example.com")).toBe("https://example.com"); expect(parseInlineMarkdown("[boom](javascript:alert(1))").some((part) => part.type === "link")).toBe(false); });
+test("raw HTML remains inert text data", () => { const source = '<img src=x onerror="globalThis.pwned=true">'; expect(parseMarkdown(source)).toEqual([{ type: "paragraph", text: source }]); expect(parseInlineMarkdown(source)).toEqual([{ type: "text", text: source }]); });

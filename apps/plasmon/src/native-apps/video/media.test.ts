@@ -1,0 +1,6 @@
+import { expect, test } from "bun:test";
+import { createObjectUrlLease, inferVideoMime, safeHttpUrl, youtubeEmbedUrl, youtubeVideoId } from "./media.ts";
+
+test("video MIME helper selects declared or extension types", () => { expect(inferVideoMime("movie.webm")).toBe("video/webm"); expect(inferVideoMime("movie.bin", "video/mp4")).toBe("video/mp4"); expect(inferVideoMime("movie.bin")).toBe("application/octet-stream"); });
+test("object URL lease revokes exactly once", () => { const revoked: string[] = []; const lease = createObjectUrlLease(new Blob([new Uint8Array([1])]), { createObjectURL: () => "blob:test", revokeObjectURL: (url) => revoked.push(url) }); expect(lease.url).toBe("blob:test"); lease.release(); lease.release(); expect(revoked).toEqual(["blob:test"]); });
+test("YouTube normalization is narrow and unsafe URL schemes are rejected", () => { expect(youtubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ"); expect(youtubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ"); expect(youtubeEmbedUrl("https://youtube.com/shorts/dQw4w9WgXcQ")).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"); expect(youtubeVideoId("https://example.com/watch?v=dQw4w9WgXcQ")).toBeNull(); expect(safeHttpUrl("javascript:alert(1)")).toBeNull(); expect(safeHttpUrl("data:video/mp4,boom")).toBeNull(); });
