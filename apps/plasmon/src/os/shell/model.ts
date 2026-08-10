@@ -1,216 +1,293 @@
 import type {
   ExternalElement,
+  HandlerId,
+  IconRef,
   NativeAppDefinition,
-  NativeAppRegistry,
+  NeutronBridge,
+  OpenTarget,
   ProcessController,
   ProcessRecord,
   WindowManager,
   WindowState,
 } from "../contracts/index.ts";
+import type { ShellPreferences } from "./preferences.ts";
 
-export type ExternalRunningState = ExternalElement["running"];
+export type ExternalRunning = ExternalElement["running"];
 
-export type NativeTaskbarEntry = {
+export interface NativeTaskbarEntry {
   kind: "native";
   id: string;
+  handlerId: HandlerId;
   appId: string;
-  handlerId: string;
   name: string;
-  icon: string;
+  icon: IconRef;
   pinned: boolean;
-  processes: readonly ProcessRecord[];
-  processId?: string;
-  running: boolean;
-  focused: boolean;
-  minimized: boolean;
-};
+  process: ProcessRecord | null;
+}
 
-export type ElementTaskbarEntry = {
+export interface ElementTaskbarEntry {
   kind: "element";
-  id: `element:${string}`;
-  appId: string;
+  id: string;
+  elementId: string;
   name: string;
   icon?: string;
   pinned: boolean;
-  running: ExternalRunningState;
-};
+  running: ExternalRunning;
+}
 
 export type TaskbarEntry = NativeTaskbarEntry | ElementTaskbarEntry;
 
-function topWindow(windows: readonly WindowState[]): WindowState | null {
-  let best: WindowState | null = null;
-  for (const window of windows) {
-    if (window.minimized) continue;
-    if (!best || window.z > best.z) best = window;
-  }
-  return best;
-}
-
-function processWindow(record: ProcessRecord, windows: readonly WindowState[]): WindowState | null {
-  if (record.windowId) return windows.find((window) => window.id === record.windowId) ?? null;
-  return windows.find((window) => window.processId === record.id) ?? null;
-}
-
-function nativeDefinitionForProcess(
-  process: ProcessRecord,
-  nativeApps: NativeAppRegistry,
-): NativeAppDefinition | null {
-  return nativeApps.get(process.appId) ?? nativeApps.getByHandler(process.handlerId);
-}
-
-export function deriveTaskbarEntries(input: {
-  pinnedNative: readonly string[];
-  pinnedElements: readonly string[];
+export interface TaskbarModelInput {
+  preferences: ShellPreferences;
+  nativeApps: readonly NativeAppDefinition[];
   processes: readonly ProcessRecord[];
-  windows: readonly WindowState[];
-  nativeApps: NativeAppRegistry;
   elements: readonly ExternalElement[];
-}): TaskbarEntry[] {
-  const { pinnedNative, pinnedElements, processes, windows, nativeApps, elements } = input;
-  const pinnedNativeSet = new Set(pinnedNative);
-  const pinnedElementSet = new Set(pinnedElements);
-  const focusedWindow = topWindow(windows);
-  const result: TaskbarEntry[] = [];
-  const emittedNative = new Set<string>();
+}
 
-  for (const handlerId of pinnedNative) {
-    const app = nativeApps.getByHandler(handlerId);
-    if (!app || emittedNative.has(app.id)) continue;
-    const open = processes.filter((process) => process.appId === app.id && process.state !== "closing");
-    if (open.length <= 1) {
-      const record = open[0];
-      const window = record ? processWindow(record, windows) : null;
-      result.push({
-        kind: "native",
-        id: `native:${app.id}`,
-        appId: app.id,
-        handlerId: app.handlerId,
-        name: record?.title || app.name,
-        icon: app.icon,
-        pinned: true,
-        processes: open,
-        ...(record ? { processId: record.id } : {}),
-        running: open.length > 0,
-        focused: !!(window && focusedWindow?.id === window.id),
-        minimized: !!window?.minimized,
-      });
-      emittedNative.add(app.id);
+function nativeMetadataForProcess(
+  process: ProcessRecord,
+  appsByHandler: ReadonlyMap<HandlerId, NativeAppDefinition>,
+): Pick<NativeTaskbarEntry, "appId" | "name" | "icon"> {
+  const app = appsByHandler.get(process.handlerId);
+  return app
+    ? { appId: app.id, name: app.name, icon: app.icon }
+    : { appId: process.appId, name: process.title, icon: process.icon };
+}
+
+/**
+ * Derives the taskbar from pinned preferences and live service state only.
+ * Installed-but-unpinned and not-running applications are intentionally absent.
+ */
+export function deriveTaskbarEntries(input: TaskbarModelInput): TaskbarEntry[] {
+  const appsByHandler = new Map(input.nativeApps.map((app) => [app.handlerId, app] as const));
+  const processesByHandler = new Map<HandlerId, ProcessRecord[]>();
+  for (const process of input.processes) {
+    if (process.state === "closing") continue;
+    const group = processesByHandler.get(process.handlerId) ?? [];
+    group.push(process);
+    processesByHandler.set(process.handlerId, group);
+  }
+
+  const nativeHandlerOrder: HandlerId[] = [];
+  const seenNative = new Set<HandlerId>();
+  for (const handlerId of input.preferences.pinnedNative) {
+    if (!seenNative.has(handlerId) && appsByHandler.has(handlerId)) {
+      seenNative.add(handlerId);
+      nativeHandlerOrder.push(handlerId);
     }
   }
-
-  const openByApp = new Map<string, ProcessRecord[]>();
-  for (const process of processes) {
-    if (process.state === "closing") continue;
-    const list = openByApp.get(process.appId) ?? [];
-    list.push(process);
-    openByApp.set(process.appId, list);
+  for (const process of input.processes) {
+    if (process.state === "closing" || seenNative.has(process.handlerId)) continue;
+    seenNative.add(process.handlerId);
+    nativeHandlerOrder.push(process.handlerId);
   }
 
-  for (const [appId, open] of openByApp) {
-    const definition = nativeDefinitionForProcess(open[0] as ProcessRecord, nativeApps);
-    if (!definition) continue;
-    const alreadyPinned = emittedNative.has(appId);
-    if (open.length === 1 && alreadyPinned) continue;
+  const entries: TaskbarEntry[] = [];
+  for (const handlerId of nativeHandlerOrder) {
+    const running = processesByHandler.get(handlerId) ?? [];
+    const pinned = input.preferences.pinnedNative.includes(handlerId);
+    const app = appsByHandler.get(handlerId);
 
-    if (open.length === 1) {
-      const record = open[0] as ProcessRecord;
-      const window = processWindow(record, windows);
-      result.push({
+    if (running.length === 0) {
+      if (!pinned || !app) continue;
+      entries.push({
         kind: "native",
-        id: `native:${appId}`,
-        appId,
-        handlerId: definition.handlerId,
-        name: record.title || definition.name,
-        icon: record.icon || definition.icon,
-        pinned: pinnedNativeSet.has(definition.handlerId),
-        processes: open,
-        processId: record.id,
-        running: true,
-        focused: !!(window && focusedWindow?.id === window.id),
-        minimized: !!window?.minimized,
+        id: `native:${handlerId}`,
+        handlerId,
+        appId: app.id,
+        name: app.name,
+        icon: app.icon,
+        pinned: true,
+        process: null,
       });
-      emittedNative.add(appId);
       continue;
     }
 
-    // MVP preserves distinct process records rather than collapsing multiple
-    // instances into an ambiguous single button without a preview UI.
-    for (const record of open) {
-      const window = processWindow(record, windows);
-      result.push({
+    // A single open instance merges with its pinned handler entry. Multiple
+    // instances receive process-specific entries so distinct records are never
+    // silently collapsed into one task.
+    for (const process of running) {
+      const metadata = nativeMetadataForProcess(process, appsByHandler);
+      entries.push({
         kind: "native",
-        id: `process:${record.id}`,
-        appId,
-        handlerId: definition.handlerId,
-        name: record.title || definition.name,
-        icon: record.icon || definition.icon,
-        pinned: pinnedNativeSet.has(definition.handlerId),
-        processes: [record],
-        processId: record.id,
-        running: true,
-        focused: !!(window && focusedWindow?.id === window.id),
-        minimized: !!window?.minimized,
+        id: running.length === 1 ? `native:${handlerId}` : `process:${process.id}`,
+        handlerId,
+        ...metadata,
+        pinned,
+        process,
       });
     }
-    emittedNative.add(appId);
   }
 
-  for (const element of elements) {
-    if (!pinnedElementSet.has(element.id) && element.running !== "yes") continue;
-    result.push({
+  const elementsById = new Map(input.elements.map((element) => [element.id, element] as const));
+  const elementOrder: string[] = [];
+  const seenElements = new Set<string>();
+  for (const id of input.preferences.pinnedElements) {
+    if (elementsById.has(id) && !seenElements.has(id)) {
+      seenElements.add(id);
+      elementOrder.push(id);
+    }
+  }
+  for (const element of input.elements) {
+    if (element.running !== "yes" || seenElements.has(element.id)) continue;
+    seenElements.add(element.id);
+    elementOrder.push(element.id);
+  }
+
+  for (const id of elementOrder) {
+    const element = elementsById.get(id);
+    if (!element) continue;
+    entries.push({
       kind: "element",
       id: `element:${element.id}`,
-      appId: element.id,
+      elementId: element.id,
       name: element.name,
       ...(element.icon ? { icon: element.icon } : {}),
-      pinned: pinnedElementSet.has(element.id),
+      pinned: input.preferences.pinnedElements.includes(element.id),
       running: element.running,
     });
   }
 
-  // Keep pinned Elements visible even when discovery returned no current item.
-  // We cannot fabricate metadata, so unresolved pins are intentionally omitted.
-  return result;
+  return entries;
 }
 
 export type NativeTaskbarAction = "launch" | "focus" | "minimize";
 
-export function nativeTaskbarAction(entry: NativeTaskbarEntry): NativeTaskbarAction {
-  if (!entry.running || !entry.processId) return "launch";
-  if (entry.focused && !entry.minimized) return "minimize";
-  return "focus";
+export function windowForProcess(
+  process: ProcessRecord,
+  windows: readonly WindowState[],
+): WindowState | null {
+  if (process.windowId) {
+    const exact = windows.find((window) => window.id === process.windowId);
+    if (exact) return exact;
+  }
+  return windows.find((window) => window.processId === process.id) ?? null;
 }
 
-export async function activateNativeTaskbarEntry(
+export function focusedWindow(windows: readonly WindowState[]): WindowState | null {
+  let focused: WindowState | null = null;
+  for (const window of windows) {
+    if (window.minimized) continue;
+    if (!focused || window.z > focused.z) focused = window;
+  }
+  return focused;
+}
+
+export function decideNativeTaskbarAction(
+  entry: NativeTaskbarEntry,
+  windows: readonly WindowState[],
+): NativeTaskbarAction {
+  if (!entry.process) return "launch";
+  const targetWindow = windowForProcess(entry.process, windows);
+  if (!targetWindow || targetWindow.minimized) return "focus";
+  return focusedWindow(windows)?.id === targetWindow.id ? "minimize" : "focus";
+}
+
+export async function executeNativeTaskbarAction(
   entry: NativeTaskbarEntry,
   process: ProcessController,
   windows: WindowManager,
-): Promise<void> {
-  const action = nativeTaskbarAction(entry);
+  target: OpenTarget = {},
+): Promise<NativeTaskbarAction> {
+  const action = decideNativeTaskbarAction(entry, windows.list());
   if (action === "launch") {
-    await process.open(entry.handlerId, {});
-    return;
+    await process.open(entry.handlerId, target);
+  } else if (entry.process) {
+    if (action === "focus") process.focus(entry.process.id);
+    else {
+      const targetWindow = windowForProcess(entry.process, windows.list());
+      if (targetWindow) windows.minimize(targetWindow.id);
+    }
   }
-  if (!entry.processId) return;
-  if (action === "focus") {
-    process.focus(entry.processId);
-    return;
-  }
-  const record = process.list().find((candidate) => candidate.id === entry.processId);
-  if (!record?.windowId) return;
-  windows.minimize(record.windowId);
+  return action;
 }
 
-export function preserveExternalRunning(value: ExternalRunningState): ExternalRunningState {
-  return value;
+export interface ExternalOpenResult {
+  refreshError: unknown | null;
 }
 
-export function deriveTrayEntries(elements: readonly ExternalElement[]): Array<{
+/** Refresh failure is bounded: it is reported but never turns unknown into no or blocks opening. */
+export async function openExternalElement(
+  bridge: NeutronBridge,
+  appId: string,
+): Promise<ExternalOpenResult> {
+  let refreshError: unknown | null = null;
+  try {
+    await bridge.refreshRuntimeState();
+  } catch (error: unknown) {
+    refreshError = error;
+  }
+  await bridge.openElement(appId);
+  return { refreshError };
+}
+
+export interface StartNativeEntry {
+  kind: "native";
+  id: string;
+  handlerId: HandlerId;
   appId: string;
+  name: string;
+  icon: IconRef;
+}
+
+export interface StartElementEntry {
+  kind: "element";
+  id: string;
+  elementId: string;
+  name: string;
+  icon?: string;
+  description: string;
+  running: ExternalRunning;
+}
+
+export type StartAppEntry = StartNativeEntry | StartElementEntry;
+
+export function deriveStartEntries(
+  nativeApps: readonly NativeAppDefinition[],
+  elements: readonly ExternalElement[],
+): StartAppEntry[] {
+  const entries: StartAppEntry[] = [
+    ...nativeApps.map<StartNativeEntry>((app) => ({
+      kind: "native",
+      id: `native:${app.handlerId}`,
+      handlerId: app.handlerId,
+      appId: app.id,
+      name: app.name,
+      icon: app.icon,
+    })),
+    ...elements.map<StartElementEntry>((element) => ({
+      kind: "element",
+      id: `element:${element.id}`,
+      elementId: element.id,
+      name: element.name,
+      ...(element.icon ? { icon: element.icon } : {}),
+      description: element.description,
+      running: element.running,
+    })),
+  ];
+  return entries.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function filterStartEntries(entries: readonly StartAppEntry[], query: string): StartAppEntry[] {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return [...entries];
+  return entries.filter((entry) => {
+    const details = entry.kind === "element" ? entry.description : entry.appId;
+    return `${entry.name}\n${details}`.toLocaleLowerCase().includes(needle);
+  });
+}
+
+export interface TrayEntry {
+  elementId: string;
   title: string;
-  running: ExternalRunningState;
-}> {
-  return elements.flatMap((element) => element.tray?.title
-    ? [{ appId: element.id, title: element.tray.title, running: element.running }]
-    : []);
+  running: ExternalRunning;
+}
+
+/** Only the frozen vanilla tray declaration is surfaced. */
+export function deriveTrayEntries(elements: readonly ExternalElement[]): TrayEntry[] {
+  return elements.flatMap((element) => {
+    const title = element.tray?.title;
+    if (typeof title !== "string" || !title.trim()) return [];
+    return [{ elementId: element.id, title, running: element.running }];
+  });
 }
