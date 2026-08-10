@@ -19,6 +19,7 @@ import type {
   WindowManager,
 } from "../contracts/index.ts";
 import { addCalendarMonths, buildCalendarMonth, startOfCalendarMonth } from "./calendar.ts";
+import { ShellIcon } from "./icon.tsx";
 import {
   decideNativeTaskbarAction,
   deriveStartEntries,
@@ -32,12 +33,13 @@ import {
   type TaskbarEntry,
 } from "./model.ts";
 import {
+  cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
+  saveShellPreferencesNonDestructive,
   SHELL_THEME_IDS,
   ShellPreferenceStore,
   togglePinned,
   type ShellPreferences,
-  type ShellStorage,
   type ShellThemeId,
 } from "./preferences.ts";
 import {
@@ -61,7 +63,6 @@ export interface ShellProps {
   nativeApps: NativeAppRegistry;
   associations?: AssociationRegistry;
   openService?: OpenService;
-  storage?: ShellStorage | null;
   children?: ReactNode;
   now?: () => Date;
 }
@@ -71,21 +72,6 @@ const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false 
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function isImageRef(value: string | undefined): value is string {
-  return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/)/u.test(value);
-}
-
-function initials(value: string): string {
-  const words = value.trim().split(/\s+/u).filter(Boolean);
-  return (words.slice(0, 2).map((word) => word[0]).join("") || "P").toLocaleUpperCase();
-}
-
-function ShellIcon({ icon, label }: { icon?: string; label: string }) {
-  return <span className="plasmon-shell__app-icon" aria-hidden="true">
-    {isImageRef(icon) ? <img src={icon} alt="" draggable={false} /> : <span>{icon || initials(label)}</span>}
-  </span>;
 }
 
 function StartMark() {
@@ -169,10 +155,10 @@ function focusRelative(event: ReactKeyboardEvent<HTMLElement>, selector: string)
 
 export function Shell({
   process, windows, fs, fsEvents, neutron, nativeApps, associations, openService,
-  storage, children, now = () => new Date(),
+  children, now = () => new Date(),
 }: ShellProps) {
-  const preferenceStore = useMemo(() => new ShellPreferenceStore(storage === undefined ? undefined : storage), [storage]);
-  const [preferences, setPreferences] = useState<ShellPreferences>(() => preferenceStore.load());
+  const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
+  const [preferences, setPreferences] = useState<ShellPreferences | null>(null);
   const [flyout, setFlyout] = useState<Flyout>(null);
   const [startQuery, setStartQuery] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -190,15 +176,33 @@ export function Shell({
   const searchAbort = useRef<AbortController | null>(null);
   const { processes, windowStates } = useNativeSnapshots(process, windows);
   const { elements, error: neutronError, reload: reloadElements } = useExternalElements(neutron);
+  const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
+  const preferencesReady = preferences !== null;
+
+  useEffect(() => {
+    let active = true;
+    setPreferences(null);
+    void preferenceStore.load()
+      .then((loaded) => {
+        if (active) setPreferences(loaded);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setPreferences(cloneShellPreferences());
+        setNotice(`Shell preferences could not be loaded: ${formatError(cause)}. Defaults are active for this session.`);
+      });
+    return () => { active = false; };
+  }, [preferenceStore]);
 
   const nativeDefinitions = useMemo(() => nativeApps.list(), [nativeApps]);
   const startEntries = useMemo(() => deriveStartEntries(nativeDefinitions, elements), [elements, nativeDefinitions]);
   const filteredStart = useMemo(() => filterStartEntries(startEntries, startQuery), [startEntries, startQuery]);
   const taskbarEntries = useMemo(
-    () => deriveTaskbarEntries({ preferences, nativeApps: nativeDefinitions, processes, elements }),
-    [elements, nativeDefinitions, preferences, processes],
+    () => deriveTaskbarEntries({ preferences: effectivePreferences, nativeApps: nativeDefinitions, processes, elements }),
+    [effectivePreferences, elements, nativeDefinitions, processes],
   );
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
+  const elementsById = useMemo(() => new Map(elements.map((element) => [element.id, element] as const)), [elements]);
   const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
   const calendar = useMemo(() => buildCalendarMonth(calendarAnchor, clock), [calendarAnchor, clock]);
   const focused = useMemo(() => focusedWindow(windowStates), [windowStates]);
@@ -245,16 +249,24 @@ export function Shell({
   }, [elements, flyout, fs, fsEpoch, nativeDefinitions, searchQuery]);
 
   const persistPreferences = useCallback((next: ShellPreferences) => {
+    if (!preferencesReady) {
+      setNotice("Shell preferences are still loading; try that setting again in a moment.");
+      return;
+    }
     setPreferences(next);
-    if (!preferenceStore.save(next)) setNotice("Shell preferences are temporary because local storage is unavailable.");
-  }, [preferenceStore]);
+    void saveShellPreferencesNonDestructive(preferenceStore, next).then((outcome) => {
+      if (!outcome.saved) {
+        setNotice(`Shell preferences could not be saved: ${formatError(outcome.error)}. Your changes remain active for this session.`);
+      }
+    });
+  }, [preferenceStore, preferencesReady]);
   const toggleNativePin = useCallback((handlerId: string) => persistPreferences({
-    ...preferences, pinnedNative: togglePinned(preferences.pinnedNative, handlerId),
-  }), [persistPreferences, preferences]);
+    ...effectivePreferences, pinnedNative: togglePinned(effectivePreferences.pinnedNative, handlerId),
+  }), [effectivePreferences, persistPreferences]);
   const toggleElementPin = useCallback((elementId: string) => persistPreferences({
-    ...preferences, pinnedElements: togglePinned(preferences.pinnedElements, elementId),
-  }), [persistPreferences, preferences]);
-  const selectTheme = useCallback((themeId: ShellThemeId) => persistPreferences({ ...preferences, themeId }), [persistPreferences, preferences]);
+    ...effectivePreferences, pinnedElements: togglePinned(effectivePreferences.pinnedElements, elementId),
+  }), [effectivePreferences, persistPreferences]);
+  const selectTheme = useCallback((themeId: ShellThemeId) => persistPreferences({ ...effectivePreferences, themeId }), [effectivePreferences, persistPreferences]);
 
   const openElement = useCallback(async (elementId: string) => {
     setActionError(null); setBusyId(`element:${elementId}`);
@@ -314,10 +326,10 @@ export function Shell({
     weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
   }).format(clock);
   const pinnedStart = startEntries.filter((entry) => entry.kind === "native"
-    ? preferences.pinnedNative.includes(entry.handlerId)
-    : preferences.pinnedElements.includes(entry.elementId));
+    ? effectivePreferences.pinnedNative.includes(entry.handlerId)
+    : effectivePreferences.pinnedElements.includes(entry.elementId));
 
-  return <div className={`plasmon-shell plasmon-shell--wallpaper-${preferences.wallpaper}`} data-plasmon-theme={preferences.themeId}>
+  return <div className={`plasmon-shell plasmon-shell--wallpaper-${effectivePreferences.wallpaper}`} data-plasmon-theme={effectivePreferences.themeId} aria-busy={!preferencesReady}>
     <div className="plasmon-shell__wallpaper" aria-hidden="true"><span className="plasmon-shell__aurora plasmon-shell__aurora--one" /><span className="plasmon-shell__aurora plasmon-shell__aurora--two" /></div>
     <div className="plasmon-shell__workspace" data-shell-workspace="true">{children}</div>
 
@@ -329,8 +341,8 @@ export function Shell({
       <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={startQuery} onChange={(event) => setStartQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && startQuery.trim()) { setSearchQuery(startQuery); setFlyout("search"); } }} placeholder="Search apps, files, and Atoms" aria-label="Search Start" /></div>
       {pinnedStart.length > 0 && !startQuery.trim() ? <div className="plasmon-shell__section"><h3>Pinned</h3><div className="plasmon-shell__grid" onKeyDown={(event) => focusRelative(event, "[data-start-item]")}>{pinnedStart.map((entry) => <button key={`pinned:${entry.id}`} type="button" data-start-item onClick={() => void launchStartEntry(entry)}><ShellIcon icon={entry.icon} label={entry.name} /><span>{entry.name}</span></button>)}</div></div> : null}
       <div className="plasmon-shell__section"><h3>{startQuery.trim() ? "App matches" : "All apps"}</h3><div className="plasmon-shell__list" onKeyDown={(event) => focusRelative(event, "[data-start-item]")}>{filteredStart.map((entry) => {
-        const pinned = entry.kind === "native" ? preferences.pinnedNative.includes(entry.handlerId) : preferences.pinnedElements.includes(entry.elementId);
-        return <div className="plasmon-shell__row" key={entry.id}><button type="button" data-start-item onClick={() => void launchStartEntry(entry)} disabled={busyId === entry.id}><ShellIcon icon={entry.icon} label={entry.name} /><span><strong>{entry.name}</strong><small>{entry.kind === "element" ? `Neutron Element · running ${entry.running}` : "Plasmon native application"}</small></span></button><button type="button" aria-label={`${pinned ? "Unpin" : "Pin"} ${entry.name}`} aria-pressed={pinned} onClick={() => entry.kind === "native" ? toggleNativePin(entry.handlerId) : toggleElementPin(entry.elementId)}>{pinned ? "Unpin" : "Pin"}</button></div>;
+        const pinned = entry.kind === "native" ? effectivePreferences.pinnedNative.includes(entry.handlerId) : effectivePreferences.pinnedElements.includes(entry.elementId);
+        return <div className="plasmon-shell__row" key={entry.id}><button type="button" data-start-item onClick={() => void launchStartEntry(entry)} disabled={busyId === entry.id}><ShellIcon icon={entry.icon} label={entry.name} /><span><strong>{entry.name}</strong><small>{entry.kind === "element" ? `Neutron Element · running ${entry.running}` : "Plasmon native application"}</small></span></button><button type="button" disabled={!preferencesReady} aria-label={`${pinned ? "Unpin" : "Pin"} ${entry.name}`} aria-pressed={pinned} onClick={() => entry.kind === "native" ? toggleNativePin(entry.handlerId) : toggleElementPin(entry.elementId)}>{pinned ? "Unpin" : "Pin"}</button></div>;
       })}{filteredStart.length === 0 ? <p>No matching applications.</p> : null}</div></div>
       <footer><button type="button" onClick={() => setFlyout("settings")}>Settings</button></footer>
     </section> : null}
@@ -338,19 +350,19 @@ export function Shell({
     {flyout === "search" ? <section className="plasmon-shell__panel plasmon-shell__search-panel" aria-label="Search">
       <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search files, metadata, Atoms, apps, and Elements" aria-label="Search Plasmon" />{searchBusy ? <span role="status">Searching…</span> : null}</div>
       <div className="plasmon-shell__tabs" role="tablist">{(["all", "apps", "documents", "media", "atoms"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={searchTab === tab} onClick={() => setSearchTab(tab)}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}</div>
-      <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{!searchQuery.trim() ? <p>Type to search this Plasmon session.</p> : null}{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety limit; refine the query.</p> : null}{filteredSearch.map((result) => <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}><span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>)}</div>
+      <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{!searchQuery.trim() ? <p>Type to search this Plasmon session.</p> : null}{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety limit; refine the query.</p> : null}{filteredSearch.map((result) => <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}>{result.kind === "native-app" ? <ShellIcon icon={result.app.icon} label={result.title} /> : result.kind === "element" ? <ShellIcon icon={result.element.icon} label={result.title} /> : null}<span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>)}</div>
     </section> : null}
 
     {flyout === "calendar" ? <section className="plasmon-shell__panel plasmon-shell__calendar-panel" aria-label="Clock and calendar"><div className="plasmon-shell__calendar-time"><strong>{clockText}</strong><span>{fullDateTime}</span></div><div className="plasmon-shell__calendar-header"><button type="button" aria-label="Previous month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, -1))}>‹</button><h2>{calendar.label}</h2><button type="button" aria-label="Next month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, 1))}>›</button></div><div className="plasmon-shell__calendar-grid">{calendar.weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}{calendar.days.map((day) => <span key={day.key} className={`${day.inMonth ? "" : "is-outside"}${day.isToday ? " is-today" : ""}`} aria-current={day.isToday ? "date" : undefined}>{day.day}</span>)}</div><button type="button" onClick={() => setCalendarAnchor(startOfCalendarMonth(clock))}>Today</button></section> : null}
 
-    {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => <button key={entry.elementId} type="button" onClick={() => void openElement(entry.elementId)}><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>)}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
+    {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => { const owner = elementsById.get(entry.elementId); return <button key={entry.elementId} type="button" onClick={() => void openElement(entry.elementId)}><ShellIcon icon={owner?.icon} label={owner?.name ?? entry.title} /><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>; })}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
 
-    {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" aria-label="Shell settings"><header><span>Browser-local</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" aria-pressed={preferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" aria-pressed={preferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...preferences, wallpaper: preferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {preferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance stay in this browser profile. Live process, window, and Neutron runtime truth is never persisted here.</p></section> : null}
+    {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance persist through the Plasmon filesystem service. Live process, window, and Neutron runtime truth is never persisted here.</p></section> : null}
 
     <nav className="plasmon-shell__taskbar" aria-label="Taskbar"><div className="plasmon-shell__taskbar-main"><button type="button" className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => entry.kind === "element" ? <button key={entry.id} type="button" className={`plasmon-shell__task-button${entry.running === "yes" ? " is-running" : ""}`} aria-label={`${entry.name}; Neutron running state ${entry.running}`} data-running={entry.running} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} /><small>{entry.running}</small></button> : (() => {
       const action = decideNativeTaskbarAction(entry, windowStates); const active = action === "minimize" && entry.process !== null;
       return <button key={entry.id} type="button" className={`plasmon-shell__task-button${entry.process ? " is-running" : ""}${active ? " is-focused" : ""}`} aria-label={`${entry.name}${entry.process ? "; running" : "; pinned"}`} aria-pressed={active} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} /></button>;
-    })())}</div></div><div className="plasmon-shell__taskbar-status"><button type="button" className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
+    })())}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
     <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
   </div>;
 }
