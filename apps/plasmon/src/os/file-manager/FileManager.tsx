@@ -19,6 +19,7 @@ import type {
   OpenService,
   ProcessController,
 } from "../contracts/index.ts";
+import { allocateDesktopPositions } from "../desktop/layout.ts";
 import {
   FileOperationClipboard,
   RefreshGate,
@@ -46,6 +47,7 @@ import {
   type NewDocumentKind,
 } from "./create-import.ts";
 import { finishEntryDragGesture } from "./drag.ts";
+import { ErrorBanner } from "./ErrorBanner.tsx";
 import { FileEntry } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
 import type { InlineRenameState } from "./rename.ts";
@@ -114,9 +116,6 @@ export function FileManager({
   const [error, setError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [rename, setRename] = useState<InlineRenameState | null>(null);
-  const [creatingFolder, setCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("New Folder");
-  const [newFolderError, setNewFolderError] = useState<string | null>(null);
   const [openWithNode, setOpenWithNode] = useState<FsNode | null>(null);
   const [propertiesNode, setPropertiesNode] = useState<FsNode | null>(null);
   const [marquee, setMarquee] = useState<MarqueeVisual>(null);
@@ -188,6 +187,10 @@ export function FileManager({
     return query ? nodes.filter((node) => node.name.toLocaleLowerCase().includes(query)) : nodes;
   }, [filterQuery, nodes]);
   const orderedIds = useMemo(() => visibleNodes.map((node) => node.id), [visibleNodes]);
+  const desktopRenderPositions = useMemo(
+    () => presentation === "desktop" ? allocateDesktopPositions(positions ?? {}, visibleNodes) : {},
+    [positions, presentation, visibleNodes],
+  );
 
   useEffect(() => {
     onSnapshot?.({ nodes: visibleNodes, selectedIds: selection.ids });
@@ -239,6 +242,11 @@ export function FileManager({
   const commitRename = async () => {
     if (!rename || rename.busy || renameCommitRef.current === rename.nodeId) return;
     const state = rename;
+    if (state.value === state.initialName) {
+      setRename(null);
+      setError(null);
+      return;
+    }
     renameCommitRef.current = state.nodeId;
     setRename({ ...state, busy: true, error: null });
     try {
@@ -255,6 +263,19 @@ export function FileManager({
   const cancelRename = () => {
     renameCommitRef.current = null;
     setRename(null);
+  };
+
+  const createNewFolder = async () => {
+    setContextMenu(null);
+    try {
+      const created = await fs.mkdir(directoryId, "New Folder");
+      setError(null);
+      await refresh();
+      setSelection({ ids: new Set([created.id]), anchor: created.id, focus: created.id });
+      beginInlineRename(created);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause));
+    }
   };
 
   const removeNodes = async (items: readonly FsNode[]) => {
@@ -293,21 +314,6 @@ export function FileManager({
       await refresh();
     } catch (cause: unknown) {
       setError(errorMessage(cause));
-    }
-  };
-
-  const commitNewFolder = async () => {
-    setNewFolderError(null);
-    try {
-      const created = await fs.mkdir(directoryId, newFolderName.trim());
-      setCreatingFolder(false);
-      setNewFolderName("New Folder");
-      setError(null);
-      await refresh();
-      setSelection({ ids: new Set([created.id]), anchor: created.id, focus: created.id });
-      beginInlineRename(created);
-    } catch (cause: unknown) {
-      setNewFolderError(errorMessage(cause));
     }
   };
 
@@ -573,9 +579,7 @@ export function FileManager({
   const canOpenWith = Boolean(contextNode && contextNode.kind !== "directory" && associations && openService);
 
   const menuAction = (action: "open" | "openWith" | "cut" | "copy" | "rename" | "delete" | "properties" | "newFolder" | "newText" | "newMarkdown" | "import" | "paste") => {
-    if (action === "newFolder") {
-      setContextMenu(null); setCreatingFolder(true); setNewFolderName("New Folder"); setNewFolderError(null); setError(null); return;
-    }
+    if (action === "newFolder") { void createNewFolder(); return; }
     if (action === "newText") { void createNewDocument("text"); return; }
     if (action === "newMarkdown") { void createNewDocument("markdown"); return; }
     if (action === "import") { triggerImport(); return; }
@@ -636,7 +640,7 @@ export function FileManager({
 
       {presentation !== "desktop" ? (
         <div className="fm-commandbar" role="toolbar" aria-label="File commands">
-          <button type="button" onClick={() => { setCreatingFolder(true); setNewFolderName("New Folder"); setNewFolderError(null); setError(null); }}>New Folder</button>
+          <button type="button" onClick={() => void createNewFolder()}>New Folder</button>
           <button type="button" onClick={() => void createNewDocument("text")}>New Text Document</button>
           <button type="button" onClick={() => void createNewDocument("markdown")}>New Markdown Document</button>
           <button type="button" onClick={triggerImport}>Import Files…</button>
@@ -648,15 +652,7 @@ export function FileManager({
         </div>
       ) : null}
 
-      {error ? (
-        <div className="fm-error-banner" role="alert">
-          <span>{error}</span>
-          <div className="fm-error-banner__actions">
-            <button type="button" onClick={() => setError(null)}>Dismiss</button>
-            <button type="button" onClick={() => void refresh()}>Retry</button>
-          </div>
-        </div>
-      ) : null}
+      {error ? <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => void refresh()} /> : null}
       {loading && nodes.length === 0 ? <p className="fm-empty">Loading…</p> : null}
 
       {presentation === "details" ? (
@@ -664,26 +660,7 @@ export function FileManager({
       ) : null}
 
       <div className="fm-entries">
-        {creatingFolder ? (
-          <div className={`fm-entry fm-entry--${presentation} fm-entry--new-folder`}>
-            <span className="fm-entry__icon fm-entry__icon--folder" aria-hidden="true">▰</span>
-            <span className="fm-entry__name">
-              <input
-                autoFocus
-                value={newFolderName}
-                aria-label="New folder name"
-                onChange={(event: ReactChangeEvent<HTMLInputElement>) => { setNewFolderName(event.target.value); setNewFolderError(null); }}
-                onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
-                  if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); void commitNewFolder(); }
-                  if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setCreatingFolder(false); setNewFolderError(null); }
-                }}
-              />
-              {newFolderError ? <span className="fm-inline-error" role="alert">{newFolderError}</span> : null}
-            </span>
-          </div>
-        ) : null}
-
-        {visibleNodes.map((node, index) => (
+        {visibleNodes.map((node) => (
           <FileEntry
             key={node.id}
             fs={fs}
@@ -691,7 +668,7 @@ export function FileManager({
             selected={selection.ids.has(node.id)}
             focused={selection.focus === node.id}
             presentation={presentation}
-            {...(presentation === "desktop" ? { position: positions?.[node.id] ?? { x: 16 + Math.floor(index / 6) * 104, y: 16 + (index % 6) * 104 } } : {})}
+            {...(presentation === "desktop" ? { position: desktopRenderPositions[node.id] } : {})}
             rename={rename}
             setRef={(element) => {
               if (element) entriesRef.current.set(node.id, element);
@@ -714,7 +691,7 @@ export function FileManager({
         ))}
       </div>
 
-      {!loading && visibleNodes.length === 0 && !creatingFolder ? <p className="fm-empty">This folder is empty.</p> : null}
+      {!loading && visibleNodes.length === 0 ? <p className="fm-empty">This folder is empty.</p> : null}
       {marquee ? <div className="fm-marquee" aria-hidden="true" style={marquee} /> : null}
 
       {contextMenu ? (
