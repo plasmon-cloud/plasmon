@@ -20,8 +20,10 @@ import {
   RefreshGate,
   beginRename,
   cancelRename,
+  captureMarqueeRectangles,
   clearSelection,
   commitRename,
+  decideEntryPointerSelection,
   deleteNodes,
   emptySelection,
   marqueeSelection,
@@ -208,6 +210,28 @@ test("selection toggle/add/range/select-all/clear remains keyed by NodeId", () =
   expect(stable.ids.has("node-b")).toBe(true);
 });
 
+test("pointer-down on a selected member preserves the group for drag and no-drag release collapses", () => {
+  const ids = ["a", "b", "c"];
+  let selection = selectNode(emptySelection(), ids, "a");
+  selection = selectNode(selection, ids, "b", { additive: true });
+
+  const decision = decideEntryPointerSelection(selection, ids, "a");
+  expect([...decision.selection.ids]).toEqual(["a", "b"]);
+  expect(decision.dragIds).toEqual(["a", "b"]);
+  expect(decision.releaseSelection ? [...decision.releaseSelection.ids] : null).toEqual(["a"]);
+});
+
+test("normal pointer-down on an unselected item selects only that item", () => {
+  const ids = ["a", "b", "c"];
+  let selection = selectNode(emptySelection(), ids, "a");
+  selection = selectNode(selection, ids, "b", { additive: true });
+
+  const decision = decideEntryPointerSelection(selection, ids, "c");
+  expect([...decision.selection.ids]).toEqual(["c"]);
+  expect(decision.dragIds).toEqual(["c"]);
+  expect(decision.releaseSelection).toBeNull();
+});
+
 test("marquee selects intersections and modifier toggles against starting selection", () => {
   const rects = new Map([
     ["a", { left: 0, top: 0, right: 30, bottom: 30 }],
@@ -216,6 +240,25 @@ test("marquee selects intersections and modifier toggles against starting select
   ]);
   expect([...marqueeSelection(new Set(), rects, { left: 20, top: 20, right: 70, bottom: 70 }, false)]).toEqual(["a", "b"]);
   expect([...marqueeSelection(new Set(["a", "c"]), rects, { left: 20, top: 20, right: 70, bottom: 70 }, true)]).toEqual(["c", "b"]);
+});
+
+test("captured marquee rectangles are reused across multiple marquee positions", () => {
+  const source = new Map([
+    ["a", { left: 0, top: 0, right: 20, bottom: 20 }],
+    ["b", { left: 40, top: 40, right: 60, bottom: 60 }],
+  ]);
+  let reads = 0;
+  const captured = captureMarqueeRectangles(["a", "b"], (id) => {
+    reads += 1;
+    return source.get(id);
+  });
+  expect(reads).toBe(2);
+  expect([...marqueeSelection(new Set(), captured, { left: 0, top: 0, right: 25, bottom: 25 }, false)]).toEqual(["a"]);
+  source.get("a")!.left = 200;
+  source.get("a")!.right = 220;
+  expect([...marqueeSelection(new Set(), captured, { left: 35, top: 35, right: 65, bottom: 65 }, false)]).toEqual(["b"]);
+  expect([...marqueeSelection(new Set(), captured, { left: 0, top: 0, right: 25, bottom: 25 }, false)]).toEqual(["a"]);
+  expect(reads).toBe(2);
 });
 
 test("rename commit, cancel, and service error semantics are explicit", async () => {
@@ -320,6 +363,41 @@ test("Properties inspection reads current FsService path, handler, Atom identity
   expect(inspection.defaultHandler?.id).toBe("native:text");
   expect(inspection.atom?.atomId).toBe("atom-123");
   expect(inspection.node.contentHash).toBe("content-abc");
+});
+
+test("Properties effective default comes from probe-aware Open With resolution", async () => {
+  const handlerA: HandlerDefinition = {
+    id: "native:a",
+    kind: "native",
+    name: "Probe-less A",
+    icon: "system:a",
+    capabilities: ["url"],
+  };
+  const handlerB: HandlerDefinition = {
+    id: "native:b",
+    kind: "native",
+    name: "Probe-aware B",
+    icon: "system:b",
+    capabilities: ["url"],
+  };
+  let getDefaultCalls = 0;
+  const registry: AssociationRegistry = {
+    registerHandler: () => undefined,
+    registerRule: () => undefined,
+    getHandler: (id) => id === handlerA.id ? handlerA : id === handlerB.id ? handlerB : null,
+    resolve: async (_resource, probe) => probe === undefined ? [handlerA] : [handlerB],
+    getDefault: async () => { getDefaultCalls += 1; return handlerA; },
+    setUserDefault: async () => undefined,
+  };
+  const fs = new FakeFs([
+    node("root", null, "", "directory"),
+    node("shortcut", "root", "Demo.url", "shortcut"),
+  ]);
+
+  const inspection = await inspectProperties(fs, registry, "shortcut");
+  expect(inspection.compatibleHandlers.map((handler) => handler.id)).toEqual(["native:b"]);
+  expect(inspection.defaultHandler?.id).toBe("native:b");
+  expect(getDefaultCalls).toBe(0);
 });
 
 test("Open delegates to the existing association/Open With service instead of reimplementing defaults", async () => {
