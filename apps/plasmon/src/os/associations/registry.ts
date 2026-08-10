@@ -44,6 +44,8 @@ interface Match {
   typeKey?: string;
 }
 
+const NO_DEFAULTS: ReadonlySet<string> = new Set<string>();
+
 export interface AssociationRegistryOptions {
   defaults?: AssociationDefaultStore;
   shortcutAliases?: Readonly<Record<string, HandlerId>>;
@@ -161,7 +163,7 @@ export class HandlerAssociationRegistry implements AssociationRegistry {
     return null;
   }
 
-  async resolve(node: FsNode, contentProbe?: Uint8Array): Promise<HandlerDefinition[]> {
+  private async collectMatches(node: FsNode, contentProbe?: Uint8Array): Promise<Match[]> {
     const matches: Match[] = [];
     const explicit = metadataString(node, "opensWith");
     if (explicit && this.handlers.has(explicit)) matches.push({ handlerId: explicit, stage: 0, specificity: 0, priority: Number.MAX_SAFE_INTEGER, ruleId: "~opensWith" });
@@ -235,6 +237,18 @@ export class HandlerAssociationRegistry implements AssociationRegistry {
       }
     }
 
+    return matches;
+  }
+
+  async defaultTypeKeyFor(node: FsNode, handlerId: HandlerId, contentProbe?: Uint8Array): Promise<string | null> {
+    const matches = (await this.collectMatches(node, contentProbe))
+      .filter((match): match is Match & { typeKey: string } => match.handlerId === handlerId && match.typeKey !== undefined);
+    matches.sort((a, b) => compareMatch(a, b, NO_DEFAULTS));
+    return matches[0]?.typeKey ?? null;
+  }
+
+  async resolve(node: FsNode, contentProbe?: Uint8Array): Promise<HandlerDefinition[]> {
+    const matches = await this.collectMatches(node, contentProbe);
     const typeKeys = [...new Set(matches.flatMap((match) => match.typeKey ? [match.typeKey] : []))];
     const defaults = new Set<string>();
     await Promise.all(typeKeys.map(async (typeKey) => {

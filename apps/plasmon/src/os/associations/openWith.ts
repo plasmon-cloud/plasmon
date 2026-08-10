@@ -9,8 +9,15 @@ import type {
 } from "../contracts/index.ts";
 import { tryGetAtomDescriptorFromNode } from "./atom.ts";
 import { tryParseAtomPackage } from "./atomPackage.ts";
-import { associationTypeKeysForNode } from "./registry.ts";
 import { tryParseInternetShortcut } from "./shortcut.ts";
+
+interface DefaultKeyAssociationRegistry extends AssociationRegistry {
+  defaultTypeKeyFor(node: FsNode, handlerId: HandlerId, contentProbe?: Uint8Array): Promise<string | null>;
+}
+
+function supportsDefaultKeyResolution(registry: AssociationRegistry): registry is DefaultKeyAssociationRegistry {
+  return typeof (registry as Partial<DefaultKeyAssociationRegistry>).defaultTypeKeyFor === "function";
+}
 
 export interface OpenWithCandidate {
   handler: HandlerDefinition;
@@ -89,9 +96,11 @@ export class OpenWithServiceModel {
     if (!model.candidates.some((candidate) => candidate.handler.id === handlerId)) {
       throw new Error(`Handler ${handlerId} is not compatible with ${node.name}`);
     }
-    const atom = model.target.atom ?? null;
-    const typeKey = associationTypeKeysForNode(node, atom)[0];
-    if (!typeKey) throw new Error(`No stable association type is available for ${node.name}`);
+    if (!supportsDefaultKeyResolution(this.registry)) {
+      throw new Error("Association registry cannot determine which matcher applies to the selected handler");
+    }
+    const typeKey = await this.registry.defaultTypeKeyFor(node, handlerId, contentProbe);
+    if (!typeKey) throw new Error(`Handler ${handlerId} has no defaultable association matcher for ${node.name}`);
     await this.registry.setUserDefault(typeKey, handlerId);
     return typeKey;
   }

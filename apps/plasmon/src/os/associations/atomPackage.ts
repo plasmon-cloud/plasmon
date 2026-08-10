@@ -165,10 +165,35 @@ export function createAtomPackage(input: AtomPackageInput): Uint8Array {
 function readU16(view: DataView, offset: number): number { return view.getUint16(offset, true); }
 function readU32(view: DataView, offset: number): number { return view.getUint32(offset, true); }
 
-async function inflateRaw(bytes: Uint8Array): Promise<Uint8Array> {
+class ZipSizeLimitError extends Error {
+  constructor() {
+    super("Decompressed ZIP entry exceeds the configured size limit");
+    this.name = "ZipSizeLimitError";
+  }
+}
+
+async function inflateRaw(bytes: Uint8Array, maxOutputBytes: number): Promise<Uint8Array> {
   if (typeof DecompressionStream === "undefined") throw new Error("Deflate decompression is unavailable");
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.byteLength === 0) continue;
+      if (value.byteLength > maxOutputBytes - total) {
+        try { await reader.cancel("Atom package decompression limit exceeded"); } catch { /* cancellation is best effort */ }
+        throw new ZipSizeLimitError();
+      }
+      total += value.byteLength;
+      chunks.push(value.slice());
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return concat(chunks);
 }
 
 async function readZip(bytes: Uint8Array, maxUncompressedBytes: number): Promise<AtomPackageParseResult | Map<string, Uint8Array>> {
@@ -190,7 +215,8 @@ async function readZip(bytes: Uint8Array, maxUncompressedBytes: number): Promise
   const result = new Map<string, Uint8Array>();
   const seenNames = new Set<string>();
   let offset = centralOffset;
-  let totalUncompressed = 0;
+  let declaredTotalUncompressed = 0;
+  let actualTotalUncompressed = 0;
   for (let index = 0; index < count; index += 1) {
     if (offset + 46 > bytes.length || readU32(view, offset) !== ZIP_CENTRAL) return fail("malformed_zip", "Malformed ZIP central directory entry");
     const flags = readU16(view, offset + 8);
@@ -213,8 +239,8 @@ async function readZip(bytes: Uint8Array, maxUncompressedBytes: number): Promise
     if (!safeZipEntryName(name)) return fail("unsafe_path", `Unsafe Atom package entry: ${name}`);
     if (seenNames.has(name)) return fail("malformed_zip", `Duplicate Atom package entry: ${name}`);
     seenNames.add(name);
-    totalUncompressed += uncompressedSize;
-    if (uncompressedSize > maxUncompressedBytes || totalUncompressed > maxUncompressedBytes) return fail("too_large", "Atom package exceeds the configured uncompressed size limit");
+    declaredTotalUncompressed += uncompressedSize;
+    if (uncompressedSize > maxUncompressedBytes || declaredTotalUncompressed > maxUncompressedBytes) return fail("too_large", "Atom package exceeds the configured uncompressed size limit");
     if (localOffset + 30 > bytes.length || readU32(view, localOffset) !== ZIP_LOCAL) return fail("malformed_zip", `Missing local ZIP header for ${name}`);
     const localFlags = readU16(view, localOffset + 6);
     const localMethod = readU16(view, localOffset + 8);
@@ -231,12 +257,20 @@ async function readZip(bytes: Uint8Array, maxUncompressedBytes: number): Promise
     }
     if (name.endsWith("/") && uncompressedSize !== 0) return fail("malformed_zip", `ZIP directory entry ${name} contains data`);
     const compressed = bytes.subarray(dataOffset, dataOffset + compressedSize);
+    const remainingBudget = maxUncompressedBytes - actualTotalUncompressed;
     let unpacked: Uint8Array;
-    if (method === 0) unpacked = compressed.slice();
-    else if (method === 8) {
-      try { unpacked = await inflateRaw(compressed); }
-      catch (error) { return fail("unsupported_zip", `Could not inflate ${name}: ${error instanceof Error ? error.message : String(error)}`); }
+    if (method === 0) {
+      if (compressed.length > remainingBudget) return fail("too_large", "Atom package exceeds the configured uncompressed size limit");
+      unpacked = compressed.slice();
+    } else if (method === 8) {
+      try { unpacked = await inflateRaw(compressed, remainingBudget); }
+      catch (error) {
+        if (error instanceof ZipSizeLimitError) return fail("too_large", "Atom package exceeds the configured uncompressed size limit");
+        return fail("unsupported_zip", `Could not inflate ${name}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     } else return fail("unsupported_zip", `ZIP compression method ${method} is not supported`);
+    actualTotalUncompressed += unpacked.length;
+    if (actualTotalUncompressed > maxUncompressedBytes) return fail("too_large", "Atom package exceeds the configured uncompressed size limit");
     if (unpacked.length !== uncompressedSize) return fail("integrity_error", `Uncompressed size mismatch for ${name}`);
     if (crc32(unpacked) !== expectedCrc) return fail("integrity_error", `CRC mismatch for ${name}`);
     if (!name.endsWith("/")) result.set(name, unpacked);
