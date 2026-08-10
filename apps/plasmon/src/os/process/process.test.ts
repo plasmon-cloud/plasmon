@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type {
+  JsonValue,
   NativeAppDefinition,
+  OpenTarget,
   ProcessId,
   WindowCreateOptions,
   WindowId,
@@ -116,6 +118,78 @@ describe("NativeProcessController", () => {
       id,
       { width: 760, height: 560, minWidth: 420, minHeight: 280 },
     ]);
+  });
+
+  test("caller mutations cannot change stored nested Atom metadata", async () => {
+    const { controller } = setup();
+    const nestedObject = { value: "original" };
+    const arrayObject = { value: "array-original" };
+    const items: JsonValue[] = ["first", arrayObject];
+    const target: OpenTarget = {
+      atom: {
+        format: "plasmon.atom",
+        version: 1,
+        atomId: "atom:1",
+        handlerId: "native:text",
+        atomType: "text",
+        schemaVersion: 1,
+        metadata: {
+          nested: nestedObject,
+          items,
+        },
+      },
+    };
+
+    await controller.open("native:text", target);
+    nestedObject.value = "caller-mutated";
+    arrayObject.value = "caller-array-mutated";
+    items.push("caller-added");
+
+    expect(controller.list()[0]?.target.atom?.metadata).toEqual({
+      nested: { value: "original" },
+      items: ["first", { value: "array-original" }],
+    });
+  });
+
+  test("list snapshots cannot mutate stored nested Atom metadata", async () => {
+    const { controller } = setup();
+    await controller.open("native:text", {
+      atom: {
+        format: "plasmon.atom",
+        version: 1,
+        atomId: "atom:1",
+        handlerId: "native:text",
+        atomType: "text",
+        schemaVersion: 1,
+        metadata: {
+          nested: { value: "original" },
+          items: ["first", { value: "array-original" }],
+        },
+      },
+    });
+
+    const metadata = controller.list()[0]?.target.atom?.metadata;
+    if (!metadata) throw new Error("expected Atom metadata");
+
+    const nested = metadata.nested;
+    if (nested === null || Array.isArray(nested) || typeof nested !== "object") {
+      throw new Error("expected nested object metadata");
+    }
+    nested.value = "list-mutated";
+
+    const items = metadata.items;
+    if (!Array.isArray(items)) throw new Error("expected nested array metadata");
+    const arrayObject = items[1];
+    if (arrayObject === null || Array.isArray(arrayObject) || typeof arrayObject !== "object") {
+      throw new Error("expected object inside metadata array");
+    }
+    arrayObject.value = "list-array-mutated";
+    items.push("list-added");
+
+    expect(controller.list()[0]?.target.atom?.metadata).toEqual({
+      nested: { value: "original" },
+      items: ["first", { value: "array-original" }],
+    });
   });
 
   test("singleton open reuses process, updates target, and focuses", async () => {
