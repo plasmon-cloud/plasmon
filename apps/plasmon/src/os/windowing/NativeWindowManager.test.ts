@@ -44,6 +44,69 @@ test("focus raises z-order without coupling to process state", () => {
   expect(windows.list().at(-1)?.id).toBe(first);
 });
 
+test("focus restores a normal minimized window", () => {
+  const windows = manager();
+  const id = windows.create("process:one", {});
+  windows.minimize(id);
+
+  windows.focus(id);
+
+  expect(windows.get(id)).toMatchObject({ minimized: false, maximized: false });
+});
+
+test("focus restores a minimized maximized window without unmaximizing it", () => {
+  const windows = manager(900, 600);
+  const id = windows.create("process:one", { x: 40, y: 50, width: 500, height: 350 });
+  windows.maximize(id);
+  windows.minimize(id);
+
+  windows.focus(id);
+
+  expect(windows.get(id)).toMatchObject({
+    minimized: false,
+    maximized: true,
+    x: 0,
+    y: 0,
+    width: 900,
+    height: 600,
+  });
+});
+
+test("focus preserves restore geometry for a minimized maximized window", () => {
+  const windows = manager(900, 600);
+  const id = windows.create("process:one", { x: 40, y: 50, width: 500, height: 350 });
+  windows.maximize(id);
+  const restoreGeometry = windows.get(id)?.restoreGeometry;
+  windows.minimize(id);
+
+  windows.focus(id);
+
+  expect(windows.get(id)?.restoreGeometry).toEqual(restoreGeometry);
+  windows.restore(id);
+  expect(windows.get(id)).toMatchObject({
+    minimized: false,
+    maximized: false,
+    x: 40,
+    y: 50,
+    width: 500,
+    height: 350,
+  });
+});
+
+test("focus raises a minimized window after making it visible", () => {
+  const windows = manager();
+  const first = windows.create("process:one", {});
+  const second = windows.create("process:two", {});
+  const secondZ = windows.get(second)?.z ?? 0;
+  windows.minimize(first);
+
+  windows.focus(first);
+
+  expect(windows.get(first)?.minimized).toBe(false);
+  expect((windows.get(first)?.z ?? 0) > secondZ).toBe(true);
+  expect(windows.list().at(-1)?.id).toBe(first);
+});
+
 test("move and resize enforce reachability and per-window minimum dimensions", () => {
   const windows = manager(1000, 700);
   const id = windows.create("process:one", { width: 500, height: 360, minWidth: 300, minHeight: 210 });
