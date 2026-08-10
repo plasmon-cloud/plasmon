@@ -63,6 +63,40 @@ export function selectNode(
   return { ids: new Set([id]), anchor: id, focus: id };
 }
 
+export interface EntryPointerSelectionDecision {
+  selection: SelectionState;
+  dragIds: readonly NodeId[];
+  releaseSelection: SelectionState | null;
+}
+
+/**
+ * Pointer-down must preserve an existing multi-selection long enough to decide
+ * whether the gesture becomes a group drag. A normal no-drag release may then
+ * collapse to the clicked entry, matching ordinary click semantics.
+ */
+export function decideEntryPointerSelection(
+  current: SelectionState,
+  orderedIds: readonly NodeId[],
+  id: NodeId,
+  options: SelectOptions = {},
+): EntryPointerSelectionDecision {
+  const modified = options.additive === true || options.range === true;
+  if (!modified && current.ids.size > 1 && current.ids.has(id)) {
+    return {
+      selection: { ids: new Set(current.ids), anchor: current.anchor, focus: id },
+      dragIds: [...current.ids],
+      releaseSelection: selectNode(current, orderedIds, id),
+    };
+  }
+
+  const next = selectNode(current, orderedIds, id, options);
+  return {
+    selection: next,
+    dragIds: next.ids.has(id) ? [...next.ids] : [id],
+    releaseSelection: null,
+  };
+}
+
 export function reconcileSelection(
   current: SelectionState,
   visibleIds: ReadonlySet<NodeId>,
@@ -93,6 +127,25 @@ export function normalizeRect(x1: number, y1: number, x2: number, y2: number): R
 
 export function rectsIntersect(a: RectLike, b: RectLike): boolean {
   return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
+}
+
+/** Captures plain rectangle values once for a marquee gesture. */
+export function captureMarqueeRectangles(
+  ids: readonly NodeId[],
+  readRect: (id: NodeId) => RectLike | null | undefined,
+): ReadonlyMap<NodeId, RectLike> {
+  const captured = new Map<NodeId, RectLike>();
+  for (const id of ids) {
+    const rect = readRect(id);
+    if (!rect) continue;
+    captured.set(id, {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+    });
+  }
+  return captured;
 }
 
 export function marqueeSelection(
