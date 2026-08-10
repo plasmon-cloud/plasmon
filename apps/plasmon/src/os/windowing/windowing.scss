@@ -1,0 +1,213 @@
+.plasmon-window-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.plasmon-window {
+  position: absolute;
+  display: grid;
+  grid-template-rows: var(--plasmon-titlebar-height, 32px) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--plasmon-text, #f4f4f4);
+  background: var(--plasmon-surface-elevated, #202020);
+  border: 1px solid color-mix(in srgb, var(--plasmon-text, #fff) 12%, transparent);
+  border-radius: var(--plasmon-radius-window, 10px);
+  box-shadow: var(--plasmon-shadow-window, 0 18px 48px rgb(0 0 0 / 35%));
+  font-family: var(--plasmon-font-ui, system-ui, sans-serif);
+  font-size: var(--plasmon-font-size-ui, 13px);
+  outline: none;
+  transform-origin: center bottom;
+  transition:
+    left var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    top var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    width var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    height var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    opacity var(--plasmon-motion-fast, 120ms) ease,
+    transform var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    box-shadow var(--plasmon-motion-fast, 120ms) ease;
+  animation: plasmon-window-open var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1);
+  will-change: left, top, width, height;
+}
+
+.plasmon-window--active {
+  box-shadow: var(--plasmon-shadow-window, 0 20px 54px rgb(0 0 0 / 42%));
+}
+
+.plasmon-window[data-interacting] {
+  transition: none;
+  will-change: left, top, width, height;
+}
+
+.plasmon-window--minimized {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(.96);
+}
+
+.plasmon-window--maximized {
+  border-radius: 0;
+}
+
+.plasmon-window--closing {
+  pointer-events: none;
+  animation: plasmon-window-close var(--plasmon-motion-window, 160ms) ease forwards;
+}
+
+.plasmon-window__titlebar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  min-width: 0;
+  height: var(--plasmon-titlebar-height, 32px);
+  background: color-mix(in srgb, var(--plasmon-surface-elevated, #202020) 92%, var(--plasmon-text, #fff) 8%);
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.plasmon-window[data-interacting="drag"] .plasmon-window__titlebar {
+  cursor: grabbing;
+}
+
+.plasmon-window__identity {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  padding-inline: 10px 8px;
+  pointer-events: none;
+}
+
+.plasmon-window__icon {
+  display: inline-grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  place-items: center;
+}
+
+.plasmon-window__icon > img,
+.plasmon-window__icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.plasmon-window__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.plasmon-window__controls {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+
+.plasmon-window__control {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: var(--plasmon-titlebar-height, 32px);
+  padding: 0;
+  place-items: center;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: default;
+  transition: background var(--plasmon-motion-fast, 120ms) ease, color var(--plasmon-motion-fast, 120ms) ease;
+}
+
+.plasmon-window__control:hover,
+.plasmon-window__control:focus-visible {
+  background: color-mix(in srgb, var(--plasmon-text, #fff) 10%, transparent);
+  outline: none;
+}
+
+.plasmon-window__control--close:hover,
+.plasmon-window__control--close:focus-visible {
+  color: #fff;
+  background: #c42b1c;
+}
+
+.plasmon-window__control svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.plasmon-window__content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  color: var(--plasmon-text, #f4f4f4);
+  background: var(--plasmon-surface, #171717);
+}
+
+.plasmon-window__resize {
+  position: absolute;
+  z-index: 3;
+  touch-action: none;
+}
+
+.plasmon-window__resize--n,
+.plasmon-window__resize--s {
+  left: 8px;
+  right: 8px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.plasmon-window__resize--n { top: -3px; }
+.plasmon-window__resize--s { bottom: -3px; }
+
+.plasmon-window__resize--e,
+.plasmon-window__resize--w {
+  top: 8px;
+  bottom: 8px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.plasmon-window__resize--e { right: -3px; }
+.plasmon-window__resize--w { left: -3px; }
+
+.plasmon-window__resize--ne,
+.plasmon-window__resize--se,
+.plasmon-window__resize--sw,
+.plasmon-window__resize--nw {
+  width: 12px;
+  height: 12px;
+}
+.plasmon-window__resize--ne { top: -3px; right: -3px; cursor: nesw-resize; }
+.plasmon-window__resize--se { right: -3px; bottom: -3px; cursor: nwse-resize; }
+.plasmon-window__resize--sw { bottom: -3px; left: -3px; cursor: nesw-resize; }
+.plasmon-window__resize--nw { top: -3px; left: -3px; cursor: nwse-resize; }
+
+@keyframes plasmon-window-open {
+  from { opacity: 0; transform: translateY(8px) scale(.975); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes plasmon-window-close {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px) scale(.975); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plasmon-window {
+    transition: none;
+    animation-duration: 1ms;
+  }
+}
