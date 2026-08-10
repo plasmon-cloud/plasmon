@@ -327,6 +327,7 @@ export function NativeWindow({
       role="dialog"
       aria-label={ariaLabel ?? title}
       aria-hidden={state.minimized || undefined}
+      inert={state.minimized}
       tabIndex={-1}
       data-window-id={state.id}
       onPointerDown={focusWindow}
