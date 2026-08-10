@@ -8,11 +8,14 @@ Wave 2 presentation/navigation around the central Desktop + WindowLayer region.
 - Native task state is derived from `ProcessController` + `WindowManager`; process/window truth is never persisted by the shell.
 - Taskbar membership is pinned native handlers + open native process records + pinned Elements + Elements explicitly reported `running: "yes"`. Installed applications are not taskbar entries merely because they are installed.
 - Neutron `running` remains `yes | no | unknown`; the shell never converts `unknown` to `no`.
-- Pins/theme/wallpaper are browser-local preferences under the namespaced `plasmon.shell.preferences.v1` key. Corrupt/unavailable storage falls back to deterministic defaults.
+- Pins/theme/wallpaper are persisted through `FsService` as validated namespaced metadata on the filesystem root under `plasmon.shell.preferences.v1`. Hosted foreground Shell never owns `window.localStorage` or another IndexedDB database.
+- Preference writes are independent of filesystem invalidation observation: a preference metadata write may emit an FsEvent, but it does not trigger preference reload/save feedback.
+- Corrupt preference metadata falls back to deterministic defaults. Filesystem load/save failures are nonfatal and do not erase the current in-memory user selection.
 - Start metadata comes from `NativeAppRegistry` and `NeutronBridge`; there is no second application catalog.
 - Filesystem search begins at `FsService.resolvePath("/")`, traverses asynchronously, maintains no persistent index, is bounded to 5,000 nodes per query by default, and uses cancellation + request ordering to prevent stale results from winning.
-- File search results dispatch through `AssociationRegistry` + `OpenService`. No extension-to-app switch exists in Shell.
+- File search results dispatch through the public Open With model backed by `AssociationRegistry` + `OpenService`. No extension-to-app switch exists in Shell.
 - Tray presentation reads only the frozen `element.tray?.title` declaration and opens/focuses the owning Element through NeutronBridge.
+- External app icons use one fixed-size Shell renderer. Failed image resources fall back to initials/symbolic icons without removing labels or changing button semantics.
 - Shell CSS publishes `--plasmon-*` tokens on the Shell root so integration can place Desktop and native windows inside the same theme boundary.
 
 ## Composition
