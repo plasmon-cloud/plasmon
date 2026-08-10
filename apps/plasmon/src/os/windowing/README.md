@@ -17,6 +17,7 @@ It does **not** own process records, application registration, filesystem state,
 - Window IDs are runtime identities and never reused while a window is live.
 - `list()` and `get()` return detached snapshots; consumers cannot mutate the store by retaining objects.
 - Focus uses a monotonically increasing z sequence. Large z sequences are compacted while preserving ordering.
+- Focusing a minimized window makes it visible before raising it. A minimized maximized window remains maximized, and its `restoreGeometry` is preserved.
 - Per-window `minWidth`/`minHeight` from `WindowCreateOptions` are enforced for normal windows.
 - A normal window may be partially outside the viewport, but a reachable titlebar region is always preserved.
 - If the viewport is smaller than a window's minimum dimensions, minimum dimensions win and the titlebar remains reachable.
@@ -38,6 +39,8 @@ Call `dispose()` when permanently discarding a manager instance so its optional 
 Drag and resize do not update the shared window store for every pointer event. Pointer movement records the latest geometry and one `requestAnimationFrame` imperatively updates the active DOM window. The final geometry is committed to `WindowManager` on pointer-up. This keeps expensive app content from rerendering merely because a pointer moved.
 
 Eight edge/corner resize hit zones provide native cursors. During drag/resize, iframe pointer events and document text selection are temporarily disabled and then restored exactly, including if pointer capture is lost unexpectedly. Clicking a window raises it; active-window z changes return keyboard focus to the window when focus is currently outside it.
+
+Minimized `NativeWindow` roots retain `aria-hidden` and also use the platform `inert` attribute, excluding the entire subtree from pointer interaction and sequential/programmatic focus until the window becomes visible again. The repository's current Bun test setup has no browser DOM harness, so controller lifecycle is covered automatically but native browser focus behavior of `inert` is not claimed as a browser-automated test here.
 
 Titlebar double-click toggles maximize/restore. Window controls use SVG glyphs. Minimize/maximize/open/close transitions consume the shared `--plasmon-*` visual tokens and honor `prefers-reduced-motion`.
 
