@@ -47,11 +47,13 @@ export async function inspectProperties(
   const node = await fs.stat(nodeId);
   const path = await fs.pathOf(nodeId);
   const probe = await readAssociationProbe(fs, node);
-  const handlers = node.kind === "directory" ? [] : await registry.resolve(node, probe);
-  const defaultHandler = node.kind === "directory" ? null : await registry.getDefault(node);
   const openModel = node.kind === "directory"
     ? null
     : await new OpenWithServiceModel(registry, { open: async () => undefined }).model(node, probe);
+  const compatibleHandlers = openModel?.candidates.map((candidate) => candidate.handler) ?? [];
+  const defaultHandler = openModel?.defaultHandlerId
+    ? compatibleHandlers.find((handler) => handler.id === openModel.defaultHandlerId) ?? null
+    : null;
   const atom = openModel?.target.atom ?? null;
   return {
     node,
@@ -60,7 +62,7 @@ export async function inspectProperties(
     extension: extensionOf(node.name),
     kindLabel: friendlyKind(node, atom),
     defaultHandler,
-    compatibleHandlers: handlers,
+    compatibleHandlers,
     atom,
     warnings: openModel?.warnings ?? [],
   };
