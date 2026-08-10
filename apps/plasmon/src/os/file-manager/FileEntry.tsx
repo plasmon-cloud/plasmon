@@ -29,7 +29,7 @@ export interface FileEntryProps {
   selected: boolean;
   focused: boolean;
   presentation: FileEntryPresentation;
-  position?: FileEntryPosition;
+  position?: FileEntryPosition | undefined;
   rename: InlineRenameState | null;
   setRef: (element: HTMLDivElement | null) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
