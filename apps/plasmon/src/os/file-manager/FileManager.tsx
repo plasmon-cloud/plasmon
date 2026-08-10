@@ -25,7 +25,9 @@ import {
   FileOperationClipboard,
   RefreshGate,
   basenameSelectionRange,
+  captureMarqueeRectangles,
   clearSelection,
+  decideEntryPointerSelection,
   deleteNodes,
   emptySelection,
   isFsEventRelevant,
@@ -231,6 +233,7 @@ export function FileManager({
     startY: number;
     ids: NodeId[];
     moved: boolean;
+    releaseSelection: SelectionState | null;
   } | null>(null);
   const marqueeFrameRef = useRef<number | null>(null);
   const marqueePointerRef = useRef<{
@@ -242,6 +245,9 @@ export function FileManager({
     base: ReadonlySet<NodeId>;
     anchor: NodeId | null;
     toggle: boolean;
+    entryRects: ReadonlyMap<NodeId, RectLike>;
+    rootLeft: number;
+    rootTop: number;
   } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -395,18 +401,18 @@ export function FileManager({
     if (event.button !== 0 || rename?.nodeId === node.id) return;
     setContextMenu(null);
     rootRef.current?.focus({ preventScroll: true });
-    const next = selectNode(selection, orderedIds, node.id, {
+    const decision = decideEntryPointerSelection(selection, orderedIds, node.id, {
       additive: event.ctrlKey || event.metaKey,
       range: event.shiftKey,
     });
-    setSelection(next);
-    const ids = next.ids.has(node.id) ? [...next.ids] : [node.id];
+    setSelection(decision.selection);
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      ids,
+      ids: [...decision.dragIds],
       moved: false,
+      releaseSelection: decision.releaseSelection,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -446,7 +452,10 @@ export function FileManager({
     clearDragVisual();
     dragRef.current = null;
     dragPendingRef.current = { dx: 0, dy: 0 };
-    if (!moved) return;
+    if (!moved) {
+      if (active.releaseSelection) setSelection(active.releaseSelection);
+      return;
+    }
 
     const underPointer = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-fm-node-id]");
     const targetId = underPointer?.dataset.fmNodeId;
@@ -470,22 +479,15 @@ export function FileManager({
   const processMarquee = () => {
     marqueeFrameRef.current = null;
     const active = marqueePointerRef.current;
-    const root = rootRef.current;
-    if (!active || !root) return;
+    if (!active) return;
     const clientRect = normalizeRect(active.startX, active.startY, active.currentX, active.currentY);
-    const rootRect = root.getBoundingClientRect();
     setMarquee({
-      left: clientRect.left - rootRect.left,
-      top: clientRect.top - rootRect.top,
+      left: clientRect.left - active.rootLeft,
+      top: clientRect.top - active.rootTop,
       width: clientRect.right - clientRect.left,
       height: clientRect.bottom - clientRect.top,
     });
-    const entryRects = new Map<NodeId, RectLike>();
-    for (const node of visibleNodes) {
-      const rect = entriesRef.current.get(node.id)?.getBoundingClientRect();
-      if (rect) entryRects.set(node.id, rect);
-    }
-    const ids = marqueeSelection(active.base, entryRects, clientRect, active.toggle);
+    const ids = marqueeSelection(active.base, active.entryRects, clientRect, active.toggle);
     setSelection({ ids, anchor: active.anchor, focus: [...ids].at(-1) ?? null });
   };
 
@@ -495,6 +497,11 @@ export function FileManager({
     setContextMenu(null);
     const toggle = event.ctrlKey || event.metaKey;
     const base = toggle ? new Set(selection.ids) : new Set<NodeId>();
+    const rootRect = event.currentTarget.getBoundingClientRect();
+    const entryRects = captureMarqueeRectangles(orderedIds, (id) => {
+      const rect = entriesRef.current.get(id)?.getBoundingClientRect();
+      return rect ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } : null;
+    });
     marqueePointerRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -504,6 +511,9 @@ export function FileManager({
       base,
       anchor: selection.anchor,
       toggle,
+      entryRects,
+      rootLeft: rootRect.left,
+      rootTop: rootRect.top,
     };
     if (!toggle) setSelection(clearSelection());
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -626,6 +636,7 @@ export function FileManager({
       onPointerDown={handleBackgroundPointerDown}
       onPointerMove={handleBackgroundPointerMove}
       onPointerUp={finishMarquee}
+      onPointerCancel={finishMarquee}
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         const element = (event.target as HTMLElement).closest<HTMLElement>("[data-fm-node-id]");
