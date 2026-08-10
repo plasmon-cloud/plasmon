@@ -1,0 +1,316 @@
+@layer plasmon-shell {
+  .plasmon-shell {
+    --plasmon-bg: #071018;
+    --plasmon-bg-elevated: rgba(17, 23, 33, 0.94);
+    --plasmon-bg-glass: rgba(15, 21, 30, 0.82);
+    --plasmon-surface: rgba(255, 255, 255, 0.055);
+    --plasmon-surface-hover: rgba(255, 255, 255, 0.095);
+    --plasmon-border: rgba(255, 255, 255, 0.11);
+    --plasmon-border-strong: rgba(255, 255, 255, 0.18);
+    --plasmon-text: #f5f8fb;
+    --plasmon-text-muted: #aab5c5;
+    --plasmon-text-subtle: #7f8b9c;
+    --plasmon-accent: #91edbd;
+    --plasmon-accent-strong: #57c990;
+    --plasmon-accent-ink: #062619;
+    --plasmon-danger: #ff9ba5;
+    --plasmon-focus: #b7e9ff;
+    --plasmon-shadow: 0 28px 90px rgba(0, 0, 0, 0.48), 0 2px 18px rgba(0, 0, 0, 0.3);
+    --plasmon-radius-sm: 7px;
+    --plasmon-radius-md: 12px;
+    --plasmon-radius-lg: 18px;
+    --plasmon-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --plasmon-font-xs: 0.75rem;
+    --plasmon-font-sm: 0.8125rem;
+    --plasmon-font-md: 0.9375rem;
+    --plasmon-font-lg: 1.125rem;
+    --plasmon-font-xl: 1.5rem;
+    --plasmon-taskbar-height: 56px;
+    --plasmon-shell-z-taskbar: 9000;
+    --plasmon-shell-z-panel: 9100;
+    background: var(--plasmon-bg);
+    color: var(--plasmon-text);
+    font-family: var(--plasmon-font);
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-midnight"] {
+    --plasmon-bg: #080a13;
+    --plasmon-bg-elevated: rgba(17, 17, 30, 0.95);
+    --plasmon-bg-glass: rgba(11, 12, 23, 0.84);
+    --plasmon-accent: #b9abff;
+    --plasmon-accent-strong: #8e7ee8;
+    --plasmon-accent-ink: #15102b;
+  }
+
+  .plasmon-shell *, .plasmon-shell *::before, .plasmon-shell *::after { box-sizing: border-box; }
+  .plasmon-shell button, .plasmon-shell input { font: inherit; }
+  .plasmon-shell button { color: inherit; }
+  .plasmon-shell button:focus-visible, .plasmon-shell input:focus-visible {
+    outline: 2px solid var(--plasmon-focus);
+    outline-offset: 2px;
+  }
+
+  .plasmon-shell__wallpaper {
+    background:
+      radial-gradient(circle at 18% 20%, rgba(71, 204, 145, 0.19), transparent 35%),
+      radial-gradient(circle at 79% 25%, rgba(80, 126, 224, 0.2), transparent 34%),
+      linear-gradient(145deg, var(--plasmon-bg) 0%, #0a1721 50%, var(--plasmon-bg) 100%);
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .plasmon-shell--wallpaper-plain .plasmon-shell__wallpaper { background: var(--plasmon-bg); }
+  .plasmon-shell__aurora {
+    border-radius: 999px;
+    filter: blur(80px);
+    opacity: 0.22;
+    position: absolute;
+  }
+  .plasmon-shell--wallpaper-plain .plasmon-shell__aurora { display: none; }
+  .plasmon-shell__aurora--one { background: #41d58f; height: 44vw; left: -14vw; top: -16vw; width: 44vw; }
+  .plasmon-shell__aurora--two { background: #547ed7; height: 38vw; right: -11vw; top: 8vh; width: 38vw; }
+
+  .plasmon-shell__workspace {
+    bottom: var(--plasmon-taskbar-height);
+    inset-inline: 0;
+    min-height: 0;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+  }
+
+  .plasmon-shell__taskbar {
+    align-items: center;
+    backdrop-filter: blur(30px) saturate(145%);
+    background: var(--plasmon-bg-glass);
+    border-top: 1px solid var(--plasmon-border);
+    bottom: 0;
+    display: flex;
+    height: var(--plasmon-taskbar-height);
+    justify-content: center;
+    left: 0;
+    padding: 5px 10px;
+    position: absolute;
+    right: 0;
+    z-index: var(--plasmon-shell-z-taskbar);
+  }
+
+  .plasmon-shell__taskbar-main { align-items: center; display: flex; gap: 3px; }
+  .plasmon-shell__tasks { align-items: center; display: flex; gap: 3px; max-width: min(58vw, 720px); overflow: hidden; }
+  .plasmon-shell__taskbar-status { align-items: center; display: flex; gap: 3px; position: absolute; right: 10px; }
+
+  .plasmon-shell__task-button, .plasmon-shell__tray-button, .plasmon-shell__clock-button {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--plasmon-radius-sm);
+    display: inline-flex;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .plasmon-shell__task-button { min-width: 44px; padding: 4px; position: relative; }
+  .plasmon-shell__task-button:hover, .plasmon-shell__task-button.is-focused, .plasmon-shell__tray-button:hover, .plasmon-shell__clock-button:hover {
+    background: var(--plasmon-surface-hover);
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+  .plasmon-shell__task-button.is-running::after {
+    background: var(--plasmon-accent);
+    border-radius: 999px;
+    bottom: 1px;
+    content: "";
+    height: 3px;
+    left: 14px;
+    position: absolute;
+    right: 14px;
+  }
+  .plasmon-shell__task-button small {
+    background: var(--plasmon-bg-elevated);
+    border: 1px solid var(--plasmon-border);
+    border-radius: 999px;
+    bottom: -1px;
+    color: var(--plasmon-text-muted);
+    font-size: 0.56rem;
+    line-height: 1;
+    padding: 2px 3px;
+    position: absolute;
+    right: -1px;
+  }
+
+  .plasmon-shell__app-icon {
+    align-items: center;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+  }
+  .plasmon-shell__app-icon img { height: 100%; max-width: 100%; object-fit: contain; width: 100%; }
+  .plasmon-shell__app-icon > span {
+    align-items: center;
+    background: linear-gradient(145deg, #233145, #121a25);
+    border: 1px solid var(--plasmon-border);
+    border-radius: 9px;
+    display: flex;
+    font-size: 0.75rem;
+    font-weight: 700;
+    height: 100%;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+  }
+  .plasmon-shell__system-icon { fill: none; height: 27px; stroke: currentColor; stroke-width: 1.45; width: 27px; }
+  .plasmon-shell__system-icon-fill { fill: currentColor; stroke: none; }
+  .plasmon-shell__taskbar-main > .plasmon-shell__task-button:first-child { color: var(--plasmon-accent); }
+
+  .plasmon-shell__tray-button { gap: 4px; min-width: 42px; padding: 5px 7px; }
+  .plasmon-shell__tray-button .plasmon-shell__system-icon { height: 20px; width: 20px; }
+  .plasmon-shell__tray-button span { color: var(--plasmon-text-muted); font-size: var(--plasmon-font-xs); }
+  .plasmon-shell__clock-button { flex-direction: column; font-size: var(--plasmon-font-xs); line-height: 1.22; min-width: 76px; padding: 4px 9px; }
+
+  .plasmon-shell__panel {
+    animation: plasmon-shell-pop 130ms cubic-bezier(.2,.8,.2,1);
+    backdrop-filter: blur(34px) saturate(135%);
+    background: var(--plasmon-bg-elevated);
+    border: 1px solid var(--plasmon-border-strong);
+    border-radius: var(--plasmon-radius-lg);
+    bottom: calc(var(--plasmon-taskbar-height) + 10px);
+    box-shadow: var(--plasmon-shadow);
+    max-height: min(76vh, 720px);
+    overflow: auto;
+    padding: 18px;
+    position: absolute;
+    z-index: var(--plasmon-shell-z-panel);
+  }
+  @keyframes plasmon-shell-pop { from { opacity: 0; transform: translateY(8px) scale(.985); } }
+  .plasmon-shell__panel header span { color: var(--plasmon-accent); font-size: var(--plasmon-font-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .plasmon-shell__panel h2 { font-size: var(--plasmon-font-xl); margin: 3px 0 14px; }
+  .plasmon-shell__panel h3 { color: var(--plasmon-text-muted); font-size: var(--plasmon-font-sm); margin: 15px 0 8px; }
+  .plasmon-shell__panel p { color: var(--plasmon-text-muted); font-size: var(--plasmon-font-sm); line-height: 1.5; }
+  .plasmon-shell__start-panel, .plasmon-shell__search-panel { left: 50%; transform: translateX(-50%); width: min(680px, calc(100vw - 24px)); }
+  .plasmon-shell__calendar-panel, .plasmon-shell__tray-panel { right: 10px; width: min(390px, calc(100vw - 24px)); }
+  .plasmon-shell__settings-panel { left: 50%; transform: translateX(-50%); width: min(480px, calc(100vw - 24px)); }
+
+  .plasmon-shell__search-box {
+    align-items: center;
+    background: rgba(255,255,255,.055);
+    border: 1px solid var(--plasmon-border);
+    border-bottom-color: var(--plasmon-accent-strong);
+    border-radius: 8px;
+    display: flex;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 10px;
+  }
+  .plasmon-shell__search-box .plasmon-shell__system-icon { height: 20px; width: 20px; }
+  .plasmon-shell__search-box input { background: transparent; border: 0; color: var(--plasmon-text); flex: 1; min-width: 0; outline: 0; }
+  .plasmon-shell__search-box input::placeholder { color: var(--plasmon-text-subtle); }
+  .plasmon-shell__search-box > span { color: var(--plasmon-text-muted); font-size: var(--plasmon-font-xs); }
+
+  .plasmon-shell__section { margin-top: 16px; }
+  .plasmon-shell__grid { display: grid; gap: 7px; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+  .plasmon-shell__grid > button, .plasmon-shell__settings-panel > button {
+    background: var(--plasmon-surface);
+    border: 1px solid var(--plasmon-border);
+    border-radius: 9px;
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+  .plasmon-shell__grid > button:hover, .plasmon-shell__settings-panel > button:hover { background: var(--plasmon-surface-hover); }
+  .plasmon-shell__start-panel .plasmon-shell__grid > button { align-items: center; display: flex; flex-direction: column; gap: 6px; min-height: 78px; }
+
+  .plasmon-shell__list { display: grid; gap: 5px; }
+  .plasmon-shell__row { align-items: stretch; display: flex; gap: 5px; }
+  .plasmon-shell__row > button:first-child, .plasmon-shell__list > button, .plasmon-shell__results > button {
+    align-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    display: flex;
+    flex: 1;
+    gap: 10px;
+    min-height: 48px;
+    padding: 7px 9px;
+    text-align: left;
+  }
+  .plasmon-shell__row > button:first-child:hover, .plasmon-shell__list > button:hover, .plasmon-shell__results > button:hover { background: var(--plasmon-surface-hover); border-color: var(--plasmon-border); }
+  .plasmon-shell__row > button:last-child {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--plasmon-text-muted);
+    font-size: var(--plasmon-font-xs);
+    padding: 6px 9px;
+  }
+  .plasmon-shell__row > button:last-child:hover { background: var(--plasmon-surface); }
+  .plasmon-shell__row strong, .plasmon-shell__list strong, .plasmon-shell__results strong { display: block; font-size: var(--plasmon-font-sm); font-weight: 600; }
+  .plasmon-shell__row small, .plasmon-shell__list small, .plasmon-shell__results small { color: var(--plasmon-text-muted); display: block; font-size: var(--plasmon-font-xs); margin-top: 2px; }
+  .plasmon-shell__start-panel footer { border-top: 1px solid var(--plasmon-border); margin: 15px -18px -18px; padding: 10px 18px; }
+  .plasmon-shell__start-panel footer button { background: transparent; border: 0; border-radius: 7px; padding: 7px 10px; }
+  .plasmon-shell__start-panel footer button:hover { background: var(--plasmon-surface-hover); }
+
+  .plasmon-shell__tabs { display: flex; gap: 4px; margin: 12px 0; overflow-x: auto; }
+  .plasmon-shell__tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--plasmon-text-muted); padding: 7px 10px; }
+  .plasmon-shell__tabs button[aria-selected="true"] { border-bottom-color: var(--plasmon-accent); color: var(--plasmon-text); }
+  .plasmon-shell__results { display: grid; gap: 3px; max-height: 48vh; overflow: auto; }
+  .plasmon-shell__results > button em { color: var(--plasmon-text-subtle); font-size: var(--plasmon-font-xs); font-style: normal; margin-left: auto; text-transform: capitalize; }
+
+  .plasmon-shell__calendar-time { border-bottom: 1px solid var(--plasmon-border); margin: -3px 0 12px; padding-bottom: 12px; }
+  .plasmon-shell__calendar-time strong { display: block; font-size: 2rem; font-weight: 350; }
+  .plasmon-shell__calendar-time span { color: var(--plasmon-text-muted); font-size: var(--plasmon-font-sm); }
+  .plasmon-shell__calendar-header { align-items: center; display: grid; grid-template-columns: 38px 1fr 38px; }
+  .plasmon-shell__calendar-header h2 { font-size: var(--plasmon-font-lg); margin: 0; text-align: center; }
+  .plasmon-shell__calendar-header button, .plasmon-shell__calendar-panel > button { background: transparent; border: 0; border-radius: 7px; min-height: 34px; }
+  .plasmon-shell__calendar-header button:hover, .plasmon-shell__calendar-panel > button:hover { background: var(--plasmon-surface-hover); }
+  .plasmon-shell__calendar-grid { display: grid; gap: 2px; grid-template-columns: repeat(7, 1fr); margin: 10px 0; }
+  .plasmon-shell__calendar-grid > span { align-items: center; border-radius: 7px; display: flex; font-size: var(--plasmon-font-sm); height: 38px; justify-content: center; }
+  .plasmon-shell__calendar-grid > span:nth-child(-n+7) { color: var(--plasmon-text-subtle); font-size: var(--plasmon-font-xs); height: 24px; }
+  .plasmon-shell__calendar-grid .is-outside { color: var(--plasmon-text-subtle); opacity: .55; }
+  .plasmon-shell__calendar-grid .is-today { background: var(--plasmon-accent); color: var(--plasmon-accent-ink); font-weight: 750; }
+
+  .plasmon-shell__error, .plasmon-shell__notice {
+    align-items: center;
+    background: var(--plasmon-bg-elevated);
+    border: 1px solid var(--plasmon-border-strong);
+    border-radius: 9px;
+    bottom: calc(var(--plasmon-taskbar-height) + 12px);
+    box-shadow: var(--plasmon-shadow);
+    display: flex;
+    font-size: var(--plasmon-font-sm);
+    gap: 12px;
+    left: 12px;
+    max-width: min(560px, calc(100vw - 24px));
+    padding: 10px 12px;
+    position: absolute;
+    z-index: calc(var(--plasmon-shell-z-panel) + 10);
+  }
+  .plasmon-shell__error { border-color: color-mix(in srgb, var(--plasmon-danger) 40%, transparent); }
+  .plasmon-shell__error button, .plasmon-shell__notice button { background: transparent; border: 0; color: var(--plasmon-text-muted); margin-left: auto; }
+
+  .plasmon-shell__sr-only {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  @media (max-width: 680px) {
+    .plasmon-shell__taskbar { justify-content: flex-start; }
+    .plasmon-shell__tasks { max-width: calc(100vw - 230px); }
+    .plasmon-shell__taskbar-status { right: 4px; }
+    .plasmon-shell__clock-button { min-width: 68px; }
+    .plasmon-shell__panel { bottom: calc(var(--plasmon-taskbar-height) + 5px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plasmon-shell__panel { animation: none; }
+  }
+}
