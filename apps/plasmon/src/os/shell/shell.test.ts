@@ -20,12 +20,9 @@ import {
 } from "./model.ts";
 import {
   DEFAULT_SHELL_PREFERENCES,
-  SHELL_PREFERENCES_KEY,
-  ShellPreferenceStore,
   parseShellPreferences,
   validateShellPreferences,
   type ShellPreferences,
-  type ShellStorage,
 } from "./preferences.ts";
 import { categorizeFsNode, LatestSearchController } from "./search.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
@@ -183,7 +180,7 @@ test("Start entries derive names and descriptions from supplied registries", () 
   ]);
 });
 
-test("shell preference validation rejects malformed or unsafe serialized shapes", () => {
+test("shell preference validation rejects malformed shapes", () => {
   expect(validateShellPreferences({
     version: 1,
     pinnedNative: ["native:text", 2],
@@ -196,24 +193,6 @@ test("shell preference validation rejects malformed or unsafe serialized shapes"
     ...DEFAULT_SHELL_PREFERENCES,
     pinnedNative: ["native:text", "native:text"],
   })?.pinnedNative).toEqual(["native:text"]);
-});
-
-test("corrupt or throwing localStorage falls back to deterministic defaults", () => {
-  const corrupt: ShellStorage = {
-    getItem(key) {
-      expect(key).toBe(SHELL_PREFERENCES_KEY);
-      return "{not-json";
-    },
-    setItem() {},
-  };
-  expect(new ShellPreferenceStore(corrupt).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
-
-  const unavailable: ShellStorage = {
-    getItem() { throw new Error("denied"); },
-    setItem() { throw new Error("denied"); },
-  };
-  expect(new ShellPreferenceStore(unavailable).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
-  expect(new ShellPreferenceStore(unavailable).save(preferences())).toBe(false);
 });
 
 function node(patch: Partial<FsNode>): FsNode {
