@@ -5,21 +5,25 @@ import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
 
-const outfile = "./dist/web/main.js";
+const mainOutfile = "./dist/web/main.js";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
 
 async function stripRemoteDiagnostics(): Promise<void> {
-  const source = await readFile(outfile, "utf8");
+  const source = await readFile(mainOutfile, "utf8");
   const sanitized = source.replaceAll("https://react.dev/errors/", "#react-error-");
   if (sanitized !== source) {
-    await writeFile(outfile, sanitized);
+    await writeFile(mainOutfile, sanitized);
   }
 }
 
 const config: BuildOptions = {
-  entryPoints: ["./src/index.tsx"],
-  outfile,
+  entryPoints: {
+    main: "./src/index.tsx",
+    service: "./src/os/fs/background.ts",
+  },
+  outdir: "./dist/web",
+  entryNames: "[name]",
   bundle: true,
   minify: !devMode,
   sourcemap: devMode ? "inline" : false,
