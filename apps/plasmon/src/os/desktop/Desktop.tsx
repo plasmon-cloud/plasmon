@@ -189,7 +189,8 @@ export function Desktop({
         positions={positions}
         onSnapshot={handleSnapshot}
         onDesktopReposition={async (ids, delta, bounds) => {
-          const next = repositionDesktopNodes(positions, orderedNodes, ids, delta, bounds);
+          const base = allocateDesktopPositions(positions, orderedNodes);
+          const next = repositionDesktopNodes(base, orderedNodes, ids, delta, bounds);
           setPositions(next);
           try {
             await persistDesktopPositions(fs, desktop.id, next);
