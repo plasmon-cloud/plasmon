@@ -107,7 +107,8 @@ if (args[0] === "watch") {
 } else {
   try {
     await esbuild.build(config);
-  } catch {
-    process.exit(1);
+  } catch (error: unknown) {
+    console.error("Plasmon UI build failed:", error);
+    process.exitCode = 1;
   }
 }
