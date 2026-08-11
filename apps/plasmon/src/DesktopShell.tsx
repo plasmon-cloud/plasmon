@@ -7,13 +7,13 @@ import {
   type ReactNode,
 } from "react";
 import { appIndexUrl, canisterIdFromUrl } from "neutron-tools/src/runtime.js";
-import { InstallDialog } from "components/InstallDialog.tsx";
+import { InstallDialog } from "./components/InstallDialog.tsx";
 import {
   createPlatform,
   type PlasmonApp,
   type PlatformMode,
   type PlatformSnapshot,
-} from "platform/index.ts";
+} from "./platform/index.ts";
 import {
   cloneItemTree,
   descendants,
@@ -530,7 +530,7 @@ export function DesktopShell() {
     }
     const content = item.content ??
       (item.kind === "atom"
-        ? JSON.stringify({ atom: item.name, note: "GUI2 logical Atom placeholder" }, null, 2)
+        ? JSON.stringify({ atom: item.name, note: "GUI logical Atom placeholder" }, null, 2)
         : item.name);
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1002,7 +1002,7 @@ function DesktopIcon({
       type="button"
     >
       {descriptor.kind === "app" ? (
-        <AppGlyph2 app={descriptor.app} size="desktop" />
+        <AppGlyph app={descriptor.app} size="desktop" />
       ) : descriptor.kind === "file" ? (
         <NativeGlyph glyph={fileGlyph(descriptor.file)} variant={descriptor.file.kind === "atom" ? "atom" : "file"} />
       ) : (
@@ -1503,7 +1503,7 @@ function Terminal({
 }) {
   const [command, setCommand] = useState("");
   const [lines, setLines] = useState<string[]>([
-    "Plasmon Terminal 0.1 GUI2",
+    "Plasmon Terminal 0.1 GUI",
     "Web desktop shell for Neutron. Type 'help'.",
     "",
   ]);
@@ -1608,7 +1608,7 @@ function DoomWindow() {
 }
 
 function About({ apps, mode, onOpenNative }: { apps: PlasmonApp[]; mode: PlatformMode; onOpenNative: (kind: WindowKind) => void }) {
-  return <div className="pl2-about"><ElectronMark /><div><small>PLASMON GUI2</small><h2>A familiar desktop for a decentralized runtime.</h2><p>GUI2 deliberately borrows the interaction model of mature browser desktops: draggable icons, marquee selection, files/folders, desktop search, a taskbar, calendar, media, editors, and windowed apps.</p><dl><div><dt>Runtime</dt><dd>{modeLabel(mode)}</dd></div><div><dt>Elements</dt><dd>{apps.length}</dd></div><div><dt>Atoms</dt><dd>File-like logical objects</dd></div></dl><div className="actions"><button onClick={() => onOpenNative("explorer")} type="button">Open Files</button><button onClick={() => onOpenNative("control")} type="button">Open Control</button></div></div></div>;
+  return <div className="pl2-about"><ElectronMark /><div><small>PLASMON GUI</small><h2>A familiar desktop for a decentralized runtime.</h2><p>GUI deliberately borrows the interaction model of mature browser desktops: draggable icons, marquee selection, files/folders, desktop search, a taskbar, calendar, media, editors, and windowed apps.</p><dl><div><dt>Runtime</dt><dd>{modeLabel(mode)}</dd></div><div><dt>Elements</dt><dd>{apps.length}</dd></div><div><dt>Atoms</dt><dd>File-like logical objects</dd></div></dl><div className="actions"><button onClick={() => onOpenNative("explorer")} type="button">Open Files</button><button onClick={() => onOpenNative("control")} type="button">Open Control</button></div></div></div>;
 }
 
 function MissingFile() {
@@ -1642,7 +1642,7 @@ function StartPanel({
         {pinnedItems.map((key) => {
           if (key.startsWith("app:")) {
             const app = apps.find((candidate) => `app:${candidate.id}` === key);
-            return app ? <button key={key} onClick={() => onLaunchApp(app)} type="button"><AppGlyph2 app={app} /><span>{app.name}</span></button> : null;
+            return app ? <button key={key} onClick={() => onLaunchApp(app)} type="button"><AppGlyph app={app} /><span>{app.name}</span></button> : null;
           }
           const kind = key.replace(/^builtin:/u, "") as WindowKind;
           return NATIVE_META[kind] ? <button key={key} onClick={() => onOpenNative(kind)} type="button"><NativeGlyph glyph={nativeGlyph(kind)} variant="native" /><span>{NATIVE_META[kind].title}</span></button> : null;
@@ -1670,11 +1670,11 @@ function SearchPanel({ apps, files, query, onLaunchApp, onOpenFile, onOpenNative
       <nav><button className={tab === "all" ? "active" : ""} onClick={() => setTab("all")} type="button">All</button><button className={tab === "apps" ? "active" : ""} onClick={() => setTab("apps")} type="button">Apps</button><button className={tab === "files" ? "active" : ""} onClick={() => setTab("files")} type="button">Files & Atoms</button></nav>
       <div className="pl2-search-content">
         <div className="results">
-          {(tab === "all" || tab === "apps") && <section><h3>{needle ? "Apps" : "Suggested apps"}</h3>{appResults.slice(0, 8).map((app) => <button key={app.id} onClick={() => onLaunchApp(app)} type="button"><AppGlyph2 app={app} size="small" /><span><strong>{app.name}</strong><small>Neutron Element · {app.id}</small></span></button>)}</section>}
+          {(tab === "all" || tab === "apps") && <section><h3>{needle ? "Apps" : "Suggested apps"}</h3>{appResults.slice(0, 8).map((app) => <button key={app.id} onClick={() => onLaunchApp(app)} type="button"><AppGlyph app={app} size="small" /><span><strong>{app.name}</strong><small>Neutron Element · {app.id}</small></span></button>)}</section>}
           {(tab === "all" || tab === "files") && <section><h3>{needle ? "Files" : "Recent files"}</h3>{fileResults.slice(0, 8).map((item) => <button key={item.id} onClick={() => onOpenFile(item)} type="button"><NativeGlyph glyph={fileGlyph(item)} variant={item.kind === "atom" ? "atom" : "file"} /><span><strong>{item.name}</strong><small>{item.detail ?? item.kind}</small></span></button>)}</section>}
         </div>
         <aside>
-          {bestApp ? <><AppGlyph2 app={bestApp} /><h2>{bestApp.name}</h2><p>{bestApp.description}</p><button onClick={() => onLaunchApp(bestApp)} type="button">Open</button></> : bestFile ? <><NativeGlyph glyph={fileGlyph(bestFile)} variant={bestFile.kind === "atom" ? "atom" : "file"} /><h2>{bestFile.name}</h2><p>{bestFile.detail}</p><button onClick={() => onOpenFile(bestFile)} type="button">Open</button></> : <><ElectronMark /><h2>Search Plasmon</h2><p>Find installed Neutron apps, files, folders, and Atom-like objects.</p><button onClick={() => onOpenNative("explorer")} type="button">Browse Files</button></>}
+          {bestApp ? <><AppGlyph app={bestApp} /><h2>{bestApp.name}</h2><p>{bestApp.description}</p><button onClick={() => onLaunchApp(bestApp)} type="button">Open</button></> : bestFile ? <><NativeGlyph glyph={fileGlyph(bestFile)} variant={bestFile.kind === "atom" ? "atom" : "file"} /><h2>{bestFile.name}</h2><p>{bestFile.detail}</p><button onClick={() => onOpenFile(bestFile)} type="button">Open</button></> : <><ElectronMark /><h2>Search Plasmon</h2><p>Find installed Neutron apps, files, folders, and Atom-like objects.</p><button onClick={() => onOpenNative("explorer")} type="button">Browse Files</button></>}
         </aside>
       </div>
     </section>
@@ -1701,7 +1701,7 @@ function TrayFlyout({ apps, onLaunch }: { apps: PlasmonApp[]; onLaunch: (app: Pl
   return (
     <section className="pl2-tray-flyout" onClick={(event) => event.stopPropagation()}>
       <header><strong>Neutron tray</strong><small>{apps.length} tray-capable app{apps.length === 1 ? "" : "s"}</small></header>
-      {apps.map((app) => <button key={app.id} onClick={() => onLaunch(app)} type="button"><AppGlyph2 app={app} size="small" /><span><strong>{app.tray?.title ?? app.name}</strong><small>{app.name} · Kernel tray surface</small></span><b>›</b></button>)}
+      {apps.map((app) => <button key={app.id} onClick={() => onLaunch(app)} type="button"><AppGlyph app={app} size="small" /><span><strong>{app.tray?.title ?? app.name}</strong><small>{app.name} · Kernel tray surface</small></span><b>›</b></button>)}
       {apps.length === 0 ? <div className="pl2-empty">No installed apps declare a Kernel tray.</div> : null}
       <footer>Icons/declarations are mirrored here. The interactive tray iframe is still Kernel-owned and cannot safely be nested in Plasmon yet.</footer>
     </section>
@@ -1846,7 +1846,7 @@ function Taskbar({
               const app = apps.find((candidate) => `app:${candidate.id}` === key);
               if (!app) return null;
               const running = liveAppIds.has(app.id);
-              return <button className={running ? "running" : ""} disabled={!app.tiles.length} key={key} onClick={() => onLaunchApp(app)} title={app.name} type="button"><AppGlyph2 app={app} size="small" />{launchingId === app.id ? <i className="launching" /> : null}</button>;
+              return <button className={running ? "running" : ""} disabled={!app.tiles.length} key={key} onClick={() => onLaunchApp(app)} title={app.name} type="button"><AppGlyph app={app} size="small" />{launchingId === app.id ? <i className="launching" /> : null}</button>;
             }
             const kind = key.replace(/^builtin:/u, "") as WindowKind;
             if (!NATIVE_META[kind]) return null;
@@ -1856,7 +1856,7 @@ function Taskbar({
         </div>
       </div>
       <div className="pl2-taskbar-system">
-        <button className="tray-preview" onClick={onToggleTray} title="Neutron app trays" type="button">⌃{trayApps.slice(0, 2).map((app) => <AppGlyph2 app={app} key={app.id} size="small" />)}</button>
+        <button className="tray-preview" onClick={onToggleTray} title="Neutron app trays" type="button">⌃{trayApps.slice(0, 2).map((app) => <AppGlyph app={app} key={app.id} size="small" />)}</button>
         <span className="status-glyphs">◉ ᯤ</span>
         <button className="clock" onClick={onToggleCalendar} type="button"><strong>{time}</strong><small>{date}</small></button>
       </div>
