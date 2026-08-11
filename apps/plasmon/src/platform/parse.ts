@@ -58,6 +58,8 @@ export function parseAppDescription(
     typeof app.version === "number" && Number.isSafeInteger(app.version)
       ? app.version
       : undefined;
+  const tray = record(app.tray);
+  const trayTitle = text(tray?.title);
 
   return {
     id: app.id,
@@ -65,7 +67,26 @@ export function parseAppDescription(
     description,
     ...(version === undefined ? {} : { version }),
     tiles,
+    ...(trayTitle ? { tray: { title: trayTitle } } : {}),
   };
+}
+
+export function parseLiveAppIds(value: unknown): Set<string> {
+  const root = record(value);
+  if (!root || !Array.isArray(root.endpoints)) return new Set();
+  const result = new Set<string>();
+  for (const entry of root.endpoints) {
+    const endpoint = record(entry);
+    if (
+      endpoint?.role === "tile" &&
+      typeof endpoint.appId === "string" &&
+      endpoint.appId !== "plasmon" &&
+      endpoint.appId !== "kernel"
+    ) {
+      result.add(endpoint.appId);
+    }
+  }
+  return result;
 }
 
 export function toolNames(value: unknown): Set<string> {

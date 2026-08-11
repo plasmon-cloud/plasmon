@@ -25,6 +25,7 @@ const MOCK_APPS: PlasmonApp[] = [
     description: "A private mail workspace running inside Neutron.",
     version: 302,
     tiles: [{ id: "main", title: "Mail" }],
+    tray: { title: "Mail" },
   },
   {
     id: "contacts",
@@ -47,7 +48,9 @@ export class MockPlatform implements PlasmonPlatform {
         "apps.describe",
         "apps.install_offer",
         "workspace.open_tile",
+        "endpoints.list",
       ]),
+      liveAppIds: new Set(["chess"]),
     };
   }
 

@@ -4,6 +4,7 @@ import {
   normalizePackageUrl,
   parseAppDescription,
   parseInstalledAppIds,
+  parseLiveAppIds,
   toolNames,
 } from "../src/platform/parse.ts";
 
@@ -21,7 +22,7 @@ test("parses vanilla Neutron installed app discovery", () => {
   ]);
 });
 
-test("parses safe apps.describe metadata without assuming asset paths", () => {
+test("parses safe apps.describe metadata including tray declaration", () => {
   expect(
     parseAppDescription(
       {
@@ -31,6 +32,7 @@ test("parses safe apps.describe metadata without assuming asset paths", () => {
         tiles: [
           { id: "main", title: "Files", description: "Browse files" },
         ],
+        tray: { title: "Files activity" },
       },
       "fallback",
     ),
@@ -42,7 +44,21 @@ test("parses safe apps.describe metadata without assuming asset paths", () => {
     tiles: [
       { id: "main", title: "Files", description: "Browse files" },
     ],
+    tray: { title: "Files activity" },
   });
+});
+
+test("extracts only live app tile endpoints for taskbar state", () => {
+  expect(
+    [...parseLiveAppIds({
+      endpoints: [
+        { endpoint: "kernel", role: "kernel", connected: true },
+        { endpoint: "app:mail:background", role: "background", appId: "mail" },
+        { endpoint: "app:chess:tile:board:instance:1", role: "tile", appId: "chess" },
+        { endpoint: "app:plasmon:tile:main:instance:2", role: "tile", appId: "plasmon" },
+      ],
+    })],
+  ).toEqual(["chess"]);
 });
 
 test("detects tenant extensions by capabilities rather than product name", () => {

@@ -1,6 +1,7 @@
 import {
   describeApp,
   listApps,
+  listEndpoints,
   listTools,
   offerAppInstall,
   openAppTile,
@@ -9,6 +10,7 @@ import {
   modeFromTools,
   parseAppDescription,
   parseInstalledAppIds,
+  parseLiveAppIds,
   toolNames,
 } from "./parse.ts";
 import type {
@@ -22,12 +24,14 @@ export class NeutronPlatform implements PlasmonPlatform {
   mode: PlatformMode = "neutron";
 
   async load(): Promise<PlatformSnapshot> {
-    const [listed, descriptors] = await Promise.all([
+    const [listed, descriptors, endpoints] = await Promise.all([
       listApps(),
       listTools("kernel"),
+      listEndpoints().catch(() => ({ endpoints: [] })),
     ]);
     const installed = parseInstalledAppIds(listed);
     const tools = toolNames(descriptors);
+    const liveAppIds = parseLiveAppIds(endpoints);
     this.mode = modeFromTools(tools);
 
     const apps = await Promise.all(
@@ -38,7 +42,7 @@ export class NeutronPlatform implements PlasmonPlatform {
             return parseAppDescription(await describeApp(id), description);
           } catch {
             // One malformed or temporarily unavailable app must not make the
-            // entire launcher unusable. Keep it visible but non-launchable.
+            // entire desktop unusable. Keep it visible but non-launchable.
             return {
               id,
               name: id,
@@ -50,7 +54,7 @@ export class NeutronPlatform implements PlasmonPlatform {
     );
 
     apps.sort((left, right) => left.name.localeCompare(right.name));
-    return { mode: this.mode, apps, tools };
+    return { mode: this.mode, apps, tools, liveAppIds };
   }
 
   async open(app: PlasmonApp): Promise<void> {

@@ -1,71 +1,90 @@
 # Plasmon GUI experiment
 
-Branch: `version-0.1.0-gui`
+Branch: `version-0.1.0-gui2`
 
-This branch is a deliberately isolated experiment in presenting Plasmon as a familiar desktop environment while keeping Neutron as the actual runtime and security boundary.
+This is the current desktop-environment experiment for Plasmon. It builds on the original GUI experiment and pushes much closer to a polished browser desktop such as daedalOS while retaining Neutron's security boundary.
 
-## What is implemented
+## Interaction model
 
-- Installed Neutron apps are discovered dynamically from the existing Plasmon platform adapter.
-- Every discovered app appears automatically as a desktop shortcut.
-- Discovered apps also appear as pinned launchers in the Plasmon taskbar.
-- Double-clicking a Neutron app desktop shortcut calls the normal Kernel `workspace.open_tile` path. The app therefore remains a real authenticated Neutron tile rather than an unsafe nested iframe.
-- The desktop includes a Start/search menu, clock, context menus, notifications, and a Plasmon-branded wallpaper.
-- Plasmon-owned demo programs run as movable/resizable/minimizable/maximizable windows inside the Plasmon tile:
-  - Plasmon Control
-  - Atoms explorer
-  - Notes
-  - Terminal
-  - Calculator
-  - About
-- The Atoms explorer intentionally presents logical Atoms as files and includes a right-click `Share…` affordance. Sharing is a UI preview only; no Atom sharing contract is invented by this branch.
-- The existing Kernel-owned install-offer flow remains available through Plasmon Control and Start.
+- Installed Neutron applications are discovered automatically and rendered as desktop shortcuts.
+- Neutron apps have a small electron/Neutron badge so they remain visually distinct from Plasmon-native desktop programs and files.
+- Desktop icons are movable and positions are persisted in browser local storage.
+- Dragging empty desktop space draws a marquee selection rectangle and selects intersecting icons.
+- Local desktop files/folders support copy, cut, paste, rename, delete, and download where meaningful.
+- Taskbar shows only pinned entries, open Plasmon-native windows, and Neutron apps with a live tile endpoint.
+- Start uses an electron/orbital glyph rather than a lettermark.
+- Start and Search are separate polished flyouts.
+- Clicking the taskbar clock opens a current-month calendar flyout.
+
+## Native desktop programs
+
+The GUI experiment includes lightweight Plasmon-native programs so the desktop can be exercised before Kernel floating windows exist:
+
+- Files / Explorer-style shell
+- Plasmon Control
+- Markdown editor with split preview
+- Media Player with video library thumbnails and local video picker
+- Terminal with useful shell-like commands
+- Calculator
+- About
+- experimental Doom web frame
+
+The local experimental filesystem is backed by browser local storage. It is not a replacement for Neutron Files/VFS. The important product experiment is the UX: Atoms behave like file-like user objects that can be named, moved, opened, and eventually shared.
+
+## Atom shell behavior
+
+`Budget 2026.nsheet` is included as a logical Atom example. It behaves like a file in the shell. Double-click attempts to open the installed Spreadsheet Element. Right-click exposes `Share Atom…`; the sharing backend remains intentionally unimplemented in this experiment.
+
+## Real Neutron applications
+
+The GUI never embeds a real Neutron app iframe inside the Plasmon iframe. Doing so would break the Kernel's immediate-parent/origin/private-MessagePort authentication model.
+
+Launching a discovered app still calls `workspace.open_tile`, so the Kernel creates/focuses the real authenticated sibling tile.
+
+`endpoints.list` is used to detect which Neutron app tile endpoints are live, allowing the inner taskbar to distinguish installed apps from running/open apps.
 
 ## App icons
 
-Vanilla `apps.describe` currently omits the manifest `tile.icon` path. This experiment therefore probes the conventional first-party Neutron location `static/icon.svg` on the target app's normal isolated app origin and falls back to generated initials if that asset does not exist.
+The GUI has a resilient icon loader because first-party Neutron packages currently mix `static/icon.svg` and `static/icon.png`, and persistent-resident apps can use the unprefixed app origin. Plasmon safely probes package-local SVG/PNG/WebP/JPEG candidates on both supported app origin forms before falling back to initials.
 
-A proper production solution should extend safe app discovery metadata to expose a validated icon reference rather than depending on this convention.
+The longer-term clean solution is for Kernel discovery to expose a safe resolved icon resource rather than requiring a launcher to infer package asset paths.
 
-## Important architectural limitation
+## Kernel trays
 
-A real Neutron app cannot currently run as a nested authenticated iframe inside the Plasmon tile. Neutron registers direct Kernel-owned tile frames and gives those frames their private message-bus ports. Nesting another app below Plasmon changes its immediate parent and breaks that trust model.
+The GUI mirrors the set of tray-capable apps exposed by `apps.describe` and displays them in its own system-tray flyout.
 
-For this reason the GUI experiment has two kinds of windows:
+This is not yet a full tray portal. The actual interactive tray surface is a Kernel-created authenticated iframe and its dynamic badge is owned by the Kernel tray service. Vanilla Neutron currently exposes neither the tray iframe nor badge state through a read API. A future generic Kernel `tray.list`/`tray.open` or portal capability would let Plasmon render the true tray state without weakening frame authentication.
 
-1. **Plasmon demo windows** — true floating windows inside the Plasmon tile.
-2. **Real Neutron apps** — launched through Kernel as sibling Neutron tiles.
+## `.neutron` package download
 
-The intended future evolution is to move/adapt the floating-window manager into Kernel (or add a Kernel floating workspace mode) so real authenticated `AppTileFrame`s can be rendered with this desktop UX without changing the application security model.
+A Neutron app's desktop context menu includes `Download .neutron` because that is the right desktop affordance. Current Kernel APIs do not expose the original installed package archive, so the GUI reports that limitation instead of fabricating a download. A future Kernel package-export tool would make this action functional.
 
-## Keyboard shortcuts inside Plasmon
+## Doom and remote media
 
-- `Ctrl+Space` — toggle Plasmon Start.
-- `Ctrl+Shift+P` — open Plasmon Control.
-- `Escape` — close Start/context menus.
+The Doom window currently embeds the public `DaniHRE/jsdoom` browser build. The media library includes remote standards/demo videos plus a local file picker. These may be blocked by future Neutron content-security policy or remote framing policy; if so, the durable solution is to package the relevant browser/WASM assets into Plasmon rather than relaxing Neutron security.
 
-These are scoped to the Plasmon iframe and are separate from Kernel workspace shortcuts.
+## Local validation
 
-## Local test
+```bash
+git fetch origin
+git switch version-0.1.0-gui2
+git pull --ff-only origin version-0.1.0-gui2
 
-From the repository root:
-
-```sh
 npm --workspace neutron-design-system run build
 npm --workspace neutron-plasmon test
 ```
 
-If the existing PocketIC `serve` process is running, then reinstall with the branch's existing deployment configuration:
+If that passes and the PocketIC server is already running:
 
-```sh
+```bash
 npm run provision -- plasmon.ndeploy.json reinstall
 npm run provision -- plasmon.ndeploy.json status
 ```
 
-## Things to evaluate visually
+## Future Kernel direction
 
-- Does the desktop metaphor make Neutron immediately understandable?
-- Is it acceptable that real apps currently open as sibling Kernel tiles?
-- Should Plasmon become a Kernel workspace background/shell later instead of an ordinary foreground tile?
-- Which daedalOS-style interactions are worth moving into a generic Kernel floating-window mode: z-order, drag/resize, minimize/maximize, snapping, taskbar state, and persisted geometry?
-- Should Files-backed documents become the first vanilla-Neutron implementation of logical Atoms?
+The intended end state is not Plasmon permanently running a second window manager inside a Neutron tile. This GUI is a UX prototype for a future generic Kernel floating-workspace mode where:
+
+- Plasmon supplies the desktop/home/file/Atom shell;
+- Kernel owns authenticated application frames, focus, permissions, tray portals, and lifecycle;
+- real Neutron app tiles receive floating `x/y/width/height/z` geometry rather than being nested inside Plasmon.
