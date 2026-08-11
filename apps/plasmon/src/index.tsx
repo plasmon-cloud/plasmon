@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { DesktopShell2 as DesktopShell } from "./desktop/DesktopShell.tsx";
+import { DesktopShell } from "./DesktopShell.tsx";
 import { installAppIconFallbacks } from "./iconFallback.ts";
 import "./style.scss";
 import "./desktop.scss";

@@ -7,13 +7,13 @@ import {
   type ReactNode,
 } from "react";
 import { appIndexUrl, canisterIdFromUrl } from "neutron-tools/src/runtime.js";
-import { InstallDialog } from "../components/InstallDialog.tsx";
+import { InstallDialog } from "components/InstallDialog.tsx";
 import {
   createPlatform,
   type PlasmonApp,
   type PlatformMode,
   type PlatformSnapshot,
-} from "../platform/index.ts";
+} from "platform/index.ts";
 import {
   cloneItemTree,
   descendants,
@@ -187,7 +187,7 @@ function nativeGlyph(kind: WindowKind): string {
   return NATIVE_META[kind].glyph;
 }
 
-export function DesktopShell2() {
+export function DesktopShell() {
   const [platform] = useState(() => createPlatform());
   const [snapshot, setSnapshot] = useState<PlatformSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -852,7 +852,7 @@ export function DesktopShell2() {
         {trayOpen ? <TrayFlyout apps={trayApps} onLaunch={launchApp} /> : null}
 
         {contextMenu ? (
-          <DesktopContextMenu2
+          <DesktopContextMenu
             clipboard={clipboard}
             descriptor={contextMenu.kind === "item" ? descriptorById(contextMenu.id) : undefined}
             menu={contextMenu}
@@ -910,7 +910,7 @@ export function DesktopShell2() {
         </div>
       </section>
 
-      <Taskbar2
+      <Taskbar
         apps={apps}
         liveAppIds={liveAppIds}
         pins={pins}
@@ -1017,7 +1017,7 @@ function NativeGlyph({ glyph, variant }: { glyph: string; variant: "native" | "f
   return <span className={`pl2-native-glyph pl2-native-glyph--${variant}`}>{glyph}</span>;
 }
 
-function AppGlyph2({ app, size = "normal" }: { app: PlasmonApp; size?: "normal" | "desktop" | "small" }) {
+function AppGlyph({ app, size = "normal" }: { app: PlasmonApp; size?: "normal" | "desktop" | "small" }) {
   const [failed, setFailed] = useState(false);
   const src = useMemo(() => appIconUrl(app), [app.id]);
   return (
@@ -1192,7 +1192,7 @@ function WindowContent({
 }) {
   if (entry.kind === "control") {
     return (
-      <ControlCenter2
+      <ControlCenter
         apps={apps}
         liveAppIds={liveAppIds}
         loading={loading}
@@ -1208,7 +1208,7 @@ function WindowContent({
   }
   if (entry.kind === "explorer") {
     return (
-      <Explorer2
+      <Explorer
         initialFolder={entry.targetId ?? "desktop"}
         items={vfs}
         onCreateFolder={onCreateFolder}
@@ -1234,7 +1234,7 @@ function WindowContent({
   }
   if (entry.kind === "terminal") {
     return (
-      <Terminal2
+      <Terminal
         apps={apps}
         items={vfs}
         mode={mode}
@@ -1245,12 +1245,12 @@ function WindowContent({
       />
     );
   }
-  if (entry.kind === "calculator") return <Calculator2 />;
+  if (entry.kind === "calculator") return <Calculator />;
   if (entry.kind === "doom") return <DoomWindow />;
-  return <About2 apps={apps} mode={mode} onOpenNative={onOpenNative} />;
+  return <About apps={apps} mode={mode} onOpenNative={onOpenNative} />;
 }
 
-function ControlCenter2({
+function ControlCenter({
   apps,
   liveAppIds,
   loading,
@@ -1298,7 +1298,7 @@ function ControlCenter2({
             const live = liveAppIds.has(app.id);
             return (
               <article key={app.id}>
-                <AppGlyph2 app={app} />
+                <AppGlyph app={app} />
                 <div className="copy"><div><strong>{app.name}</strong>{live ? <span className="live">RUNNING</span> : null}{app.tray ? <span className="tray">TRAY</span> : null}</div><p>{app.description}</p><small>{app.id} · {appVersion(app.version) || "unknown version"} · {app.tiles.length} tile{app.tiles.length === 1 ? "" : "s"}</small></div>
                 <button className={pins.includes(key) ? "pinned" : ""} onClick={() => onTogglePin(key)} type="button">{pins.includes(key) ? "Unpin" : "Pin"}</button>
                 <button disabled={!app.tiles.length || launchingId === app.id} onClick={() => onLaunch(app)} type="button">{launchingId === app.id ? "Opening…" : live ? "Focus" : "Open"}</button>
@@ -1311,7 +1311,7 @@ function ControlCenter2({
   );
 }
 
-function Explorer2({
+function Explorer({
   initialFolder,
   items,
   onCreateFolder,
@@ -1484,7 +1484,7 @@ function ImageViewer({ item }: { item?: VfsItem }) {
   );
 }
 
-function Terminal2({
+function Terminal({
   apps,
   items,
   mode,
@@ -1574,7 +1574,7 @@ function Terminal2({
   );
 }
 
-function Calculator2() {
+function Calculator() {
   const [display, setDisplay] = useState("0");
   const keys = ["7", "8", "9", "÷", "4", "5", "6", "×", "1", "2", "3", "−", "0", ".", "=", "+"];
   const press = (key: string) => {
@@ -1607,7 +1607,7 @@ function DoomWindow() {
   );
 }
 
-function About2({ apps, mode, onOpenNative }: { apps: PlasmonApp[]; mode: PlatformMode; onOpenNative: (kind: WindowKind) => void }) {
+function About({ apps, mode, onOpenNative }: { apps: PlasmonApp[]; mode: PlatformMode; onOpenNative: (kind: WindowKind) => void }) {
   return <div className="pl2-about"><ElectronMark /><div><small>PLASMON GUI2</small><h2>A familiar desktop for a decentralized runtime.</h2><p>GUI2 deliberately borrows the interaction model of mature browser desktops: draggable icons, marquee selection, files/folders, desktop search, a taskbar, calendar, media, editors, and windowed apps.</p><dl><div><dt>Runtime</dt><dd>{modeLabel(mode)}</dd></div><div><dt>Elements</dt><dd>{apps.length}</dd></div><div><dt>Atoms</dt><dd>File-like logical objects</dd></div></dl><div className="actions"><button onClick={() => onOpenNative("explorer")} type="button">Open Files</button><button onClick={() => onOpenNative("control")} type="button">Open Control</button></div></div></div>;
 }
 
@@ -1708,7 +1708,7 @@ function TrayFlyout({ apps, onLaunch }: { apps: PlasmonApp[]; onLaunch: (app: Pl
   );
 }
 
-function DesktopContextMenu2({
+function DesktopContextMenu({
   clipboard,
   descriptor,
   menu,
@@ -1786,7 +1786,7 @@ function DesktopContextMenu2({
   );
 }
 
-function Taskbar2({
+function Taskbar({
   apps,
   liveAppIds,
   pins,
