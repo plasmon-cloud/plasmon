@@ -29,7 +29,6 @@ test("plasmon manifest validates and declares the shipped method", async () => {
     id: "plasmon",
     name: "Plasmon",
     version: 100,
-    update_source: "233tv-xiaaa-aaaay-aacta-cai",
     src: "main.mo",
     tiles: [
       {
@@ -47,6 +46,7 @@ test("plasmon manifest validates and declares the shipped method", async () => {
     },
   });
   expect(manifest).not.toHaveProperty("init_arg");
+  expect(manifest).not.toHaveProperty("update_source");
 });
 
 test("plasmon emits a build-time app method schema", async () => {

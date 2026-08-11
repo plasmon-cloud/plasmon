@@ -6,6 +6,7 @@
   "version": "0.1.0",
   "scripts": {
     "build": "bun build.ts && npm run mogen",
+    "dev": "bun build.ts dev",
     "mogen": "bun ../../packages/neutron-scripts/src/mogen.ts",
     "mopack": "bun ../../packages/neutron-scripts/src/mopack.ts",
     "schema": "bun ../../packages/neutron-scripts/src/method_schema.ts",

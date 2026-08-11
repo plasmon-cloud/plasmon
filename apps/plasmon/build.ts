@@ -2,9 +2,12 @@ import esbuild from "esbuild";
 import copyStaticFiles from "esbuild-copy-static-files";
 import { sassPlugin } from "esbuild-sass-plugin";
 import { readFile, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
 
 const outfile = "./dist/web/main.js";
+const args = process.argv.slice(2);
+const devMode = args[0] === "dev";
 
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(outfile, "utf8");
@@ -18,7 +21,8 @@ const config: BuildOptions = {
   entryPoints: ["./src/index.tsx"],
   outfile,
   bundle: true,
-  minify: true,
+  minify: !devMode,
+  sourcemap: devMode ? "inline" : false,
   external: [],
   format: "esm",
   jsx: "automatic",
@@ -30,7 +34,7 @@ const config: BuildOptions = {
       name: "neutron-self-contained-assets",
       setup(build) {
         build.onEnd(async (result) => {
-          if (result.errors.length === 0) {
+          if (!devMode && result.errors.length === 0) {
             await stripRemoteDiagnostics();
           }
         });
@@ -47,12 +51,35 @@ const config: BuildOptions = {
   ],
 };
 
-const args = process.argv.slice(2);
-
 if (args[0] === "watch") {
   const ctx = await esbuild.context(config);
   await ctx.watch();
   console.log("Watching local files for changes...");
+} else if (devMode) {
+  const ctx = await esbuild.context(config);
+  await ctx.watch();
+  await ctx.rebuild();
+
+  const root = new URL("./dist/web/", import.meta.url);
+  const port = Number(process.env.PORT ?? 5173);
+  Bun.serve({
+    port,
+    async fetch(request) {
+      const url = new URL(request.url);
+      const relative = url.pathname === "/"
+        ? "index.html"
+        : decodeURIComponent(url.pathname.slice(1));
+      if (!relative || relative.split("/").includes("..")) {
+        return new Response("Not found", { status: 404 });
+      }
+      const file = Bun.file(fileURLToPath(new URL(relative, root)));
+      if (!(await file.exists())) return new Response("Not found", { status: 404 });
+      return new Response(file);
+    },
+  });
+
+  console.log(`Plasmon UI dev server: http://localhost:${port}`);
+  console.log("Standalone mode uses mock Neutron data; no Kernel build is required.");
 } else {
   try {
     await esbuild.build(config);
