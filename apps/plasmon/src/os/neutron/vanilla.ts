@@ -174,17 +174,13 @@ export class VanillaNeutronBridge implements NeutronBridge {
 
     const elements = await Promise.all(
       hints.map(async (hint): Promise<ExternalElement> => {
-        const icon = this.resolveIcon(hint.id);
-        try {
-          return parseExternalElement(
-            await this.api.describeApp(hint.id),
-            hint,
-            runtime,
-            icon,
-          );
-        } catch {
-          return parseExternalElement(null, hint, runtime, icon);
-        }
+        const [iconResult, descriptorResult] = await Promise.allSettled([
+          this.resolveIcon(hint.id),
+          this.api.describeApp(hint.id),
+        ]);
+        const icon = iconResult.status === "fulfilled" ? iconResult.value : undefined;
+        const descriptor = descriptorResult.status === "fulfilled" ? descriptorResult.value : null;
+        return parseExternalElement(descriptor, hint, runtime, icon);
       }),
     );
 
