@@ -6,22 +6,41 @@ import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
 
 const mainOutfile = "./dist/web/main.js";
+const bundledCss = "./dist/web/main.bundle.css";
+const publicCss = "./public/main.css";
+const outputCss = "./dist/web/main.css";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
 
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(mainOutfile, "utf8");
   const sanitized = source.replaceAll("https://react.dev/errors/", "#react-error-");
-  if (sanitized !== source) {
-    await writeFile(mainOutfile, sanitized);
-  }
+  if (sanitized !== source) await writeFile(mainOutfile, sanitized);
+}
+
+/**
+ * Monaco's ESM modules contribute CSS. Plasmon already ships public/main.css,
+ * so esbuild emits imported CSS as main.bundle.css and this deterministic
+ * post-step combines the two without letting a copy plugin overwrite either.
+ */
+async function mergeApplicationStyles(): Promise<void> {
+  const [base, generated] = await Promise.all([
+    readFile(publicCss, "utf8"),
+    readFile(bundledCss, "utf8").catch(() => ""),
+  ]);
+  await writeFile(outputCss, generated ? `${base}\n\n/* Bundled application engine styles */\n${generated}` : base);
 }
 
 const config: BuildOptions = {
-  entryPoints: {
-    main: "./src/index.tsx",
-    service: "./src/os/fs/background.ts",
-  },
+  entryPoints: [
+    { in: "./src/index.tsx", out: "main" },
+    { in: "./src/os/fs/background.ts", out: "service" },
+    { in: "monaco-editor/esm/vs/editor/editor.worker.js", out: "monaco-workers/editor.worker" },
+    { in: "monaco-editor/esm/vs/language/json/json.worker.js", out: "monaco-workers/json.worker" },
+    { in: "monaco-editor/esm/vs/language/css/css.worker.js", out: "monaco-workers/css.worker" },
+    { in: "monaco-editor/esm/vs/language/html/html.worker.js", out: "monaco-workers/html.worker" },
+    { in: "monaco-editor/esm/vs/language/typescript/ts.worker.js", out: "monaco-workers/ts.worker" },
+  ],
   outdir: "./dist/web",
   entryNames: "[name]",
   bundle: true,
@@ -30,20 +49,11 @@ const config: BuildOptions = {
   external: [],
   format: "esm",
   jsx: "automatic",
-  loader: { ".ts": "ts", ".tsx": "tsx" },
+  loader: { ".ts": "ts", ".tsx": "tsx", ".ttf": "file" },
+  outExtension: { ".css": ".bundle.css" },
   platform: "browser",
   plugins: [
     sassPlugin(),
-    {
-      name: "neutron-self-contained-assets",
-      setup(build) {
-        build.onEnd(async (result) => {
-          if (!devMode && result.errors.length === 0) {
-            await stripRemoteDiagnostics();
-          }
-        });
-      },
-    },
     copyStaticFiles({
       src: "./public",
       dest: "./dist/web",
@@ -52,6 +62,16 @@ const config: BuildOptions = {
       preserveTimestamps: true,
       recursive: true,
     }),
+    {
+      name: "neutron-self-contained-assets",
+      setup(build) {
+        build.onEnd(async (result) => {
+          if (result.errors.length !== 0) return;
+          await mergeApplicationStyles();
+          if (!devMode) await stripRemoteDiagnostics();
+        });
+      },
+    },
   ],
 };
 

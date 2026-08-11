@@ -1,10 +1,14 @@
-# Agent 7 dependency requests
+# Agent 7 mature-component dependencies
 
-The Wave 2 implementation works without new packages.
+Wave 2 polish intentionally replaces homemade application engines with established browser components while preserving Plasmon's OS/service adapters.
 
-Future polish requests, not blockers:
+Runtime dependencies:
 
-- `monaco-editor`: richer Text/Markdown editing, search, selection, accessibility, and language services.
-- `marked`: broader CommonMark-compatible Markdown rendering.
-- `dompurify`: sanitizer for a future richer HTML-producing Markdown pipeline.
-- No media library is required for the current native `<video>` + narrow YouTube adapter. A future Video.js-style dependency should be evaluated only if native controls prove insufficient.
+- `monaco-editor@0.54.0` — Text and Markdown editing engine: undo/redo, find, selection/cursor behavior, language modes, accessibility, and text-model semantics. Pinned to 0.54.0 for the current esbuild packaging path rather than adopting the newer Monaco export reorganization during this gate.
+- `marked@18.0.7` — mature Markdown/GFM parser used for Preview. It is not treated as a sanitizer.
+- `dompurify@3.4.12` — sanitizes Marked HTML before the preview uses `dangerouslySetInnerHTML`; Plasmon also applies a narrow URL protocol policy.
+- `@panzoom/panzoom@4.6.2` — Photos pan/zoom engine, avoiding a custom pointer/gesture implementation.
+
+No application engine is loaded from a CDN. Monaco language/editor workers are emitted by `apps/plasmon/build.ts` into the packaged application.
+
+Video remains on browser-native `<video controls>` plus the existing narrow YouTube adapter. Video.js was reviewed but is not added in this round because it would materially increase the media stack without fixing a demonstrated Plasmon gate regression.

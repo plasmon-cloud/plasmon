@@ -1,0 +1,10 @@
+import type { FsNode, NodeId } from "../../os/contracts/index.ts";
+export const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg"] as const;
+export const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/bmp", "image/svg+xml"] as const;
+const EXTENSION_MIME: Readonly<Record<string, string>> = Object.freeze({ ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif", ".bmp": "image/bmp", ".svg": "image/svg+xml" });
+export interface ObjectUrlApi { createObjectURL(blob: Blob): string; revokeObjectURL(url: string): void; }
+export function imageExtension(name: string): string { const lower = name.toLowerCase(); const dot = lower.lastIndexOf("."); return dot >= 0 ? lower.slice(dot) : ""; }
+export function inferImageMime(name: string, declaredMime?: string): string | null { const normalized = declaredMime?.trim().toLowerCase(); if (normalized && (IMAGE_MIME_TYPES as readonly string[]).includes(normalized)) return normalized; return EXTENSION_MIME[imageExtension(name)] ?? null; }
+export function isSupportedImageNode(node: FsNode): boolean { return node.kind !== "directory" && inferImageMime(node.name, node.mime) !== null; }
+export function createImageObjectUrlLease(bytes: Uint8Array, name: string, declaredMime: string | undefined, urlApi: ObjectUrlApi): { url: string; mime: string; release: () => void } { const mime = inferImageMime(name, declaredMime); if (!mime) throw new Error(`Unsupported image format: ${name}`); const blob = new Blob([bytes.slice().buffer], { type: mime }); const url = urlApi.createObjectURL(blob); let released = false; return { url, mime, release: () => { if (released) return; released = true; urlApi.revokeObjectURL(url); } }; }
+export function adjacentImageNode(nodes: readonly FsNode[], currentId: NodeId, direction: -1 | 1): FsNode | null { const images = nodes.filter(isSupportedImageNode).sort((a, b) => a.name.localeCompare(b.name)); const current = images.findIndex((node) => node.id === currentId); if (current < 0) return null; return images[current + direction] ?? null; }

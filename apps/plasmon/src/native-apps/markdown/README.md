@@ -1,3 +1,3 @@
 # Native Markdown
 
-Markdown reuses the Text editor's transient `DocumentSession` and `FsService` save/conflict rules. Preview is dependency-free and intentionally limited: it builds React element data from headings, paragraphs, lists, fenced/inline code, emphasis, and validated links. Raw HTML is never passed to `dangerouslySetInnerHTML` and remains plain text.
+`native:markdown` uses the same `FsService`/`DocumentSession` persistence mechanics as Text, Monaco for source editing, Marked for Markdown/GFM parsing, and DOMPurify for sanitization before sanitized HTML reaches React. Edit/Split/Preview mode changes keep the Monaco model mounted so editor history is preserved.

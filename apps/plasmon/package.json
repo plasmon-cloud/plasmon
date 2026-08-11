@@ -19,6 +19,10 @@
   "license": "GPL-3.0-only",
   "description": "Plasmon launcher for Neutron",
   "dependencies": {
+    "@panzoom/panzoom": "4.6.2",
+    "dompurify": "3.4.12",
+    "marked": "18.0.7",
+    "monaco-editor": "0.54.0",
     "neutron-design-system": "^1.1.0",
     "neutron-tools": "^1.1.0",
     "react": "^19.2.7",
