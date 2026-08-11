@@ -30,6 +30,28 @@ The underlying Neutron package registry already retains normalized tile/tray ico
 
 All icon outcomes are cached with the Element metadata, including complete compatibility failure. Repeated `loadElements()` calls for an unchanged Element and runtime-only focus/pageshow/visibility refreshes therefore perform zero additional icon probes.
 
-## MTN boundary
+## MTN 0.2 authorization boundary
 
-There is intentionally no `ResourceAuthorizationService` implementation here yet. Vanilla Neutron remains functional without authorization. The production authorization adapter must be implemented only after the MTN 0.2 authorization API is frozen; this directory must not invent grant/token/tool schemas in advance.
+The authoritative MTN dependency is external repository `plasmon-cloud/multitenancy-neutron` at accepted SHA `13a412f40bc0c3571c43bcfb8f0e2133b35ffc3a`. No MTN source is vendored or copied into Plasmon.
+
+Accepted MTN 0.2 separates authorization into two surfaces:
+
+- public Kernel actor methods `kernel_authorization_capabilities`, `kernel_authorization_inspect`, and `kernel_authorization_redeem`;
+- compiler-delivered backend `AuthorizationV1`, bound to one exact physical AppScope, with `issue`, `list`, `revoke`, `rotate_resource`, `register_provider`, `call`, `delegate`, and `release`.
+
+The exact AppScope-bound split is security-significant. Plasmon must not turn the backend methods into caller-selectable provider/issuer/consumer scopes.
+
+Provider callback registration is lifecycle metadata, not authority. Accepted MTN allows `register_provider` for an installed/active exact AppScope before that physical provider is assigned to a tenant. Issue/list/revoke/rotate/call/delegate still recheck the accepted MTN ownership/liveness rules; Plasmon must not require assignment merely to register the callback.
+
+### Frozen Plasmon contract mismatch
+
+The current frozen `ResourceAuthorizationService` predates the shipped MTN 0.2 surface and cannot yet be implemented faithfully:
+
+1. Plasmon `ResourceRef` requires `providerId`, `resourceId`, and `revision` (plus optional metadata). MTN authorization identifies a resource as `namespace`, `resource_id`, and `resource_type`; MTN grant/lease records do not carry the Plasmon provider revision needed to reconstruct the frozen `ResourceRef` on inspect/redeem.
+2. Plasmon `redeem({ token })` supplies no consumer AppScope. MTN redemption requires an explicit exact `consumer_scope` and verifies that the authenticated principal currently owns that active scope and satisfies the grant's consumer Element policy.
+3. MTN issuer operations required by Plasmon (`issue`, full issuer inspection via `list`, and `revoke`) are not public browser Kernel methods. They exist only on the compiler-bound backend `AuthorizationV1`. The current Plasmon package does not declare `backend.capabilities.authorization`, and the existing `neutron-tools/app` browser transport exposes no MTN authorization bridge.
+4. MTN's public `kernel_authorization_inspect` is intentionally safe pre-authentication metadata. It omits exact `resource_id`, provider/issuer scopes, audience, and bearer material, so it cannot satisfy Plasmon's full `ResourceGrantSummary` without shadow state (which is forbidden).
+
+`BlockedMtnResourceAuthorizationService` therefore advertises `available: false` and fails every authority-bearing operation closed. It stores no authorization state. `supportsMtnAuthorizationDiscovery()` is limited to generic operation/right detection and does not sniff MTN product/version strings.
+
+Coordinator A must perform one deliberate contract/integration reconciliation before a production MTN adapter is enabled. See `DEPENDENCIES.md` for the exact missing seams.
