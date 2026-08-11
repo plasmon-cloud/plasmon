@@ -10,7 +10,9 @@ The frozen Plasmon `ResourceAuthorizationService` cannot currently represent the
 
 1. Plasmon `ResourceRef` is `{ providerId, resourceId, revision, metadata? }`; MTN authorization resource identity is `{ namespace, resource_id, resource_type }`. MTN does not carry the Plasmon provider revision in grants/leases, so the adapter cannot reconstruct the frozen `ResourceRef` on inspect/redeem without inventing a shadow mapping.
 2. Plasmon `redeem({ token })` has no exact consumer AppScope. MTN `kernel_authorization_redeem` requires `{ token, consumer_scope }` and validates authenticated-principal ownership, liveness, and consumer Element policy for that exact AppScope.
-3. Plasmon `inspect(grantId)` requires a full `ResourceGrantSummary`, including the exact resource and audience. MTN's public `kernel_authorization_inspect` is intentionally safe pre-authentication metadata and omits exact `resource_id`, provider/issuer scope, audience, bearer material, and storage details.
+3. MTN redemption returns an `AuthorizationLease` whose `lease_id` is required by bound `call`, `delegate`, and `release`. Frozen Plasmon `ResourceAuthorization` has no lease handle. Silently discarding it would make the accepted authorized-call lifecycle impossible to represent without hidden adapter state.
+4. Plasmon `expiresAt` is a JavaScript `number` with no frozen unit/encoding contract. MTN grant/lease timestamps are `Nat64` values derived from `Time.now()` nanoseconds. Epoch-nanosecond values exceed JavaScript's safe-integer range, so the adapter must not coerce them without an approved representation/unit decision.
+5. Plasmon `inspect(grantId)` requires a full `ResourceGrantSummary`, including the exact resource and audience. MTN's public `kernel_authorization_inspect` is intentionally safe pre-authentication metadata and omits exact `resource_id`, provider/issuer scope, audience, bearer material, and storage details.
 
 Coordinator A should make one deliberate contract reconciliation rather than scattering translation or hidden state through Sharing/Neutron code.
 
