@@ -1,0 +1,20 @@
+@use "neutron-design-system/styles.scss";
+
+@layer nt.tokens, nt.base, nt.layout, nt.components, nt.utilities, app;
+
+@layer app {
+  .nt-app.plasmon-app {
+    --nt-accent: #89e0aa;
+    --nt-accent-muted: #193525;
+    container-type: inline-size;
+    min-height: 100dvh;
+    padding: var(--nt-pad-5);
+  }
+
+  .plasmon-shell {
+    margin: 0 auto;
+    max-width: 980px;
+    min-height: calc(100dvh - (var(--nt-pad-5) * 2));
+    width: min(100%, 980px);
+  }
+}

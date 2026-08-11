@@ -1,0 +1,33 @@
+{
+  "format": 3,
+  "name": "Plasmon",
+  "id": "plasmon",
+  "version": 100,
+  "update_source": "233tv-xiaaa-aaaay-aacta-cai",
+  "src": "main.mo",
+  "tiles": [
+    {
+      "id": "main",
+      "title": "Plasmon",
+      "path": "index.html",
+      "icon": "static/icon.svg"
+    }
+  ],
+  "func": {
+    "hello_world": {
+      "type": "update",
+      "async": false
+    }
+  },
+  "memory": {
+    "hello": {
+      "version": 1,
+      "schemas": {
+        "1": {
+          "src": "memory/hello/v1.mo"
+        }
+      },
+      "migrations": []
+    }
+  }
+}

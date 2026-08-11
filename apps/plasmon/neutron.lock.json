@@ -1,0 +1,15 @@
+{
+  "format": 2,
+  "app": "plasmon",
+  "memory": {
+    "hello": {
+      "schemas": {
+        "1": {
+          "hash": "a6824df3ed431e4bde76b3bd96687332fdc001738ded60b8fb5d1af65c573982",
+          "entry": "a6824df3ed431e4bde76b3bd96687332fdc001738ded60b8fb5d1af65c573982"
+        }
+      },
+      "migrations": {}
+    }
+  }
+}
