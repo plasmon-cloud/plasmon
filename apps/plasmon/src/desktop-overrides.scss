@@ -1,0 +1,20 @@
+@layer app {
+  .pl-os .dialog-layer {
+    z-index: 7000;
+  }
+
+  .pl-os .install-dialog {
+    border-radius: 10px;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
+  }
+
+  .pl-os .primary-button {
+    border-radius: 5px;
+  }
+
+  .pl-os .secondary-button,
+  .pl-os .icon-button,
+  .pl-os .field-input {
+    border-radius: 5px;
+  }
+}
