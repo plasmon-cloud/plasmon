@@ -102,6 +102,8 @@ describe("unreconciled Plasmon ResourceAuthorizationService", () => {
     expect(error.blockers).toEqual([
       "resource_ref_revision",
       "redeem_consumer_scope",
+      "redeem_lease_handle",
+      "timestamp_representation",
       "issuer_backend_capability_transport",
       "safe_inspection_shape",
     ]);
