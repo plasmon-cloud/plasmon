@@ -86,9 +86,9 @@ async function probeWithTimeout(
 }
 
 /**
- * Probe every candidate concurrently so one missing format does not serialize
- * discovery. Selection still follows the established URL priority rather than
- * whichever image happens to finish loading first.
+ * Start every probe concurrently. Resolve as soon as the highest-priority
+ * candidate that can still win is known, without waiting for lower-priority
+ * probes that cannot affect the result.
  */
 export async function firstLoadableIconCandidate(
   candidates: readonly string[],
@@ -97,11 +97,33 @@ export async function firstLoadableIconCandidate(
 ): Promise<string | undefined> {
   if (candidates.length === 0) return undefined;
   const timeout = normalizedTimeout(timeoutMs);
-  const results = await Promise.all(
-    candidates.map((candidate) => probeWithTimeout(candidate, probe, timeout)),
-  );
-  const firstSuccessful = results.findIndex(Boolean);
-  return firstSuccessful < 0 ? undefined : candidates[firstSuccessful];
+
+  return await new Promise<string | undefined>((resolve) => {
+    const results: Array<boolean | undefined> = new Array(candidates.length).fill(undefined);
+    let settled = false;
+
+    const choose = (): void => {
+      if (settled) return;
+      for (let index = 0; index < results.length; index += 1) {
+        const result = results[index];
+        if (result === undefined) return;
+        if (result) {
+          settled = true;
+          resolve(candidates[index]);
+          return;
+        }
+      }
+      settled = true;
+      resolve(undefined);
+    };
+
+    candidates.forEach((candidate, index) => {
+      void probeWithTimeout(candidate, probe, timeout).then((loaded) => {
+        results[index] = loaded;
+        choose();
+      });
+    });
+  });
 }
 
 /**
