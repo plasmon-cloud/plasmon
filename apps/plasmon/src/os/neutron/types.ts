@@ -21,7 +21,9 @@ export interface VanillaNeutronApi {
   offerAppInstall(request: Extract<AppInstallOfferRequest, { kind: "package_url" }>): Promise<unknown>;
 }
 
-export type ElementIconResolver = (appId: string) => string | undefined;
+export type ElementIconResolver = (
+  appId: string,
+) => string | undefined | Promise<string | undefined>;
 
 export function cloneExternalElement(element: ExternalElement): ExternalElement {
   return {
