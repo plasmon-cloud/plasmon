@@ -7,7 +7,6 @@ import type { BuildOptions } from "esbuild";
 
 const mainOutfile = "./dist/web/main.js";
 const bundledCss = "./dist/web/main.bundle.css";
-const publicCss = "./public/main.css";
 const outputCss = "./dist/web/main.css";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
@@ -19,16 +18,14 @@ async function stripRemoteDiagnostics(): Promise<void> {
 }
 
 /**
- * Monaco's ESM modules contribute CSS. Plasmon already ships public/main.css,
- * so esbuild emits imported CSS as main.bundle.css and this deterministic
- * post-step combines the two without letting a copy plugin overwrite either.
+ * Plasmon's application styles are imported by src/index.tsx. Monaco's ESM
+ * modules contribute additional CSS to the same esbuild output. esbuild emits
+ * that complete stylesheet as main.bundle.css; publish it as main.css because
+ * public/index.html references that stable package path.
  */
 async function mergeApplicationStyles(): Promise<void> {
-  const [base, generated] = await Promise.all([
-    readFile(publicCss, "utf8"),
-    readFile(bundledCss, "utf8").catch(() => ""),
-  ]);
-  await writeFile(outputCss, generated ? `${base}\n\n/* Bundled application engine styles */\n${generated}` : base);
+  const generated = await readFile(bundledCss, "utf8");
+  await writeFile(outputCss, generated);
 }
 
 const config: BuildOptions = {
