@@ -51,6 +51,8 @@ export const MTN_AUTHORIZATION_REQUIRED_RIGHTS = [
 export const MTN_RESOURCE_AUTHORIZATION_BLOCKERS = [
   "resource_ref_revision",
   "redeem_consumer_scope",
+  "redeem_lease_handle",
+  "timestamp_representation",
   "issuer_backend_capability_transport",
   "safe_inspection_shape",
 ] as const;
