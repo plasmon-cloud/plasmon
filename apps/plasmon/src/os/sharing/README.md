@@ -1,6 +1,8 @@
 # Plasmon Shared Resource Provider
 
-Status: **Phase A provider/storage implementation. MTN orchestration is intentionally not implemented yet.**
+Status: **Phase A provider/storage is implemented. Phase B grant/revoke orchestration is implemented against the frozen Plasmon `ResourceAuthorizationService`; lease-bound cross-AppScope provider access remains fail-closed because the frozen abstraction cannot faithfully express the accepted MTN 0.2 call path.**
+
+The accepted MTN dependency reviewed for Phase B is `plasmon-cloud/multitenancy-neutron` at frozen SHA `13a412f40bc0c3571c43bcfb8f0e2133b35ffc3a`. No MTN source is merged, vendored, copied, or reproduced here.
 
 ## Local-first boundary
 
@@ -24,7 +26,15 @@ resourceType = Atom atomType, for example notepad2/v1
 
 Ordinary files use the immutable filesystem `NodeId` under the separate `plasmon.file` namespace. The path, parent, and local source `NodeId` are not stored in an Atom's provider identity, so rename/move operations do not invalidate a published Atom.
 
-The current frozen `contracts/authorization.ts` `ResourceRef` shape is provisional. `resourceRefBoundary.ts` is the only module that maps the provider's internal identity/revision model to that representation. Provider storage does not persist `providerId`, `ResourceRef.metadata`, MTN AppScope data, grants, rights, audiences, leases, bearer material, or authorization epochs.
+The current frozen `contracts/authorization.ts` `ResourceRef` shape remains provisional. `resourceRefBoundary.ts` is the only module that maps the provider's internal identity/revision model to that representation. Provider storage does not persist `providerId`, `ResourceRef.metadata`, MTN AppScope data, grants, rights, audiences, leases, bearer material, authorization epochs, ownership, or liveness state.
+
+The accepted MTN 0.2 authorization identity is the stable tuple:
+
+```text
+namespace + resource_id + resource_type
+```
+
+MTN derives the provider AppScope from the exact compiler-delivered capability; callers do not select provider/issuer scope. MTN's `ResourceRef` intentionally has no provider revision field. Plasmon's current `ResourceRef` does include a revision so a published snapshot can be addressed exactly. That difference is one of the Phase B contract mismatches documented below; Sharing does not encode the revision into the AtomId/resource id and does not maintain a shadow grant-to-revision authorization database.
 
 ## Persistence model
 
@@ -75,7 +85,7 @@ Integrity is checked at every storage boundary:
 
 Corrupt content fails closed with an integrity error. A concurrent local filesystem mutation fails the publication before provider revision commit with a source-changed integrity error.
 
-## Revisions and writes
+## Revisions and provider writes
 
 A published resource has monotonically increasing integer revisions represented as strings at the TypeScript boundary.
 
@@ -87,19 +97,73 @@ commit(resource, expectedRevision, complete replacement content)
   -> revision conflict
 ```
 
-There is no CRDT or automatic merge policy. `ProviderResourceHandle.write()` is a complete-resource replacement operation suitable for later use behind MTN-authorized writes.
+There is no CRDT or automatic merge policy. `ProviderResourceHandle.write()` is a complete-resource replacement operation.
 
-`ProviderResourceHandle` is **not** an authorization object. It contains only a provider resource identity. `openInternalResource()` is provider-internal access and must not be exposed as a cross-AppScope tool. Phase B must create/bind such a resource-scoped operation only after the Kernel/MTN supplies trusted authorization context and verifies the requested right.
+`ProviderResourceHandle` is **not** an authorization object. It contains only a provider resource identity. `openInternalResource()` remains provider-internal access and must not be exposed as a cross-AppScope tool.
 
-## Read operations
+## Phase B share/grant orchestration
 
-The backend provides same-AppScope storage methods for schema inspection, chunk existence/upload/retrieval, resource description, revision lookup, and resource-scoped chunk reads. These are storage primitives for Plasmon itself; they are not an insecure generic cross-tenant provider API.
+`ResourceAuthorizedShareService` implements the portion of the frozen `ShareService` contract that can be expressed without weakening MTN 0.2.
 
-The future MTN authorized call path must derive the provider AppScope, resource identity, and rights from Kernel-trusted context. Caller-supplied `rights`, provider scope, or resource authorization identity must never become trusted security context.
+Share creation is:
 
-## Import/copy
+```text
+require ResourceAuthorizationService.available
+    -> provider.publish(node, snapshot)
+    -> ResourceAuthorizationService.issue({ resource, rights, audience?, expiresAt? })
+    -> CreatedShare { ShareRecord, IssuedResourceGrant }
+```
 
-`importResource()` downloads and verifies a published revision, then creates a **new local filesystem node** under the requested destination.
+Sharing does not create or hash bearer secrets. The raw token is returned only in the one-time `IssuedResourceGrant` produced by the authorization service.
+
+`ShareRecord` contains no bearer secret. This implementation deliberately uses:
+
+```text
+ShareId = grantId
+url     = plasmon://share/<grantId>
+```
+
+The grant id is not the bearer secret. Using it as `ShareId` lets `revoke(id)` delegate directly to `ResourceAuthorizationService.revoke(grantId)` without maintaining a parallel share-to-grant authority database. Any UI that constructs a transportable bearer link must combine the non-secret record locator with the one-time token transiently and must not persist that bearer value in provider/share storage.
+
+Default share rights are `read`. Explicit rights/audience/expiry values are passed through to the authorization abstraction; Sharing does not implement audience, expiry, rights-subset, ownership, liveness, revocation, delegation, or authorization-epoch policy itself.
+
+If the authorization service is unavailable, `share()` fails before publication. If MTN rejects grant issuance because the provider scope is unassigned, inactive, or no longer owned by the current issuer, the already completed explicit provider snapshot may remain as an ungranted provider revision. That revision has no authorization authority and remains ordinary provider storage.
+
+## Accepted MTN 0.2 authority behavior
+
+At frozen MTN SHA `13a412f40bc0c3571c43bcfb8f0e2133b35ffc3a`:
+
+- `register_provider` is exact-AppScope-bound and requires the physical provider scope to be valid and active, but it does **not** require a tenant assignment/owner. This permits installed+active pool providers to register their callback before allocation.
+- Root `issue` is exact-AppScope-bound and requires the provider scope to be valid/active and currently owned. Ownership is revalidated after randomness awaits before the grant is persisted.
+- `redeem` validates the bearer token, audience, consumer AppScope activity/ownership, consumer Element restriction, grant usability, and redemption policy, then creates a transient authorization lease.
+- Leases contain `lease_id`, subject, consumer scope, provider scope, resource, rights, and expiry. Leases/provider callbacks are transient and are invalidated by restart/upgrade.
+- Every `call` revalidates the lease for the exact consumer AppScope and requested right before dispatch. Grant revocation, resource-epoch rotation, provider/issuer liveness changes, ownership changes, ancestry invalidation, consumer ownership/liveness loss, or lease expiry therefore deny later calls.
+- The provider callback receives a Kernel-constructed trusted `AuthorizationContext`; provider scope and exact resource are derived from the validated lease rather than caller-selected data.
+
+Sharing does not duplicate any of those checks.
+
+## Fail-closed import and exact Plasmon contract mismatch
+
+The current frozen `ResourceAuthorizationService` is sufficient for root grant issue/revoke orchestration, but it cannot faithfully express the accepted MTN 0.2 provider-use path. `ResourceAuthorizedShareService.importShare()` therefore fails closed with `SharingAuthorizationContractMismatchError` and deliberately does **not** redeem/consume the bearer token.
+
+Calling `authorization.redeem(token)` and then invoking `SharedResourceProvider.importResource(ResourceRef)` directly would be unsafe: the Plasmon authorization result has no live MTN lease handle, and the provider operation would occur outside MTN's per-call revalidation. A grant could be revoked, its resource epoch rotated, or provider/consumer ownership/liveness could change after redemption but before/during a multi-chunk import. Sharing will not create that TOCTOU authorization gap.
+
+The exact frozen-contract mismatches are:
+
+1. **Provider registration is absent.** MTN `AuthorizationCapabilityV1.register_provider(dispatch)` can bind a callback to an active exact provider AppScope before assignment. `ResourceAuthorizationService` has no provider-registration operation, so Agent 9 cannot implement or test the required pre-allocation callback registration through the frozen abstraction.
+2. **Lease-bound provider calls are absent.** MTN `AuthorizationCapabilityV1.call({ lease_id, requested_right, operation, payload })` revalidates authority at call time and dispatches a trusted `AuthorizationContext`. `ResourceAuthorizationService` has no equivalent authorized-call operation.
+3. **Lease identity/scopes are absent from redemption.** MTN redemption returns `AuthorizationLease` with `lease_id`, `consumer_scope`, `provider_scope`, subject, resource, rights, and expiry. Plasmon `redeem({ token })` returns `ResourceAuthorization` with only grant id/resource/rights/audience/expiry, so Sharing cannot carry a live lease into provider access or release it.
+4. **Lease release is absent.** MTN exposes `release({ lease_id })`; `ResourceAuthorizationService` does not.
+5. **Pre-auth inspection shapes conflict.** MTN `GrantInspection` deliberately omits exact `resource_id`, provider scope, and issuer scope. Plasmon `inspect(grantId)` requires a `ResourceGrantSummary` containing the complete `ResourceRef`. A faithful Agent 8 adapter cannot populate that field from MTN inspection alone without leaking/fabricating/caching information outside the accepted API.
+6. **Snapshot revision is not an MTN resource-authority field.** MTN `ResourceRef` is `{ namespace, resource_id, resource_type }`; Plasmon's provisional `ResourceRef` additionally carries `revision`. The MTN bearer token/lease therefore cannot by itself recover the exact published snapshot revision required by `ShareService.importShare(token, destination)`. Encoding the revision into AtomId/resource id or maintaining a parallel grant-to-revision authority mapping would violate the frozen provider identity/security model.
+7. **Additional MTN policy inputs are not represented.** MTN issue/delegate supports structured `GrantAudience`, `consumer_element`, and `max_redemptions`; the frozen generic Plasmon request exposes only `audience?: string`, rights, and expiry. Sharing does not invent mappings for the missing fields.
+8. **Delegation/resource rotation are absent.** MTN exposes `delegate` and `rotate_resource`; `ResourceAuthorizationService` does not. Sharing therefore does not implement reshare/delegation or authorization-epoch rotation semantics itself.
+
+Coordinator A/Agent 0 must reconcile these abstractions with Agent 8. The required security property is that a consumer operation reaches the provider only through an MTN-authorized call carrying live lease authority and that snapshot revision selection is transported separately from MTN's stable resource authorization identity without becoming a parallel authorization database.
+
+## Import/copy provider semantics
+
+Phase A `SharedResourceProvider.importResource()` remains an internal provider storage/copy primitive. It downloads and verifies a published revision, then creates a **new local filesystem node** under the requested destination.
 
 For an Atom, the imported local copy receives a new local `atomId`. The original provider identity is retained only as `metadata.sharedSource` provenance:
 
@@ -107,9 +171,11 @@ For an Atom, the imported local copy receives a new local `atomId`. The original
 provider resource identity != imported local NodeId != imported local AtomId
 ```
 
-This prevents an imported copy from pretending to own or be the provider's original filesystem object.
+This prevents an imported copy from pretending to own or be the provider's original filesystem object. Phase B does not expose this primitive as an authorized cross-AppScope operation until the contract mismatch above is reconciled.
 
-## Implemented in Phase A
+## Implemented
+
+Phase A:
 
 - explicit file/Atom snapshot publication;
 - filesystem-revision guard preventing mixed local snapshots;
@@ -119,20 +185,17 @@ This prevents an imported copy from pretending to own or be the provider's origi
 - SHA-256 chunk addressing and cross-publication deduplication;
 - domain-separated content-root verification;
 - optimistic expected-revision writes and stale-revision conflicts;
-- verified reads and imports;
-- resource-scoped provider operation handle for future authorization binding;
+- verified provider reads/imports;
 - versioned stable-memory sharing root and backend methods;
-- narrow provisional `ResourceRef` adapter;
-- focused tests for publication, dedupe, multi-chunk data, concurrent payload/Atom metadata mutation, integrity failure, identity/path independence, revisions, persistence/schema handling, malformed refs, import/copy, and absence of capability material from provider persistence.
+- narrow provisional `ResourceRef` adapter.
 
-## MTN 0.2 integration still blocked
+Phase B safe subset:
 
-Phase A deliberately does **not** implement `ShareService` grant/lease orchestration. The following must wait for Agent 0's handoff of the actually shipped MTN 0.2 API:
+- `ResourceAuthorizedShareService.share()` publication -> authorization issue orchestration;
+- `ResourceAuthorizedShareService.revoke()` direct authorization-service delegation;
+- token-free `ShareRecord` output with `ShareId == grantId` and no shadow grant database;
+- fail-fast behavior when `ResourceAuthorizationService.available` is false;
+- fail-closed `importShare()` until MTN lease-bound provider calls are representable;
+- focused fake-adapter tests for issue/redemption behavior, unassigned/current-owner/liveness rejection, revocation, stale authorization, provider-revision non-corruption, bearer-secret absence from provider persistence, and the explicit frozen-contract tripwire.
 
-1. replace/adjust the provisional mapping in `resourceRefBoundary.ts` to the Agent-0-approved MTN `ResourceRef` boundary;
-2. add the high-level `ShareService` implementation that composes `provider.publish()` with MTN grant issuance;
-3. bind MTN's trusted `AuthorizationContext` to provider `describe`/`read`/`write` operations and enforce rights from that trusted context;
-4. wire grant inspection, redemption, consumer Element/AppScope selection, lease handling, and revocation through the MTN adapter owned by the integration/Neutron boundary;
-5. wire the completed provider into `src/os/integration/services.ts` after the real filesystem service and MTN adapter are integrated.
-
-No bearer-secret generation/hashing, token parsing, audience policy, grant creation, lease validation/issuance, revocation semantics, reshare policy, authorization epochs, cross-AppScope routing, or trusted authorization-context construction belongs in this directory.
+No bearer-secret generation/hashing, token parsing, audience policy, grant persistence, ownership/liveness state, lease issuance/validation, revocation semantics, reshare policy, authorization epochs, cross-AppScope routing, or trusted authorization-context construction is implemented in Sharing.
