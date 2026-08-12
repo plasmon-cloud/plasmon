@@ -242,3 +242,32 @@ test("dispose flushes a pending dirty autosave without stale timer writes", asyn
   await delay(20);
   expect(new TextDecoder().decode(await fs.read(id))).toBe("after");
 });
+
+test("pending close decision suspends autosave until Cancel resumes it", async () => {
+  const fs = new TinyFs();
+  const id = fs.seed("notes.txt", "before");
+  const session = new DocumentSession(fs, { autosaveMs: 15 });
+  await session.setTarget(id);
+  session.edit("after");
+  session.suspendAutosave();
+  await delay(30);
+  expect(new TextDecoder().decode(await fs.read(id))).toBe("before");
+
+  session.resumeAutosave();
+  await delay(30);
+  expect(new TextDecoder().decode(await fs.read(id))).toBe("after");
+  session.dispose();
+});
+
+test("Discard suppresses pending autosave and dispose flush", async () => {
+  const fs = new TinyFs();
+  const id = fs.seed("notes.txt", "before");
+  const session = new DocumentSession(fs, { autosaveMs: 15 });
+  await session.setTarget(id);
+  session.edit("discard me");
+  session.suspendAutosave();
+  session.discardOnClose();
+  session.dispose({ flush: true });
+  await delay(30);
+  expect(new TextDecoder().decode(await fs.read(id))).toBe("before");
+});
