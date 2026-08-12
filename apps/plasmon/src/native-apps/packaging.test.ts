@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { assertMatureNativeAppBundle, cacheBustEntryAssets, type BuildMetafileLike } from "./packaging.ts";
+import {
+  assertMatureNativeAppBundle,
+  cacheBustEntryAssets,
+  FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS,
+  type BuildMetafileLike,
+} from "./packaging.ts";
 
 function goodMetafile(): BuildMetafileLike {
   return {
@@ -17,6 +22,19 @@ function goodMetafile(): BuildMetafileLike {
           "node_modules/dompurify/dist/purify.es.mjs": {},
         },
       },
+      // Dynamic app loaders may be emitted under any chunk filename. Structural
+      // coverage follows their source inputs across the complete build graph.
+      "dist/web/chunks/native-apps-arbitrary-name.js": {
+        inputs: {
+          "src/native-apps/photos/Photos.tsx": {},
+          "src/native-apps/video/VideoPlayer.tsx": {},
+          "src/native-apps/browser/Browser.tsx": {},
+          "src/native-apps/settings/Settings.tsx": {},
+          "src/native-apps/explorer/ExplorerApp.tsx": {},
+          "src/native-apps/properties/PropertiesApp.tsx": {},
+          "src/native-apps/recycle-bin/RecycleBin.tsx": {},
+        },
+      },
       "dist/web/main.bundle.css": { inputs: { "node_modules/monaco-editor/esm/vs/editor/editor.all.css": {} } },
       "dist/web/monaco-workers/editor.worker.js": { inputs: {} },
       "dist/web/monaco-workers/json.worker.js": { inputs: {} },
@@ -27,11 +45,48 @@ function goodMetafile(): BuildMetafileLike {
   };
 }
 
+function deleteInput(metafile: BuildMetafileLike, suffix: string): void {
+  const key = suffix.slice(1);
+  for (const output of Object.values(metafile.outputs)) {
+    if (output.inputs && key in output.inputs) delete output.inputs[key];
+  }
+}
+
 test("package guard requires mature Text/Markdown engines and Monaco workers", () => {
   expect(() => assertMatureNativeAppBundle(goodMetafile())).not.toThrow();
   const broken = goodMetafile();
   delete broken.outputs["dist/web/main.js"]!.inputs!["src/native-apps/text/MonacoEditorSurface.tsx"];
   expect(() => assertMatureNativeAppBundle(broken)).toThrow("MonacoEditorSurface");
+});
+
+test("package guard requires every launchable first-party native app somewhere in the build graph", () => {
+  expect(FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS.map(({ name }) => name)).toEqual([
+    "Text",
+    "Markdown",
+    "Photos",
+    "Video",
+    "Browser",
+    "Settings",
+    "Explorer",
+    "Properties",
+    "Recycle Bin",
+  ]);
+
+  for (const app of FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS) {
+    const broken = goodMetafile();
+    deleteInput(broken, app.suffix);
+    expect(() => assertMatureNativeAppBundle(broken)).toThrow(`missing first-party ${app.name} loader input`);
+  }
+});
+
+test("package guard does not require runtime-only js-dos as a launchable first-party app", () => {
+  const metafile = goodMetafile();
+  expect(
+    Object.values(metafile.outputs).some((output) =>
+      Object.keys(output.inputs ?? {}).some((input) => input.includes("/jsdos/") || input.includes("/js-dos/")),
+    ),
+  ).toBe(false);
+  expect(() => assertMatureNativeAppBundle(metafile)).not.toThrow();
 });
 
 test("package guard rejects a stylesheet without Monaco engine CSS", () => {
