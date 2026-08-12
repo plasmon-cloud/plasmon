@@ -10,6 +10,9 @@ export type ReviewHarness = { page: Page; review: FrameLocator; frame: Locator }
 export async function login(page: Page): Promise<void> {
   const runtime = resolveLocalNeutronRuntime({ configPath: deploymentConfig });
   await page.goto(kernelUrl(), { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => typeof (window as typeof window & { __NEUTRON_PLAYWRIGHT_LOGIN_AS__?: unknown }).__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function",
+  );
   await page.evaluate(async (identitySeed) => {
     const signIn = (window as typeof window & { __NEUTRON_PLAYWRIGHT_LOGIN_AS__?: (seed: number) => Promise<string> }).__NEUTRON_PLAYWRIGHT_LOGIN_AS__;
     if (!signIn) throw new Error("Local Playwright login is unavailable");
@@ -28,32 +31,10 @@ export async function openReview(page: Page): Promise<ReviewHarness> {
   const selector = 'iframe[data-app-id="review"][data-tile-id="review"]';
   const frame = page.locator(selector).last();
   const review = page.frameLocator(selector).last();
-  await expect(frame).toBeVisible();
-  await expect(review.getByText("Review.neutron", { exact: true })).toBeVisible();
+  await expect(frame).toBeVisible({ timeout: 1_500 });
+  await expect(review.locator("#root > .review-app")).toBeVisible({ timeout: 1_500 });
+  await expect(review.getByText("Review.neutron", { exact: true })).toBeVisible({ timeout: 1_500 });
   return { page, review, frame };
-}
-
-export async function callReviewTool(page: Page, name: string, args: Record<string, unknown>, timeoutMs = 20_000): Promise<any> {
-  return page.evaluate(({ name, args, timeoutMs }) => new Promise((resolve, reject) => {
-    const frame = document.querySelector<HTMLIFrameElement>('[data-tid="app-background-frame"][data-app-id="review"]');
-    if (!frame?.contentWindow) { reject(new Error("Review background frame is unavailable")); return; }
-    const id = Date.now() + Math.floor(Math.random() * 100_000);
-    const timeout = window.setTimeout(() => {
-      window.removeEventListener("message", onMessage);
-      reject(new Error(`Review tool ${name} timed out`));
-    }, timeoutMs);
-    function onMessage(event: MessageEvent): void {
-      if (event.source !== frame!.contentWindow) return;
-      const response = event.data as { type?: unknown; id?: unknown; ok?: unknown; error?: unknown };
-      if (response.type !== "response" || response.id !== id) return;
-      window.clearTimeout(timeout);
-      window.removeEventListener("message", onMessage);
-      if (Object.hasOwn(response, "error")) reject(new Error(JSON.stringify(response.error)));
-      else resolve(response.ok);
-    }
-    window.addEventListener("message", onMessage);
-    frame.contentWindow.postMessage({ type: "exec", id, payload: { action: "__neutron_msgbus_tools_call", payload: { name, arguments: args } } }, "*");
-  }), { name, args, timeoutMs });
 }
 
 export async function approveFilesTool(page: Page, tool: "readBinary" | "writeBinary"): Promise<void> {

@@ -12,7 +12,7 @@ import type { ReviewActor, ReviewOperation } from "./model.ts";
 import { NeutronFilesPort } from "./neutron_files_port.ts";
 import { createIndexedDbReviewPersistence } from "./persistence.ts";
 
-const STATE_TOPIC = "review:state";
+const STATE_TOPIC = "review.state";
 const engine = new ReviewEngine(createIndexedDbReviewPersistence());
 const files = new NeutronFilesPort();
 
