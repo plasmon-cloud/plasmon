@@ -1,6 +1,6 @@
 # Plasmon
 
-Plasmon is the user-facing desktop and application environment built on Neutron. It is packaged as a normal Neutron application and does not replace the Kernel. Neutron remains authoritative for installation, AppScope isolation, capabilities, package execution, and Kernel security.
+Plasmon is the user-facing desktop and application environment running on Neutron. It is packaged as a normal Neutron application and does not replace the Kernel. Neutron remains authoritative for installation, AppScope isolation, capabilities, package execution, and Kernel security.
 
 ## Product direction
 
