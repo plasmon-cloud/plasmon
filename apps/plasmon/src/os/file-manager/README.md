@@ -10,6 +10,7 @@ Deterministic behavior already lives in production helper modules such as:
 - `activation.ts` — the thin FileManager adapter to the canonical filesystem open authority, including caller-owned same-window directory navigation;
 - `clipboard.ts` — collision-aware copy/cut/paste behavior;
 - `create-import.ts`, `download.ts` — filesystem action helpers;
+- `create-shortcut.ts` — capability-aware FileManager shortcut creation that delegates serialization, stable target identity, and collision naming to the canonical filesystem shortcut primitive;
 - `delete.ts` — the thin ordinary-Delete adapter to the canonical filesystem Trash authority, including deterministic multi-selection success/failure reporting;
 - `keyboard.ts`, `drag.ts`, `drop-target.ts`, `rename.ts` — interaction decisions;
 - `properties.tsx` — Properties/Open With presentation.
@@ -19,6 +20,8 @@ Deterministic behavior already lives in production helper modules such as:
 FileManager is not a filesystem repository and must not grow private application-opening or Trash policy. All normal resource activation delegates to the filesystem core's canonical open dispatcher. FileManager may provide presentation-owned directory navigation so an existing Explorer window can navigate in place, but resource classification, shortcut dereference, system/Neutron application opening, and ordinary association dispatch remain filesystem/opening authority concerns.
 
 Ordinary Delete delegates to the filesystem core's canonical Trash service. FileManager retains confirmation, selection reconciliation, and visible error presentation, while protection decisions, Trash metadata, stable-identity moves, restore, permanent deletion, and emptying remain filesystem authority concerns.
+
+Create Shortcut eligibility follows canonical filesystem resource capabilities. The filesystem `createShortcut()` primitive owns shortcut metadata, unique-name allocation, and stable `NodeId` targets; FileManager owns command presentation and the created shortcut's selection, focus, inline rename, and visible error handling.
 
 ## Refactor direction
 
