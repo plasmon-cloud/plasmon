@@ -2,6 +2,8 @@ name: Plasmon Fast CI
 
 on:
   push:
+    branches:
+      - version-0.1.0-os
     paths:
       - "apps/plasmon/**"
       - "packages/neutron-design-system/**"
@@ -10,15 +12,8 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/plasmon-ci.yml"
+      - ".github/workflows/plasmon-browser-ci.yml"
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "packages/neutron-design-system/**"
-      - "packages/neutron-scripts/**"
-      - "packages/neutron-tools/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -37,19 +32,55 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect Plasmon-relevant changes
+        id: plasmon_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_plasmon=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$base_sha" "$head_sha" > /tmp/plasmon-changed-files.txt
+          cat /tmp/plasmon-changed-files.txt
+
+          run_plasmon=false
+          while IFS= read -r path; do
+            case "$path" in
+              apps/plasmon/*|packages/neutron-design-system/*|packages/neutron-scripts/*|packages/neutron-tools/*|package.json|package-lock.json|.github/workflows/plasmon-ci.yml|.github/workflows/plasmon-browser-ci.yml)
+                run_plasmon=true
+                break
+                ;;
+            esac
+          done < /tmp/plasmon-changed-files.txt
+
+          echo "run_plasmon=$run_plasmon" >> "$GITHUB_OUTPUT"
+          if [ "$run_plasmon" != "true" ]; then
+            echo "No Plasmon-relevant changes; satisfying required Fast Bun tests without installing toolchains."
+          fi
 
       - name: Set up Node
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
 
       - name: Set up Bun
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
 
       - name: Show toolchain
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         run: |
           set -euxo pipefail
           node --version
@@ -57,7 +88,9 @@ jobs:
           bun --version
 
       - name: Install dependencies
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         run: npm ci
 
       - name: Plasmon fast tests
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         run: npm --workspace neutron-plasmon test
