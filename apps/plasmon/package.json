@@ -20,7 +20,7 @@
   },
   "author": "",
   "license": "GPL-3.0-only",
-  "description": "Plasmon launcher for Neutron",
+  "description": "Plasmon desktop and application environment for Neutron",
   "dependencies": {
     "@panzoom/panzoom": "4.6.2",
     "dompurify": "3.4.12",
