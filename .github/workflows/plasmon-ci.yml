@@ -2,6 +2,8 @@ name: Plasmon Fast CI
 
 on:
   push:
+    branches:
+      - version-0.1.0-os
     paths:
       - "apps/plasmon/**"
       - "packages/neutron-design-system/**"

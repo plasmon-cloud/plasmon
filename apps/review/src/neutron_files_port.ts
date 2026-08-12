@@ -5,6 +5,7 @@ import { FilePortError, type BinaryFileMetadata, type BinaryFileRead, type Revie
 const FILES_TARGET = "app:files:background" as MsgBusEndpointId;
 const SHA_256_ETAG = /^[a-f0-9]{64}$/u;
 const ALLOWED_MEDIA_TYPES = new Set(["text/plain", "text/markdown", "application/octet-stream"]);
+const FILES_ROOT_PATHS = ["/Shared", "/Vault", "/Workspace"] as const;
 
 export class NeutronFilesPort implements ReviewFilesPort {
   constructor(private readonly callAttachments: typeof callToolWithAttachments = callToolWithAttachments) {}
@@ -16,7 +17,7 @@ export class NeutronFilesPort implements ReviewFilesPort {
       arguments: { path, ...(options.ifMatch ? { ifMatch: options.ifMatch } : {}) },
     }, [], { ...(options.delegationToken ? { delegationToken: options.delegationToken } : {}) });
     const metadata = parseMetadata(result.value);
-    if (metadata.path !== path) throw invalidResponse("path does not match the requested file");
+    if (!filesResponsePathMatches(path, metadata.path)) throw invalidResponse("path does not match the requested file");
     if (options.ifMatch !== undefined && metadata.etag !== options.ifMatch) throw invalidResponse("etag does not match requested version");
     const attachment = result.attachments[0];
     if (result.attachments.length !== 1 || !attachment || attachment.name !== "file" || !(attachment.data instanceof ArrayBuffer)) {
@@ -36,18 +37,21 @@ export class NeutronFilesPort implements ReviewFilesPort {
   ): Promise<BinaryFileMetadata> {
     const normalized = normalizeMediaType(mediaType);
     const payload = data.slice(0);
+    const expectedByteLength = payload.byteLength;
     const expectedEtag = await sha256Hex(payload);
     const result = await this.callAttachments({
       target: FILES_TARGET,
       name: "writeBinary",
       arguments: { path, mediaType: normalized, createParents: true, ...condition } as JsonObject,
-    }, [{ name: "file", mediaType: attachmentMediaType(normalized), byteLength: payload.byteLength, data: payload }], {
+    }, [{ name: "file", mediaType: attachmentMediaType(normalized), byteLength: expectedByteLength, data: payload }], {
       ...(options.delegationToken ? { delegationToken: options.delegationToken } : {}),
     });
     const metadata = parseMetadata(result.value);
-    if (metadata.path !== path || metadata.mediaType !== normalized || metadata.byteLength !== payload.byteLength || metadata.etag !== expectedEtag || result.attachments.length !== 0) {
-      throw invalidResponse("write result does not match requested file");
-    }
+    if (!filesResponsePathMatches(path, metadata.path)) throw invalidResponse("write path does not match the requested file");
+    if (metadata.mediaType !== normalized) throw invalidResponse("write mediaType does not match the requested media type");
+    if (metadata.byteLength !== expectedByteLength) throw invalidResponse("write byteLength does not match the requested bytes");
+    if (metadata.etag !== expectedEtag) throw invalidResponse("write etag does not match the requested bytes");
+    if (result.attachments.length !== 0) throw invalidResponse("write unexpectedly returned attachments");
     return metadata;
   }
 }
@@ -70,6 +74,14 @@ function normalizeMediaType(value: string): string {
   return normalized;
 }
 
+function filesResponsePathMatches(requested: string, actual: string): boolean {
+  if (actual === requested) return true;
+  if (!requested.startsWith("/")) return false;
+  if (FILES_ROOT_PATHS.some((root) => requested === root || requested.startsWith(`${root}/`))) return false;
+  const workspacePath = requested === "/" ? "/Workspace" : `/Workspace${requested}`;
+  return actual === workspacePath;
+}
+
 function attachmentMediaType(value: string): string {
   return ALLOWED_MEDIA_TYPES.has(value) ? value : "application/octet-stream";
 }
@@ -86,7 +98,7 @@ function stringField(value: JsonObject, key: string): string {
 }
 
 function invalidResponse(reason: string): FilePortError {
-  return new FilePortError("FILES_INVALID_RESPONSE", "Files returned data that failed Review integrity validation", { reason });
+  return new FilePortError("FILES_INVALID_RESPONSE", `Files returned data that failed Review integrity validation: ${reason}`, { reason });
 }
 
 function isObject(value: JsonValue): value is JsonObject {
