@@ -1,6 +1,6 @@
-# Plasmon Release 2 TDD queue
+# Plasmon 0.1.0 internal r2 TDD queue
 
-This file is the shared queue for Luna Medium TDD agents preparing Release 2 red gates.
+This file is the shared queue for Luna Medium TDD agents preparing red gates for internal release `release/0.1.0-r2` on the path to the public Plasmon `0.1.0` release.
 
 ## Status
 
@@ -14,7 +14,7 @@ If the current production/headless API cannot faithfully express the user action
 
 Red gates belong under `apps/plasmon/test/tdd/red/` as `issue-<N>.red.ts`. They are intentionally excluded from the ordinary fast suite on this staging branch and must be runnable explicitly with Bun. When an implementor takes an Issue, the gate is copied/adopted onto that Issue branch and becomes a normal green regression before merge.
 
-This `planning/release-0.2.0-tdd` branch is staging only. It is not a Release 2 integration branch and must never be merged wholesale while gates are intentionally red.
+This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `release/0.1.0-r2` integration branch and must never be merged wholesale while gates are intentionally red.
 
 ## Lane A — Desktop / FileManager / Filesystem interaction
 
