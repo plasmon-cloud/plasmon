@@ -6,9 +6,11 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
 import { controlButtonStyle, controlInputStyle, editorChrome, editorErrorStyle, editorStatusStyle } from "./editorChrome.ts";
 import { editorLanguageForName } from "./editorModel.ts";
 import { MonacoEditorSurface, monacoEngineStatus, type MonacoCursorState } from "./MonacoEditorSurface.tsx";
+import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
 export interface TextEditorProps {
@@ -20,6 +22,7 @@ export interface TextEditorProps {
 
 export default function TextEditor({ processId, target, fs, process }: TextEditorProps) {
   const { snapshot, sessionRef } = useDocumentSession(fs, target.nodeId);
+  const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
@@ -122,12 +125,23 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
       </footer>
+      {closeProtection.snapshot.pending && (
+        <DocumentClosePrompt
+          documentName={snapshot.name}
+          saving={closeProtection.snapshot.saving}
+          status={snapshot.status}
+          error={snapshot.error}
+          onSave={() => { void closeProtection.saveAndClose(); }}
+          onDiscard={() => { closeProtection.discardAndClose(); }}
+          onCancel={() => { closeProtection.cancelClose(); }}
+        />
+      )}
     </section>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  root: { height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: editorChrome.background, color: editorChrome.text },
+  root: { position: "relative", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: editorChrome.background, color: editorChrome.text },
   toolbar: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, padding: 8, borderBottom: `1px solid ${editorChrome.border}`, background: editorChrome.panel, fontSize: 13 },
   engineBadge: { padding: "4px 7px", border: `1px solid ${editorChrome.border}`, borderRadius: 4, background: "#171b21", color: "#b8d8ff", font: "600 11px/1.2 system-ui, sans-serif" },
   saveAsLabel: { display: "flex", alignItems: "center", gap: 7 },
