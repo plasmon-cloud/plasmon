@@ -47,6 +47,10 @@ import {
   type NewDocumentKind,
 } from "./create-import.ts";
 import {
+  createFileManagerShortcut,
+  fileManagerShortcutTarget,
+} from "./create-shortcut.ts";
+import {
   deleteFailureMessage,
   deleteFilesystemNodes,
   type FileManagerTrashAuthority,
@@ -338,6 +342,21 @@ export function FileManager({
     }
   };
 
+  const createShortcutFromSelection = async () => {
+    const target = fileManagerShortcutTarget(nodes, selection.ids);
+    if (!target) return;
+    setContextMenu(null);
+    try {
+      const result = await createFileManagerShortcut(fs, directoryId, target);
+      setError(null);
+      await refresh();
+      setSelection(result.selection);
+      beginInlineRename(result.shortcut);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause));
+    }
+  };
+
   const importFiles = async (files: readonly File[]) => {
     if (files.length === 0) return;
     setContextMenu(null);
@@ -613,13 +632,15 @@ export function FileManager({
 
   const contextNode = contextMenu?.nodeId ? nodes.find((node) => node.id === contextMenu.nodeId) ?? null : null;
   const canOpenWith = Boolean(contextNode && contextNode.kind !== "directory" && !readSharedShortcut(contextNode) && associations && openService);
+  const canCreateShortcut = fileManagerShortcutTarget(nodes, selection.ids) !== null;
 
-  const menuAction = (action: "open" | "openWith" | "download" | "cut" | "copy" | "rename" | "delete" | "properties" | "newFolder" | "newText" | "newMarkdown" | "import" | "paste") => {
+  const menuAction = (action: "open" | "openWith" | "download" | "cut" | "copy" | "createShortcut" | "rename" | "delete" | "properties" | "newFolder" | "newText" | "newMarkdown" | "import" | "paste") => {
     if (action === "newFolder") { void createNewFolder(); return; }
     if (action === "newText") { void createNewDocument("text"); return; }
     if (action === "newMarkdown") { void createNewDocument("markdown"); return; }
     if (action === "import") { triggerImport(); return; }
     if (action === "paste") { setContextMenu(null); void paste(); return; }
+    if (action === "createShortcut") { void createShortcutFromSelection(); return; }
     if (!contextNode) return;
     if (action === "open") { void openNode(contextNode); return; }
     if (action === "openWith") { setContextMenu(null); if (canOpenWith) setOpenWithNode(contextNode); return; }
@@ -683,6 +704,7 @@ export function FileManager({
           <button type="button" onClick={triggerImport}>Import Files…</button>
           <button type="button" onClick={() => copySelection()} disabled={selection.ids.size === 0}>Copy</button>
           <button type="button" onClick={() => cutSelection()} disabled={selection.ids.size === 0}>Cut</button>
+          <button type="button" onClick={() => void createShortcutFromSelection()} disabled={!canCreateShortcut}>Create Shortcut</button>
           <button type="button" onClick={() => void paste()} disabled={!clipboard.snapshot()}>Paste</button>
           <button type="button" onClick={() => void removeSelected()} disabled={selection.ids.size === 0}>Delete</button>
           <button type="button" onClick={() => void refresh()}>Refresh</button>
@@ -748,6 +770,7 @@ export function FileManager({
               <div className="fm-menu-separator" role="separator" />
               <button type="button" role="menuitem" onClick={() => menuAction("cut")}>Cut</button>
               <button type="button" role="menuitem" onClick={() => menuAction("copy")}>Copy</button>
+              <button type="button" role="menuitem" disabled={!canCreateShortcut} onClick={() => menuAction("createShortcut")}>Create Shortcut</button>
               <button type="button" role="menuitem" onClick={() => menuAction("rename")}>Rename</button>
               <button type="button" role="menuitem" onClick={() => menuAction("delete")}>Delete</button>
               <div className="fm-menu-separator" role="separator" />
