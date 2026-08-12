@@ -63,17 +63,26 @@ jobs:
             server_pid=$!
             trap '\''status=$?; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/plasmon-pocketic.log || true; fi; exit "$status"'\'' EXIT
 
-            for attempt in $(seq 1 30); do
-              if npm run provision -- plasmon-local.ndeploy.json status >/dev/null 2>&1; then
-                break
-              fi
-              if [ "$attempt" -eq 30 ]; then
-                echo "PocketIC did not become ready" >&2
+            pocketic_ready=0
+            for attempt in $(seq 1 180); do
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                echo "PocketIC serve exited before becoming ready" >&2
+                cat /tmp/plasmon-pocketic.log >&2 || true
                 exit 1
+              fi
+              if grep -q "^PocketIC .* is ready$" /tmp/plasmon-pocketic.log 2>/dev/null; then
+                pocketic_ready=1
+                break
               fi
               sleep 1
             done
+            if [ "$pocketic_ready" -ne 1 ]; then
+              echo "PocketIC serve did not complete startup" >&2
+              cat /tmp/plasmon-pocketic.log >&2 || true
+              exit 1
+            fi
 
+            npm run provision -- plasmon-local.ndeploy.json status
             npm run provision -- plasmon-local.ndeploy.json reinstall
             NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json \
               npx playwright test test/e2e/plasmon-golden-path.spec.ts

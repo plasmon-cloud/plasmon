@@ -7,8 +7,6 @@ on:
     paths-ignore:
       - "apps/plasmon/**"
   pull_request:
-    paths-ignore:
-      - "apps/plasmon/**"
   workflow_dispatch:
 
 jobs:
@@ -19,13 +17,52 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect kernel-relevant changes
+        id: kernel_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Push/main and manual runs preserve the existing full Kernel lane.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_kernel=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$base_sha" "$head_sha" > /tmp/kernel-changed-files.txt
+          cat /tmp/kernel-changed-files.txt
+
+          run_kernel=false
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              apps/plasmon/*|README.md|AGENTS.md|LICENSE|doc/*|.github/workflows/README.md)
+                ;;
+              *)
+                run_kernel=true
+                break
+                ;;
+            esac
+          done < /tmp/kernel-changed-files.txt
+
+          echo "run_kernel=$run_kernel" >> "$GITHUB_OUTPUT"
+          if [ "$run_kernel" != "true" ]; then
+            echo "No kernel-relevant changes; satisfying required Kernel CI without full kernel build."
+          fi
 
       - name: Install Nix
+        if: steps.kernel_scope.outputs.run_kernel == 'true'
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show toolchain
+        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -36,6 +73,7 @@ jobs:
           '
 
       - name: Install dependencies
+        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -46,6 +84,7 @@ jobs:
       # artifacts produced by the normal packaging pipeline. Do not run a
       # separate build here: package already performs the build.
       - name: Kernel package
+        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -53,6 +92,7 @@ jobs:
           '
 
       - name: Kernel tests
+        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
