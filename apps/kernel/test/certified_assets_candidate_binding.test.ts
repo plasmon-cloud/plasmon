@@ -318,15 +318,20 @@ describe("generic Certified Assets qualification binding", () => {
     expect(JSON.parse(new TextDecoder().decode(bytes))).toEqual(bindingInput);
   });
 
-  test("keeps the checked candidate binding exact and current", () => {
-    const expected = certifiedAssetsCandidateBindingInputBytes(
+  test("keeps the checked candidate binding exact, current, and pretty-printed", () => {
+    const canonicalBytes = certifiedAssetsCandidateBindingInputBytes(
       buildCertifiedAssetsCandidateBindingInput(repositoryRoot),
     );
-    const checked = readFileSync(checkedBindingPath);
-    expect(checked.equals(Buffer.from(expected))).toBe(true);
+    const canonical = JSON.parse(
+      new TextDecoder().decode(canonicalBytes),
+    ) as unknown;
+    const expected = `${JSON.stringify(canonical, null, 2)}\n`;
+    const checked = readFileSync(checkedBindingPath, "utf8");
+    expect(checked).toBe(expected);
+    expect(checked.split("\n").length).toBeGreaterThan(2);
     expect(() =>
       validateCertifiedAssetsCandidateBindingInput(
-        JSON.parse(checked.toString("utf8")),
+        JSON.parse(checked),
         repositoryRoot,
       ),
     ).not.toThrow();

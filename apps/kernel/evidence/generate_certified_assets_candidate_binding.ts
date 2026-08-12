@@ -12,8 +12,15 @@ const bindingPath = path.resolve(
 );
 const generated =
   buildCertifiedAssetsCandidateBindingInput();
-const generatedBytes =
-  certifiedAssetsCandidateBindingInputBytes(generated);
+const generatedCanonical = JSON.parse(
+  Buffer.from(
+    certifiedAssetsCandidateBindingInputBytes(generated),
+  ).toString("utf8"),
+) as unknown;
+const generatedBytes = Buffer.from(
+  `${JSON.stringify(generatedCanonical, null, 2)}\n`,
+  "utf8",
+);
 
 if (process.argv.includes("--write")) {
   await writeFile(bindingPath, generatedBytes);
@@ -24,7 +31,7 @@ if (process.argv.includes("--write")) {
   const checkedBytes = await readFile(bindingPath);
   const checked = JSON.parse(checkedBytes.toString("utf8"));
   validateCertifiedAssetsCandidateBindingInput(checked);
-  if (!Buffer.from(generatedBytes).equals(checkedBytes)) {
+  if (!generatedBytes.equals(checkedBytes)) {
     throw new Error(
       "Certified Assets candidate-binding input is valid but not canonical",
     );

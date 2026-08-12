@@ -87,7 +87,7 @@ jobs:
       - name: Attest installed Review package bytes
         run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npm --workspace neutron-review run attest:installed'
       - name: Exercise packaged Review in vanilla Neutron
-        run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" playwright test -c apps/review/playwright.config.ts'
+        run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npx playwright test -c apps/review/playwright.config.ts'
       - name: Stop vanilla Neutron
         if: always()
         run: |
