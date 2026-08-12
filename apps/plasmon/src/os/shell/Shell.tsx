@@ -33,7 +33,6 @@ import {
   type ShellContextMenuPolicy,
 } from "./interactions.ts";
 import {
-  decideNativeTaskbarAction,
   deriveTaskbarEntries,
   deriveTrayEntries,
   executeNativeTaskbarAction,
@@ -230,8 +229,15 @@ export function Shell({
   const nativeSeedKey = useMemo(() => nativeDefinitions.map((app) => `${app.handlerId}:${app.name}`).sort().join("\u0000"), [nativeDefinitions]);
   const elementSeedKey = useMemo(() => elements.map((element) => `${element.id}:${element.name}`).sort().join("\u0000"), [elements]);
   const taskbarEntries = useMemo(
-    () => deriveTaskbarEntries({ preferences: effectivePreferences, nativeApps: nativeDefinitions, processes, elements }),
-    [effectivePreferences, elements, nativeDefinitions, processes],
+    () => deriveTaskbarEntries({
+      preferences: effectivePreferences,
+      nativeApps: nativeDefinitions,
+      processes,
+      elements,
+      windows: windowStates,
+      busyTaskId: busyId,
+    }),
+    [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
   );
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
   const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
@@ -409,10 +415,14 @@ export function Shell({
       await openElement(entry.elementId);
       return;
     }
+    const launching = entry.process === null;
+    if (launching) setBusyId(entry.id);
     try {
       await executeNativeTaskbarAction(entry, process, windows);
     } catch (cause: unknown) {
       setActionError(`Taskbar action failed: ${formatError(cause)}`);
+    } finally {
+      if (launching) setBusyId((current) => current === entry.id ? null : current);
     }
   }, [openElement, process, windows]);
 
@@ -575,11 +585,14 @@ export function Shell({
       style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, bottom: "auto", transform: "none", width: 230, padding: 8 }}
     ><div className="plasmon-shell__list">{contextPin ? <button type="button" role="menuitem" title={contextPin.action.label} onClick={() => { if (contextPin.kind === "native") toggleNativePin(contextPin.id); else toggleElementPin(contextPin.id); setContextMenu(null); }}>📌 <span><strong>{contextPin.action.label}</strong></span></button> : <><button type="button" role="menuitem" onClick={() => { setFlyout("start"); setContextMenu(null); }}>Start</button><button type="button" role="menuitem" onClick={() => { setFlyout("search"); setContextMenu(null); }}>Search</button><button type="button" role="menuitem" onClick={() => { setFlyout("settings"); setContextMenu(null); }}>Settings</button></>}</div></section> : null}
 
-    <nav className="plasmon-shell__taskbar" data-shell-owned-surface aria-label="Taskbar"><div className="plasmon-shell__taskbar-main"><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => entry.kind === "element" ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={`plasmon-shell__task-button${entry.running === "yes" ? " is-running" : ""}`} aria-label={`${entry.name}; Neutron running state ${entry.running}`} data-running={entry.running} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} /><small>{entry.running}</small></button> : (() => {
-      const action = decideNativeTaskbarAction(entry, windowStates);
-      const active = action === "minimize" && entry.process !== null;
-      return <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={`plasmon-shell__task-button${entry.process ? " is-running" : ""}${active ? " is-focused" : ""}`} aria-label={`${entry.name}${entry.process ? "; running" : "; pinned"}`} aria-pressed={active} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} /></button>;
-    })())}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
+    <nav className="plasmon-shell__taskbar" data-shell-owned-surface aria-label="Taskbar"><div className="plasmon-shell__taskbar-main"><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => {
+      const task = entry.presentation;
+      const className = `plasmon-shell__task-button${task.running ? " is-running" : ""}${task.active ? " is-focused" : ""}`;
+      const badge = task.badge ? <small aria-hidden="true">{task.badge}</small> : null;
+      return entry.kind === "element"
+        ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>
+        : <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={className} aria-label={task.accessibilityLabel} aria-pressed={task.active} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>;
+    })}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
     <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
   </div>;
 }
