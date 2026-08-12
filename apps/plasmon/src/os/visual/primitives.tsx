@@ -120,6 +120,7 @@ export function MediaThumbnail({
 export type ResourceIconPresentation =
   | { kind: "system"; icon: SystemIconName }
   | { kind: "file-type"; icon: FileTypeIconName }
+  | { kind: "application"; src?: string | null | undefined; fallback?: ReactNode | undefined }
   | { kind: "native"; src?: string | null | undefined; fallback?: ReactNode | undefined }
   | { kind: "thumbnail"; src?: string | null | undefined; mediaKind?: MediaThumbnailKind | undefined; fallback?: ReactNode | undefined }
   | { kind: "custom"; content: ReactNode };
@@ -144,6 +145,7 @@ function ResourceArtwork({ presentation }: { presentation: ResourceIconPresentat
       return <SystemIcon icon={presentation.icon} />;
     case "file-type":
       return <FileTypeIcon icon={presentation.icon} />;
+    case "application":
     case "native":
       return <NativeAppIcon src={presentation.src} fallback={presentation.fallback} />;
     case "thumbnail":

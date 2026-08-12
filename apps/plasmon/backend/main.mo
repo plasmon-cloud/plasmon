@@ -9,10 +9,6 @@ module {
     let SHARING_SCHEMA_VERSION : Nat = 1;
     let MAX_CHUNK_BYTES : Nat = 1048576;
 
-    // Public app-method aliases must remain structurally expressible so the
-    // Neutron method-schema generator can derive Candid/JSON schemas without
-    // reaching through app-local imported type aliases. These intentionally
-    // mirror the immutable SharingMemory v1 wire shapes.
     public type SharingChunkRef = {
         hash : Blob;
         size : Nat;
@@ -179,10 +175,6 @@ module {
             mem.name := name;
             prev;
         };
-
-        // Same-AppScope provider storage primitives. They are intentionally not
-        // MTN authorization endpoints. Phase B must bind trusted MTN context
-        // before routing cross-AppScope calls to these operations.
 
         public func /*query*/sharing_schema_version() : Nat {
             sharing.schemaVersion;

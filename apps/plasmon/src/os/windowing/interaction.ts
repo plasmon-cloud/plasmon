@@ -1,7 +1,18 @@
 import type { WindowGeometry } from "../contracts/window.ts";
-import { constrainGeometry, type WindowViewport } from "./geometry.ts";
+import {
+  constrainGeometry,
+  type HorizontalSnapSide,
+  type WindowViewport,
+} from "./geometry.ts";
 
 export type ResizeDirection = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+
+export const DEFAULT_HORIZONTAL_SNAP_EDGE_PX = 12;
+
+export interface HorizontalEdgeBounds {
+  left: number;
+  right: number;
+}
 
 const resizeCursors: Record<ResizeDirection, string> = {
   n: "ns-resize",
@@ -16,6 +27,19 @@ const resizeCursors: Record<ResizeDirection, string> = {
 
 export function resizeCursor(direction: ResizeDirection): string {
   return resizeCursors[direction];
+}
+
+export function horizontalSnapSideAtPointer(
+  clientX: number,
+  bounds: HorizontalEdgeBounds,
+  threshold = DEFAULT_HORIZONTAL_SNAP_EDGE_PX,
+): HorizontalSnapSide | null {
+  const safeThreshold = Math.max(0, Number.isFinite(threshold) ? threshold : DEFAULT_HORIZONTAL_SNAP_EDGE_PX);
+  const left = Math.min(bounds.left, bounds.right);
+  const right = Math.max(bounds.left, bounds.right);
+  if (clientX <= left + safeThreshold) return "left";
+  if (clientX >= right - safeThreshold) return "right";
+  return null;
 }
 
 export function resizeGeometry(

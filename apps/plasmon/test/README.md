@@ -40,7 +40,7 @@ Prefer executable behavior over source-string assertions. If source inspection i
 - `NativeWindowManager` runs with deterministic IDs and a fixed headless viewport;
 - filesystem bootstrap/policy, associations, opening, native-app registration, process lifecycle, and window semantics remain the production implementations.
 
-Use `createHeadlessPlasmonEnvironment()` when a workflow spans several Plasmon authorities and does not require React or browser behavior. Prefer its exposed production `services` plus small state-inspection helpers over feature-specific fake models. If a workflow needs a new semantic operation, add that operation to the owning production model/controller/command rather than implementing it in this harness.
+Use `createHeadlessPlasmonEnvironment()` when a workflow spans several Plasmon authorities and does not require React or browser behavior. Prefer its exposed production `services` plus small state-inspection helpers over feature-specific fake models. Pass an existing `MemoryFsRepository` through the `repository` option when a workflow must reconstruct the production composition over the same persistence boundary. If a workflow needs a new semantic operation, add that operation to the owning production model/controller/command rather than implementing it in this harness.
 
 ## Package lane
 

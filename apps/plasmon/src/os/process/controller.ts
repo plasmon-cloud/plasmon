@@ -3,6 +3,8 @@ import type {
   NativeAppDefinition,
   NativeAppRegistry,
   OpenTarget,
+  ProcessCloseHandler,
+  ProcessCloseRequest,
   ProcessController,
   ProcessId,
   ProcessRecord,
@@ -13,6 +15,7 @@ import { ProcessStore } from "./store.ts";
 export interface NativeProcessControllerOptions {
   processIdFactory?: (app: NativeAppDefinition, ordinal: number) => ProcessId;
   onStartupError?: (error: unknown, app: NativeAppDefinition, target: OpenTarget) => void;
+  onCloseError?: (error: unknown, process: ProcessRecord) => void;
 }
 
 const defaultProcessIdFactory = (app: NativeAppDefinition, ordinal: number): ProcessId =>
@@ -20,6 +23,8 @@ const defaultProcessIdFactory = (app: NativeAppDefinition, ordinal: number): Pro
 
 export class NativeProcessController implements ProcessController {
   private readonly ordinals = new Map<string, number>();
+  private readonly closeHandlers = new Map<ProcessId, ProcessCloseHandler>();
+  private readonly pendingCloses = new Map<ProcessId, symbol>();
   private readonly unsubscribeWindows: () => void;
   private reconcilingWindows = false;
 
@@ -72,7 +77,7 @@ export class NativeProcessController implements ProcessController {
       this.store.patch(id, { state: "running", windowId });
       return id;
     } catch (error: unknown) {
-      this.store.remove(id);
+      this.removeProcess(id);
       this.options.onStartupError?.(error, app, target);
       return null;
     }
@@ -83,16 +88,70 @@ export class NativeProcessController implements ProcessController {
     if (record?.windowId) this.windows.focus(record.windowId);
   }
 
-  close(id: ProcessId): void {
+  close(id: ProcessId): boolean {
     const record = this.store.get(id);
-    if (!record) return;
+    if (!record || record.state === "closing") return true;
+    if (this.pendingCloses.has(id)) return false;
 
-    this.store.patch(id, { state: "closing" });
+    const handler = this.closeHandlers.get(id);
+    if (!handler) return this.finishClose(id);
+
+    const token = Symbol(`process-close:${id}`);
+    this.pendingCloses.set(id, token);
+    const request: ProcessCloseRequest = {
+      processId: id,
+      complete: () => this.completeDeferredClose(id, token),
+      cancel: () => this.cancelDeferredClose(id, token),
+    };
+
+    let decision: ReturnType<ProcessCloseHandler>;
     try {
-      if (record.windowId) this.windows.close(record.windowId);
-    } finally {
-      this.store.remove(id);
+      decision = handler(request);
+    } catch (error: unknown) {
+      this.pendingCloses.delete(id);
+      this.options.onCloseError?.(error, record);
+      return false;
     }
+
+    // A handler may resolve the request synchronously. In that case its
+    // complete/cancel callback already owns the outcome and stale decisions
+    // from this invocation must not act again.
+    if (this.pendingCloses.get(id) !== token) return this.store.get(id) === null;
+
+    if (decision === "allow") {
+      this.pendingCloses.delete(id);
+      return this.finishClose(id);
+    }
+    if (decision === "prevent") {
+      this.pendingCloses.delete(id);
+      return false;
+    }
+
+    // "defer" keeps the process running until request.complete() or
+    // request.cancel() resolves this exact close attempt.
+    return false;
+  }
+
+  forceClose(id: ProcessId): boolean {
+    this.pendingCloses.delete(id);
+    return this.finishClose(id);
+  }
+
+  registerCloseHandler(id: ProcessId, handler: ProcessCloseHandler): () => void {
+    const record = this.store.get(id);
+    if (!record || record.state !== "running") {
+      throw new Error(`Cannot register close handler for inactive process: ${id}`);
+    }
+    if (this.closeHandlers.has(id)) {
+      throw new Error(`Close handler already registered for process: ${id}`);
+    }
+
+    this.closeHandlers.set(id, handler);
+    return () => {
+      if (this.closeHandlers.get(id) !== handler) return;
+      this.closeHandlers.delete(id);
+      this.pendingCloses.delete(id);
+    };
   }
 
   setTitle(id: ProcessId, title: string): void {
@@ -114,6 +173,37 @@ export class NativeProcessController implements ProcessController {
   /** Releases the WindowManager subscription for tests/composition teardown. */
   dispose(): void {
     this.unsubscribeWindows();
+  }
+
+  private completeDeferredClose(id: ProcessId, token: symbol): void {
+    if (this.pendingCloses.get(id) !== token) return;
+    this.pendingCloses.delete(id);
+    this.finishClose(id);
+  }
+
+  private cancelDeferredClose(id: ProcessId, token: symbol): void {
+    if (this.pendingCloses.get(id) !== token) return;
+    this.pendingCloses.delete(id);
+  }
+
+  private finishClose(id: ProcessId): boolean {
+    const record = this.store.get(id);
+    if (!record) return true;
+
+    this.pendingCloses.delete(id);
+    this.store.patch(id, { state: "closing" });
+    try {
+      if (record.windowId) this.windows.close(record.windowId);
+    } finally {
+      this.removeProcess(id);
+    }
+    return true;
+  }
+
+  private removeProcess(id: ProcessId): void {
+    this.pendingCloses.delete(id);
+    this.closeHandlers.delete(id);
+    this.store.remove(id);
   }
 
   private nextProcessId(app: NativeAppDefinition): ProcessId {
@@ -138,7 +228,7 @@ export class NativeProcessController implements ProcessController {
           record.windowId !== undefined &&
           !active.has(record.windowId)
         ) {
-          this.store.remove(record.id);
+          this.removeProcess(record.id);
         }
       }
     } finally {

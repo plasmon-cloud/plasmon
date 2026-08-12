@@ -11,6 +11,7 @@ import type {
   OpenService,
 } from "../contracts/index.ts";
 import { OpenWithServiceModel } from "../associations/index.ts";
+import { ResourceIcon } from "../visual/index.ts";
 import {
   basenameSelectionRange,
   extensionOf,
@@ -18,6 +19,7 @@ import {
   readAssociationProbe,
   renameNode,
 } from "./model.ts";
+import { fileVisualKind, resourceIconPresentationForFile } from "./file-icons.ts";
 import {
   handleOpenWithDialogPointerDown,
   openWithErrorMessage,
@@ -179,7 +181,11 @@ export function OpenWithPanel({
                   checked={selected === handler.id}
                   onChange={() => selectOpenWithHandler(handler.id, setSelected)}
                 />
-                <span className="fm-handler__icon" aria-hidden="true">{handler.kind === "neutron" ? "⚛" : "◆"}</span>
+                <ResourceIcon
+                  context="file-list"
+                  className="fm-handler__icon"
+                  presentation={{ kind: "application", src: handler.icon }}
+                />
                 <span>
                   <strong>{handler.name}</strong>
                   <small>{isDefault ? "Current default" : handler.id}</small>
@@ -264,12 +270,16 @@ export function PropertiesPanel({ nodeId, fs, fsEvents, registry, openService, o
   if (!inspection) return <section className="fm-properties"><p>Loading properties…</p></section>;
 
   const { node } = inspection;
+  const visualKind = fileVisualKind(node);
   return (
     <section className="fm-properties" aria-label={`Properties for ${node.name}`}>
       <header className="fm-properties__hero">
-        <div className={`fm-kind-icon fm-kind-icon--${node.kind}`} aria-hidden="true">
-          {node.kind === "directory" ? "▰" : node.kind === "atom" ? "◈" : node.kind === "shortcut" ? "↗" : "□"}
-        </div>
+        <ResourceIcon
+          context="properties"
+          className={`fm-kind-icon fm-kind-icon--${node.kind}`}
+          presentation={resourceIconPresentationForFile(node)}
+          shortcut={visualKind === "shortcut"}
+        />
         <div className="fm-properties__name">
           {editing ? (
             <>

@@ -1,4 +1,5 @@
 import type { FsNode } from "../contracts/index.ts";
+import type { FileTypeIconName, ResourceIconPresentation } from "../visual/index.ts";
 
 export type FileVisualKind = "folder" | "text" | "markdown" | "image" | "video" | "shortcut" | "atom" | "unknown";
 
@@ -9,6 +10,17 @@ const SOURCE_EXTENSIONS = new Set([
   ".xml", ".yaml", ".yml", ".toml", ".rs", ".py", ".go", ".java", ".c", ".h", ".cpp",
   ".sh", ".sql", ".ini", ".conf", ".log",
 ]);
+
+const SHARED_FILE_ICON: Readonly<Record<FileVisualKind, FileTypeIconName>> = Object.freeze({
+  folder: "folder",
+  text: "text",
+  markdown: "markdown",
+  image: "image",
+  video: "video",
+  shortcut: "file",
+  atom: "atom",
+  unknown: "file",
+});
 
 function extension(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -25,6 +37,11 @@ export function fileVisualKind(node: FsNode): FileVisualKind {
   if (node.mime?.startsWith("video/") || VIDEO_EXTENSIONS.has(ext)) return "video";
   if (node.mime?.startsWith("text/") || SOURCE_EXTENSIONS.has(ext)) return "text";
   return "unknown";
+}
+
+/** Maps FileManager's already-resolved semantic kind onto shared visual artwork. */
+export function resourceIconPresentationForFile(node: FsNode): ResourceIconPresentation {
+  return { kind: "file-type", icon: SHARED_FILE_ICON[fileVisualKind(node)] };
 }
 
 export function iconForFile(node: FsNode): string {

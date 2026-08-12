@@ -1,16 +1,21 @@
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
-test("packaged Doom .jsdos opens through js-dos and closes cleanly", async ({ page }) => {
+const DOOM_FIXTURE = resolve("apps/plasmon/dist/web/Games/DOS Bundles/Doom.jsdos");
+
+test("normal boot stays clean and explicitly imported Doom opens through js-dos", async ({ page }) => {
   const runtimeRequests: string[] = [];
   const externalRuntimeRequests: string[] = [];
   const runtimeHttpErrors: string[] = [];
   const pageErrors: string[] = [];
   const failedRuntimeRequests: string[] = [];
+  const demoAssetRequests: string[] = [];
 
   page.on("request", (request) => {
     const url = new URL(request.url());
     const path = decodeURIComponent(url.pathname);
     if (path.includes("/System/Program Files/js-dos/")) runtimeRequests.push(path);
+    if (path === "/Games/DOS Bundles/Doom.jsdos") demoAssetRequests.push(path);
     if (["v8.js-dos.com", "github.com", "raw.githubusercontent.com"].includes(url.hostname)) {
       externalRuntimeRequests.push(request.url());
     }
@@ -33,8 +38,21 @@ test("packaged Doom .jsdos opens through js-dos and closes cleanly", async ({ pa
 
   await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
 
+  const files = page.getByRole("listbox", { name: "Files" }).first();
+  await expect(files).toBeVisible({ timeout: 30_000 });
   const doom = page.locator("[data-fm-node-id]", { hasText: "Doom.jsdos" }).first();
+
+  // Normal production boot must not fetch or materialize the temporary demo game.
+  await expect(doom).toHaveCount(0);
+  expect(demoAssetRequests).toEqual([]);
+
+  // The browser proof opts in explicitly by importing the packaged fixture
+  // through the same FileManager path a user would use for any .jsdos bundle.
+  await files.locator('input[type="file"]').setInputFiles(DOOM_FIXTURE);
   await expect(doom).toBeVisible({ timeout: 30_000 });
+  // FileManager creates the node before chunked writes finish, then selects the
+  // imported node only after importFileIntoFs() and its final refresh complete.
+  await expect(doom).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
   await doom.dblclick();
 
   const dialog = page.getByRole("dialog", { name: "js-dos" });

@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import type {
-  AssociationRegistry,
   ExternalElement,
   FsEventSource,
   FsNode,
@@ -20,6 +19,11 @@ import type {
   ProcessController,
   WindowManager,
 } from "../contracts/index.ts";
+import {
+  activateSearchFilesystemResult,
+  activateStartFilesystemNode,
+  type ShellFilesystemOpener,
+} from "./activation.ts";
 import { addCalendarMonths, buildCalendarMonth, startOfCalendarMonth } from "./calendar.ts";
 import { ShellIcon } from "./icon.tsx";
 import {
@@ -55,13 +59,10 @@ import {
   type SearchTab,
   type ShellSearchResult,
 } from "./search.ts";
-import { openFilesystemSearchResult } from "./searchOpening.ts";
 import {
-  launchStartShortcut,
   listStartMenuFolder,
   parseStartShortcut,
   reconcileStartMenu,
-  type StartShortcut,
   type StartShortcutTarget,
 } from "./startMenu.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
@@ -74,7 +75,7 @@ export interface ShellProps {
   fsEvents?: FsEventSource;
   neutron: NeutronBridge;
   nativeApps: NativeAppRegistry;
-  associations?: AssociationRegistry;
+  filesystemOpen: ShellFilesystemOpener;
   openService?: OpenService;
   children?: ReactNode;
   now?: () => Date;
@@ -179,7 +180,7 @@ function contextPosition(client: number, viewport: number, size: number): number
 }
 
 export function Shell({
-  process, windows, fs, fsEvents, neutron, nativeApps, associations, openService,
+  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, openService,
   children, now = () => new Date(),
 }: ShellProps) {
   const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
@@ -384,10 +385,6 @@ export function Shell({
     }
   }, [neutron]);
 
-  const launchShortcut = useCallback(async (shortcut: StartShortcut) => {
-    await launchStartShortcut(shortcut, { fs, process, neutron, associations, openService });
-  }, [associations, fs, neutron, openService, process]);
-
   const openStartNode = useCallback(async (node: FsNode) => {
     setActionError(null);
     if (node.kind === "directory") {
@@ -397,19 +394,14 @@ export function Shell({
     }
     setBusyId(`start:${node.id}`);
     try {
-      const shortcut = parseStartShortcut(node);
-      if (shortcut) await launchShortcut(shortcut);
-      else {
-        if (!associations || !openService) throw new Error("File association/open service is unavailable");
-        await openFilesystemSearchResult(fs, associations, openService, node.id);
-      }
+      await activateStartFilesystemNode(filesystemOpen, node);
       setFlyout(null);
     } catch (cause: unknown) {
       setActionError(`Could not open ${node.name}: ${formatError(cause)}`);
     } finally {
       setBusyId(null);
     }
-  }, [associations, fs, launchShortcut, openService]);
+  }, [filesystemOpen]);
 
   const activateTaskbar = useCallback(async (entry: TaskbarEntry) => {
     setActionError(null);
@@ -436,11 +428,8 @@ export function Shell({
         }
       } else if (result.kind === "element") {
         await neutron.openElement(result.element.id);
-      } else if (result.kind === "start-shortcut") {
-        await launchShortcut({ node: result.node, target: result.target });
       } else {
-        if (!associations || !openService) throw new Error("File opening is unavailable until AssociationRegistry and OpenService are injected");
-        await openFilesystemSearchResult(fs, associations, openService, result.node.id);
+        await activateSearchFilesystemResult(filesystemOpen, result);
       }
       setFlyout(null);
     } catch (cause: unknown) {
@@ -448,7 +437,7 @@ export function Shell({
     } finally {
       setBusyId(null);
     }
-  }, [associations, fs, launchShortcut, neutron, openService, process]);
+  }, [filesystemOpen, neutron, openService, process]);
 
   const shortcutPresentation = useCallback((target: StartShortcutTarget): { icon?: string; pinned?: boolean; pinId?: string; pinKind?: "native" | "element" } => {
     if (target.kind === "native") {

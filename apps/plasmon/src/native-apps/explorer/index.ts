@@ -8,6 +8,7 @@ import type {
 import type { NativeAppComponent, NativeAppLoader } from "../../os/process/index.ts";
 import type {
   FileManagerOpenAuthority,
+  FileManagerTrashAuthority,
   FileOperationClipboard,
 } from "../../os/file-manager/index.ts";
 
@@ -29,6 +30,7 @@ export interface ExplorerNativeDependencies {
   associations: AssociationRegistry;
   openService: OpenService;
   openAuthority: FileManagerOpenAuthority;
+  trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
 }
 
@@ -40,6 +42,7 @@ export function createExplorerNativeLoader(dependencies: ExplorerNativeDependenc
       associations: dependencies.associations,
       openService: dependencies.openService,
       openAuthority: dependencies.openAuthority,
+      trashAuthority: dependencies.trashAuthority,
       ...(dependencies.fsEvents ? { fsEvents: dependencies.fsEvents } : {}),
       ...(dependencies.clipboard ? { clipboard: dependencies.clipboard } : {}),
     });

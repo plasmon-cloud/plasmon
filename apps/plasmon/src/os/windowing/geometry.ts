@@ -7,6 +7,8 @@ export const DEFAULT_MIN_HEIGHT = 160;
 export const DEFAULT_REACHABLE_TITLEBAR_WIDTH = 72;
 export const DEFAULT_REACHABLE_TITLEBAR_HEIGHT = 32;
 
+export type HorizontalSnapSide = "left" | "right";
+
 export interface WindowViewport {
   x: number;
   y: number;
@@ -79,6 +81,32 @@ export function constrainGeometry(
 export function maximizeGeometry(viewportInput: WindowViewport): WindowGeometry {
   const viewport = normalizeViewport(viewportInput);
   return { x: viewport.x, y: viewport.y, width: viewport.width, height: viewport.height };
+}
+
+export function horizontalSnapGeometry(
+  viewportInput: WindowViewport,
+  side: HorizontalSnapSide,
+): WindowGeometry {
+  const viewport = normalizeViewport(viewportInput);
+  const split = Math.floor(viewport.width / 2);
+  const leftWidth = Math.max(1, split);
+  const rightWidth = Math.max(1, viewport.width - split);
+
+  if (side === "left") {
+    return {
+      x: viewport.x,
+      y: viewport.y,
+      width: leftWidth,
+      height: viewport.height,
+    };
+  }
+
+  return {
+    x: viewport.x + viewport.width - rightWidth,
+    y: viewport.y,
+    width: rightWidth,
+    height: viewport.height,
+  };
 }
 
 export function geometryEqual(a: WindowGeometry, b: WindowGeometry): boolean {

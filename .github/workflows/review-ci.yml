@@ -1,0 +1,99 @@
+name: Review CI
+
+on:
+  push:
+    paths:
+      - "apps/review/**"
+      - "review-local.ndeploy.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/review-ci.yml"
+  pull_request:
+    paths:
+      - "apps/review/**"
+      - "review-local.ndeploy.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/review-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semantic-package:
+    name: Review semantic + package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Test Review package
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm ci
+            npm --workspace neutron-review test
+          '
+
+  vanilla-browser:
+    name: Vanilla Neutron packaged Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        run: nix develop --command bash -lc 'set -euxo pipefail; npm ci'
+      - name: Package Kernel
+        run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-kernel run package'
+      - name: Build design system
+        run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-design-system run build'
+      - name: Package Files for local acceptance
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            cd apps/vfs
+            npm run validate
+            npm run build
+            npm run typecheck:clean
+            npm run mopack
+            npm run schema
+            bun ../../packages/neutron-scripts/src/pack.ts
+          '
+      - name: Package Review
+        run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-review run package'
+      - name: Start and provision vanilla Neutron
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            nohup npm run provision -- review-local.ndeploy.json serve > /tmp/review-pocketic.log 2>&1 &
+            echo $! > /tmp/review-pocketic.pid
+            for attempt in $(seq 1 45); do
+              if npm run provision -- review-local.ndeploy.json status >/dev/null 2>&1; then break; fi
+              if [ "$attempt" -eq 45 ]; then cat /tmp/review-pocketic.log || true; echo "PocketIC did not become ready" >&2; exit 1; fi
+              sleep 1
+            done
+            npm run provision -- review-local.ndeploy.json reinstall
+          '
+      - name: Attest installed Review package bytes
+        run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npm --workspace neutron-review run attest:installed'
+      - name: Exercise packaged Review in vanilla Neutron
+        run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" playwright test -c apps/review/playwright.config.ts'
+      - name: Stop vanilla Neutron
+        if: always()
+        run: |
+          if [ -f /tmp/review-pocketic.pid ]; then
+            kill "$(cat /tmp/review-pocketic.pid)" 2>/dev/null || true
+          fi
+          if [ "${{ job.status }}" != "success" ]; then
+            cat /tmp/review-pocketic.log 2>/dev/null || true
+          fi

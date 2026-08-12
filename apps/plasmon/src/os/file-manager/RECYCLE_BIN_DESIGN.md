@@ -1,61 +1,55 @@
-# Recycle Bin design spike
+# Recycle Bin design
 
-Gate 3 keeps Delete as permanent `FsService.remove()` behind `deleteFilesystemNodes()`. This note records the smallest Trash model that fits the frozen filesystem contract without introducing a second filesystem abstraction.
+Plasmon's Recycle Bin is implemented by the canonical filesystem core. FileManager consumes that authority for ordinary Delete; it does not implement a second Trash model or call raw permanent removal for normal user deletion.
 
-## Proposed shape
+## Canonical model
 
-- Canonical location: `/.Trash` as one normal FsService directory owned by Plasmon.
-- The folder should be hidden/system-presentational by convention rather than by a new FsNode kind or contract field.
-- A soft delete would move the existing NodeId into `/.Trash`, preserving filesystem identity and directory descendants.
-- Before moving, Plasmon would attach JSON-safe metadata such as:
-
+- Canonical location: `/System/.Trash`.
+- Trash is ordinary filesystem state managed by filesystem/core policy rather than a new `FsNode` kind or parallel repository.
+- `FilesystemCoreServices.trash` is the public service seam used by UI consumers.
+- `TrashService.trash(nodeId)` checks canonical resource capabilities before mutation.
+- A soft delete moves the existing node, preserving its stable NodeId and directory descendants.
+- Each deletion gets a hidden wrapper directory under `/System/.Trash`. The wrapper carries versioned `plasmon.trash` metadata with:
+  - trashed node ID;
   - original parent NodeId;
   - original name;
-  - deletion timestamp;
-  - format/version marker for future migration.
+  - original path for presentation/history;
+  - deletion timestamp.
+- The trashed resource itself is moved inside that wrapper; FileManager does not write or interpret this metadata.
 
-- Restore would use the stored parent NodeId, not a historical path string, because NodeId is the stable identity contract.
+## Ordinary FileManager Delete
 
-## Policy that still needs a decision
+FileManager's ordinary Delete command delegates selected resources to the canonical Trash authority. Confirmation, selection reconciliation, and visible errors remain presentation responsibilities.
 
-### Canonical Trash naming
+For a multi-selection, the FileManager adapter attempts nodes in stable input order and records successes and failures independently. This permits deletable resources to reach Trash even when another selected resource is protected. Failed resources remain in their source folder after refresh and canonical policy errors remain visible.
 
-`FsService.move()` does not accept a destination name. Two deleted siblings can therefore collide inside one Trash directory. A complete design must choose whether to:
+Permanent removal is not the ordinary FileManager Delete path.
 
-1. rename the node to a unique internal Trash name before moving, then restore its recorded original name; or
-2. create per-deletion/per-parent containers under `/.Trash` and keep the visible node name unchanged.
+## Protection semantics
 
-The second option avoids exposing an internal renamed filename as user state, but adds container cleanup policy.
+Filesystem resource policy remains authoritative:
 
-### Deleting inside Trash
+- protected/system resources cannot be trashed through ordinary Delete;
+- installed Neutron application projections are rejected with the canonical instruction to use Uninstall instead;
+- resources already inside Recycle Bin are rejected rather than recursively trashed;
+- the filesystem root cannot be deleted.
 
-Deletion from `/.Trash` should be permanent and should bypass another soft-delete pass. Empty Trash would permanently remove all children. This requires an explicit Trash-aware delete policy rather than recursive interception of every `remove()` call.
+FileManager must not infer or duplicate these restrictions.
 
-### Missing original parent
+## Restore
 
-If the stored parent NodeId no longer exists, restore needs an explicit product rule. Reasonable choices are:
+Restore finds the Trash entry by the stable trashed NodeId.
 
-- fail and ask the user to choose a destination; or
-- restore to a defined fallback such as `/Desktop` or `/`.
+- The original parent NodeId is preferred over reconstructing a historical path.
+- If the original parent is unavailable, the current canonical fallback is `/Desktop`.
+- If the restored name collides, filesystem naming policy chooses a deterministic unique name.
+- Directory restore moves the existing directory node and therefore preserves descendant NodeIds.
+- The wrapper and Trash metadata are removed after successful restore.
 
-Silently reconstructing an old path would violate NodeId-first identity and could recreate directories the user intentionally deleted.
+## Permanent delete and Empty Recycle Bin
 
-### Restore name collisions
+Permanent deletion and emptying are explicit Trash-service operations. They remain separate from ordinary FileManager Delete and are intended for Recycle Bin functionality. Filesystem policy continues to protect system/native and Neutron application resources from inappropriate permanent deletion.
 
-If the original parent contains the original name again, restore should use the same deterministic `name (N).ext` family allocator used by FileManager copy/generated names. The restored node keeps its NodeId; only its presentation name changes.
+## Architecture boundary
 
-### Directory restoration
-
-Moving a directory node back through FsService should preserve its descendants and their NodeIds. No recursive copy model is needed.
-
-### Metadata lifecycle
-
-Trash metadata should be removed after a successful restore. The original parent NodeId/name and deletion timestamp should not remain as ordinary file metadata once restored unless product history explicitly requires it.
-
-### Desktop representation
-
-A special Recycle Bin Desktop icon should be a presentation/system entry backed by the canonical `/.Trash` directory, not a duplicate filesystem or a fake shortcut format. Its empty/full visual state can be derived from `fs.list(trashId)` and FsEvents.
-
-## Gate 3 conclusion
-
-The frozen FsService is sufficient for a Recycle Bin, but collision policy inside the canonical Trash and missing-parent restore UX are not yet frozen. Implementing it in this correction round would therefore create policy accidentally. Gate 3 keeps permanent deletion factored behind one operation boundary so it can be redirected later.
+`FsService` remains the storage/mutation contract, while filesystem/core owns managed-resource policy and Trash semantics around it. UI layers receive the public Trash service through composition. This keeps one filesystem authority, one identity model, and one persistence boundary while allowing Desktop and Explorer to share the same Delete behavior.

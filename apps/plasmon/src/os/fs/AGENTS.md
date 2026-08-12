@@ -13,6 +13,7 @@
 - Centralized resource classification/protection; generic consumers must not bypass it through private storage access.
 - Shared resource opening/shortcut resolution rather than per-surface dispatch tables.
 - A clear distinction between durable product initialization and temporary demo/fixture data.
+- `/System/Program Files` is a Filesystem-managed curated runtime/resource location, not Neutron installation authority. Runtime owners consume the shared Program Files seam and retain semantics for their own subtrees; do not infer `.sys` applications from Program Files entries.
 
 Representation-specific rules belong in the contracts/policy implementation and focused tests. Do not promote a particular suffix, seeded item, compatibility exception, or current bug into generic instructions unless it is an enduring filesystem invariant.
 

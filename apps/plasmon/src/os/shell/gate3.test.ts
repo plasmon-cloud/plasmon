@@ -1,7 +1,6 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
 import type {
-  AssociationRegistry,
   CreateFileOptions,
   ExternalElement,
   FsEvent,
@@ -10,16 +9,10 @@ import type {
   FsNode,
   FsReadRange,
   FsService,
-  HandlerDefinition,
   HandlerId,
   JsonValue,
   NativeAppDefinition,
-  NeutronBridge,
   NodeId,
-  OpenService,
-  OpenTarget,
-  ProcessController,
-  ProcessRecord,
   Revision,
   WriteOptions,
 } from "../contracts/index.ts";
@@ -38,7 +31,6 @@ import {
 } from "./search.ts";
 import {
   START_MENU_PATH,
-  launchStartShortcut,
   listStartMenuFolder,
   parseStartShortcut,
   reconcileStartMenu,
@@ -265,49 +257,6 @@ test("intentionally deleted seeded shortcut is not recreated", async () => {
   const result = await reconcileStartMenu(fs, [textApp], [mailElement]);
   expect(result.skippedDeleted).toBe(1);
   expect((await shortcutNodes(fs)).some((item) => item.target.kind === "element")).toBe(false);
-});
-
-function launchFakes() {
-  const opened: Array<{ handlerId: string; target: OpenTarget }> = [];
-  const neutronOpened: Array<{ id: string; options?: { tileId?: string; view?: string } }> = [];
-  const process: ProcessController = {
-    async open() { return "process"; }, focus() {}, close() {}, setTitle() {}, setTarget() {},
-    list(): ProcessRecord[] { return []; }, subscribe() { return () => undefined; },
-  };
-  const neutron: NeutronBridge = {
-    async loadElements() { return []; },
-    async openElement(id, options) { neutronOpened.push({ id, ...(options ? { options } : {}) }); },
-    async offerInstall() {}, async refreshRuntimeState() {}, subscribe() { return () => undefined; },
-  };
-  const handler: HandlerDefinition = { id: "native:text", kind: "native", name: "Text", icon: "T", capabilities: ["read"] };
-  const browser: HandlerDefinition = { id: "native:browser", kind: "native", name: "Browser", icon: "B", capabilities: ["url"] };
-  const registry: AssociationRegistry = {
-    registerHandler() {}, registerRule() {},
-    getHandler(id) { return id === handler.id ? handler : id === browser.id ? browser : null; },
-    async resolve() { return [handler]; }, async getDefault() { return handler; }, async setUserDefault() {},
-  };
-  const openService: OpenService = { async open(handlerId, target) { opened.push({ handlerId, target }); } };
-  return { process, neutron, registry, openService, opened, neutronOpened };
-}
-
-function shortcut(node: FsNode, target: StartShortcut["target"]): StartShortcut { return { node, target }; }
-
-test("Start shortcut launch dispatches native, Element, node, and URL targets through existing services", async () => {
-  const fs = new GateFs();
-  const file = await fs.createFile("root", "note.txt", { mime: "text/plain" });
-  const baseNode: FsNode = { id: "shortcut", parentId: "root", name: "Shortcut", kind: "shortcut", size: 0, createdAt: 0, modifiedAt: 0, metadata: {} };
-  const fakes = launchFakes();
-  const services = { fs, process: fakes.process, neutron: fakes.neutron, associations: fakes.registry, openService: fakes.openService };
-
-  await launchStartShortcut(shortcut(baseNode, { kind: "native", handlerId: "native:text" }), services);
-  await launchStartShortcut(shortcut(baseNode, { kind: "element", elementId: "mail", tileId: "main" }), services);
-  await launchStartShortcut(shortcut(baseNode, { kind: "node", nodeId: file.id }), services);
-  await launchStartShortcut(shortcut(baseNode, { kind: "url", url: "https://example.test/" }), services);
-
-  expect(fakes.neutronOpened).toEqual([{ id: "mail", options: { tileId: "main" } }]);
-  expect(fakes.opened[0]).toEqual({ handlerId: "native:text", target: {} });
-  expect(fakes.opened.some((call) => call.target.nodeId === file.id)).toBe(true);
-  expect(fakes.opened.some((call) => call.handlerId === "native:browser" && call.target.url === "https://example.test/")).toBe(true);
 });
 
 test("empty-query Search returns useful apps, Documents, Media, and Atoms", async () => {

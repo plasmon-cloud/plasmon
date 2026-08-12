@@ -46,7 +46,11 @@ import {
   importFileIntoFs,
   type NewDocumentKind,
 } from "./create-import.ts";
-import { deleteFilesystemNodes } from "./delete.ts";
+import {
+  deleteFailureMessage,
+  deleteFilesystemNodes,
+  type FileManagerTrashAuthority,
+} from "./delete.ts";
 import { downloadFsNode } from "./download.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { finishEntryDragGesture } from "./drag.ts";
@@ -70,6 +74,7 @@ export interface FileManagerProps {
   directoryId: NodeId;
   fs: FsService;
   openAuthority: FileManagerOpenAuthority;
+  trashAuthority: FileManagerTrashAuthority;
   fsEvents?: FsEventSource;
   associations?: AssociationRegistry;
   openService?: OpenService;
@@ -101,6 +106,7 @@ export function FileManager({
   directoryId,
   fs,
   openAuthority,
+  trashAuthority,
   fsEvents,
   associations,
   openService,
@@ -285,14 +291,15 @@ export function FileManager({
     const permitted = confirmDelete ? await confirmDelete(items) : true;
     if (!permitted) return;
     try {
-      await deleteFilesystemNodes(fs, items);
-      setSelection(clearSelection());
+      const result = await deleteFilesystemNodes(trashAuthority, items);
+      if (result.failures.length === 0) setSelection(clearSelection());
       setContextMenu(null);
-      setError(null);
       await refresh();
+      const failure = deleteFailureMessage(result.failures);
+      if (failure) setError(failure);
     } catch (cause: unknown) {
-      setError(errorMessage(cause));
       await refresh();
+      setError(errorMessage(cause));
     }
   };
 

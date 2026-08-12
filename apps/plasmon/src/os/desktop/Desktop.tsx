@@ -14,6 +14,7 @@ import {
   FileOperationClipboard,
   type FileManagerOpenAuthority,
   type FileManagerSnapshot,
+  type FileManagerTrashAuthority,
 } from "../file-manager/index.ts";
 import {
   allocateDesktopPositions,
@@ -100,6 +101,7 @@ export async function persistDesktopPositions(
 export interface DesktopProps {
   fs: FsService;
   openAuthority: FileManagerOpenAuthority;
+  trashAuthority: FileManagerTrashAuthority;
   fsEvents?: FsEventSource;
   process: ProcessController;
   associations?: AssociationRegistry;
@@ -111,6 +113,7 @@ export interface DesktopProps {
 export function Desktop({
   fs,
   openAuthority,
+  trashAuthority,
   fsEvents,
   process,
   associations,
@@ -184,6 +187,7 @@ export function Desktop({
         directoryId={desktop.id}
         fs={fs}
         openAuthority={openAuthority}
+        trashAuthority={trashAuthority}
         {...(fsEvents ? { fsEvents } : {})}
         {...(associations ? { associations } : {})}
         {...(openService ? { openService } : {})}

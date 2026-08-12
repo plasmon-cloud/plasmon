@@ -26,6 +26,7 @@ import {
   systemAppMetadata,
   type ResourceOwnership,
 } from "./resourcePolicy.ts";
+import { reconcileProgramFilesRoot } from "./programFiles.ts";
 import { shortcutMetadata, type SharedShortcutTarget, uniqueChildName } from "./shortcut.ts";
 
 export const FILESYSTEM_BOOTSTRAP_METADATA_KEY = "plasmon.filesystem.bootstrap.v1";
@@ -366,12 +367,8 @@ export async function bootstrapFilesystem(
   await ensureRootDirectory(fs, "Desktop", "system-required");
   await ensureRootDirectory(fs, "Apps", "system-required");
   await moveLegacyStartMenu(fs, system);
-  const programFiles = await ensureDirectory(fs, system, "Program Files", "system-required");
+  await reconcileProgramFilesRoot(fs);
   await ensureDirectory(fs, system, ".Trash", "system-required");
-  // Games correction: these are the actual Program Files runtimes. No DOS.sys
-  // or Emulator.sys resources are created anywhere in bootstrap.
-  await ensureDirectory(fs, programFiles, "js-dos", "system-required");
-  await ensureDirectory(fs, programFiles, "EmulatorJs", "system-required");
 
   const refreshedRoot = await fs.stat(root.id);
   const bootstrap = refreshedRoot.metadata[FILESYSTEM_BOOTSTRAP_METADATA_KEY];

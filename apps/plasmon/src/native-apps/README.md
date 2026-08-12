@@ -26,6 +26,7 @@ An association-backed runtime host can use a native process/window without autom
 - `video/` — browser media playback and URL/media capability handling.
 - `settings/` — settings/status surface over injected shared services.
 - `properties/` — native wrapper for shared filesystem/resource inspection.
+- `recycle-bin/` — native restore/permanent-delete/empty surface over the canonical filesystem Trash service.
 - `jsdos/` — association-backed packaged runtime/player integration.
 
 ## Refactor direction
@@ -38,4 +39,4 @@ Concrete titles, menu omissions, file-type corrections, runtime paths, and curre
 
 ## Testing
 
-Use fast model/domain tests for document sessions, parsing/classification, navigation, settings summaries, URL/media normalization, and other deterministic semantics. Use real-browser/package tests for Monaco/workers, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.
+Use fast model/domain tests for document sessions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use real-browser/package tests for Monaco/workers, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.

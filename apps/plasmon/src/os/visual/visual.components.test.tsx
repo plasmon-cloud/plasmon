@@ -14,6 +14,25 @@ test("native app presentation has a non-letter application fallback", () => {
   expect(markup).toContain("/static/plasmon/icons/application.svg");
 });
 
+test("generic application presentation preserves handler artwork", () => {
+  const markup = renderToStaticMarkup(
+    <ResourceIcon
+      context="file-list"
+      presentation={{ kind: "application", src: "/apps/mail/static/icon.svg" }}
+    />,
+  );
+  expect(markup).toContain("/apps/mail/static/icon.svg");
+  expect(markup).toContain("object-fit:contain");
+  expect(markup).toContain("data-icon-context=\"file-list\"");
+});
+
+test("generic application presentation uses the shared fallback when artwork is absent", () => {
+  const markup = renderToStaticMarkup(
+    <ResourceIcon context="file-list" presentation={{ kind: "application", src: null }} />,
+  );
+  expect(markup).toContain("/static/plasmon/icons/application.svg");
+});
+
 test("resource shortcut keeps target artwork and adds only the lower-left overlay", () => {
   const markup = renderToStaticMarkup(
     <ResourceIcon

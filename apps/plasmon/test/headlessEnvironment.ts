@@ -15,6 +15,8 @@ import { NativeWindowManager } from "../src/os/windowing/index.ts";
 export interface HeadlessPlasmonEnvironmentOptions {
   /** Elements exposed by the fake Neutron boundary. Defaults to no installed Elements. */
   elements?: readonly ExternalElement[];
+  /** Optional in-memory persistence boundary to reuse across reconstructed production compositions. */
+  repository?: MemoryFsRepository;
 }
 
 export interface HeadlessPlasmonEnvironment {
@@ -42,7 +44,7 @@ export interface HeadlessPlasmonEnvironment {
 export function createHeadlessPlasmonEnvironment(
   options: HeadlessPlasmonEnvironmentOptions = {},
 ): HeadlessPlasmonEnvironment {
-  const repository = new MemoryFsRepository();
+  const repository = options.repository ?? new MemoryFsRepository();
   const neutronMessages: string[] = [];
   const neutron = new MockNeutronBridge({
     elements: options.elements ?? [],

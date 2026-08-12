@@ -14,8 +14,10 @@ import {
   DEFAULT_WINDOW_WIDTH,
   constrainGeometry,
   geometryEqual,
+  horizontalSnapGeometry,
   maximizeGeometry,
   normalizeViewport,
+  type HorizontalSnapSide,
   type WindowViewport,
 } from "./geometry.ts";
 
@@ -38,6 +40,15 @@ export interface NativeWindowManagerOptions {
 
 export interface WindowGeometryCommitter {
   setGeometry(id: WindowId, geometry: WindowGeometry): void;
+}
+
+export interface WindowStateReader {
+  get(id: WindowId): WindowState | undefined;
+}
+
+export interface WindowSnapController {
+  snap(id: WindowId, side: HorizontalSnapSide, restoreGeometry?: WindowGeometry): void;
+  getSnapSide(id: WindowId): HorizontalSnapSide | null;
 }
 
 let generatedId = 0;
@@ -77,8 +88,9 @@ function stateGeometry(state: WindowState): WindowGeometry {
   return { x: state.x, y: state.y, width: state.width, height: state.height };
 }
 
-export class NativeWindowManager implements WindowManager, WindowGeometryCommitter {
+export class NativeWindowManager implements WindowManager, WindowGeometryCommitter, WindowStateReader, WindowSnapController {
   private readonly windows = new Map<WindowId, WindowState>();
+  private readonly snapSides = new Map<WindowId, HorizontalSnapSide>();
   private readonly listeners = new Set<() => void>();
   private readonly idFactory: () => WindowId;
   private readonly viewportProvider: () => WindowViewport;
@@ -178,6 +190,7 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
     if (!state || state.maximized) return;
     const next = this.constrain({ ...stateGeometry(state), x, y }, this.minWidth(state), this.minHeight(state));
     if (geometryEqual(stateGeometry(state), next)) return;
+    this.clearSnapForFloatingEdit(state);
     Object.assign(state, next);
     this.emit();
   }
@@ -187,6 +200,7 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
     if (!state || state.maximized) return;
     const next = this.constrain({ ...stateGeometry(state), width, height }, this.minWidth(state), this.minHeight(state));
     if (geometryEqual(stateGeometry(state), next)) return;
+    this.clearSnapForFloatingEdit(state);
     Object.assign(state, next);
     this.emit();
   }
@@ -196,8 +210,37 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
     if (!state || state.maximized) return;
     const next = this.constrain(geometry, this.minWidth(state), this.minHeight(state));
     if (geometryEqual(stateGeometry(state), next)) return;
+    this.clearSnapForFloatingEdit(state);
     Object.assign(state, next);
     this.emit();
+  }
+
+  snap(id: WindowId, side: HorizontalSnapSide, restoreGeometry?: WindowGeometry): void {
+    const state = this.windows.get(id);
+    if (!state) return;
+    const previousSide = this.snapSides.get(id);
+    if (previousSide === undefined) {
+      const candidate = restoreGeometry
+        ?? (state.maximized && state.restoreGeometry ? state.restoreGeometry : stateGeometry(state));
+      state.restoreGeometry = this.constrain(candidate, this.minWidth(state), this.minHeight(state));
+    }
+    const geometry = horizontalSnapGeometry(this.getViewport(), side);
+    const placementChanged = previousSide !== side || state.maximized || state.minimized || !geometryEqual(stateGeometry(state), geometry);
+    if (!placementChanged) return;
+
+    this.snapSides.set(id, side);
+    Object.assign(state, geometry);
+    state.maximized = false;
+    state.minimized = false;
+    state.z = this.raiseZ();
+    this.compactZIfNeeded();
+    this.emit();
+  }
+
+  getSnapSide(id: WindowId): HorizontalSnapSide | null {
+    const state = this.windows.get(id);
+    if (!state || state.maximized) return null;
+    return this.snapSides.get(id) ?? null;
   }
 
   minimize(id: WindowId): void {
@@ -220,7 +263,7 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
       }
       return;
     }
-    state.restoreGeometry = cloneGeometry(stateGeometry(state));
+    if (!this.snapSides.has(id)) state.restoreGeometry = cloneGeometry(stateGeometry(state));
     Object.assign(state, maximizeGeometry(this.getViewport()));
     state.maximized = true;
     state.minimized = false;
@@ -232,20 +275,41 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
   restore(id: WindowId): void {
     const state = this.windows.get(id);
     if (!state) return;
+    const snapSide = this.snapSides.get(id);
 
     if (state.minimized) {
       state.minimized = false;
       if (state.maximized) Object.assign(state, maximizeGeometry(this.getViewport()));
+      else if (snapSide) Object.assign(state, horizontalSnapGeometry(this.getViewport(), snapSide));
       state.z = this.raiseZ();
       this.compactZIfNeeded();
       this.emit();
       return;
     }
 
-    if (!state.maximized) return;
+    if (state.maximized) {
+      if (snapSide) {
+        Object.assign(state, horizontalSnapGeometry(this.getViewport(), snapSide));
+        state.maximized = false;
+        state.z = this.raiseZ();
+        this.compactZIfNeeded();
+        this.emit();
+        return;
+      }
+      const restoreGeometry = state.restoreGeometry ?? stateGeometry(state);
+      Object.assign(state, this.constrain(restoreGeometry, this.minWidth(state), this.minHeight(state)));
+      state.maximized = false;
+      delete state.restoreGeometry;
+      state.z = this.raiseZ();
+      this.compactZIfNeeded();
+      this.emit();
+      return;
+    }
+
+    if (!snapSide) return;
     const restoreGeometry = state.restoreGeometry ?? stateGeometry(state);
     Object.assign(state, this.constrain(restoreGeometry, this.minWidth(state), this.minHeight(state)));
-    state.maximized = false;
+    this.snapSides.delete(id);
     delete state.restoreGeometry;
     state.z = this.raiseZ();
     this.compactZIfNeeded();
@@ -254,6 +318,7 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
 
   close(id: WindowId): void {
     if (!this.windows.delete(id)) return;
+    this.snapSides.delete(id);
     this.emit();
   }
 
@@ -284,15 +349,23 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
     let changed = false;
     const viewport = this.getViewport();
     for (const state of this.windows.values()) {
+      const snapSide = this.snapSides.get(state.id);
       const next = state.maximized
         ? maximizeGeometry(viewport)
-        : this.constrain(stateGeometry(state), this.minWidth(state), this.minHeight(state));
+        : snapSide
+          ? horizontalSnapGeometry(viewport, snapSide)
+          : this.constrain(stateGeometry(state), this.minWidth(state), this.minHeight(state));
       if (!geometryEqual(stateGeometry(state), next)) {
         Object.assign(state, next);
         changed = true;
       }
     }
     if (changed) this.emit();
+  }
+
+  private clearSnapForFloatingEdit(state: WindowState): void {
+    if (!this.snapSides.delete(state.id)) return;
+    delete state.restoreGeometry;
   }
 
   private uniqueId(): WindowId {

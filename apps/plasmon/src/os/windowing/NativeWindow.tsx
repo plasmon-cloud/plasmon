@@ -15,16 +15,22 @@ import {
   DEFAULT_MIN_HEIGHT,
   DEFAULT_MIN_WIDTH,
   constrainGeometry,
+  type HorizontalSnapSide,
   type WindowViewport,
 } from "./geometry.ts";
 import {
+  horizontalSnapSideAtPointer,
   resizeCursor,
   resizeGeometry,
   suspendDocumentSelection,
   suspendIframePointerEvents,
   type ResizeDirection,
 } from "./interaction.ts";
-import type { WindowGeometryCommitter } from "./NativeWindowManager.ts";
+import type {
+  WindowGeometryCommitter,
+  WindowSnapController,
+  WindowStateReader,
+} from "./NativeWindowManager.ts";
 import "./windowing.scss";
 
 const RESIZE_DIRECTIONS: readonly ResizeDirection[] = ["n", "ne", "e", "se", "s", "sw", "w", "nw"];
@@ -54,7 +60,8 @@ export interface NativeWindowProps {
   contentClassName?: string;
   ariaLabel?: string;
   canResize?: boolean;
-  onRequestClose?: (id: WindowId, processId: ProcessId) => void;
+  /** Return false when the owning lifecycle rejects or defers this close request. */
+  onRequestClose?: (id: WindowId, processId: ProcessId) => boolean | void;
 }
 
 function classNames(...values: Array<string | false | null | undefined>): string {
@@ -75,6 +82,26 @@ function viewportFor(element: HTMLElement): WindowViewport {
 function geometryCommitter(manager: WindowManager): WindowGeometryCommitter | null {
   const candidate = manager as WindowManager & Partial<WindowGeometryCommitter>;
   return typeof candidate.setGeometry === "function" ? candidate as WindowManager & WindowGeometryCommitter : null;
+}
+
+function stateReader(manager: WindowManager): WindowStateReader | null {
+  const candidate = manager as WindowManager & Partial<WindowStateReader>;
+  return typeof candidate.get === "function" ? candidate as WindowManager & WindowStateReader : null;
+}
+
+function snapController(manager: WindowManager): WindowSnapController | null {
+  const candidate = manager as WindowManager & Partial<WindowSnapController>;
+  return typeof candidate.snap === "function" && typeof candidate.getSnapSide === "function"
+    ? candidate as WindowManager & WindowSnapController
+    : null;
+}
+
+function pointerSnapSide(root: HTMLElement, clientX: number): HorizontalSnapSide | null {
+  const parent = root.parentElement;
+  if (!parent) return null;
+  const bounds = parent.getBoundingClientRect();
+  if (bounds.width <= 0) return null;
+  return horizontalSnapSideAtPointer(clientX, { left: bounds.left, right: bounds.right });
 }
 
 function MinimizeIcon(): ReactNode {
@@ -131,16 +158,19 @@ export function NativeWindow({
   const [closing, setClosing] = useState(false);
   const minWidth = state.minWidth ?? DEFAULT_MIN_WIDTH;
   const minHeight = state.minHeight ?? DEFAULT_MIN_HEIGHT;
+  const snapper = snapController(manager);
+  const snapSide = snapper?.getSnapSide(state.id) ?? null;
+  const snapped = snapSide !== null;
 
   const style = useMemo<CSSProperties>(() => ({
     left: state.x,
     top: state.y,
     width: state.width,
     height: state.height,
-    minWidth: state.maximized ? 0 : minWidth,
-    minHeight: state.maximized ? 0 : minHeight,
+    minWidth: state.maximized || snapped ? 0 : minWidth,
+    minHeight: state.maximized || snapped ? 0 : minHeight,
     zIndex: state.z,
-  }), [state.x, state.y, state.width, state.height, state.z, state.maximized, minWidth, minHeight]);
+  }), [state.x, state.y, state.width, state.height, state.z, state.maximized, snapped, minWidth, minHeight]);
 
   const focusWindow = useCallback(() => {
     if (!active) manager.focus(state.id);
@@ -175,7 +205,7 @@ export function NativeWindow({
     });
   }, [applyGeometry]);
 
-  const clearInteraction = useCallback((commit: boolean) => {
+  const clearInteraction = useCallback((commit: boolean, requestedSnapSide: HorizontalSnapSide | null = null) => {
     const interaction = interactionRef.current;
     if (!interaction) return;
     interactionRef.current = null;
@@ -193,13 +223,18 @@ export function NativeWindow({
     }
 
     if (!commit) {
-      applyGeometry(geometryOf(state));
+      const authoritative = stateReader(manager)?.get(state.id);
+      applyGeometry(authoritative ? geometryOf(authoritative) : geometryOf(state));
       return;
     }
 
     applyGeometry(interaction.latestGeometry);
     if (interaction.kind === "drag") {
-      manager.move(state.id, interaction.latestGeometry.x, interaction.latestGeometry.y);
+      if (requestedSnapSide && snapper) {
+        snapper.snap(state.id, requestedSnapSide, interaction.latestGeometry);
+      } else {
+        manager.move(state.id, interaction.latestGeometry.x, interaction.latestGeometry.y);
+      }
       return;
     }
 
@@ -210,7 +245,7 @@ export function NativeWindow({
       manager.move(state.id, interaction.latestGeometry.x, interaction.latestGeometry.y);
       manager.resize(state.id, interaction.latestGeometry.width, interaction.latestGeometry.height);
     }
-  }, [applyGeometry, manager, state]);
+  }, [applyGeometry, manager, snapper, state]);
 
   useEffect(() => () => {
     const interaction = interactionRef.current;
@@ -228,12 +263,26 @@ export function NativeWindow({
     direction?: ResizeDirection,
   ) => {
     if (event.button !== 0 || state.minimized || (kind === "drag" && state.maximized)) return;
-    if (kind === "resize" && (!canResize || state.maximized)) return;
+    if (kind === "resize" && (!canResize || state.maximized || snapped)) return;
     const root = rootRef.current;
     if (!root) return;
 
     event.preventDefault();
     event.stopPropagation();
+
+    let startGeometry = geometryOf(state);
+    if (kind === "drag" && snapped) {
+      manager.restore(state.id);
+      const restored = stateReader(manager)?.get(state.id);
+      if (restored) {
+        startGeometry = geometryOf(restored);
+        applyGeometry(startGeometry);
+      } else if (state.restoreGeometry) {
+        startGeometry = { ...state.restoreGeometry };
+        applyGeometry(startGeometry);
+      }
+    }
+
     focusWindow();
     const target = event.currentTarget;
     target.setPointerCapture(event.pointerId);
@@ -244,14 +293,14 @@ export function NativeWindow({
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startGeometry: geometryOf(state),
-      latestGeometry: geometryOf(state),
+      startGeometry,
+      latestGeometry: startGeometry,
       ...(direction === undefined ? {} : { direction }),
       captureTarget: target,
       restoreIframePointerEvents: suspendIframePointerEvents(root.ownerDocument),
       restoreDocumentSelection: suspendDocumentSelection(cursor, root.ownerDocument),
     };
-  }, [canResize, focusWindow, state]);
+  }, [applyGeometry, canResize, focusWindow, manager, snapped, state]);
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const interaction = interactionRef.current;
@@ -271,10 +320,15 @@ export function NativeWindow({
   }, [minHeight, minWidth, scheduleGeometry]);
 
   const onPointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    if (interactionRef.current?.pointerId !== event.pointerId) return;
+    const interaction = interactionRef.current;
+    const root = rootRef.current;
+    if (!interaction || interaction.pointerId !== event.pointerId) return;
     event.preventDefault();
-    clearInteraction(true);
-  }, [clearInteraction]);
+    const requestedSnapSide = interaction.kind === "drag" && root && snapper
+      ? pointerSnapSide(root, event.clientX)
+      : null;
+    clearInteraction(true, requestedSnapSide);
+  }, [clearInteraction, snapper]);
 
   const onPointerCancel = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     if (interactionRef.current?.pointerId !== event.pointerId) return;
@@ -299,8 +353,13 @@ export function NativeWindow({
       window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-    if (onRequestClose) onRequestClose(state.id, state.processId);
-    else manager.close(state.id);
+
+    if (onRequestClose) {
+      const accepted = onRequestClose(state.id, state.processId) !== false;
+      if (!accepted) setClosing(false);
+      return;
+    }
+    manager.close(state.id);
   }, [manager, onRequestClose, state.id, state.processId]);
 
   const requestClose = useCallback(() => {
@@ -315,6 +374,7 @@ export function NativeWindow({
     active && "plasmon-window--active",
     state.minimized && "plasmon-window--minimized",
     state.maximized && "plasmon-window--maximized",
+    snapped && "plasmon-window--snapped",
     closing && "plasmon-window--closing",
     className,
   );
@@ -330,6 +390,7 @@ export function NativeWindow({
       inert={state.minimized}
       tabIndex={-1}
       data-window-id={state.id}
+      data-window-snap={snapSide ?? undefined}
       onPointerDown={focusWindow}
       onAnimationEnd={closing ? finalizeClose : undefined}
     >
@@ -380,7 +441,7 @@ export function NativeWindow({
         </div>
       </header>
       <div className={classNames("plasmon-window__content", contentClassName)}>{children}</div>
-      {canResize && !state.maximized ? RESIZE_DIRECTIONS.map((direction) => (
+      {canResize && !state.maximized && !snapped ? RESIZE_DIRECTIONS.map((direction) => (
         <div
           key={direction}
           className={`plasmon-window__resize plasmon-window__resize--${direction}`}

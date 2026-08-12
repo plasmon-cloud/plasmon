@@ -18,8 +18,6 @@ Hosted Plasmon keeps durable browser filesystem ownership behind the application
 
 `core.ts` composes the higher-level filesystem policy layer around the raw service: bootstrap/reconciliation, protected managed resources, Trash operations, external application projections, and the shared filesystem-aware open dispatcher. Durable seeds and demo/fixture seeds are intentionally separate inputs.
 
-The open dispatcher owns resource classification, shortcut dereference, system/native application dispatch, Neutron application dispatch, and association-based opening. Its optional directory presentation callback lets a caller such as an existing Explorer window navigate in place after the dispatcher has resolved the resource as a directory; without that callback the canonical default remains opening Explorer through the process service.
-
 ## Durable semantics
 
 - A node has stable identity independent of path and display name.
@@ -30,6 +28,21 @@ The open dispatcher owns resource classification, shortcut dereference, system/n
 - Resource classification/protection policy is centralized rather than duplicated in Desktop/FileManager/Shell.
 - Generic resource opening and shortcut dereference are shared OS behavior rather than UI-owned dispatch.
 - Bootstrap/reconciliation must be versionable and idempotent so upgrades can repair expected managed state without destroying user state.
+
+## Program Files boundary
+
+`/System/Program Files` is the canonical filesystem location for curated packaged runtime/application resources. Filesystem owns the durable directory identity, managed/protected semantics, and versioned root reconciliation; it does **not** own runtime asset semantics or application installation state.
+
+Runtime owners use `FilesystemCoreServices.programFiles` rather than recreating `/System/Program Files` policy themselves. The narrow filesystem seam is:
+
+```ts
+await filesystem.programFiles.root();
+await filesystem.programFiles.ensureRuntimeDirectory("MonacoEditor");
+```
+
+`ensureRuntimeDirectory()` creates or repairs one direct managed child while preserving an existing directory's `NodeId`, metadata, and contents. The runtime/native-app Area remains responsible for what that subtree means and whether packaged HTTP assets are projected into it.
+
+Program Files is **not** a Neutron Element installation database. `/Apps/*.neutron` remains the filesystem projection of Kernel-authoritative installation state. A Program Files subtree does not imply a `.sys` application, and runtime resources such as js-dos or EmulatorJS must not acquire fake `DOS.sys`, `Emulator.sys`, or similar wrappers merely because they have Program Files resources.
 
 ## Refactor direction
 

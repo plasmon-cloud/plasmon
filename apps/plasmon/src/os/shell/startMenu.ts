@@ -1,21 +1,16 @@
 import type {
-  AssociationRegistry,
   ExternalElement,
   FsNode,
   FsService,
   HandlerId,
   JsonValue,
   NativeAppDefinition,
-  NeutronBridge,
-  OpenService,
-  ProcessController,
 } from "../contracts/index.ts";
 import {
   parseSharedShortcut,
   shortcutMetadata as sharedShortcutMetadata,
   type SharedShortcutTarget,
 } from "../fs/shortcut.ts";
-import { openFilesystemSearchResult } from "./searchOpening.ts";
 
 export const START_MENU_PATH = "/System/Start Menu";
 export const START_MENU_NAME = "Start Menu";
@@ -34,14 +29,6 @@ export interface StartSeedResult {
   created: number;
   preserved: number;
   skippedDeleted: number;
-}
-
-export interface StartLaunchServices {
-  fs: FsService;
-  process: ProcessController;
-  neutron: NeutronBridge;
-  associations?: AssociationRegistry | undefined;
-  openService?: OpenService | undefined;
 }
 
 export function parseStartShortcutTarget(value: unknown): StartShortcutTarget | null {
@@ -231,47 +218,4 @@ export async function listStartMenuFolder(fs: FsService, folderId: string): Prom
   const folder = await fs.stat(folderId);
   if (folder.kind !== "directory") throw new Error(`${folder.name} is not a Start Menu folder`);
   return fs.list(folder.id, { includeHidden: false, sort: "name" });
-}
-
-export async function launchStartShortcut(shortcut: StartShortcut, services: StartLaunchServices): Promise<void> {
-  const { target } = shortcut;
-  switch (target.kind) {
-    case "native": {
-      if (services.openService) {
-        await services.openService.open(target.handlerId, {});
-        return;
-      }
-      const processId = await services.process.open(target.handlerId, {});
-      if (processId === null) throw new Error(`Native handler is unavailable: ${target.handlerId}`);
-      return;
-    }
-    case "element":
-      await services.neutron.openElement(target.elementId, {
-        ...(target.tileId ? { tileId: target.tileId } : {}),
-        ...(target.view ? { view: target.view } : {}),
-      });
-      return;
-    case "node": {
-      const node = await services.fs.stat(target.nodeId);
-      if (node.kind === "directory") {
-        const processId = await services.process.open("native:explorer", { nodeId: target.nodeId });
-        if (processId === null) throw new Error("Explorer is unavailable");
-        return;
-      }
-      if (!services.associations || !services.openService) throw new Error("File association/open service is unavailable");
-      await openFilesystemSearchResult(services.fs, services.associations, services.openService, target.nodeId);
-      return;
-    }
-    case "url": {
-      if (!services.openService || !services.associations) throw new Error("URL opening is unavailable");
-      const handlerId = services.associations.getHandler("native:browser")
-        ? "native:browser"
-        : services.associations.getHandler("external:url")
-          ? "external:url"
-          : null;
-      if (!handlerId) throw new Error("No URL-capable browser handler is registered");
-      await services.openService.open(handlerId, { url: target.url });
-      return;
-    }
-  }
 }

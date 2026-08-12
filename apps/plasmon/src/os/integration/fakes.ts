@@ -9,6 +9,8 @@ import type {
   NeutronBridge,
   NodeId,
   OpenTarget,
+  ProcessCloseHandler,
+  ProcessCloseRequest,
   ProcessController,
   ProcessId,
   ProcessRecord,
@@ -221,6 +223,8 @@ export class MemoryWindowManager implements WindowManager {
 export class MemoryProcessController implements ProcessController {
   private records: ProcessRecord[] = [];
   private listeners = new Set<() => void>();
+  private closeHandlers = new Map<ProcessId, ProcessCloseHandler>();
+  private pendingCloses = new Map<ProcessId, symbol>();
   constructor(private windows: WindowManager) {}
   private emit(): void { for (const listener of this.listeners) listener(); }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
@@ -231,7 +235,62 @@ export class MemoryProcessController implements ProcessController {
     this.emit(); return id;
   }
   focus(id: ProcessId): void { const record = this.records.find((item) => item.id === id); if (record?.windowId) this.windows.focus(record.windowId); }
-  close(id: ProcessId): void { const record = this.records.find((item) => item.id === id); if (record?.windowId) this.windows.close(record.windowId); this.records = this.records.filter((item) => item.id !== id); this.emit(); }
+  close(id: ProcessId): boolean {
+    const record = this.records.find((item) => item.id === id);
+    if (!record) return true;
+    if (this.pendingCloses.has(id)) return false;
+    const handler = this.closeHandlers.get(id);
+    if (!handler) return this.forceClose(id);
+
+    const token = Symbol(`process-close:${id}`);
+    this.pendingCloses.set(id, token);
+    const request: ProcessCloseRequest = {
+      processId: id,
+      complete: () => {
+        if (this.pendingCloses.get(id) !== token) return;
+        this.pendingCloses.delete(id);
+        this.forceClose(id);
+      },
+      cancel: () => {
+        if (this.pendingCloses.get(id) === token) this.pendingCloses.delete(id);
+      },
+    };
+
+    let decision: ReturnType<ProcessCloseHandler>;
+    try {
+      decision = handler(request);
+    } catch {
+      this.pendingCloses.delete(id);
+      return false;
+    }
+    if (this.pendingCloses.get(id) !== token) return !this.records.some((item) => item.id === id);
+    if (decision === "allow") {
+      this.pendingCloses.delete(id);
+      return this.forceClose(id);
+    }
+    if (decision === "prevent") this.pendingCloses.delete(id);
+    return false;
+  }
+  forceClose(id: ProcessId): boolean {
+    const record = this.records.find((item) => item.id === id);
+    this.pendingCloses.delete(id);
+    this.closeHandlers.delete(id);
+    if (!record) return true;
+    if (record.windowId) this.windows.close(record.windowId);
+    this.records = this.records.filter((item) => item.id !== id);
+    this.emit();
+    return true;
+  }
+  registerCloseHandler(id: ProcessId, handler: ProcessCloseHandler): () => void {
+    if (!this.records.some((item) => item.id === id)) throw new Error(`Unknown process: ${id}`);
+    if (this.closeHandlers.has(id)) throw new Error(`Close handler already registered for process: ${id}`);
+    this.closeHandlers.set(id, handler);
+    return () => {
+      if (this.closeHandlers.get(id) !== handler) return;
+      this.closeHandlers.delete(id);
+      this.pendingCloses.delete(id);
+    };
+  }
   setTitle(id: ProcessId, title: string): void { const record = this.records.find((item) => item.id === id); if (record) record.title = title; this.emit(); }
   setTarget(id: ProcessId, target: OpenTarget): void { const record = this.records.find((item) => item.id === id); if (record) record.target = target; this.emit(); }
   list(): readonly ProcessRecord[] { return this.records.map((record) => ({ ...record })); }

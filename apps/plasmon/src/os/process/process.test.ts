@@ -3,6 +3,7 @@ import type {
   JsonValue,
   NativeAppDefinition,
   OpenTarget,
+  ProcessCloseRequest,
   ProcessId,
   WindowCreateOptions,
   WindowId,
@@ -216,15 +217,120 @@ describe("NativeProcessController", () => {
     ]);
   });
 
-  test("close removes process and closes the associated window", async () => {
+  test("close without a registered concern removes process and window immediately", async () => {
     const { controller, windows } = setup();
     const id = await controller.open("native:text", {});
     if (!id) throw new Error("expected process startup");
-    controller.close(id);
 
+    expect(controller.close(id)).toBe(true);
     expect(controller.list()).toEqual([]);
     expect(windows.list()).toEqual([]);
     expect(windows.calls.at(-1)).toEqual(["close", "window:1"]);
+  });
+
+  test("ordinary close handler can allow immediate teardown", async () => {
+    const { controller, windows } = setup();
+    const id = await controller.open("native:text", {});
+    if (!id) throw new Error("expected process startup");
+    let calls = 0;
+    controller.registerCloseHandler(id, () => {
+      calls += 1;
+      return "allow";
+    });
+
+    expect(controller.close(id)).toBe(true);
+    expect(calls).toBe(1);
+    expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+  });
+
+  test("ordinary close handler can prevent teardown", async () => {
+    const { controller, windows } = setup();
+    const id = await controller.open("native:text", {});
+    if (!id) throw new Error("expected process startup");
+    let calls = 0;
+    const unregister = controller.registerCloseHandler(id, () => {
+      calls += 1;
+      return "prevent";
+    });
+
+    expect(controller.close(id)).toBe(false);
+    expect(calls).toBe(1);
+    expect(controller.list()).toHaveLength(1);
+    expect(controller.list()[0]?.state).toBe("running");
+    expect(windows.list()).toHaveLength(1);
+
+    unregister();
+    expect(controller.close(id)).toBe(true);
+  });
+
+  test("window-originated ordinary close can defer and later complete the same lifecycle request", async () => {
+    const { controller, windows } = setup();
+    const id = await controller.open("native:text", {});
+    if (!id) throw new Error("expected process startup");
+    let calls = 0;
+    let pending: ProcessCloseRequest | null = null;
+    controller.registerCloseHandler(id, (request) => {
+      calls += 1;
+      pending = request;
+      return "defer";
+    });
+
+    const requestWindowClose = (_windowId: WindowId, processId: ProcessId): boolean =>
+      controller.close(processId);
+
+    expect(requestWindowClose("window:1", id)).toBe(false);
+    expect(controller.list()[0]?.state).toBe("running");
+    expect(windows.list()).toHaveLength(1);
+    expect(controller.close(id)).toBe(false);
+    expect(calls).toBe(1);
+
+    if (!pending) throw new Error("expected deferred close request");
+    pending.complete();
+    expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+  });
+
+  test("canceling a deferred close keeps the process alive and permits a later close request", async () => {
+    const { controller, windows } = setup();
+    const id = await controller.open("native:text", {});
+    if (!id) throw new Error("expected process startup");
+    const requests: ProcessCloseRequest[] = [];
+    controller.registerCloseHandler(id, (request) => {
+      requests.push(request);
+      return "defer";
+    });
+
+    expect(controller.close(id)).toBe(false);
+    expect(requests).toHaveLength(1);
+    requests[0]?.cancel();
+    expect(controller.list()).toHaveLength(1);
+    expect(windows.list()).toHaveLength(1);
+
+    expect(controller.close(id)).toBe(false);
+    expect(requests).toHaveLength(2);
+    requests[1]?.complete();
+    expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+  });
+
+  test("forceClose explicitly bypasses a deferred ordinary close", async () => {
+    const { controller, windows } = setup();
+    const id = await controller.open("native:text", {});
+    if (!id) throw new Error("expected process startup");
+    let pending: ProcessCloseRequest | null = null;
+    controller.registerCloseHandler(id, (request) => {
+      pending = request;
+      return "defer";
+    });
+
+    expect(controller.close(id)).toBe(false);
+    expect(controller.forceClose(id)).toBe(true);
+    expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+
+    pending?.complete();
+    expect(controller.list()).toEqual([]);
   });
 
   test("external WindowManager closure removes the running process", async () => {

@@ -4,14 +4,17 @@
 
 Shell derives state from public authorities. Native task state comes from `ProcessController`/`WindowManager`; external application state comes from `NeutronBridge`; filesystem/search/start content comes from filesystem/shared resource services. Shell must not become a second install database, process store, filesystem, or generic resource-opening authority.
 
+Filesystem-backed Start and Search activation delegates to the canonical `FilesystemOpenDispatcher`. Shell keeps Start-folder navigation, Search result selection, overlay dismissal, pinning, and genuinely non-filesystem native/Element actions, but does not duplicate directory/shortcut/system-app/Neutron-app/association launch policy.
+
 ## Production models
 
 The directory already separates a number of deterministic concerns:
 
+- `activation.ts` — thin Start/Search adapters into canonical filesystem opening;
 - `model.ts` — taskbar/tray derivation and native task actions;
 - `preferences.ts` — persisted shell preferences;
-- `search.ts` / `searchOpening.ts` — search/query and opening helpers;
-- `startMenu.ts` — Start inventory/reconciliation and launch helpers;
+- `search.ts` — search/query inventory, classification, limits, and invalidation;
+- `startMenu.ts` — Start inventory, reconciliation, and shortcut presentation metadata;
 - `interactions.ts` — click-away/context/pin decisions;
 - `subscriptions.ts` — derived-state invalidation;
 - `calendar.ts` — date/calendar calculations.
@@ -28,4 +31,4 @@ Feature-completeness work should use mature desktop conventions for discoverabil
 
 ## Testing
 
-Use fast tests for task derivation/actions, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, and subscription invalidation. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile.
+Use fast tests for task derivation/actions, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, and canonical filesystem activation adapters. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile.

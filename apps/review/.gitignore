@@ -1,0 +1,4 @@
+dist/
+*.neutron
+playwright-report/
+test-results/

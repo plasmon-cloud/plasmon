@@ -5,6 +5,7 @@ export * from "./client.ts";
 export * from "./resourcePolicy.ts";
 export * from "./shortcut.ts";
 export * from "./managed.ts";
+export * from "./programFiles.ts";
 export * from "./defaultSeeds.ts";
 export * from "./stableProjection.ts";
 export * from "./protectedService.ts";

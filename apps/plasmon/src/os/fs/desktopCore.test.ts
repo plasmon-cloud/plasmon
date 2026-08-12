@@ -117,8 +117,9 @@ test("bootstrap is idempotent, moves Start Menu by NodeId, and creates only appr
   assert.equal(properties?.mime, SYSTEM_APP_MIME);
   assert.equal(await raw.resolvePath("/System/DOS.sys"), null);
   assert.equal(await raw.resolvePath("/System/Emulator.sys"), null);
-  assert.ok(await raw.resolvePath("/System/Program Files/js-dos"));
-  assert.ok(await raw.resolvePath("/System/Program Files/EmulatorJs"));
+  assert.ok(await raw.resolvePath("/System/Program Files"));
+  assert.equal(await raw.resolvePath("/System/Program Files/js-dos"), null);
+  assert.equal(await raw.resolvePath("/System/Program Files/EmulatorJs"), null);
 
   const ids = [fileManager?.id, settings?.id, properties?.id];
   await bootstrapFilesystem(raw, { nativeApps: apps });

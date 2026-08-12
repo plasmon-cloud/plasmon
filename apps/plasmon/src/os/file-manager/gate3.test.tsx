@@ -181,7 +181,11 @@ test("Delete key routes to deletion while editable targets suppress it", async (
     node("folder", "root", "Folder", "directory"),
     node("child", "folder", "child.txt"),
   ]);
-  await deleteFilesystemNodes(fs, [await fs.stat("a"), await fs.stat("folder")]);
+  const trash = {
+    trash: async (id: NodeId) => fs.remove(id, { recursive: true }),
+  };
+  const result = await deleteFilesystemNodes(trash, [await fs.stat("a"), await fs.stat("folder")]);
+  expect(result.failures).toEqual([]);
   expect(fs.nodes.has("a")).toBe(false);
   expect(fs.nodes.has("folder")).toBe(false);
   expect(fs.nodes.has("child")).toBe(false);

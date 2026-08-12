@@ -1,23 +1,18 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
 import type {
-  AssociationRegistry,
   CreateFileOptions,
   FsListOptions,
   FsNode,
   FsReadRange,
   FsService,
-  HandlerDefinition,
   JsonValue,
   NativeAppDefinition,
   NodeId,
-  OpenService,
-  OpenTarget,
   Revision,
   WriteOptions,
 } from "../contracts/index.ts";
 import { searchShell } from "./search.ts";
-import { openFilesystemSearchResult } from "./searchOpening.ts";
 import { START_MENU_PATH, listStartMenuFolder, reconcileStartMenu } from "./startMenu.ts";
 
 class CorrectionFs implements FsService {
@@ -193,30 +188,4 @@ test("non-empty Search returns matching folders, omits unrelated folders, and pr
   expect(batch.results.some((result) => result.kind === "file" && result.title === "project.md" && result.category === "documents")).toBe(true);
   expect(batch.results.some((result) => result.kind === "file" && result.title === "project.png" && result.category === "media")).toBe(true);
   expect(batch.results.some((result) => result.kind === "file" && result.title === "project.atom" && result.category === "atoms")).toBe(true);
-});
-
-test("directory Search activation routes to Explorer without invoking Open With resolution", async () => {
-  const fs = new CorrectionFs();
-  const folder = await fs.mkdir("root", "Project Folder");
-  let resolveCalls = 0;
-  const registry: AssociationRegistry = {
-    registerHandler() {},
-    registerRule() {},
-    getHandler() { return null; },
-    async resolve() {
-      resolveCalls += 1;
-      return [];
-    },
-    async getDefault() { return null; },
-    async setUserDefault() {},
-  };
-  const opened: Array<{ handlerId: string; target: OpenTarget }> = [];
-  const openService: OpenService = {
-    async open(handlerId, target) { opened.push({ handlerId, target }); },
-  };
-
-  await openFilesystemSearchResult(fs, registry, openService, folder.id);
-
-  expect(resolveCalls).toBe(0);
-  expect(opened).toEqual([{ handlerId: "native:explorer", target: { nodeId: folder.id } }]);
 });

@@ -26,6 +26,7 @@ import {
   type FileManagerOpenAuthority,
   type FileManagerPresentation,
   type FileManagerSnapshot,
+  type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
 import { ExplorerHistory, type ExplorerLocation } from "./history.ts";
 import { resolveExplorerAddress } from "./navigation.ts";
@@ -42,6 +43,7 @@ export interface ExplorerAppProps {
   associations: AssociationRegistry;
   openService: OpenService;
   openAuthority: FileManagerOpenAuthority;
+  trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
 }
 
@@ -77,6 +79,7 @@ export function ExplorerApp({
   associations,
   openService,
   openAuthority,
+  trashAuthority,
   clipboard: providedClipboard,
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
@@ -280,6 +283,7 @@ export function ExplorerApp({
               directoryId={location.nodeId}
               fs={fs}
               openAuthority={openAuthority}
+              trashAuthority={trashAuthority}
               {...(fsEvents ? { fsEvents } : {})}
               associations={associations}
               openService={openService}

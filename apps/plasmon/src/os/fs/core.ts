@@ -18,6 +18,10 @@ import {
   type TrashEntry,
 } from "./managed.ts";
 import { FilesystemOpenDispatcher } from "./openDispatcher.ts";
+import {
+  ManagedProgramFilesService,
+  type ProgramFilesService,
+} from "./programFiles.ts";
 import { ProtectedManagedFsService } from "./protectedService.ts";
 import { StableNeutronProjectionService } from "./stableProjection.ts";
 
@@ -47,6 +51,7 @@ export interface FilesystemTrashService {
 export interface FilesystemCoreServices {
   fs: ProtectedManagedFsService;
   ready: Promise<FilesystemCoreInitialization>;
+  programFiles: ProgramFilesService;
   trash: FilesystemTrashService;
   open: FilesystemOpenDispatcher;
   projections: StableNeutronProjectionService;
@@ -97,6 +102,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
 
   const ready = initialize();
   managed.setInitialization(ready);
+  const programFiles = new ManagedProgramFilesService(options.fs, ready);
 
   stopNeutron = options.neutron.subscribe(() => {
     if (disposed) return;
@@ -132,6 +138,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
   return {
     fs: managed,
     ready,
+    programFiles,
     trash,
     open,
     projections,
