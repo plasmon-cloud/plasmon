@@ -25,6 +25,7 @@ export function DocumentClosePrompt({
   onDiscard,
   onCancel,
 }: DocumentClosePromptProps) {
+  const displayName = documentName || "this document";
   const problem = status === "conflict"
     ? error ?? "Resolve the document conflict before saving and closing."
     : status === "error"
@@ -36,13 +37,12 @@ export function DocumentClosePrompt({
       <section
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="document-close-title"
-        aria-describedby="document-close-description"
+        aria-label={`Save changes to ${displayName}?`}
         style={styles.dialog}
       >
-        <h2 id="document-close-title" style={styles.title}>Save changes?</h2>
-        <p id="document-close-description" style={styles.description}>
-          Save changes to <strong>{documentName || "this document"}</strong> before closing?
+        <h2 style={styles.title}>Save changes?</h2>
+        <p style={styles.description}>
+          Save changes to <strong>{displayName}</strong> before closing?
         </p>
         {problem && <div role="alert" style={editorErrorStyle}>{problem}</div>}
         <div style={styles.actions}>
