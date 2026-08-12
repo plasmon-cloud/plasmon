@@ -1,6 +1,6 @@
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
-import Debug "mo:core/Debug";
+import Runtime "mo:core/Runtime";
 import Memory "./memory/hello/v1";
 import SharingMemory "./memory/sharing/v1";
 import Sha256 "./sharing/Sha256";
@@ -163,7 +163,7 @@ module {
                 case (?index) {
                     let stored = sharing.chunks[index];
                     if (not Blob.equal(Sha256.digest(stored.bytes), stored.hash)) {
-                        Debug.trap("sharing provider stored chunk failed SHA-256 integrity verification");
+                        Runtime.trap("sharing provider stored chunk failed SHA-256 integrity verification");
                     };
                     ?stored.bytes;
                 };
@@ -251,7 +251,7 @@ module {
                                 case null null;
                                 case (?bytes) {
                                     if (bytes.size() != ref.size) {
-                                        Debug.trap("sharing provider chunk size integrity failure");
+                                        Runtime.trap("sharing provider chunk size integrity failure");
                                     };
                                     ?bytes;
                                 };
