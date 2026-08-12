@@ -10,6 +10,7 @@ import type {
   WindowManager,
   WindowState,
 } from "../contracts/index.ts";
+import { NativeWindowManager } from "../windowing/NativeWindowManager.ts";
 import { NativeProcessController } from "./controller.ts";
 import { NativeApplicationRegistry } from "./registry.ts";
 
@@ -25,11 +26,22 @@ function app(overrides: Partial<NativeAppDefinition> = {}): NativeAppDefinition 
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 class TestWindowManager implements WindowManager {
   private windows: WindowState[] = [];
   private readonly listeners = new Set<() => void>();
   readonly calls: Array<readonly [string, ...unknown[]]> = [];
   failCreate = false;
+  failAfterCreate = false;
   private nextId = 1;
 
   subscribe(listener: () => void): () => void {
@@ -59,6 +71,7 @@ class TestWindowManager implements WindowManager {
       ...(initial.minHeight !== undefined ? { minHeight: initial.minHeight } : {}),
     });
     this.emit();
+    if (this.failAfterCreate) throw new Error("window startup failed after allocation");
     return id;
   }
 
@@ -205,6 +218,56 @@ describe("NativeProcessController", () => {
     expect(windows.calls.at(-1)).toEqual(["focus", "window:1"]);
   });
 
+  test("singleton reactivation during pending lazy load reuses one process/window and preserves latest activation intent", async () => {
+    const registry = new NativeApplicationRegistry();
+    registry.register(app({ singleton: true }));
+    const pendingLoad = deferred<{ default: () => null }>();
+    const Component = () => null;
+    let loadAttempts = 0;
+    registry.setLoader("native:text", () => {
+      loadAttempts += 1;
+      return pendingLoad.promise;
+    });
+
+    const windows = new NativeWindowManager({
+      idFactory: () => "window:singleton",
+      viewport: () => ({ x: 0, y: 0, width: 1280, height: 720 }),
+      listenForViewportChanges: false,
+    });
+    const controller = new NativeProcessController(registry, windows);
+
+    try {
+      const first = await controller.open("native:text", { nodeId: "node:1" });
+      if (!first) throw new Error("expected singleton startup");
+      const windowId = controller.list()[0]?.windowId;
+      if (!windowId) throw new Error("expected singleton window");
+
+      windows.minimize(windowId);
+      expect(windows.list()[0]?.minimized).toBe(true);
+
+      const loading = registry.loadComponent("native:text");
+      expect(loadAttempts).toBe(1);
+
+      const second = await controller.open("native:text", { nodeId: "node:2" });
+      expect(second).toBe(first);
+      expect(controller.list()).toHaveLength(1);
+      expect(controller.list()[0]?.target).toEqual({ nodeId: "node:2" });
+      expect(windows.list()).toHaveLength(1);
+      expect(windows.list()[0]?.minimized).toBe(false);
+
+      pendingLoad.resolve({ default: Component });
+      expect(await loading).toBe(Component);
+
+      expect(controller.list()).toHaveLength(1);
+      expect(controller.list()[0]?.target).toEqual({ nodeId: "node:2" });
+      expect(windows.list()).toHaveLength(1);
+      expect(windows.list()[0]?.minimized).toBe(false);
+    } finally {
+      controller.dispose();
+      windows.dispose();
+    }
+  });
+
   test("multi-instance app receives distinct monotonic process IDs", async () => {
     const { controller } = setup();
     const first = await controller.open("native:text", { nodeId: "node:1" });
@@ -215,6 +278,33 @@ describe("NativeProcessController", () => {
       "node:1",
       "node:2",
     ]);
+  });
+
+  test("multi-instance policy remains distinct while the shared lazy loader is in flight", async () => {
+    const { registry, controller, windows } = setup(app({ singleton: false }));
+    const pendingLoad = deferred<{ default: () => null }>();
+    const Component = () => null;
+    let loadAttempts = 0;
+    registry.setLoader("native:text", () => {
+      loadAttempts += 1;
+      return pendingLoad.promise;
+    });
+
+    const first = await controller.open("native:text", { nodeId: "node:1" });
+    const firstLoad = registry.loadComponent("native:text");
+    const secondLoad = registry.loadComponent("native:text");
+    const second = await controller.open("native:text", { nodeId: "node:2" });
+
+    expect([first, second]).toEqual(["native:text#1", "native:text#2"]);
+    expect(controller.list()).toHaveLength(2);
+    expect(windows.list()).toHaveLength(2);
+    expect(loadAttempts).toBe(1);
+
+    pendingLoad.resolve({ default: Component });
+    expect(await firstLoad).toBe(Component);
+    expect(await secondLoad).toBe(Component);
+    expect(controller.list()).toHaveLength(2);
+    expect(windows.list()).toHaveLength(2);
   });
 
   test("close without a registered concern removes process and window immediately", async () => {
@@ -377,6 +467,34 @@ describe("NativeProcessController", () => {
     windows.failCreate = true;
     expect(await controller.open("native:text", { nodeId: "node:1" })).toBeNull();
     expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+  });
+
+  test("startup failure after Windowing allocation cleans both authorities and permits retry", async () => {
+    const { controller, windows } = setup(app({ singleton: true }));
+    windows.failAfterCreate = true;
+
+    expect(await controller.open("native:text", { nodeId: "node:failed" })).toBeNull();
+    expect(controller.list()).toEqual([]);
+    expect(windows.list()).toEqual([]);
+    expect(windows.calls.filter(([kind]) => kind === "close")).toEqual([
+      ["close", "window:1"],
+    ]);
+
+    windows.failAfterCreate = false;
+    const retry = await controller.open("native:text", { nodeId: "node:retry" });
+
+    expect(retry).toBe("native:text#2");
+    expect(controller.list()).toEqual([
+      expect.objectContaining({
+        id: retry,
+        target: { nodeId: "node:retry" },
+        state: "running",
+        windowId: "window:2",
+      }),
+    ]);
+    expect(windows.list()).toHaveLength(1);
+    expect(windows.list()[0]?.processId).toBe(retry);
   });
 });
 
