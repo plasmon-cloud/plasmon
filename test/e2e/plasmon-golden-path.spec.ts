@@ -27,7 +27,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     (seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed),
     runtime.developerIdentitySeed,
   );
-  expect(principal).toBe(runtime.developerIdentityPrincipal;
+  expect(principal).toBe(runtime.developerIdentityPrincipal);
 
   await expect(page.locator('[data-tid="launcher-open"]')).toBeVisible();
 
