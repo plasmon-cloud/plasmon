@@ -173,7 +173,7 @@ export function resourceCapabilities(node: FsNode): ResourceCapabilities {
       move: false,
       copy: false,
       delete: false,
-      uninstall: true,
+      uninstall: false,
       createShortcut: true,
       pin: true,
       download: false,
