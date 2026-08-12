@@ -37,11 +37,28 @@ export interface ElementTaskbarEntry {
 
 export type TaskbarEntry = NativeTaskbarEntry | ElementTaskbarEntry;
 
+export type TaskbarPresentationState = "pinned-only" | "launching" | "running" | "active" | "uncertain";
+
+export interface TaskbarPresentation {
+  state: TaskbarPresentationState;
+  statusLabel: string;
+  accessibilityLabel: string;
+  running: boolean;
+  active: boolean;
+  launching: boolean;
+  uncertain: boolean;
+  badge?: string;
+}
+
+export type PresentedTaskbarEntry = TaskbarEntry & { presentation: TaskbarPresentation };
+
 export interface TaskbarModelInput {
   preferences: ShellPreferences;
   nativeApps: readonly NativeAppDefinition[];
   processes: readonly ProcessRecord[];
   elements: readonly ExternalElement[];
+  windows?: readonly WindowState[];
+  busyTaskId?: string | null;
 }
 
 function nativeMetadataForProcess(
@@ -54,11 +71,111 @@ function nativeMetadataForProcess(
     : { appId: process.appId, name: process.title, icon: process.icon };
 }
 
+function presentation(
+  entry: TaskbarEntry,
+  state: TaskbarPresentationState,
+  statusLabel: string,
+  options: Pick<TaskbarPresentation, "running" | "active" | "launching" | "uncertain">,
+  badge?: string,
+): TaskbarPresentation {
+  const pinnedSuffix = entry.pinned && state !== "pinned-only" ? "; pinned to taskbar" : "";
+  return {
+    state,
+    statusLabel,
+    accessibilityLabel: `${entry.name}; ${statusLabel}${pinnedSuffix}`,
+    ...options,
+    ...(badge ? { badge } : {}),
+  };
+}
+
+/**
+ * Projects canonical Process/Windowing/Neutron observations into user-facing
+ * taskbar state. It never stores or strengthens lifecycle knowledge: in
+ * particular, an unknown Element runtime observation remains uncertain.
+ */
+export function deriveTaskbarPresentation(
+  entry: TaskbarEntry,
+  windows: readonly WindowState[] = [],
+  busyTaskId: string | null = null,
+): TaskbarPresentation {
+  const busy = busyTaskId === entry.id;
+
+  if (entry.kind === "native") {
+    const processStarting = entry.process?.state === "starting";
+    if (busy || processStarting) {
+      return presentation(entry, "launching", "Launching", {
+        running: entry.process?.state === "running",
+        active: false,
+        launching: true,
+        uncertain: false,
+      }, "…");
+    }
+    if (!entry.process) {
+      return presentation(entry, "pinned-only", "Pinned to taskbar", {
+        running: false,
+        active: false,
+        launching: false,
+        uncertain: false,
+      });
+    }
+
+    const targetWindow = windowForProcess(entry.process, windows);
+    const active = !!targetWindow
+      && !targetWindow.minimized
+      && focusedWindow(windows)?.id === targetWindow.id;
+    if (active) {
+      return presentation(entry, "active", "Active and focused", {
+        running: true,
+        active: true,
+        launching: false,
+        uncertain: false,
+      });
+    }
+    return presentation(entry, "running", "Running", {
+      running: true,
+      active: false,
+      launching: false,
+      uncertain: false,
+    });
+  }
+
+  if (busy) {
+    return presentation(entry, "launching", "Opening", {
+      running: entry.running === "yes",
+      active: false,
+      launching: true,
+      uncertain: entry.running === "unknown",
+    }, "…");
+  }
+  if (entry.running === "yes") {
+    return presentation(entry, "running", "Running", {
+      running: true,
+      active: false,
+      launching: false,
+      uncertain: false,
+    });
+  }
+  if (entry.running === "unknown") {
+    return presentation(entry, "uncertain", "Runtime status unavailable", {
+      running: false,
+      active: false,
+      launching: false,
+      uncertain: true,
+    }, "?");
+  }
+  return presentation(entry, "pinned-only", "Pinned to taskbar", {
+    running: false,
+    active: false,
+    launching: false,
+    uncertain: false,
+  });
+}
+
 /**
  * Derives the taskbar from pinned preferences and live service state only.
  * Installed-but-unpinned and not-running applications are intentionally absent.
  */
-export function deriveTaskbarEntries(input: TaskbarModelInput): TaskbarEntry[] {
+export function deriveTaskbarEntries(input: TaskbarModelInput): PresentedTaskbarEntry[] {
   const appsByHandler = new Map(input.nativeApps.map((app) => [app.handlerId, app] as const));
   const processesByHandler = new Map<HandlerId, ProcessRecord[]>();
   for (const process of input.processes) {
@@ -148,7 +265,12 @@ export function deriveTaskbarEntries(input: TaskbarModelInput): TaskbarEntry[] {
     });
   }
 
-  return entries;
+  const windows = input.windows ?? [];
+  const busyTaskId = input.busyTaskId ?? null;
+  return entries.map((entry) => ({
+    ...entry,
+    presentation: deriveTaskbarPresentation(entry, windows, busyTaskId),
+  }));
 }
 
 export type NativeTaskbarAction = "launch" | "focus" | "minimize";
