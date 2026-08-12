@@ -195,7 +195,7 @@ test("resource classification protects real sys/neutron metadata but not spoofed
   assert.equal(resourceCapabilities(sys).delete, false);
   assert.equal(classifyResource(neutron).kind, "neutron-app");
   assert.equal(resourceCapabilities(neutron).delete, false);
-  assert.equal(resourceCapabilities(neutron).uninstall, true);
+  assert.equal(resourceCapabilities(neutron).uninstall, false);
   assert.equal(classifyResource(spoof).kind, "ordinary-file");
   assert.equal(resourceCapabilities(spoof).delete, true);
 });
