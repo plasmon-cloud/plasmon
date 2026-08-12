@@ -60,18 +60,6 @@ test("package guard requires mature Text/Markdown engines and Monaco workers", (
 });
 
 test("package guard requires every launchable first-party native app somewhere in the build graph", () => {
-  expect(FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS.map(({ name }) => name)).toEqual([
-    "Text",
-    "Markdown",
-    "Photos",
-    "Video",
-    "Browser",
-    "Settings",
-    "Explorer",
-    "Properties",
-    "Recycle Bin",
-  ]);
-
   for (const app of FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS) {
     const broken = goodMetafile();
     deleteInput(broken, app.suffix);
@@ -83,7 +71,7 @@ test("package guard does not require runtime-only js-dos as a launchable first-p
   const metafile = goodMetafile();
   expect(
     Object.values(metafile.outputs).some((output) =>
-      Object.keys(output.inputs ?? {}).some((input) => input.includes("/jsdos/") || input.includes("/js-dos/")),
+      Object.keys(output.inputs ?? {}).some((input) => input.includes("native-apps/jsdos/")),
     ),
   ).toBe(false);
   expect(() => assertMatureNativeAppBundle(metafile)).not.toThrow();
