@@ -16,6 +16,8 @@ Native application UI consumes the same OS authorities as other surfaces:
 
 An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns.
 
+Document applications consume Process close negotiation rather than replacing it. Text and Markdown share a Native Apps close-decision model: a clean document allows ordinary close immediately; a dirty document defers the Process request while Native Apps presents Save / Discard / Cancel. Save completes the same request only after persistence succeeds, failed save/conflict keeps it pending, Discard suppresses document autosave/unmount flush for that close, and Cancel restores normal document-session behavior.
+
 ## Application families
 
 - `browser/` — web URL/browser surface.
@@ -39,4 +41,4 @@ Concrete titles, menu omissions, file-type corrections, runtime paths, and curre
 
 ## Testing
 
-Use fast model/domain tests for document sessions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use real-browser/package tests for Monaco/workers, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.
+Use fast model/domain tests for document sessions, document close decisions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use real-browser/package tests for Monaco/workers, visible document-close interaction, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.
