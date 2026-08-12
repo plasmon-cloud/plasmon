@@ -12,7 +12,13 @@ Claim work by changing exactly one `[ ]` to `[~]` before editing a gate. Finish 
 
 If the current production/headless API cannot faithfully express the user action, KEEP the item `[~]` and append `HARNESS GAP:` with the exact missing production/test seam. Do not fake React/DOM behavior in the headless harness and do not implement product behavior from the Luna TDD role.
 
-Red gates belong under `apps/plasmon/test/tdd/red/` as `issue-<N>.red.ts`. They are intentionally excluded from the ordinary fast suite on this staging branch and must be runnable explicitly with Bun. When an implementor takes an Issue, the gate is copied/adopted onto that Issue branch and becomes a normal green regression before merge.
+Red gates belong under `apps/plasmon/test/tdd/.red/` as `issue-<N>.red.test.ts`. The hidden `.red` directory keeps them out of Bun's ordinary recursive discovery on this staging branch. Run one gate explicitly with:
+
+```sh
+bun test ./apps/plasmon/test/tdd/.red/issue-<N>.red.test.ts
+```
+
+When an implementor takes an Issue, the gate is copied/adopted onto that Issue branch as a normal production regression and must become green before merge.
 
 This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `release/0.1.0-r2` integration branch and must never be merged wholesale while gates are intentionally red.
 
