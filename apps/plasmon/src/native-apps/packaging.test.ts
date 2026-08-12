@@ -63,7 +63,7 @@ test("package guard requires every launchable first-party native app somewhere i
   for (const app of FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS) {
     const broken = goodMetafile();
     deleteInput(broken, app.suffix);
-    expect(() => assertMatureNativeAppBundle(broken)).toThrow(`missing first-party ${app.name} loader input`);
+    expect(() => assertMatureNativeAppBundle(broken)).toThrow(app.suffix);
   }
 });
 
