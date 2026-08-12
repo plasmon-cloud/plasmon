@@ -9,13 +9,13 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
-  let monacoWasUsed = false;
+  let monacoLifecycleActive = false;
   page.on("pageerror", (error) => {
     // Monaco/VS Code cancellation tokens can surface the expected `Canceled`
-    // rejection asynchronously after editor work or teardown. Ignore that exact
-    // cancellation only after this journey has proven a real Monaco editor was
-    // ready; every other page error remains fatal to the packaged golden path.
-    if (monacoWasUsed && error.message === "Canceled") return;
+    // rejection while the editor is loading, active, or tearing down. Scope
+    // that exact exception to the real Monaco lifecycle exercised below;
+    // every other page error remains fatal to the packaged golden path.
+    if (monacoLifecycleActive && error.message === "Canceled") return;
     pageErrors.push(error.message);
   });
 
@@ -116,13 +116,13 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const textEntry = dialog.locator("[data-fm-node-id]", { hasText: "New Text Document.txt" }).first();
   await expect(textEntry).toBeVisible();
+  monacoLifecycleActive = true;
   await textEntry.dblclick();
 
   const editorWindow = app.getByRole("dialog", { name: "New Text Document.txt" }).last();
   await expect(editorWindow).toBeVisible({ timeout: 20_000 });
   const editorSurface = editorWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
   await expect(editorSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-  monacoWasUsed = true;
 
   await editorSurface.click({ position: { x: 120, y: 80 } });
   await page.keyboard.type("dirty close proof");
