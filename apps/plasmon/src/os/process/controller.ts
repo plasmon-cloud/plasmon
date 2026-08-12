@@ -77,7 +77,7 @@ export class NativeProcessController implements ProcessController {
       this.store.patch(id, { state: "running", windowId });
       return id;
     } catch (error: unknown) {
-      this.removeProcess(id);
+      this.cleanupFailedStartup(id);
       this.options.onStartupError?.(error, app, target);
       return null;
     }
@@ -198,6 +198,30 @@ export class NativeProcessController implements ProcessController {
       this.removeProcess(id);
     }
     return true;
+  }
+
+  private cleanupFailedStartup(id: ProcessId): void {
+    try {
+      // WindowManager.create() is synchronous, but an implementation can still
+      // fail after it has allocated/announced a window and before returning its
+      // id. The unique ProcessId lets Process reconcile only state created for
+      // this failed launch without reaching into Windowing internals.
+      const ownedWindows = this.windows.list().filter((window) => window.processId === id);
+      for (const window of ownedWindows) {
+        try {
+          this.windows.close(window.id);
+        } catch {
+          // Preserve the original startup failure. Windowing owns its internal
+          // error semantics; Process can only make best-effort cleanup through
+          // the public close contract here.
+        }
+      }
+    } catch {
+      // Preserve the original startup failure if Windowing inspection itself
+      // fails; Process bookkeeping must still be removed below.
+    } finally {
+      this.removeProcess(id);
+    }
   }
 
   private removeProcess(id: ProcessId): void {
