@@ -7,7 +7,7 @@ import Sha256 "./sharing/Sha256";
 
 module {
     let SHARING_SCHEMA_VERSION : Nat = 1;
-    let MAX_CHUNK_BYTES : Nat = 1024 * 1024;
+    let MAX_CHUNK_BYTES : Nat = 1048576;
 
     // Public app-method aliases must remain structurally expressible so the
     // Neutron method-schema generator can derive Candid/JSON schemas without
