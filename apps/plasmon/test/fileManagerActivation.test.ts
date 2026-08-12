@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ExternalElement, FsNode } from "../src/os/contracts/index.ts";
 import { activateFileManagerNode } from "../src/os/file-manager/index.ts";
-import { createShortcut } from "../src/os/fs/index.ts";
+import { createShortcut, NEUTRON_APP_MIME } from "../src/os/fs/index.ts";
 import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
 
 const DEMO_ELEMENT: ExternalElement = {
@@ -104,8 +104,19 @@ test("FileManager activation uses canonical policy for associated files, shortcu
     const neutronApp = await environment.node("/Apps/Activation Demo.neutron");
     expect(neutronApp).not.toBeNull();
     if (!neutronApp) throw new Error("Activation Demo.neutron projection is unavailable");
+
+    environment.services.associations.registerRule({
+      id: "test:neutron-projection-text-fallback",
+      handlerId: "native:text",
+      mimeTypes: [NEUTRON_APP_MIME],
+      priority: 1_000_000,
+    });
+    expect((await environment.services.associations.resolve(neutronApp))[0]?.id).toBe("native:text");
+
     await activateFileManagerNode(environment.services.filesystem.open, neutronApp);
     expect(environment.neutronMessages).toContain("[Plasmon preview] Open Activation Demo/main");
+    expect(environment.processes()).toHaveLength(0);
+    expect(environment.windows()).toHaveLength(0);
   } finally {
     environment.dispose();
   }
