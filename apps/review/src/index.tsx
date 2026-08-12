@@ -19,7 +19,7 @@ import type {
 } from "./model.ts";
 import "./style.scss";
 
-const STATE_TOPIC = "review:state";
+const STATE_TOPIC = "review.state";
 const RESULTS: TestResult[] = ["not_tested", "working", "not_working", "needs_polish"];
 const DESIRED: Desired[] = [null, "must", "high", "normal", "later"];
 const EFFORT: Effort[] = [null, "tiny", "small", "medium", "big", "really_big"];
