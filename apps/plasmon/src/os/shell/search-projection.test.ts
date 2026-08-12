@@ -103,11 +103,55 @@ test("Search de-duplicates a projection against direct Element discovery while r
   expect(mail.node.id).toBe(projection.id);
   expect(mail.elementId).toBe(direct.id);
   expect(mail.title).toBe(direct.name);
-  expect(mail.subtitle).toBe("Canonical Neutron Mail · running yes");
+  expect(mail.subtitle).toBe("Canonical Neutron Mail · Running");
   expect(mail.icon).toBe(direct.icon);
 
   const calendar = batch.results.find(
     (result) => result.kind === "element" && result.element.id === directOnly.id,
   );
   expect(calendar?.kind).toBe("element");
+});
+
+test("Search presents uncertain and metadata-poor Neutron applications without implementation tokens or suffixes", async () => {
+  const projection = projectionNode("projection-review", {
+    elementId: "review",
+    name: "Review",
+  });
+  const uncertain: ExternalElement = {
+    id: "review",
+    name: "Review",
+    description: "Installed review application",
+    tiles: [{ id: "main", title: "Review" }],
+    running: "unknown",
+  };
+
+  const batch = await searchShell(staticSearchFs([projection]), [], [uncertain], "");
+  expect(batch.results).toHaveLength(1);
+  const result = batch.results[0];
+  expect(result?.kind).toBe("neutron-projection");
+  if (!result || result.kind !== "neutron-projection") throw new Error("Review projection result is unavailable");
+
+  expect(result.title).toBe("Review");
+  expect(result.title).not.toContain(".neutron");
+  expect(result.subtitle).toBe("Installed review application · Availability uncertain");
+  expect(result.subtitle).not.toMatch(/\brunning\s+(?:yes|no|unknown)\b/i);
+  expect(result.icon).toBeUndefined();
+  expect(result.node.name).toBe("Review.neutron");
+  expect(result.node.id).toBe("projection-review");
+
+  const metadataPoor = projectionNode("projection-legacy", {
+    elementId: "legacy",
+    name: "Legacy Tool",
+  });
+  metadataPoor.name = "Legacy Tool.neutron";
+  const fallback = await searchShell(staticSearchFs([{
+    ...metadataPoor,
+    metadata: neutronAppMetadata({ elementId: "legacy" }),
+  }]), [], [], "");
+  const legacy = fallback.results[0];
+  expect(legacy?.kind).toBe("neutron-projection");
+  if (!legacy || legacy.kind !== "neutron-projection") throw new Error("Legacy projection result is unavailable");
+  expect(legacy.title).toBe("Legacy Tool");
+  expect(legacy.title).not.toContain(".neutron");
+  expect(legacy.subtitle).toBe("Neutron application");
 });
