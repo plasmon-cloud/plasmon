@@ -57,7 +57,6 @@ export function useDocumentCloseProtection(
       unregister();
       unsubscribe();
       if (modelRef.current === model) modelRef.current = null;
-      setSnapshot(EMPTY_CLOSE_SNAPSHOT);
     };
   }, [process, processId, sessionKey, sessionRef]);
 
