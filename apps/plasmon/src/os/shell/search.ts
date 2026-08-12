@@ -6,6 +6,7 @@ import type {
   JsonValue,
   NativeAppDefinition,
 } from "../contracts/index.ts";
+import { classifyResource, type NeutronAppMetadata } from "../fs/index.ts";
 import {
   parseStartShortcut,
   startShortcutTargetIdentity,
@@ -13,7 +14,8 @@ import {
 } from "./startMenu.ts";
 
 export type SearchTab = "all" | "apps" | "documents" | "media" | "atoms";
-export type FileSearchCategory = Exclude<SearchTab, "all" | "apps">;
+export type FsSearchCategory = Exclude<SearchTab, "all">;
+export type FileSearchCategory = Exclude<FsSearchCategory, "apps">;
 
 export const SEARCH_TOTAL_LIMIT = 48;
 export const SEARCH_CATEGORY_LIMITS: Readonly<Record<Exclude<SearchTab, "all">, number>> = Object.freeze({
@@ -39,6 +41,17 @@ export interface ElementSearchResult {
   title: string;
   subtitle: string;
   element: ExternalElement;
+}
+
+export interface NeutronProjectionSearchResult {
+  kind: "neutron-projection";
+  id: string;
+  category: "apps";
+  title: string;
+  subtitle: string;
+  icon?: string;
+  elementId: string;
+  node: FsNode;
 }
 
 export interface StartShortcutSearchResult {
@@ -69,7 +82,13 @@ export interface FileSearchResult {
   node: FsNode;
 }
 
-export type ShellSearchResult = NativeAppSearchResult | ElementSearchResult | StartShortcutSearchResult | DirectorySearchResult | FileSearchResult;
+export type ShellSearchResult =
+  | NativeAppSearchResult
+  | ElementSearchResult
+  | NeutronProjectionSearchResult
+  | StartShortcutSearchResult
+  | DirectorySearchResult
+  | FileSearchResult;
 
 export interface SearchBatch {
   results: ShellSearchResult[];
@@ -118,7 +137,7 @@ function atomRecord(node: FsNode): Record<string, JsonValue> | null {
   return value as Record<string, JsonValue>;
 }
 
-export function categorizeFsNode(node: FsNode): FileSearchCategory {
+function categorizeNonApplicationFsNode(node: FsNode): FileSearchCategory {
   const atom = atomRecord(node);
   if (node.kind === "atom" || atom?.format === "plasmon.atom" || extension(node.name) === ".atom") {
     return "atoms";
@@ -127,6 +146,11 @@ export function categorizeFsNode(node: FsNode): FileSearchCategory {
     return "media";
   }
   return "documents";
+}
+
+export function categorizeFsNode(node: FsNode): FsSearchCategory {
+  if (classifyResource(node).kind === "neutron-app") return "apps";
+  return categorizeNonApplicationFsNode(node);
 }
 
 function metadataStrings(value: JsonValue, output: string[], budget: { remaining: number }): void {
@@ -165,6 +189,36 @@ function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
   }
   if (node.mime) return node.mime;
   return category === "media" ? "Media" : "Document";
+}
+
+function elementSubtitle(element: ExternalElement): string {
+  return `${element.description || "Neutron Element"} · running ${element.running}`;
+}
+
+function projectionSearchResult(node: FsNode, metadata: NeutronAppMetadata): NeutronProjectionSearchResult {
+  return {
+    kind: "neutron-projection",
+    id: `element:${metadata.elementId}`,
+    category: "apps",
+    title: metadata.name ?? node.name,
+    subtitle: metadata.description ?? "Neutron application projection",
+    ...(metadata.icon ? { icon: metadata.icon } : {}),
+    elementId: metadata.elementId,
+    node,
+  };
+}
+
+function withElementPresentation(
+  projection: NeutronProjectionSearchResult,
+  element: ExternalElement | undefined,
+): NeutronProjectionSearchResult {
+  if (!element) return projection;
+  return {
+    ...projection,
+    title: element.name,
+    subtitle: elementSubtitle(element),
+    ...(element.icon ? { icon: element.icon } : { icon: undefined }),
+  };
 }
 
 function shortcutSubtitle(target: StartShortcutTarget): string {
@@ -219,7 +273,7 @@ export function searchApplicationEntries(
       id: `element:${element.id}`,
       category: "apps",
       title: element.name,
-      subtitle: `${element.description || "Neutron Element"} · running ${element.running}`,
+      subtitle: elementSubtitle(element),
       element,
     }));
 
@@ -244,6 +298,7 @@ export async function searchFilesystem(
   const queue: FsNode[] = [root];
   const visited = new Set<string>();
   const appShortcuts: StartShortcutSearchResult[] = [];
+  const projections: NeutronProjectionSearchResult[] = [];
   const directories: DirectorySearchResult[] = [];
   const files: FileSearchResult[] = [];
   const warnings: string[] = [];
@@ -300,7 +355,14 @@ export async function searchFilesystem(
       }
 
       if (!matches(searchableNodeText(node), query)) continue;
-      const category = categorizeFsNode(node);
+
+      const classification = classifyResource(node);
+      if (classification.kind === "neutron-app" && classification.neutronApp) {
+        projections.push(projectionSearchResult(node, classification.neutronApp));
+        continue;
+      }
+
+      const category = categorizeNonApplicationFsNode(node);
       files.push({
         kind: "file",
         id: `node:${node.id}`,
@@ -315,9 +377,10 @@ export async function searchFilesystem(
   const recent = <T extends { node: FsNode }>(left: T, right: T) =>
     right.node.modifiedAt - left.node.modifiedAt || left.node.name.localeCompare(right.node.name);
   appShortcuts.sort(recent);
+  projections.sort(recent);
   directories.sort(recent);
   files.sort(recent);
-  return { results: [...appShortcuts, ...directories, ...files], warnings, truncated: queue.length > 0 };
+  return { results: [...appShortcuts, ...projections, ...directories, ...files], warnings, truncated: queue.length > 0 };
 }
 
 function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; truncated: boolean } {
@@ -344,12 +407,34 @@ export async function searchShell(
   options: ShellSearchOptions = {},
 ): Promise<SearchBatch> {
   const apps = searchApplicationEntries(nativeApps, elements, query, options);
-  const files = await searchFilesystem(fs, query, options);
-  const limited = applyResultLimits([...apps, ...files.results]);
+  const filesystem = await searchFilesystem(fs, query, options);
+  const projections = filesystem.results.filter(
+    (result): result is NeutronProjectionSearchResult => result.kind === "neutron-projection",
+  );
+  const projectionByElement = new Map(projections.map((projection) => [projection.elementId, projection] as const));
+  const elementsById = new Map(elements.map((element) => [element.id, element] as const));
+  const emittedProjectionIds = new Set<string>();
+
+  const applicationResults = apps.map<ShellSearchResult>((result) => {
+    if (result.kind !== "element") return result;
+    const projection = projectionByElement.get(result.element.id);
+    if (!projection) return result;
+    emittedProjectionIds.add(projection.elementId);
+    return withElementPresentation(projection, result.element);
+  });
+
+  for (const projection of projections) {
+    if (emittedProjectionIds.has(projection.elementId)) continue;
+    applicationResults.push(withElementPresentation(projection, elementsById.get(projection.elementId)));
+    emittedProjectionIds.add(projection.elementId);
+  }
+
+  const nonProjectionFilesystemResults = filesystem.results.filter((result) => result.kind !== "neutron-projection");
+  const limited = applyResultLimits([...applicationResults, ...nonProjectionFilesystemResults]);
   return {
     results: limited.results,
-    warnings: files.warnings,
-    truncated: files.truncated || limited.truncated,
+    warnings: filesystem.warnings,
+    truncated: filesystem.truncated || limited.truncated,
   };
 }
 
