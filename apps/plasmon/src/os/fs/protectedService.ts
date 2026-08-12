@@ -11,7 +11,9 @@ import { classifyResource, resourceCapabilities } from "./resourcePolicy.ts";
 function protectedOperationError(node: FsNode, operation: string): Error {
   const classification = classifyResource(node);
   if (classification.kind === "neutron-app" && operation === "deleted") {
-    return new Error(`${node.name} is an installed application; use Uninstall instead`);
+    return new Error(
+      `${node.name} is a Neutron application projection and cannot be deleted; installation state is managed by Neutron`,
+    );
   }
   return new Error(`${node.name || "This resource"} is protected and cannot be ${operation}`);
 }
