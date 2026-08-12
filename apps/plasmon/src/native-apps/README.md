@@ -29,6 +29,12 @@ An association-backed runtime host can use a native process/window without autom
 - `recycle-bin/` — native restore/permanent-delete/empty surface over the canonical filesystem Trash service.
 - `jsdos/` — association-backed packaged runtime/player integration.
 
+## Package structural coverage
+
+`packaging.ts` validates the esbuild metafile for the accepted user-launchable first-party native app component inputs: Text, Markdown, Photos, Video, Browser, Settings, Explorer, Properties, and Recycle Bin. The assertion searches the complete build graph rather than depending on generated chunk filenames, so eager and dynamically imported loaders remain covered without freezing bundler output naming.
+
+This structural check proves that required application code is represented in the package build graph; it does **not** prove application UI behavior, browser APIs, focus/input behavior, or successful user interaction. Those claims remain in focused/headless/browser/manual layers as appropriate. Runtime-only hosts such as js-dos are not treated as launchable native apps by this package inventory; js-dos keeps its dedicated pinned packaged-runtime asset contract.
+
 ## Refactor direction
 
 Build reusable application infrastructure instead of solving the same document/media/runtime problem in each app. Prefer shared document sessions/editor chrome, common media/object-URL helpers, reusable navigation models, shared settings capability seams, and consistent application chrome/presentation.
