@@ -52,6 +52,8 @@ npm --workspace neutron-plasmon run test:package
 
 when generated build/package output is part of the acceptance claim. Build-output presence is not installed-runtime proof.
 
+Native-app package structural coverage is enforced during the real esbuild pipeline through `src/native-apps/packaging.ts`. It checks build-metafile inputs across all outputs for the accepted first-party launchable native app loaders instead of freezing generated chunk filenames. This proves required application code is present in the package build graph; it does not prove app behavior or browser interaction. Runtime-only hosts such as js-dos remain under their dedicated runtime package/asset assertions rather than this launchable-app inventory.
+
 ## Browser / Playwright lane
 
 Use real browser/Neutron automation only when the claim depends on browser or installed-package behavior, such as packaged HTTP serving, focus/pointer/hit-testing, workers, media, downloads, fullscreen, iframe/runtime initialization, or other browser-owned boundaries.
