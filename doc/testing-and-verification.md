@@ -139,6 +139,20 @@ binding. The binding identifies exact inputs and is not evidence. It covers
 five neutral scopes and 12 operational cases run once on fresh canisters,
 including the actor-wide cross-scope cases and separate privileged gates.
 
+Refresh the checked candidate binding only through the authoritative generator
+whenever any bound input changes, including the repository root
+`package-lock.json`:
+
+```sh
+npm --workspace neutron-kernel run certified-assets:candidate-binding:write
+npm --workspace neutron-kernel run certified-assets:candidate-binding
+```
+
+The first command rewrites the canonical checked binding; the second validates
+that it is exact for the current checkout. Do not hand-edit the binding or
+weaken the exactness test to accommodate drift. Run the Kernel test/CI lane
+after refreshing it.
+
 The isolated PocketIC timeline starts from a private bootstrap, keeps automatic
 progress off, and explicitly normalizes to the fixed historical start
 `1735689600000000000` ns. The physical phase runs first and commits 256
