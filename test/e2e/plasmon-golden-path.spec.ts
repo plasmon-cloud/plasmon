@@ -9,13 +9,13 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
-  let monacoEditorMounted = false;
+  let monacoWasUsed = false;
   page.on("pageerror", (error) => {
-    // Monaco/VS Code cancellation tokens surface the expected `Canceled`
-    // rejection while editor work is active or being torn down. Scope that
-    // exception to the period where this test has a real Monaco editor mounted;
-    // every other page error remains fatal to the packaged golden path.
-    if (monacoEditorMounted && error.message === "Canceled") return;
+    // Monaco/VS Code cancellation tokens can surface the expected `Canceled`
+    // rejection asynchronously after editor work or teardown. Ignore that exact
+    // cancellation only after this journey has proven a real Monaco editor was
+    // ready; every other page error remains fatal to the packaged golden path.
+    if (monacoWasUsed && error.message === "Canceled") return;
     pageErrors.push(error.message);
   });
 
@@ -27,7 +27,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     (seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed),
     runtime.developerIdentitySeed,
   );
-  expect(principal).toBe(runtime.developerIdentityPrincipal);
+  expect(principal).toBe(runtime.developerIdentityPrincipal;
 
   await expect(page.locator('[data-tid="launcher-open"]')).toBeVisible();
 
@@ -122,7 +122,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(editorWindow).toBeVisible({ timeout: 20_000 });
   const editorSurface = editorWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
   await expect(editorSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-  monacoEditorMounted = true;
+  monacoWasUsed = true;
 
   await editorSurface.click({ position: { x: 120, y: 80 } });
   await page.keyboard.type("dirty close proof");
@@ -147,7 +147,6 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(closePrompt).toBeVisible({ timeout: 5_000 });
   await closePrompt.getByRole("button", { name: "Discard" }).click();
   await expect(app.getByRole("dialog", { name: "New Text Document.txt" })).toHaveCount(0, { timeout: 10_000 });
-  monacoEditorMounted = false;
 
   expect(pageErrors).toEqual([]);
 });
