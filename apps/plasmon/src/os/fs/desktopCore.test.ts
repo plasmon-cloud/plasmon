@@ -214,7 +214,7 @@ test("Neutron projections preserve NodeId while installed and public generic Del
   assert.equal(updated?.id, first.id);
 
   const managed = new ProtectedManagedFsService(raw);
-  await assert.rejects(() => managed.remove(first.id), /use Uninstall instead/u);
+  await assert.rejects(() => managed.remove(first.id), /installation state is managed by Neutron/u);
   assert.equal((await raw.resolvePath("/Apps/Mail.neutron"))?.id, first.id);
 
   await projections.reconcile([]);
