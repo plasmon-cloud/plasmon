@@ -81,24 +81,48 @@ function firstFreeDesktopPosition(
   return null;
 }
 
+function placementPriority(
+  orderedIds: readonly NodeId[],
+  incumbentIds: readonly NodeId[],
+): NodeId[] {
+  const active = new Set(orderedIds);
+  const seen = new Set<NodeId>();
+  const prioritized: NodeId[] = [];
+  for (const id of incumbentIds) {
+    if (!active.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    prioritized.push(id);
+  }
+  for (const id of orderedIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    prioritized.push(id);
+  }
+  return prioritized;
+}
+
 /**
  * Canonical deterministic Desktop placement policy.
  *
  * Inputs are deliberately limited to stable NodeIds, persisted/occupied visual
- * positions, and usable workspace geometry. Filesystem existence, Trash
- * semantics, resource presentation, opening and pointer/drop policy do not
- * belong here.
+ * positions, and usable workspace geometry. `incumbentIds` identifies NodeIds
+ * that were already visible before the current recomposition so a newly
+ * visible/restored entry cannot steal an occupied user position merely because
+ * display sorting places it first. Filesystem existence, Trash semantics,
+ * resource presentation, opening and pointer/drop policy do not belong here.
  */
 export function reconcileDesktopPositions(
   current: Readonly<DesktopPositions>,
   orderedIds: readonly NodeId[],
   workspace?: DesktopWorkspace,
+  incumbentIds: readonly NodeId[] = [],
 ): DesktopPositions {
   const next: DesktopPositions = { ...current };
   const occupied: DesktopPosition[] = [];
+  const priorityIds = placementPriority(orderedIds, incumbentIds);
 
-  for (let index = 0; index < orderedIds.length; index += 1) {
-    const id = orderedIds[index]!;
+  for (let index = 0; index < priorityIds.length; index += 1) {
+    const id = priorityIds[index]!;
     const persisted = current[id];
     if (isDesktopPositionValid(persisted, workspace)
       && !occupied.some((point) => overlaps(point, persisted))) {
@@ -133,8 +157,8 @@ export function reconcileDesktopPositions(
 }
 
 /**
- * Render-adapter compatibility: FileManager still receives resource records,
- * but only their stable NodeIds cross into the placement authority.
+ * Legacy resource-shaped caller adapter. Placement still consumes only stable
+ * NodeIds and delegates all policy to `reconcileDesktopPositions`.
  */
 export function allocateDesktopPositions(
   current: Readonly<DesktopPositions>,
