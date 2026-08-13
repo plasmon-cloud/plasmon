@@ -1,11 +1,13 @@
 # #185 acceptance map
 
-| criterion | authority | observable | layer | current evidence | disposition |
+| criterion | authority | observable | layer | evidence | final status |
 |---|---|---|---|---|---|
-| Show Desktop minimizes eligible windows | WindowManager command | visible windows become minimized; processes remain | Bun | no command | HEADLESS RED to add after command seam |
-| restore/toggle affects only command set | WindowManager snapshot | pre-minimized/closed windows never resurrect | Bun | no snapshot command | missing |
-| no process destruction | ProcessController | process records remain during action | headless | Process authority available | missing consumer |
-| taskbar background exposes action | Shell context menu | menu item reachable from background | RTL | RED gate absent item | RTL RED |
-| new window while active | WindowManager command state | new window policy explicit (visible or included) | Bun | unspecified | contract decision required |
-| closed meanwhile | Process/Window authority | closed window is not restored | Bun | no command | missing |
-| focus order restoration | WindowManager MRU | prior focused eligible window restored coherently | Bun | #62 MRU exists | missing |
+| Show Desktop minimizes eligible windows | new WindowManager/Shell command | visible native windows minimized; Process records remain | headless | no command seam; cannot call without inventing API | HARNESS GAP: desired `showDesktop()` / `restoreDesktop()` or equivalent public command |
+| restore/toggle only affected windows | same command snapshot | pre-minimized/closed windows never resurrect | headless | no command | HARNESS GAP |
+| process survival | ProcessController | records remain during toggle | headless | Process authority available | adoption target after seam |
+| taskbar background action | Shell context menu | accessible Show desktop menu item | RTL | `issue-185.red.ui.test.tsx` fails: current menu has Start/Search/Settings only | RTL RED |
+| close race | WindowManager/Process | closed window not restored | headless | no command | HARNESS GAP |
+| new-window policy | WindowManager | explicit visible/hidden behavior while active | headless | unspecified by canonical issue | contract decision required |
+| focus order | WindowManager MRU | affected focus restored coherently | headless | #62 MRU available | command implementation required |
+
+The missing command is a genuine production seam gap, not a reason to build a test-local copy of window state. Browser adoption should be a minimal taskbar semantic click after the deterministic command exists.

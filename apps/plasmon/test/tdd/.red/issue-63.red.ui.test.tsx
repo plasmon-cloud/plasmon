@@ -19,13 +19,21 @@ test("Alt-Tab cycles from the focused native window through Windowing MRU", asyn
     expect(second).not.toBeNull();
     await waitFor(() => expect(app.environment.windows()).toHaveLength(2));
     expect(focusedProcessId(app)).toBe(second);
-
     await app.user.keyboard("{Alt>}{Tab}{/Alt}");
-
-    // The current Shell has no Alt-Tab adapter; this is the user-visible
-    // contract expected after the Windowing MRU seam is consumed.
     expect(focusedProcessId(app)).toBe(first);
-  } finally {
-    app.dispose();
-  }
+  } finally { app.dispose(); }
+});
+
+test("Alt-Tab exposes an accessible switcher while the modifier is held", async () => {
+  const app = await renderPlasmon();
+  try {
+    await act(async () => {
+      await app.environment.services.process.open("native:explorer", {});
+      await app.environment.services.process.open("native:text", {});
+    });
+    await waitFor(() => expect(app.environment.windows()).toHaveLength(2));
+    await app.user.keyboard("{Alt>}{Tab}");
+    expect(app.getByRole("listbox", { name: "Window switcher" })).toBeDefined();
+    await app.user.keyboard("{/Alt}");
+  } finally { app.dispose(); }
 });
