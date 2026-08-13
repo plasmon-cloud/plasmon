@@ -1,12 +1,4 @@
-const VIDEO_MIME: Readonly<Record<string, string>> = Object.freeze({
-  ".mp4": "video/mp4",
-  ".m4v": "video/mp4",
-  ".webm": "video/webm",
-  ".mov": "video/quicktime",
-  ".ogv": "video/ogg",
-  ".ogg": "video/ogg",
-  ".mkv": "video/x-matroska",
-});
+import { classifyResource } from "../../os/fs/index.ts";
 
 export function safeHttpUrl(value: string): string | null {
   try {
@@ -18,10 +10,14 @@ export function safeHttpUrl(value: string): string | null {
 }
 
 export function inferVideoMime(name: string, declaredMime?: string): string {
-  if (declaredMime?.toLowerCase().startsWith("video/")) return declaredMime.toLowerCase();
-  const path = name.split(/[?#]/u, 1)[0]!.toLowerCase();
-  for (const [extension, mime] of Object.entries(VIDEO_MIME)) if (path.endsWith(extension)) return mime;
-  return "application/octet-stream";
+  const path = name.split(/[?#]/u, 1)[0]!;
+  const classification = classifyResource({
+    name: path,
+    kind: "file",
+    metadata: {},
+    ...(declaredMime ? { mime: declaredMime } : {}),
+  });
+  return classification.type.mime ?? "application/octet-stream";
 }
 
 export type NativeVideoSupport = "supported" | "unsupported" | "unknown";
