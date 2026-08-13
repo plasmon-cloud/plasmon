@@ -1,16 +1,21 @@
 # #96 native application identity assets characterization
 
-**Disposition: CHARACTERIZATION READY.** `content-apps.ts` defines stable
-handler/app identities and package structural tests enumerate Text, Markdown,
-Photos, Video, Browser, Settings, Explorer, Properties and Recycle Bin loader
-inputs. Runtime-only js-dos/EmulatorJS hosts intentionally are not native `.sys`
-applications.
+**Disposition: FULL/CORE RED + PACKAGE BOUNDARY REMAINDER (post-#190).**
+`content-apps.ts` still defines six user-launchable first-party handlers/apps
+whose canonical identity values are generated SVG data URIs: Text, Markdown,
+Photos, Video, Browser, and Settings. The #190 candidate does not change those
+metadata values.
 
-Acceptance authority is package output plus NativeApplicationRegistry/Visual
-identity consumption: each registered first-party app has a stable identity/icon
-that resolves in packaged launch, Search/Start projections, and native window
-chrome; missing asset fails explicitly; no runtime host receives a fabricated
-`.sys` identity. Current evidence is structural package coverage and inline
-handler icon metadata. Missing evidence is installed package asset/visual
-resolution and a focused asset failure gate. Do not duplicate #190's shared
-resource icon authority or #112's content chrome work.
+#190 now supplies the accepted `ResourceIcon`/resolved-presentation consumer,
+package-relative shared asset vocabulary, deterministic application fallback,
+and migrated Start/Search/taskbar/FileManager/Properties/Open With consumers.
+Therefore #96 must not add consumer maps or retest general resource
+presentation. It owns replacing only the six canonical metadata references with
+stable package-owned offline identity references, retaining IDs and association
+semantics. Runtime-only js-dos/EmulatorJS hosts remain outside this gate.
+
+The executable `.red/issue-96.red.test.ts` fails on the current generated
+metadata and also requires each future reference to resolve to an existing
+package asset. Existing #190 installed asset coverage is the appropriate
+packaged URL/offline remainder; no screenshot or artwork-pixel contract is
+needed here. Accessibility labels remain independent semantic metadata.

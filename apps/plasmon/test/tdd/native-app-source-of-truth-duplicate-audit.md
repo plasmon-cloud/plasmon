@@ -3,7 +3,7 @@
 | duplicate/risk | locations | classification |
 |---|---|---|
 | MIME/extension tables | classifier + editor/media helpers | #178 canonical consumer migration; app-specific MIME capability helpers legitimate |
-| app icons | HandlerDefinition/NativeAppDefinition + shared Visual assets | #96 owns identity; #190 owns consumption; generated glyphs RED |
+| app icons | HandlerDefinition/NativeAppDefinition + shared Visual assets | #96 owns six first-party identity references; #190 owns consumption/fallback; current generated glyph metadata is FULL/CORE RED |
 | process/window state | Process/Windowing plus Shell projections | B-owned; app must not duplicate |
 | filesystem paths as identity | document target/path and runtime paths | NodeId/session is authority; path only presentation |
 | runtime catalogs | two explicit runtime definitions | legitimate distinct handlers; no game dispatcher |

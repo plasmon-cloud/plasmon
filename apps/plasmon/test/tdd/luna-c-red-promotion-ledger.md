@@ -8,7 +8,7 @@
 | #79 | Process/Window/document close composition | D-owned missing composed gate | headless cross-authority test | D gap |
 | #83 | two-runtime association/open selection | D-owned separate tests | headless runtime selection test | D gap |
 | #89 | canonical Program Files Worker route | `.red/issue-89.red.test.ts` | package + installed browser | current top-level route fails |
-| #96 | packaged stable app identity assets | current generated glyph inventory | package + RTL/manual | glyph placeholders fail |
+| #96 | packaged stable first-party app identity metadata | `.red/issue-96`; post-#190 reassessment | package + existing shared Visual/RTL/manual | six canonical handlers/apps still publish generated data-URI glyphs; #190 consumer seam is ready |
 | #107 | integrated C native rows | closure audit | D report + specialist e2e | browser/manual |
 | #112 | common semantic chrome/theme | characterization | RTL/manual app states | no honest structural RED |
 | #113 | Text title/language/status/commands/minimap | full matrix; no fake direct-mount RED | Text RTL + Monaco e2e | CORE RED + exact RTL/browser remainder |
