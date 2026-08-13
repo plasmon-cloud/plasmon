@@ -15,14 +15,15 @@ This is an audit checkpoint, **not** a closure certificate. The second-pass deep
 ## Blocking gaps
 
 1. **RED promotion gap #65:** PR #208 adopted the earlier one-file tests, not the final repaired two-file/partial-failure/duplicate/paste contract. Exact absent assertions are in `r2-red-promotion-master-ledger.md`.
-2. **RED promotion gap #51:** PR #210 adopted only the one-file happy path; primitive negative/identity/collision/repeated-creation assertions are not in the PR or release.
-3. **Active PRs:** #204/#191, #208/#65, #210/#51, #211/#190 are not integrated. Luna-D did not edit or merge them.
-4. **Browser proofs pending:** #66, #67/#89/#113/#200, #175, #180, #190, #191, #202 and the packaged portion of #181 require a real installed session/CI result. #187 allowances remain for #190, #175/#193, #67/#200 and #202 (plus the unrelated Kernel iframe warning).
-5. **Unresolved packets:** B/C have no published packet tree in this snapshot; A future packets are mixed characterization/readiness and RED. #181 lacks an explicit production opt-in fixture seam and therefore has no honest executable RED yet.
-6. **Invalid packets:** #66 fake stacking, #173 old single-column, #178 cast/API, #182 test-local Favorites, old #190/#191 health/selector packets, and old one-file #51/#65 packets are quarantined.
-7. **GitHub mismatch:** all 79 Issues were open while many linked implementations are merged and ancestor of release. Coordinator must reconcile Issue closure without treating merge as acceptance.
-8. **Ownership collisions:** #109 and #177 have A packet artifacts but B is canonical; #189/#190 versus C runtime consumers and #167/#187 versus domain packets are dependency overlaps, documented in `r2-luna-ownership-consistency.md`.
-9. **Merged implementations audited:** #167/#170/#186/#187/#189/#192 and historical #25/#38/#43/#44/#46/#58/#64/#67/#72/#82/#87/#89/#95/#107/#109/#110/#111/#117/#121/#155.
+2. **Executed product RED #190:** active PR #211's installed asset gate reached the browser but failed required 200 response evidence for representative icons; its broad smoke also failed on unallowed icon aborts. See `r2-browser-health-allowance-audit-v2.md`.
+3. **RED promotion gap #51:** PR #210 adopted only the one-file happy path; primitive negative/identity/collision/repeated-creation assertions are not in the PR or release.
+4. **Active PRs:** #204/#191, #208/#65, #210/#51, #211/#190 are not integrated. Luna-D did not edit or merge them.
+5. **Browser proofs pending:** #66, #67/#89/#113/#200, #175, #180, #190, #191, #202 and the packaged portion of #181 require a real installed session/CI result. #187 allowances remain for #190, #175/#193, #67/#200 and #202 (plus the unrelated Kernel iframe warning).
+6. **Unresolved packets:** B/C have no published packet tree in this snapshot; A future packets are mixed characterization/readiness and RED. #181 lacks an explicit production opt-in fixture seam and therefore has no honest executable RED yet.
+7. **Invalid packets:** #66 fake stacking, #173 old single-column, #178 cast/API, #182 test-local Favorites, old #190/#191 health/selector packets, and old one-file #51/#65 packets are quarantined.
+8. **GitHub mismatch:** all 79 Issues were open while many linked implementations are merged and ancestor of release. Coordinator must reconcile Issue closure without treating merge as acceptance.
+9. **Ownership collisions:** #109 and #177 have A packet artifacts but B is canonical; #189/#190 versus C runtime consumers and #167/#187 versus domain packets are dependency overlaps, documented in `r2-luna-ownership-consistency.md`.
+10. **Merged implementations audited:** #167/#170/#186/#187/#189/#192 and historical #25/#38/#43/#44/#46/#58/#64/#67/#72/#82/#87/#89/#95/#107/#109/#110/#111/#117/#121/#155.
 
 ## Required next work
 
