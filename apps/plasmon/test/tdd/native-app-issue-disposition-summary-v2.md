@@ -1,8 +1,10 @@
 # Phase 2 disposition summary
 
-**FULL RED:** #89 path/worker route, #96 glyph identity assets, #113 Text
-chrome/commands, #114 Markdown formatter/commands, #179 autosave (existing
-executable RED), plus deterministic #64 save bridge absence.
+**FULL RED:** #89 path/worker route, #96 glyph identity assets, and #179
+autosave (existing executable RED). #113/#114 are **CORE RED + EXACT
+RTL/BROWSER REMAINDER**; their missing title/commands/formatter criteria are
+mapped without faking direct component or Monaco proof. #64 is blocked on the
+actual shipped engine API and future authorized save seam.
 
 **CORE GREEN + EXACT REMAINDER:** #58 Review model/package semantics (installed
 vanilla package); #121 fixture/package mechanics (current installed closure);

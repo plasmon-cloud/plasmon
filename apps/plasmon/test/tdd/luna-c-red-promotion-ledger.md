@@ -3,7 +3,7 @@
 | Issue | validated contract | staging RED/current test | permanent GREEN | current strength/gap |
 |---|---|---|---|---|
 | #58 | standalone typed Atom/revision/history/portability | Review tests/e2e existing | Review semantic + package e2e | model green; installed rerun |
-| #64 | NodeId-bound FS save/restore | save seam absent; packet | runtime Bun + installed e2e | RED bridge/API gap |
+| #64 | NodeId-bound FS save/restore | no honest RED until shipped engine API/save seam exists | runtime Bun + installed e2e | blocked external capability/future owner |
 | #67 | actual Worker creation/communication | packaged e2e currently shell/edit; v2 spec | `test/e2e/plasmon-monaco-packaged.spec.ts` | visible ready insufficient |
 | #79 | Process/Window/document close composition | D-owned missing composed gate | headless cross-authority test | D gap |
 | #83 | two-runtime association/open selection | D-owned separate tests | headless runtime selection test | D gap |
@@ -11,8 +11,8 @@
 | #96 | packaged stable app identity assets | current generated glyph inventory | package + RTL/manual | glyph placeholders fail |
 | #107 | integrated C native rows | closure audit | D report + specialist e2e | browser/manual |
 | #112 | common semantic chrome/theme | characterization | RTL/manual app states | no honest structural RED |
-| #113 | Text title/language/status/commands/minimap | full matrix | Text RTL + Monaco e2e | deterministic/browser RED |
-| #114 | Markdown formatter/commands/preview | full matrix | Markdown Bun/RTL/e2e | formatter absent |
+| #113 | Text title/language/status/commands/minimap | full matrix; no fake direct-mount RED | Text RTL + Monaco e2e | CORE RED + exact RTL/browser remainder |
+| #114 | Markdown formatter/commands/preview | full matrix; no fake formatter API RED | Markdown Bun/RTL/e2e | CORE RED + exact RTL/browser remainder |
 | #121 | explicit fixture normal installed route | package/e2e closure | demo-game e2e | current release rerun |
 | #122 | direct observable Games UX audit | reference matrix | parity ledger/manual | research evidence |
 | #123 | stable artwork metadata/shared fallback | packet; waits #190/#121 | visual/resource tests | dependency |
