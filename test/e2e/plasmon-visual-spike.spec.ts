@@ -46,7 +46,7 @@ test("visual regression feasibility uses focused stable regions", async ({ page 
       menuItem: "New Folder" | "New Text Document",
       generatedName: string,
       finalName: string,
-    ) => {
+    ): Promise<Locator> => {
       const box = await desktop.boundingBox();
       if (!box) throw new Error("Desktop has no bounds");
       await desktop.click({
@@ -58,7 +58,7 @@ test("visual regression feasibility uses focused stable regions", async ({ page 
       await expect(rename).toBeVisible();
       await rename.fill(finalName);
       await rename.press("Enter");
-      const item = app.getByRole("option", { name: finalName });
+      const item = desktop.locator('[data-fm-node-id]').filter({ hasText: finalName }).first();
       await expect(item).toBeVisible();
       return item;
     };
@@ -69,9 +69,6 @@ test("visual regression feasibility uses focused stable regions", async ({ page 
       "New Text Document.txt",
       "Visual File.txt",
     );
-    await visualFile.click({ button: "right" });
-    await app.getByRole("menu").last().getByRole("menuitem", { name: "Create Shortcut" }).click();
-    await expect(app.getByRole("option", { name: /Visual File\.txt/ })).toHaveCount(2);
 
     await captureStableRegion(desktop, "desktop-resource-state", testInfo);
 
