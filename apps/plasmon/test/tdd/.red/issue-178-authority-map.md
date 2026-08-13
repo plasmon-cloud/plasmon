@@ -1,6 +1,6 @@
 # Issue #178 — integrated authority map
 
-Refresh basis: fetched `origin/release/0.1.0-r2` at `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`. No open implementation PR owns #178. This is future preparation only; #189's accepted source is the release branch, not an unmerged branch.
+Refresh basis: fetched `origin/release/0.1.0-r2` at `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`. No open implementation PR owns #178. #189 is integrated and its accepted classifier vocabulary is the release source.
 
 ## Actual vocabulary
 
@@ -19,21 +19,17 @@ Refresh basis: fetched `origin/release/0.1.0-r2` at `f4ac3b4c9880da5c6ce3b344bde
 | Visual presentation | `os/visual/presentation.ts`, `assets.ts`, primitives and consumer adapters | icon/title/thumbnail decisions are presentation, not MIME persistence | consume classification/type facts, retain fallbacks |
 | import/create/rename | FileManager helpers + FsService `createFile`/`rename`/document flows | create/import may persist MIME; rename currently changes name through FsService | preserve explicit MIME; inferred type may change after rename |
 
-## Current limitation
+## Integrated result
 
-Integrated #189 provides canonical semantic classification and MIME inference
-consumer vocabulary, but the release branch does not expose a single general
-`deriveMime`/`deriveLanguage` function consumed by all surfaces. Existing
-`classifyResource()` does not encode ordinary extension MIME. Therefore a full
-#178 RED cannot honestly call a future classifier or cast a future API into
-existence. The packet status is **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**
-until the implementor establishes and exports the accepted #189-derived
-ordinary-resource metadata seam.
+The integrated release now exposes `classifyResource(node).type` with extension,
+MIME, content kind, language, and source (`explicit-mime`, `filename`, or
+`fallback`). Search, Properties, FileManager icon classification, Photos/Video,
+and Text's `editorLanguageForResource` consume that seam. The old divergence and
+fictional two-argument editor API are no longer valid release assumptions.
 
-The current truthful RED is the existing cross-consumer divergence:
-`editorLanguageForName("note.md")` is extension-only while `FsNode.mime` and
-Search/Properties remain independently sourced. The executable test must be
-updated only after the real integrated API is present.
+See `issue-178-integrated-closure-audit.md`: the core #178 acceptance is
+ALREADY GREEN on integrated release. The local TDD worktree is stale and must
+not be used to claim execution against that source.
 
 ## Required authority rule
 

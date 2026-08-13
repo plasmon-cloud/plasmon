@@ -1,9 +1,8 @@
 # Issue #178 — precedence and supported-format table
 
-This is a contract table, not a claim that the missing ordinary-resource
-classifier already exists. `Actual release result` records what the integrated
-source can currently prove; `future expected result` is the narrow #178
-behavior to test after the real API is added.
+This is the integrated #189/#178 contract table. The release source now exposes
+these effective type facts through `classifyResource(node).type`; rows marked
+conditional remain limited to formats actually declared by production.
 
 ## Precedence
 
@@ -19,7 +18,7 @@ behavior to test after the real API is added.
 6. Editor language maps the canonical derived type/MIME through one adapter;
    it never becomes association authority.
 
-## Cases to stage after the accepted classifier API is consumable
+## Integrated representative cases
 
 | Input | Future derived MIME/type | editor hint | Search/Properties expectation | Current release evidence |
 |---|---|---|---|---|

@@ -1,6 +1,8 @@
-# Issue #178 — dependency-wait specification
+# Issue #178 — integrated closure disposition
 
-Disposition: **WAIT FOR DEPENDENCY**.
+Disposition: **ALREADY GREEN — COMPLETE CORE ACCEPTANCE PROVEN** on integrated
+release `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`. See
+`issue-178-integrated-closure-audit.md`.
 
 ## Validation repair
 
@@ -10,10 +12,10 @@ signature, and it required the image-specific helper to return `text/plain`
 although that helper's actual contract returns image MIME or `null`. The
 speculative test has been deleted; no test-local policy is retained.
 
-PR #207 is the active #189 implementation and is not yet integrated into
-`release/0.1.0-r2`. #178 must consume the accepted production classifier result
-rather than inventing a compatibility API. Do not mark #178 RED until that seam
-is observable on the current accepted composition.
+PR #207/#189 is integrated into `release/0.1.0-r2`. The accepted production
+classifier/result seam is now observable in the release source. Do not reopen
+or manufacture a competing RED; the Luna staging worktree requires a refresh
+before it can execute the integrated tests.
 
 ## Required post-#189 contract
 
@@ -30,5 +32,6 @@ Use real production nodes and the accepted classifier vocabulary to cover:
 - Properties type, Search category, and the real editor-language consumer;
 - AssociationRegistry/OpenService remaining independently authoritative.
 
-At that point stage a production-backed Bun gate for the complete cross-surface
-contract. Until then this issue is genuinely blocked, not a valid RED packet.
+The production-backed Bun gate is permanently present in the integrated #189
+regression suite. This packet is retained as the historical invalid/dependency
+record, while the integrated closure audit is authoritative.

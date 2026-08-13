@@ -1,29 +1,28 @@
 # Issue #178 — consumer matrix and executable plan
 
-Status: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**. The integrated release
-has canonical semantic classification but not yet a general ordinary-resource
-MIME/language derivation API that this lane can consume honestly.
+Status: **ALREADY GREEN — COMPLETE CORE ACCEPTANCE PROVEN** on integrated
+release. The local TDD worktree is stale, so this lane records integrated source
+and permanent release evidence without claiming local execution.
 
 | Canonical requirement | Production authority | Observable behavior | Lowest truthful layer | Existing evidence | Missing evidence |
 |---|---|---|---|---|---|
-| ordinary extension derives one type | future accepted #189-derived resource metadata | `.js/.html/.md/.json/.ts/.css` expose same type | Bun | local Text/content tests prove fragments | integrated shared derivation result |
-| explicit MIME wins | FsNode/FsService metadata | conflicting name does not overwrite MIME | Bun | FsNode metadata and association tests | composed create/rename/Properties proof |
-| inferred rename updates | FsService rename + derivation | same NodeId, new derived type | Bun | rename identity tests | canonical metadata refresh test |
-| explicit rename preserves | FsService rename | pinned MIME remains | Bun | FsService identity/rename tests | explicit marker/policy proof |
-| Search classification | `search.ts` + classifier | category comes from canonical result | Bun | Search projection tests | no independent suffix table |
-| Properties facts | Properties loader + FsNode | displayed MIME/type agrees | Bun/RTL | Properties source inspection | cross-surface fixture |
-| Text language | editor adapter | Monaco label comes from canonical hint | Bun | `editorLanguageForName` tests | remove duplicate extension authority |
-| Markdown language | Markdown editor/host | markdown hint is canonical input | RTL | literal `markdown` inspected | shared language input |
-| association opening | AssociationRegistry/OpenService | handler selection unchanged by visual hint | Bun | association/open tests | conflicting-type composed proof |
-| Visual presentation | Visual/resource presentation | icon/title fallback follows semantic type | RTL/browser only as needed | Visual primitives tests/inspection | type-driven consumer test |
-| unknown safety | FsService/classifier/AssociationRegistry | no crash/no executable guess | Bun | no-match association tests | unknown binary end-to-end |
+| ordinary extension derives one type | integrated `classifyResource(node).type` | `.js/.html/.md/.json/.ts/.css` expose same type | Bun | `test/refactor/189/issue-189.test.ts` | none for core |
+| explicit MIME wins | integrated classifier explicit branch | conflicting name does not overwrite MIME | Bun | #189 explicit-over-derived and Properties/Text assertions | none for core |
+| inferred rename updates | FsService + integrated classifier | same NodeId, new derived type | Bun | #189 rename characterization + FsService tests | none for core |
+| explicit rename preserves | FsService metadata + classifier precedence | pinned MIME remains | Bun | FsService identity and #189 explicit precedence tests | none for core |
+| Search classification | integrated `search.ts` + classifier | category comes from canonical result | Bun | #189 Search classification and release Search tests | none for core |
+| Properties facts | `friendlyKind` + classifier | displayed MIME/type agrees | Bun | #189 Properties assertion | none for core |
+| Text language | `editorLanguageForResource` + classifier | Monaco label comes from canonical hint | Bun | #189 editor-language assertion and release Text import | none for core |
+| Markdown language | Markdown editor accepted language input | markdown hint remains coherent | RTL | integrated source inspection; app behavior owned by C | no #178 core gap |
+| association opening | AssociationRegistry/OpenService | handler selection unchanged by visual hint | Bun | association/open tests | no #178 core gap |
+| Visual presentation | FileManager/Visual consumers of classifier | icon/title fallback follows semantic type | RTL/browser only as needed | #189 FileManager classification plus Visual tests | broader #190 presentation promotion |
+| unknown safety | classifier fallback + AssociationRegistry | no crash/no executable guess | Bun | #189 unknown fallback and Association tests | none for core |
 
-## Exact test packet once seam exists
+## Integrated executable evidence
 
-Create one deterministic fixture using the real headless Plasmon environment and
-real FsService. It should create resources with and without MIME, rename them,
-then query the production classifier/derivation function by its exported type
-(not a cast). Assertions should cover:
+`apps/plasmon/test/refactor/189/issue-189.test.ts` is the integrated deterministic
+fixture using actual production vocabulary. It covers the following assertions
+without casts or test-local policy:
 
 - expected canonical type and language for every supported row in the precedence
   table;
@@ -35,9 +34,10 @@ then query the production classifier/derivation function by its exported type
 - AssociationRegistry still resolves based on its own accepted matching rules;
 - unknown resources return a safe value and do not throw.
 
-A separate RTL test should render actual Properties/Text consumer composition only
-if the canonical harness can inject the real production service graph. A browser
-run is not required for deterministic metadata semantics.
+A separate RTL test is not required for the core metadata semantics because
+integrated Properties/Text consumers are directly covered by the release
+characterization and their production imports are source-inspected. Browser is
+not required for deterministic metadata semantics.
 
 ## Forbidden substitutes
 

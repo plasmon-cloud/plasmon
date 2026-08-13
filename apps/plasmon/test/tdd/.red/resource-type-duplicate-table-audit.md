@@ -1,13 +1,15 @@
 # Resource type / MIME / language duplicate-table audit
 
-Refresh: integrated release `f4ac3b4`; no active #178 PR. This audit is
-code-inspected, not a claim that any candidate is safe to delete.
+Refresh: integrated release `f4ac3b4`; no active #178 PR and #189 is integrated.
+This audit is code-inspected, not a claim that any candidate is safe to delete.
+The ordinary classifier seam is now `classifyResource(node).type`; downstream
+retirement still requires consumer-by-consumer evidence.
 
 | File/helper | Owner | Current consumers | Semantic purpose | Duplicate? | Removable by #178? | Other Issue / do-not-touch reason |
 |---|---|---|---|---|---|---|
 | `src/os/fs/resourcePolicy.ts::classifyResource` | Fs/resource authority | Search, FileManager, desktop, managed FS | semantic kind + ownership + validated app metadata | no | no; upstream authority | preserve released #189 vocabulary |
-| `src/native-apps/text/editorModel.ts::LANGUAGE_BY_EXTENSION` | Text | TextEditor + adapter tests | Monaco language hint from filename | yes, partial | likely after canonical language seam | #178 owns convergence; retain until consumer migrated |
-| `src/os/shell/search.ts::MEDIA_EXTENSIONS` | Search | `categorizeNonApplicationFsNode` | media category fallback | yes, partial | likely | #178/#193; do not alter today's #174 packet |
+| `src/native-apps/text/editorModel.ts::LANGUAGE_BY_EXTENSION` | Text | historical/compatibility adapter only on integrated release | Monaco language hint from filename | superseded by `editorLanguageForResource` | yes, after release promotion audit | #178/#200; verify no stale consumer before deletion |
+| `src/os/shell/search.ts::MEDIA_EXTENSIONS` | Search | no longer canonical in integrated #189 Search path | legacy candidate | superseded in integrated source | #178/#193/#201 | verify current release import/consumer graph before deletion |
 | `src/os/file-manager/file-icons.ts::IMAGE_EXTENSIONS` | FileManager | `resourceIconKind` | icon kind / thumbnail eligibility | yes, partial | not automatically | #196/#190 presentation; icon policy is not MIME authority |
 | `src/os/file-manager/file-icons.ts::VIDEO_EXTENSIONS` | FileManager | same | video icon kind | yes, partial | not automatically | #94/#196; browser/media acceptance boundary |
 | `src/os/file-manager/file-icons.ts::SOURCE_EXTENSIONS` | FileManager | text icon kind | source/text icon fallback | yes, partial | maybe after canonical presentation | #196/#190; visual fallback may remain |

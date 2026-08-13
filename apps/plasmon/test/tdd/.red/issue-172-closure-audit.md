@@ -26,8 +26,15 @@ resources and the Desktop placement helper. It trashes a real Desktop node,
 creates a real incumbent at its old position, restores the original NodeId,
 reconciles and asserts incumbent stability/non-overlap/idempotence.
 
-The gate reaches the intended collision assertion and fails because this TDD
-worktree still has the pre-#192 allocator; that is not evidence against the
-integrated release. Coordinator/implementation validation must run this exact
+Executed on this lane with:
+
+```text
+bun test ./apps/plasmon/test/tdd/.red/issue-172.composed.red.test.ts
+```
+
+Result: **1 intentional failure** at the non-overlap assertion (`expected false,
+received true`). The gate reaches the intended collision assertion and fails
+because this TDD worktree still has the pre-#192 allocator; that is not evidence
+against the integrated release. Coordinator/implementation validation must run this exact
 gate against the integrated #192 source before closing #172. Trash semantics
 remain outside layout authority.

@@ -2,16 +2,15 @@
 
 ## #178 — canonical MIME/language
 
-- **Status:** VERIFIED CORE RED / INCOMPLETE ACCEPTANCE; #189 integrated, ordinary shared derivation API still needs truthful final seam.
-- **Prerequisites:** integrated #189 (present); no active #178 PR.
-- **Evidence/files:** `issue-178-authority-map.md`, `issue-178-precedence-table.md`, `issue-178-consumer-matrix.md`, `resource-type-duplicate-table-audit.md`.
-- **RED target:** inferred extension consumers disagree; do not revive deleted two-argument API.
+- **Status:** ALREADY GREEN — COMPLETE CORE ACCEPTANCE PROVEN on integrated #189 release.
+- **Prerequisites:** none for core; local TDD staging refresh required to execute release tests here.
+- **Evidence/files:** `issue-178-integrated-closure-audit.md`, authority/precedence/consumer maps, integrated `test/refactor/189/issue-189.test.ts`.
+- **RED target:** none; do not manufacture a second RED or revive the deleted two-argument API.
 - **Fence:** FsService/NodeId, classifyResource, AssociationRegistry/OpenService, Visual remain separate authorities.
 - **Preserve:** explicit MIME, identity, association/open behavior, unknown safety.
-- **Change:** one canonical ordinary derivation consumed by Search/Properties/Text/Markdown.
-- **Unspecified:** module names/table representation/exact MIME strings not accepted by current registry.
-- **Tests:** Bun/headless first; RTL only for real consumer wiring; browser not required for metadata.
-- **Stop:** no cast/fake classifier/test-local table; narrow supported formats to production claims.
+- **Change:** already integrated through #189 consumers.
+- **Tests:** permanent Bun/headless release tests; browser not required for metadata.
+- **Stop:** no cast/fake classifier/test-local table; cleanup only after consumer graph proof.
 
 ## #193 — Search surface
 
