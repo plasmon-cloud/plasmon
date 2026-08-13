@@ -45,7 +45,7 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 | #173 -> #196 | SOFT PRODUCT RELATIONSHIP | #173 behavior is independently specified and can proceed now |
 | #65 -> #92 | HARD IMPLEMENTATION DEPENDENCY | PR #208 open, CI green at poll; #92 remains WAIT FOR #65 integration |
 | #44 -> #51 | HARD CONSUMER DEPENDENCY | #51 core consumer RED plus primitive fence |
-| #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated in release; composed gate still requires TDD staging refresh |
+| #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated in release; composed gate passed against exact release source in clean detached worktree |
 | #190 / #171 | NO DEPENDENCY / PARALLEL | Plasmon assets versus installed Element assets remain distinct |
 | #176 -> surfaces | SOFT CONSUMER RELATIONSHIP | production event-policy seam still missing |
 | #186 -> all | NO DEPENDENCY / PARALLEL | #186 is Testing Lead-owned and integrated; no Luna ownership |
@@ -56,8 +56,8 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 **Active implementation packets (fenced):** #51, #65, #66, #86, #95, #173,
 #174, #182, #190, #191.
 
-**Executable/specification work:** #93, #110, #171, and #172 closure
-verification. #178 is already green on integrated source.
+**Executable/specification work:** #93, #110, #171. #172 closure verification
+is complete and #178 is already green on integrated source.
 
 **Waiting:** #92 for #65; #195 for #191; #196 for #195; #201 cleanup for
 accepted migrations; #94 for a truthful media thumbnail seam.

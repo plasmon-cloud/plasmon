@@ -26,7 +26,8 @@ protection; it does not create a competing filesystem policy.
   be injected without violating real-graph testing.
 - #92 waits for accepted #65 operation vocabulary.
 - #178 waits for ordinary effective MIME/language seam.
-- #172 composed gate currently fails on stale TDD source and requires exact
-  integrated #192 execution; Trash semantics themselves are covered.
+- #172 composed gate passed against the exact integrated #192 source in a clean
+  detached worktree; Trash semantics and NodeId identity remain covered by the
+  same gate plus the existing lifecycle suites.
 - #82 remains cross-surface bootstrap ownership for Luna-D; no duplicate packet
   is created here.

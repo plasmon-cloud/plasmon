@@ -22,7 +22,7 @@ verification.
 | #110 | toggle/reopen/reload persistence -> repaired semantic packaged gate -> BROWSER SPEC ONLY -> execution blocked |
 | #115 | shared commands with >=2 consumers -> existing outcomes only -> CHARACTERIZATION ONLY -> implementation required |
 | #171 | resolver safety + installed Element no-storm -> deterministic green + browser plan -> BROWSER SPEC ONLY -> installed browser execution |
-| #172 | integrated #192 + Trash composed restore collision -> pure integrated evidence + staged real composed gate -> BROWSER SPEC ONLY -> run exact integrated gate |
+| #172 | integrated #192 + real Trash composed free/occupied restore gate -> exact release-head detached execution -> ALREADY GREEN -> 2 passed, 13 expects |
 | #173 | deliberate compact multi-column List + spatial keyboard -> revised browser gate -> VERIFIED CORE RED / INCOMPLETE -> execution and lower common semantics |
 | #174 | one `.sys` result + hidden/running/identity/activation -> headless core RED + characterizations -> VERIFIED CORE RED / INCOMPLETE -> final vocabulary/Start consistency |
 | #176 | owned/foreign event boundary -> no production seam, matrix only -> RECONNAISSANCE -> seam and browser propagation |

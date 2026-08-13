@@ -21,7 +21,7 @@ said so.
 | #110 | real packaged toggle/reopen/reload gate, no swallowed setup catch | BROWSER SPEC ONLY | packaged execution blocked |
 | #115 | outcomes green, but no shared command seam or two-consumer proof | CHARACTERIZATION ONLY / IMPLEMENTATION REQUIRED | bounded production command layer |
 | #171 | resolver tests green; installed Element request/fallback/no-storm gate remains unexecuted | CHARACTERIZATION ONLY + BROWSER SPEC | installed browser evidence |
-| #172 | #192 integrated pure tests plus real Trash/restore/placement composed gate | VERIFIED CLOSURE EVIDENCE PENDING EXECUTION | exact integrated-head rerun and coordinator closure |
+| #172 | #192 integrated pure tests plus real Trash/restore/placement composed gate | ALREADY GREEN | exact release-head detached worktree: 2 passed, 13 expects |
 | #173 | revised gate requires multi-column compact List and spatial ArrowRight, unlike current vertical full-width List | VERIFIED CORE RED / INCOMPLETE | packaged execution and common semantics characterization |
 | #174 | core duplicate RED plus hidden/running/identity/activation characterization | VERIFIED CORE RED / INCOMPLETE | final accepted native projection/type vocabulary |
 | #176 | no production event-policy seam; propagation matrix only | RECONNAISSANCE | production seam and representative browser gate |

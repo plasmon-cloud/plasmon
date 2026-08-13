@@ -19,7 +19,7 @@ Open implementation ownership observed: #51 PR #210, #65 PR #208, #189 PR #207,
 | #115 | no bounded shared command layer with two consumers | CHARACTERIZATION ONLY / IMPLEMENTATION REQUIRED |
 | #169 | Start reconciliation prerequisite for #194 | readiness dependency, no Luna-A full packet |
 | #171 | deterministic Neutron resolver green; installed no-storm unexecuted | BROWSER SPEC ONLY; distinct from #190 |
-| #172 | #192 integrated; composed Trash/placement gate staged | BROWSER SPEC ONLY / closure pending exact integrated run |
+| #172 | #192 integrated; composed Trash/placement gate passed at exact release head | ALREADY GREEN / deterministic headless closure |
 | #173 | current List remains vertical full-width | VERIFIED CORE RED / INCOMPLETE; repaired multi-column spatial gate |
 | #174 | current Search emits native plus raw `.sys` result | VERIFIED CORE RED / INCOMPLETE; lower characterizations added |
 | #175 | Search frame geometry remains a separate browser acceptance defect | SPEC GAP; referenced by #193 readiness, no duplicate Luna-B full packet |

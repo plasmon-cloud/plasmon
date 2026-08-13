@@ -11,8 +11,8 @@ composition evidence. NodeId is the identity key throughout.
 | persisted positions | exact valid positions retained | Desktop parse/persist tests | recompose packaged state |
 | new resource | existing positions fixed; new resource gets free slot | allocator tests | Desktop FsEvent composition |
 | removed resource | removed NodeId no longer rendered; incumbents fixed | allocator active-ID logic | composed refresh |
-| Trash restore | original NodeId returns | Trash/refactor guards | #172 composed collision/free-slot gate |
-| occupied restored position | occupant fixed; restored gets free deterministic slot | #172 test intended RED on stale lane | integrated #192 execution |
+| Trash restore | original NodeId returns | Trash/refactor guards + #172 composed gate | exact integrated-head #172 execution passed |
+| occupied restored position | occupant fixed; restored gets free deterministic slot | #172 composed gate: 2 passed | no remaining deterministic gap |
 | viewport shrinks | positions remain reachable according to accepted controller | #192 geometry tests | browser only for actual DOM workspace |
 | viewport expands | no unnecessary movement of existing icons | controller/layout tests | integrated composition |
 | rename | NodeId/position stable, label changes | refactor guards/rename tests | composed Desktop rename |

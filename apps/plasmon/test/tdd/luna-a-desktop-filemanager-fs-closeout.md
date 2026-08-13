@@ -53,8 +53,9 @@ creating competing Luna-A packets. Its dispositions are:
 - **Dependency/readiness:** #92 waits for integrated #65 operation vocabulary;
   #195 characterization waits for #191; #196 waits for #195/#173; #201 is late
   cleanup only.
-- **Staging refresh:** #172's composed gate must run against integrated #192;
-  the stale lane failure is not an integrated-release verdict.
+- **Completed integrated-head closure:** #172's composed gate passed against
+  current integrated #192 in a clean detached worktree; the stale lane failure
+  is retained only as historical staging evidence.
 - **Active ownership — do not touch:** #51/#65/#66/#86/#95/#173/#174/#182/
   #190/#191 and other lane-owned concrete packets.
 
@@ -128,20 +129,26 @@ npx playwright test --list test/e2e/plasmon-image-thumbnails-93.spec.ts
 
 Result: one test listed. No packaged browser execution was claimed.
 
-The composed #172 gate was executed against the stale lane and intentionally
-failed its overlap assertion; this is recorded as **WAIT FOR STAGING REFRESH**,
-not as a release verdict.
+The refreshed #172 gate was executed against the exact integrated release in a
+clean detached worktree:
+
+```text
+bun test /tmp/plasmon-r2-172/apps/plasmon/test/tdd/.red/issue-172.composed.red.test.ts
+```
+
+Result: **2 passed, 0 failed, 13 expect() calls**.
+
+The exact integrated controller/layout/filesystem/Trash suite also passed:
+**18 passed, 0 failed, 51 expect() calls**. No browser boundary applies.
 
 ## Promotion gaps and final handoff
 
 D/testing must promote only after:
 
-1. refreshing this TDD lane to integrated #192 and rerunning the #172 composed
-   gate;
-2. reusing a matching supervised packaged session to execute #45/#93/#94/#110/
-   #171 browser claims;
-3. consuming accepted #65 vocabulary before any #92 gate;
-4. preserving active ownership fences and separating Native Apps/Luna-C and
+1. reusing a matching supervised packaged session to execute the remaining
+   #45/#93/#94/#110/#171 browser claims;
+2. consuming accepted #65 vocabulary before any #92 gate;
+3. preserving active ownership fences and separating Native Apps/Luna-C and
    Shell/Windowing/Luna-B evidence.
 
 No browser RED is reported for the missing session journal. No new production
