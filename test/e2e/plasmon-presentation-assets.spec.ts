@@ -50,7 +50,10 @@ test("#190 installed Plasmon requests shared icon assets from its application mo
   for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
     const path = `${ICON_PREFIX}${name}`;
     expect(requested, `${path} should be requested by the real installed surface`).toContain(path);
-    expect(iconResponses.get(path), `${path} should load successfully`).toBe(200);
+    await expect.poll(
+      () => iconResponses.get(path),
+      { timeout: 15_000, message: `${path} should load successfully` },
+    ).toBe(200);
   }
 });
 
