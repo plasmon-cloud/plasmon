@@ -72,7 +72,8 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await expect(card.getByText("Local reviewer")).toBeVisible();
   await attachBrowserScreenshot(page, testInfo, "populated-review");
 
-  const originalAtomId = await harness.review.locator(".atom-details dd").first().innerText();
+  const originalAtomId = (await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "";
+  expect(originalAtomId).not.toBe("");
   await expect(harness.review.locator(".history-entry")).toHaveCount(5);
   const revisionFour = harness.review.locator(".history-entry").filter({ hasText: "r4" }).first();
   await revisionFour.getByRole("button", { name: "Restore…" }).click();
@@ -85,7 +86,7 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await restoreAction.click();
   await expect(harness.review.locator(".history-entry")).toHaveCount(6);
   await expect(card.getByText("Packaged workflow verified.")).toHaveCount(0);
-  expect(await harness.review.locator(".atom-details dd").first().innerText()).toBe(originalAtomId);
+  expect((await harness.review.locator(".atom-details dd").first().textContent())?.trim()).toBe(originalAtomId);
 
   await card.getByLabel("Comment on Review launches in vanilla Neutron").fill("Verified again after deliberate restore.");
   await card.getByRole("button", { name: "Add note" }).click();
@@ -113,7 +114,8 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
 
   const atomChoices = harness.review.locator(".atom-choice");
   await expect(atomChoices).toHaveCount(2);
-  const importedAtomId = await harness.review.locator(".atom-details dd").first().innerText();
+  const importedAtomId = (await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "";
+  expect(importedAtomId).not.toBe("");
   expect(importedAtomId).not.toBe(originalAtomId);
   await expect(harness.review.locator(".source-chip")).toHaveText(`Imported from ${exportPath}`);
 
@@ -137,12 +139,15 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   const reopenedAtomIds: string[] = [];
   for (let index = 0; index < 2; index += 1) {
     await reopenedChoices.nth(index).click();
-    reopenedAtomIds.push(await harness.review.locator(".atom-details dd").first().innerText());
+    await expect(reopenedChoices.nth(index)).toHaveAttribute("aria-current", "page");
+    reopenedAtomIds.push((await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "");
   }
+  expect(reopenedAtomIds.every(Boolean)).toBe(true);
   expect(new Set(reopenedAtomIds)).toEqual(new Set([originalAtomId, importedAtomId]));
 
   const originalIndex = reopenedAtomIds.indexOf(originalAtomId);
   await reopenedChoices.nth(originalIndex).click();
+  await expect(reopenedChoices.nth(originalIndex)).toHaveAttribute("aria-current", "page");
   const reopenedOriginalCard = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
   await expect(reopenedOriginalCard.getByRole("button", { name: "Working", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(reopenedOriginalCard.getByText("Verified again after deliberate restore.")).toBeVisible();
