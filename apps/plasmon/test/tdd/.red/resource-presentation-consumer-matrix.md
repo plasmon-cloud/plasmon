@@ -26,7 +26,28 @@ components must not recreate MIME, suffix, shortcut, Neutron, or fallback maps.
 - Start/Search surfaces: #194/#193; view strategies: #196/#173.
 - Shortcut semantics: #44/#51; context ownership: #176.
 
-Known current local maps should be removed only after their consumer migrates
-and the shared seam has equivalent lower-layer evidence. This matrix does not
-require every surface to render every resource state identically; it requires
-identity and fallback decisions to remain canonical.
+## Final refresh / dependency status
+
+Release `f4ac3b4` includes #189 canonical semantic classification, but #190 is
+still active in PR #211 and the installed shared asset path is not an integrated
+replacement yet. Therefore cells below are convergence targets, not proof that
+all consumers currently agree. #174 remains today's unattended ownership and is
+not reopened by this matrix.
+
+| Resource category | Canonical identity | Classifier | Icon/title source | Fallback | Shortcut overlay | Thumbnail | Future owner |
+|---|---|---|---|---|---|---|---|
+| native `.sys` | validated system metadata + NodeId | #189 `classifyResource` | Visual/native registry | system/app fallback | target overlay | no | #174/#193 |
+| Neutron `.neutron` | validated projection metadata + Element id | #189 | Visual/Element metadata | app fallback | target overlay | no | #190/#193 |
+| ordinary document | NodeId/FsNode | #178 future shared derivation | Visual file type | generic file | yes if shortcut | no | #178/#196 |
+| image | NodeId/FsNode | shared type after #178 | Visual + media policy | image/file fallback | yes | contained thumbnail | #93/#190 |
+| audio | NodeId/FsNode | accepted registered MIME/type | Visual audio fallback | generic file | yes | no frame | #178/#190 |
+| video | NodeId/FsNode | accepted registered MIME/type | Visual video fallback | generic video/file | yes | bounded frame only if #94 | #94/#190 |
+| folder | NodeId/FsNode kind | `classifyResource` | Visual folder | folder fallback | no | no | #194/#196 |
+| shortcut | shortcut NodeId + target | shared shortcut parser | target presentation + overlay | generic file | intrinsic | target thumbnail only if accepted | #44/#196 |
+| unknown | NodeId/FsNode | safe ordinary/unknown | generic Visual fallback | file | no | no | #178/#201 |
+
+Known current local maps should be removed only after their consumer migrates,
+the shared seam has equivalent lower-layer evidence, and active PR ownership is
+resolved. This matrix does not require every surface to render every resource
+state identically; it requires identity and fallback decisions to remain
+canonical.
