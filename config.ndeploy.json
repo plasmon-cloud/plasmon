@@ -46,11 +46,11 @@
         "version": 201
       },
       {
-        "path": "apps/vfs/files.v0.4.3.neutron",
-        "sha256": "b05c5c88d7705cefc2026478002a372f778fe4430f946663bba3003a82f8348d",
-        "bytes": 709431,
+        "path": "apps/vfs/files.v0.4.5.neutron",
+        "sha256": "dd36ebc32ea535b783aee29ec4aa9820a4550b4e7ddd27574406baaf390f5ba5",
+        "bytes": 706067,
         "id": "files",
-        "version": 403
+        "version": 405
       },
       {
         "path": "apps/spreadsheet/spreadsheet.v0.3.1.neutron",
