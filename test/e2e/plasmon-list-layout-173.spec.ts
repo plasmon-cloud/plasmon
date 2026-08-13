@@ -26,7 +26,7 @@ test("#173 — List flows compact entries across columns and navigates spatially
   const root = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await expect(root).toBeVisible();
   await root.dblclick();
-  const explorer = app.getByRole("dialog", { name: "Root" }).last();
+  const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
   await expect(explorer).toBeVisible({ timeout: 15_000 });
 
   await explorer.getByLabel("View").selectOption("list");
