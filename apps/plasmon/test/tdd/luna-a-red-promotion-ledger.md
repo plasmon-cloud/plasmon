@@ -5,7 +5,7 @@ integrated `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 | Issue | Validated packet commit/file | RED/spec files | Behavioral contract | Implementation PR | Permanent test expected | Permanent test observed | Promotion status |
 |---|---|---|---|---|---|---|---|
-| #44 | Phase-2 audit current HEAD `8453df4` | `issue-44-closure-audit.md` | canonical shortcut, NodeId, collision/open lifecycle | none | `create-shortcut.test.tsx`, fs/refactor guards | observed/source inspected | CORE GREEN / ACCEPTANCE GAP |
+| #44 | Phase-2 closure | `issue-44-closure-audit.md` | canonical shortcut, NodeId, collision/open lifecycle | none | `create-shortcut.test.tsx`, fs/refactor guards | observed/source inspected | ALREADY GREEN — COMPLETE CANONICAL ACCEPTANCE |
 | #51 | prior packet commit `d522336` | active packet files | Send to Desktop shortcut consumer | #210 active | PR #210 tests | active PR not consumed | ACTIVE — DO NOT TOUCH |
 | #65 | prior packet commit `d522336` | active packet files | import/paste operation state | #208 active | PR #208 tests | active PR not consumed | ACTIVE — DO NOT TOUCH |
 | #66 | repaired packet `789279e`/`6eb5cc5` | existing #66 browser spec | drag preview stacking/hit/drop/cancel | today's ownership | implementor promotion | not re-run | ACTIVE — DO NOT TOUCH |

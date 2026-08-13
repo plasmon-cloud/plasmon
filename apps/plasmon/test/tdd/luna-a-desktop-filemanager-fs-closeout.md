@@ -25,13 +25,24 @@ below are blocked by the missing matching session journal:
 
 No reinstall or second PocketIC fleet was started.
 
+## Live integration poll
+
+At the follow-up poll, `origin/release/0.1.0-r2` remained
+`f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`. PR #208/#65 and PR #210/#51 were
+still open with required checks green; PR #211/#190 was open with kernel/Fast
+Bun checks in progress; PR #204/#191 remained open with packaged specialist and
+refactor-smoke failures despite successful kernel/Fast Bun checks. These active
+packets remain fenced and were not modified. The dependency graph was refreshed
+accordingly.
+
 ## Canonical inventory
 
 The exhaustive issue table is in
 `r2-luna-a-desktop-filemanager-fs-inventory.md`. Its dispositions are:
 
-- **Already green / closure evidence:** #44 core, #45 deterministic Recycle Bin
-  core, #108 deterministic navigation, #178 integrated resource semantics,
+- **Already green / closure evidence:** #44 complete canonical shortcut
+  acceptance, #45 deterministic Recycle Bin core, #108 deterministic navigation,
+  #178 integrated resource semantics,
   #189 dependency, #192 placement implementation, and older #31/#40/#47/#70/
   #77/#80 closures.
 - **Browser boundary/specification:** #45 packaged launch/render, #93 geometry,

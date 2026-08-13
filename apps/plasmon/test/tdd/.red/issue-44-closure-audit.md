@@ -14,16 +14,16 @@ No active implementation PR owns #44. This is a closure audit, not a new RED.
 | target survives path rename/move | NodeId target + FsService | `test/refactorGuards.test.ts` renames/moves resource before shortcut activation | PROVEN |
 | dereference/open | `FilesystemOpenDispatcher` | `test/resourceOpenCrossSurface.test.ts`, `test/fileManagerActivation.test.ts`, `src/os/fs/desktopCore.test.ts` | PROVEN |
 | missing target behavior | open dispatcher NodeId stat/error path | `src/os/fs/desktopCore.test.ts` covers Trash target rejection; `test/fileManagerActivation.test.ts` covers canonical activation failures | PROVEN for safe failure; exact FileManager-visible message is activation-owned |
-| no partial state on creation failure | FsService atomic create boundary + FileManager error path | no dedicated production test found proving failed shortcut creation leaves no partial node | RED PROMOTION GAP / ACCEPTANCE GAP |
+| no partial state on creation failure | not a canonical #44 acceptance criterion; filesystem atomicity remains owned by FsService | no separate #44 gate required | OUT OF SCOPE FOR #44 |
 | normal selection/rename after creation | FileManager helper returns shortcut and selects/renames it | `apps/plasmon/src/os/file-manager/create-shortcut.test.tsx` creation/selection/rename characterization and FileManager implementation | CORE GREEN; packaged visual interaction not independently proven |
 | FileManager does not own execution/serialization authority | FsService shortcut primitive + dispatcher | `test/refactorGuards.test.ts`, `test/resourceOpenCrossSurface.test.ts`, refactor guards | PROVEN |
 
 ## Disposition
 
-**VERIFIED CORE GREEN / INCOMPLETE ACCEPTANCE**, not full ALREADY GREEN, because
-there is no separately identified permanent failure-atomicity regression and no
-packaged/manual discoverability evidence. Do not manufacture a RED: the current
-production behavior is correct on the proven core path.
+**ALREADY GREEN — COMPLETE CANONICAL ACCEPTANCE PROVEN** on integrated release.
+Packaged/manual discoverability is explicitly optional in the Issue verification
+text and is not a missing acceptance criterion. Do not manufacture a RED or
+promote a test-local failure-atomicity requirement.
 
 The permanent GREEN destination is the existing headless suite, especially:
 
@@ -33,6 +33,6 @@ The permanent GREEN destination is the existing headless suite, especially:
 - `apps/plasmon/test/fileManagerActivation.test.ts`;
 - `apps/plasmon/src/os/file-manager/create-shortcut.test.tsx`.
 
-A future promotion audit should add only the missing failure-atomicity assertion
-if the canonical FsService contract requires it. The FileManager must continue to call the shared primitive,
-not copy its naming or metadata policy.
+The FileManager must continue to call the shared primitive, not copy its naming
+or metadata policy. Any future FsService atomicity work belongs to the
+filesystem authority and must not be attributed to #44.

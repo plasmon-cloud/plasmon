@@ -3,11 +3,10 @@
 Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 ```text
-#189 ── hard implementation ──> #190 consumer convergence
-  ├── test-packet ──> #178 (WAIT FOR ACCEPTED #189 SEAM)
-  ├── test-packet ──> #174 (core RED; consumer convergence incomplete)
-  ├── consumer prerequisite ──> #193 Search
-  └── consumer prerequisite ──> #194 Start
+#189 (INTEGRATED) ── hard implementation ──> #190 consumer convergence
+  ├── closure evidence ──> #178 (ALREADY GREEN on integrated seam)
+  ├── consumer prerequisite ──> #174 (active packet; final promotion elsewhere)
+  └── consumer prerequisite ──> #193 Search / #194 Start
 
 #171 and #190 ── NO DEPENDENCY / MAY RUN IN PARALLEL
 #190 ── no authority dependency ──> Monaco / js-dos / EmulatorJS
@@ -37,16 +36,16 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 | Edge | Classification | Current status |
 |---|---|---|
-| #189 -> #190 | HARD IMPLEMENTATION DEPENDENCY | #189 PR open; #190 browser gate repaired, not executed |
-| #189 -> #178 | TEST-PACKET DEPENDENCY | #178 correctly WAIT FOR accepted seam; no invented API |
-| #189 -> #174 | TEST-PACKET DEPENDENCY | #174 core RED is independently executable; final vocabulary waits |
+| #189 -> #190 | HARD IMPLEMENTATION DEPENDENCY | #189 integrated; PR #211/#190 active, CI currently in progress |
+| #189 -> #178 | CLOSURE EVIDENCE | #178 core acceptance is green on integrated release; local TDD staging is stale |
+| #189 -> #174 | TEST-PACKET DEPENDENCY | #174 remains active-owned; final consumer promotion waits on its owner |
 | #190 -> #52 | SOFT CONSUMER PREFERENCE | presentation convergence, not semantic authority |
 | #191 -> #195 | HARD IMPLEMENTATION DEPENDENCY | #191 PR open/not integrated |
 | #195 -> #196 | HARD IMPLEMENTATION DEPENDENCY | final #196 packet remains deferred |
 | #173 -> #196 | SOFT PRODUCT RELATIONSHIP | #173 behavior is independently specified and can proceed now |
-| #65 -> #92 | HARD IMPLEMENTATION DEPENDENCY | PR #208 open/not integrated; #92 WAIT FOR #65 |
+| #65 -> #92 | HARD IMPLEMENTATION DEPENDENCY | PR #208 open, CI green at poll; #92 remains WAIT FOR #65 integration |
 | #44 -> #51 | HARD CONSUMER DEPENDENCY | #51 core consumer RED plus primitive fence |
-| #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated; composed real Trash/placement gate staged |
+| #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated in release; composed gate still requires TDD staging refresh |
 | #190 / #171 | NO DEPENDENCY / PARALLEL | Plasmon assets versus installed Element assets remain distinct |
 | #176 -> surfaces | SOFT CONSUMER RELATIONSHIP | production event-policy seam still missing |
 | #186 -> all | NO DEPENDENCY / PARALLEL | #186 is Testing Lead-owned and integrated; no Luna ownership |
@@ -54,11 +53,14 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 ## Current order
 
-**Implementation-ready packets:** #51, #65, #66, #93, #95, #110, #173,
-#174, #182, #190, #172 closure verification.
+**Active implementation packets (fenced):** #51, #65, #66, #86, #95, #173,
+#174, #182, #190, #191.
 
-**Waiting:** #178 for #189; #92 for #65; #195 refresh for #191; #196 for #195;
-#201 cleanup for accepted migrations; #94 for truthful media seams.
+**Executable/specification work:** #93, #110, #171, and #172 closure
+verification. #178 is already green on integrated source.
+
+**Waiting:** #92 for #65; #195 for #191; #196 for #195; #201 cleanup for
+accepted migrations; #94 for a truthful media thumbnail seam.
 
 **Parallel:** #171 browser acceptance, #176 event-policy reconnaissance, #186
 Testing Lead, #173 behavior and #190 asset correction can proceed independently
