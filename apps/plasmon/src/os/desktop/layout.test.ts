@@ -28,6 +28,23 @@ test("valid explicit Desktop positions survive recomposition without unrelated m
   expect(reconcileDesktopPositions(persisted, ["b", "a"], workspace)).toEqual(persisted);
 });
 
+test("restore collision preserves the already-visible occupant even when display sorting puts restored first", () => {
+  const persisted = {
+    incumbent: { x: 120, y: 16 },
+    restored: { x: 120, y: 16 },
+  };
+
+  const reconciled = reconcileDesktopPositions(
+    persisted,
+    ["restored", "incumbent"],
+    workspace,
+    ["incumbent"],
+  );
+
+  expect(reconciled.incumbent).toEqual(persisted.incumbent);
+  expect(reconciled.restored).not.toEqual(reconciled.incumbent);
+});
+
 test("workspace shrink repairs only entries that no longer fit", () => {
   const persisted = {
     stable: { x: 16, y: 16 },
