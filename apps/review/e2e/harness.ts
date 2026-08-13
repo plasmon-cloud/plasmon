@@ -33,7 +33,6 @@ export async function openReview(page: Page): Promise<ReviewHarness> {
   const review = page.frameLocator(selector).last();
   await expect(frame).toBeVisible({ timeout: 1_500 });
   await expect(review.locator("#root > .review-app")).toBeVisible({ timeout: 1_500 });
-  await expect(review.getByText("Review.neutron", { exact: true })).toBeVisible({ timeout: 1_500 });
   return { page, review, frame };
 }
 

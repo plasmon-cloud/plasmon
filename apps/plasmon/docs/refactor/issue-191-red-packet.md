@@ -14,6 +14,7 @@ Adopted from Luna TDD-A packet `1e579bf` onto the canonical #191 implementation 
 - `test/refactorGuards.test.ts`, `test/fileManagerActivation.test.ts`, `test/resourceOpenCrossSurface.test.ts`: composed canonical opening, shortcut activation, identity lifecycle, and cross-surface authority.
 - `test/rtl/renderPlasmon.test.tsx`: real RTL click/rename/Enter/context-menu/Properties/directory activation/taskbar adapter path.
 - `test/e2e/plasmon-refactor-smoke.spec.ts`: merged #187 packaged smoke, browser health, Desktop rename reachability, and gross bounds.
+- `test/e2e/plasmon-desktop-placement-192.spec.ts`: current Desktop controller/rendered-position boundary.
 
 ## Classification
 
@@ -27,16 +28,18 @@ Adopted from Luna TDD-A packet `1e579bf` onto the canonical #191 implementation 
 - Shortcut presentation preserves target artwork and execution remains canonical shortcut/open dispatch.
 - Image thumbnails remain filesystem-backed and revoke object URLs.
 - Existing accessibility roles/names and accepted keyboard behavior remain usable.
+- Desktop placement remains the #192 controller's `NodeId`-keyed authority; FileEntry only consumes its x/y result.
+- The current readable selected/focused label overlay may widen within the workspace without changing the underlying icon footprint or placement.
 
 ### CHANGE
 
-- Desktop rename editor/label must be bounded by the FileEntry/tile presentation, not the current expanded 260px label surface.
-- Long selected/renaming labels must not change unrelated neighboring entry placement.
+- The Desktop rename editor must be bounded by the FileEntry/tile presentation, not the current expanded label surface.
+- Long selected or renaming labels must not change unrelated neighboring entry placement.
 - FileEntry reconstruction must continue consuming resolved shared presentation/shortcut composition rather than creating another semantic icon/type/open authority.
 
 ### UNSPECIFIED
 
-- Exact pixel dimensions, typography, palette, wrapping policy, and screenshot baselines are not frozen by current accepted evidence.
+- Exact typography, palette, wrapping policy, and screenshot baselines are not frozen by current accepted evidence.
 - No new screenshot baseline is adopted: #187's visual spike proved determinism but explicitly retired the temporary snapshots and says visual baselines are not an r2 gate.
 - List/details presentation redesign and broad FileManager decomposition remain separately owned.
 
@@ -54,4 +57,4 @@ bun test --preload ./apps/plasmon/test/setupHappyDom.ts ./apps/plasmon/test/rtl/
 npx playwright test test/e2e/plasmon-file-entry-191.spec.ts
 ```
 
-The Playwright assertions are unchanged from Luna's intentional RED: the rename editor must remain within its FileEntry tile.
+The Playwright geometry assertions are unchanged from Luna's intentional RED: the rename editor must remain within its FileEntry tile.

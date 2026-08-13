@@ -6,6 +6,7 @@ export interface FileEntryPosition { x: number; y: number }
 export interface FileEntryRenderStyle {
   left: number;
   top: number;
+  "--fm-desktop-entry-x": string;
 }
 
 export interface FileEntryRenderState {
@@ -28,7 +29,8 @@ export function fileEntryClassName(
 
 /**
  * Deterministic FileEntry render policy. Resource identity stays NodeId-backed;
- * this helper owns presentation state only and never mutates or opens a node.
+ * this helper consumes Desktop controller coordinates for rendering only and
+ * never allocates placement, mutates, classifies, or opens a node.
  */
 export function deriveFileEntryRenderState(options: {
   nodeId: NodeId;
@@ -41,7 +43,11 @@ export function deriveFileEntryRenderState(options: {
 }): FileEntryRenderState {
   const isRenaming = options.renameNodeId === options.nodeId;
   const style = options.presentation === "desktop" && options.position
-    ? { left: options.position.x, top: options.position.y }
+    ? {
+        left: options.position.x,
+        top: options.position.y,
+        "--fm-desktop-entry-x": `${options.position.x}px`,
+      }
     : undefined;
 
   return {

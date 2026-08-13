@@ -2,6 +2,7 @@ import {
   memo,
   useLayoutEffect,
   useRef,
+  type CSSProperties,
   type ChangeEvent as ReactChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -131,7 +132,7 @@ export const FileEntry = memo(function FileEntry({
         setRef(element);
       }}
       className={renderState.className}
-      style={renderState.style}
+      style={renderState.style as CSSProperties | undefined}
       role="option"
       tabIndex={-1}
       aria-selected={selected}

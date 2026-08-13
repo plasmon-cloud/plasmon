@@ -19,7 +19,6 @@ import type {
   OpenService,
   ProcessController,
 } from "../contracts/index.ts";
-import { allocateDesktopPositions } from "../desktop/layout.ts";
 import {
   FileOperationClipboard,
   RefreshGate,
@@ -205,10 +204,7 @@ export function FileManager({
     return query ? nodes.filter((node) => node.name.toLocaleLowerCase().includes(query)) : nodes;
   }, [filterQuery, nodes]);
   const orderedIds = useMemo(() => visibleNodes.map((node) => node.id), [visibleNodes]);
-  const desktopRenderPositions = useMemo(
-    () => presentation === "desktop" ? allocateDesktopPositions(positions ?? {}, visibleNodes) : {},
-    [positions, presentation, visibleNodes],
-  );
+  const desktopRenderPositions = presentation === "desktop" ? positions ?? {} : {};
 
   useEffect(() => {
     onSnapshot?.({ nodes: visibleNodes, selectedIds: selection.ids });

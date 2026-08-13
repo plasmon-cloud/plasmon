@@ -14,12 +14,12 @@ Deterministic behavior already lives in production helper modules such as:
 - `delete.ts` — the thin ordinary-Delete adapter to the canonical filesystem Trash authority, including deterministic multi-selection success/failure reporting;
 - `preferences.ts` — the small filesystem-backed FileManager presentation preference store;
 - `visibility.ts` — the presentation-only filesystem view that selects the canonical `includeHidden` list mode without classifying resources itself;
-- `file-entry-state.ts` — pure `NodeId`-keyed FileEntry render state, including Desktop placement consumption and rename/selection/focus presentation state;
-- `use-file-entry-presentation.ts` — the React/browser lifecycle adapter around the existing shared resource-presentation resolver and image-thumbnail loader; it does not classify, open, or mutate resources;
+- `file-entry-state.ts` — pure `NodeId`-keyed FileEntry render state, consuming Desktop controller coordinates while deriving rename/selection/focus presentation state;
+- `use-file-entry-presentation.ts` — the React/browser lifecycle adapter around the shared FileManager resource-presentation resolver and image-thumbnail loader; it does not classify, open, or mutate resources;
 - `keyboard.ts`, `drag.ts`, `drop-target.ts`, `rename.ts` — interaction decisions;
 - `properties.tsx` — Properties/Open With presentation.
 
-`FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering. `FileEntry.tsx` is a rendered adapter: it consumes stable resource identity, derived render state, and resolved shared presentation, then translates user interaction back to FileManager's existing command/service paths.
+`FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering. `FileEntry.tsx` is a rendered adapter: it consumes stable resource identity, derived render state, resolved shared presentation, and a Desktop position supplied by the placement authority, then translates user interaction back to FileManager's existing command/service paths.
 
 FileManager is not a filesystem repository and must not grow private application-opening or Trash policy. All normal resource activation delegates to the filesystem core's canonical open dispatcher. FileManager may provide presentation-owned directory navigation so an existing Explorer window can navigate in place, but resource classification, shortcut dereference, system/Neutron application opening, and ordinary association dispatch remain filesystem/opening authority concerns.
 
@@ -29,7 +29,7 @@ Create Shortcut eligibility follows canonical filesystem resource capabilities. 
 
 Hidden-resource classification also remains filesystem-owned. FileManager's `Show hidden files` preference stores only whether Explorer should request hidden entries, using namespaced metadata on the filesystem root through `FsService`. The visibility layer passes `includeHidden` to the canonical filesystem list contract and never reimplements hidden detection from filenames or metadata. Showing hidden entries changes presentation only and does not weaken resource protection.
 
-Desktop FileEntry labels and inline rename editors are overlays bounded by the entry tile. Long selected or renaming labels therefore do not participate in neighboring Desktop entry placement. Desktop layout remains owned by the Desktop placement model; FileEntry only consumes the resulting position.
+Desktop selected/focused labels are pointer-independent overlays that may widen within the current workspace for readability without changing the underlying 92px icon footprint or its controller-owned position. Inline rename is separately bounded to that FileEntry tile. Neither state participates in neighboring Desktop placement or changes stable `NodeId` placement metadata.
 
 ## Refactor direction
 
