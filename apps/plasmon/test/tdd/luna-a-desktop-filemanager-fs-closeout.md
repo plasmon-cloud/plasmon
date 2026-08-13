@@ -109,6 +109,17 @@ bun test apps/plasmon/src/os/file-manager/create-shortcut.test.tsx \
 
 Result: **33 passed, 0 failed, 123 expect() calls**.
 
+Cross-surface shortcut/open/Trash authority validation:
+
+```text
+bun test apps/plasmon/test/refactorGuards.test.ts \
+  apps/plasmon/test/resourceOpenCrossSurface.test.ts \
+  apps/plasmon/test/fileManagerActivation.test.ts \
+  apps/plasmon/src/os/fs/desktopCore.test.ts
+```
+
+Result: **16 passed, 0 failed, 145 expect() calls**.
+
 Browser syntax validation:
 
 ```text
