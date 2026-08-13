@@ -22,7 +22,10 @@ primarily a CSS/content difference rather than a deliberate view behavior.
   full-width compact rows and Details metadata header/row distinction.
 
 The gate requires the existing local packaged session and does not convert a
-missing session, browser crash, or runtime error into product failure.
+missing session, browser crash, or runtime error into product failure. A focused
+attempt on this head stopped before app boot because
+`local.ndeploy.session.json` is absent; this is an operational browser block,
+not product RED.
 
 ## Contract fence
 
