@@ -48,6 +48,7 @@ import {
 import {
   createFileManagerShortcut,
   fileManagerShortcutTarget,
+  sendFileManagerShortcutToDesktop,
 } from "./create-shortcut.ts";
 import {
   deleteFailureMessage,
@@ -348,6 +349,18 @@ export function FileManager({
       await refresh();
       setSelection(result.selection);
       beginInlineRename(result.shortcut);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause));
+    }
+  };
+
+  const sendSelectionToDesktop = async () => {
+    const target = fileManagerShortcutTarget(nodes, selection.ids);
+    if (!target) return;
+    setContextMenu(null);
+    try {
+      await sendFileManagerShortcutToDesktop(fs, target);
+      setError(null);
     } catch (cause: unknown) {
       setError(errorMessage(cause));
     }
@@ -701,6 +714,7 @@ export function FileManager({
           <button type="button" onClick={() => copySelection()} disabled={selection.ids.size === 0}>Copy</button>
           <button type="button" onClick={() => cutSelection()} disabled={selection.ids.size === 0}>Cut</button>
           <button type="button" onClick={() => void createShortcutFromSelection()} disabled={!canCreateShortcut}>Create Shortcut</button>
+          <button type="button" onClick={() => void sendSelectionToDesktop()} disabled={!canCreateShortcut}>Send to Desktop</button>
           <button type="button" onClick={() => void paste()} disabled={!clipboard.snapshot()}>Paste</button>
           <button type="button" onClick={() => void removeSelected()} disabled={selection.ids.size === 0}>Delete</button>
           <button type="button" onClick={() => void refresh()}>Refresh</button>
