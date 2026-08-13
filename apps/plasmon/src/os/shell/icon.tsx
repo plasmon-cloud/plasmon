@@ -7,6 +7,7 @@ import {
 export interface ShellIconProps {
   icon?: string;
   label: string;
+  shortcut?: boolean;
 }
 
 export type ShellIconPresentation =
@@ -32,12 +33,13 @@ export function resolveShellIconPresentation(
   return { kind: "fallback", text: symbolic || shellIconInitials(label) };
 }
 
-export function ShellIcon({ icon, label }: ShellIconProps) {
+export function ShellIcon({ icon, label, shortcut = false }: ShellIconProps) {
   const presentation = resolveShellIconPresentation(icon, label, null);
   return (
     <span className="plasmon-shell__app-icon" aria-hidden="true">
       <ResourceIcon
         context="start"
+        shortcut={shortcut}
         presentation={presentation.kind === "image"
           ? applicationResourcePresentation(presentation.src)
           : { kind: "custom", content: presentation.text }}
