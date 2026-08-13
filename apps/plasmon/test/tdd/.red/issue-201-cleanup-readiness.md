@@ -1,6 +1,6 @@
 # Issue #201 cleanup readiness — refreshed after #192 integration
 
-Integrated release inspected: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
+Integrated release inspected at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 Audit only. Luna-A deletes nothing.
 

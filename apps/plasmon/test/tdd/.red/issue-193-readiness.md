@@ -1,6 +1,6 @@
 # Issue #193 readiness — refreshed after r2 integration
 
-Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
+Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 This is a readiness audit, not Luna-B's Search implementation packet.
 

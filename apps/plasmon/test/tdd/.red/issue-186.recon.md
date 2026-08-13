@@ -1,6 +1,6 @@
 # Issue #186 — persistence boundary reconnaissance and executable plan
 
-Classification: **HANDOFF INPUT FOR TESTING LEAD**. PR #209 (`work/testing/186-real-browser-persistence`) now owns the real packaged-browser investigation. Luna-A does not claim #186 ownership.
+Classification: **HANDOFF INPUT FOR TESTING LEAD**. PR #209 (`work/testing/186-real-browser-persistence`) is now merged into the integrated release. Luna-A does not claim #186 ownership; this document remains input/evidence context for the Testing Lead acceptance.
 
 ## Survival matrix
 
@@ -18,8 +18,8 @@ Classification: **HANDOFF INPUT FOR TESTING LEAD**. PR #209 (`work/testing/186-r
 
 ## Handoff input for Testing Lead
 
-The existing matrix and evidence rules below are supplied to PR #209. Its
-persistent-profile browser probe should retain the distinctions between app
+The existing matrix and evidence rules below were supplied to PR #209. The
+merged persistent-profile browser probe should retain the distinctions between app
 close/reopen, page reload, browser restart, PocketIC lifecycle and deliberate
 site-data clearing. Luna-A will not add another #186 gate or alter the Testing
 Lead branch.

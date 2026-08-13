@@ -4,7 +4,11 @@ Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
 
 ## Reference interpretation
 
-Canonical #173 explicitly rejects the current vertical full-width List as
+The tracked daedalOS reference was inspected at commit
+`0df82d75e6114727ad035f6fce93842a96682355`: its List uses compact ~36px
+single-file rows, while its Icon view uses explicit spatial grid flow and its
+Details view carries metadata. Canonical #173 explicitly rejects the current
+vertical full-width List as
 “Details with information removed.” The accepted reference behavior is a
 compact desktop file-list arrangement that uses multiple horizontal columns
 (or an equally deliberate compact arrangement), while Details remains a

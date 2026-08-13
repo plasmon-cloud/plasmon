@@ -1,7 +1,7 @@
 # Issue #172 closure audit — refreshed after #192 integration
 
 Date: 2026-08-13
-Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`
+Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`
 
 PR #205/#192 is integrated. The prior audit identified the missing composed
 Trash/Desktop proof; this revision stages that proof but local execution remains

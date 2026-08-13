@@ -1,6 +1,6 @@
 # Luna-A packet quality audit — independent repair validation
 
-Audit date: 2026-08-13. Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
+Audit date: 2026-08-13. Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 A packet is marked verified only where canonical criteria map to executable
 production behavior or explicitly existing evidence. Browser parsing is never
@@ -33,7 +33,7 @@ verification.
 | #192 | placement controller -> integrated #192 tests and browser adapter packet -> CHARACTERIZATION ONLY -> independent packaged geometry execution remains blocked |
 | #195 | decomposition behavior -> existing lower-layer guards, no source-shape test -> CHARACTERIZATION ONLY -> inspect post-#191 |
 | #196 | explicit strategies -> reconnaissance -> WAIT FOR DEPENDENCY -> #195 seam |
-| #186 | persistence matrix -> Testing Lead PR #209 -> RECONNAISSANCE -> explicit Testing Lead handoff, no Luna ownership |
+| #186 | persistence matrix -> Testing Lead PR #209 merged in final release -> RECONNAISSANCE -> explicit Testing Lead handoff, no Luna ownership |
 | #193/#194 | source/consumer readiness -> refreshed readiness audits -> RECONNAISSANCE -> owning implementation |
 | #201 | cleanup candidates -> release inspection after #192 -> RECONNAISSANCE -> accepted migration evidence |
 

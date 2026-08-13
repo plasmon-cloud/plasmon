@@ -1,6 +1,6 @@
 # r2 packet consistency audit — repaired
 
-Audit date: 2026-08-13. Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
+Audit date: 2026-08-13. Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 This audit independently compares canonical acceptance, executable evidence and
 actual production vocabulary. It is not evidence merely because the prior audit
@@ -32,7 +32,7 @@ said so.
 | #192 | integrated controller and tests inspect actual release implementation | VERIFIED INTEGRATED | #172 composed closure evidence |
 | #195 | characterization only, no source-shape gate | CHARACTERIZATION ONLY | inspect after #191 |
 | #196 | reconnaissance intentionally architecture-deferred | WAIT FOR DEPENDENCY | #195 implementation seam |
-| #186 | matrix handed to Testing Lead PR #209 | HANDOFF INPUT FOR TESTING LEAD | no Luna ownership |
+| #186 | matrix handed to Testing Lead PR #209, now merged | RECONNAISSANCE | no Luna ownership |
 | #193/#194 | readiness docs separate source authority, visible uniqueness and React extraction | RECONNAISSANCE/READINESS | owning implementation packets |
 | #201 | current release inspected; #192 no longer a wait condition | RECONNAISSANCE/READINESS | accepted migration consumer proof |
 

@@ -1,6 +1,6 @@
 # r2 Desktop/FileManager dependency graph — refreshed
 
-Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
+Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 
 ```text
 #189 ── hard implementation ──> #190 consumer convergence
@@ -49,7 +49,7 @@ Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
 | #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated; composed real Trash/placement gate staged |
 | #190 / #171 | NO DEPENDENCY / PARALLEL | Plasmon assets versus installed Element assets remain distinct |
 | #176 -> surfaces | SOFT CONSUMER RELATIONSHIP | production event-policy seam still missing |
-| #186 -> all | NO DEPENDENCY / PARALLEL | PR #209 is Testing Lead-owned handoff |
+| #186 -> all | NO DEPENDENCY / PARALLEL | #186 is Testing Lead-owned and integrated; no Luna ownership |
 | #201 -> migrations | CLOSURE RELATIONSHIP | #192 no longer a wait condition; actual consumers still govern retirement |
 
 ## Current order
