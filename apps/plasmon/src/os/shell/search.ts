@@ -121,16 +121,6 @@ function normalize(value: string): string {
   return value.toLocaleLowerCase();
 }
 
-function extension(name: string): string {
-  const index = name.lastIndexOf(".");
-  return index > 0 ? name.slice(index).toLocaleLowerCase() : "";
-}
-
-const MEDIA_EXTENSIONS = new Set([
-  ".aac", ".avi", ".bmp", ".flac", ".gif", ".heic", ".heif", ".jpeg", ".jpg", ".m4a", ".m4v", ".mkv",
-  ".mov", ".mp3", ".mp4", ".ogg", ".ogv", ".opus", ".png", ".svg", ".wav", ".webm", ".webp",
-]);
-
 function atomRecord(node: FsNode): Record<string, JsonValue> | null {
   const value = node.metadata.atom;
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -138,18 +128,18 @@ function atomRecord(node: FsNode): Record<string, JsonValue> | null {
 }
 
 function categorizeNonApplicationFsNode(node: FsNode): FileSearchCategory {
+  const classification = classifyResource(node);
   const atom = atomRecord(node);
-  if (node.kind === "atom" || atom?.format === "plasmon.atom" || extension(node.name) === ".atom") {
+  if (classification.kind === "atom" || atom?.format === "plasmon.atom" || classification.type.extension === ".atom") {
     return "atoms";
   }
-  if (node.mime?.startsWith("audio/") || node.mime?.startsWith("image/") || node.mime?.startsWith("video/") || MEDIA_EXTENSIONS.has(extension(node.name))) {
-    return "media";
-  }
+  if (["audio", "image", "video"].includes(classification.type.contentKind)) return "media";
   return "documents";
 }
 
 export function categorizeFsNode(node: FsNode): FsSearchCategory {
-  if (classifyResource(node).kind === "neutron-app") return "apps";
+  const classification = classifyResource(node);
+  if (classification.kind === "system-app" || classification.kind === "neutron-app") return "apps";
   return categorizeNonApplicationFsNode(node);
 }
 
@@ -174,7 +164,8 @@ function metadataStrings(value: JsonValue, output: string[], budget: { remaining
 }
 
 export function searchableNodeText(node: FsNode): string {
-  const parts = [node.name, node.kind, node.mime ?? ""];
+  const classification = classifyResource(node);
+  const parts = [node.name, node.kind, node.mime ?? classification.type.mime ?? ""];
   const budget = { remaining: 4096 };
   metadataStrings(node.metadata, parts, budget);
   return normalize(parts.join("\n"));
@@ -187,7 +178,8 @@ function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
     const atomType = typeof atom?.atomType === "string" ? atom.atomType : null;
     return [title, atomType, "Atom"].filter(Boolean).join(" · ");
   }
-  if (node.mime) return node.mime;
+  const mime = classifyResource(node).type.mime;
+  if (mime) return mime;
   return category === "media" ? "Media" : "Document";
 }
 
@@ -378,6 +370,12 @@ export async function searchFilesystem(
       const classification = classifyResource(node);
       if (classification.kind === "neutron-app" && classification.neutronApp) {
         projections.push(projectionSearchResult(node, classification.neutronApp));
+        continue;
+      }
+      if (classification.kind === "system-app") {
+        // Native application presentation remains supplied by the native registry in
+        // this Issue. The canonical filesystem resource must never leak back out as
+        // an ordinary Document while #174 owns full projection convergence.
         continue;
       }
 
