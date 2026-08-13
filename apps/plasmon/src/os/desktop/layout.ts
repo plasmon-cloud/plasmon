@@ -183,3 +183,18 @@ export function applyDesktopDragDelta(
   }
   return next;
 }
+
+/**
+ * Existing FileManager tests and adapters may hold resource-shaped records;
+ * this adapter strips them to NodeIds before delegating to the same pure drag
+ * translation. No filesystem/resource semantics cross the boundary.
+ */
+export function repositionDesktopNodes(
+  current: Readonly<DesktopPositions>,
+  orderedNodes: readonly { id: NodeId }[],
+  ids: readonly NodeId[],
+  delta: { dx: number; dy: number },
+  workspace: DesktopWorkspace,
+): DesktopPositions {
+  return applyDesktopDragDelta(current, orderedNodes.map((node) => node.id), ids, delta, workspace);
+}
