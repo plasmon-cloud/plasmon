@@ -6,6 +6,7 @@ import {
   readNeutronAppMetadata,
 } from "../src/os/fs/index.ts";
 import { EMULATORJS_NES_MIME } from "../src/native-apps/emulatorjs/runtime.ts";
+import { parseStartShortcut, searchShell, type StartShortcut } from "../src/os/shell/index.ts";
 import {
   createHeadlessPlasmonEnvironment,
   type HeadlessPlasmonEnvironment,
@@ -40,6 +41,33 @@ async function expectSingleNamedChild(
     .filter((node) => node.name === name);
   expect(matches).toHaveLength(1);
   return matches[0]!;
+}
+
+async function collectStartShortcuts(
+  environment: HeadlessPlasmonEnvironment,
+): Promise<StartShortcut[]> {
+  const root = requireDirectory(
+    await environment.node("/System/Start Menu"),
+    "/System/Start Menu",
+  );
+  const queue = [root];
+  const visited = new Set<string>();
+  const shortcuts: StartShortcut[] = [];
+
+  while (queue.length > 0) {
+    const directory = queue.shift();
+    if (!directory || visited.has(directory.id)) continue;
+    visited.add(directory.id);
+    for (const child of await environment.services.fs.list(directory.id, { includeHidden: true })) {
+      if (child.kind === "directory") {
+        queue.push(child);
+        continue;
+      }
+      const shortcut = parseStartShortcut(child);
+      if (shortcut) shortcuts.push(shortcut);
+    }
+  }
+  return shortcuts;
 }
 
 function emulatorFixture(): Uint8Array {
@@ -157,6 +185,117 @@ describe("Plasmon refactor guards", () => {
       expect((await environment.node("/Apps/Review.neutron"))?.id).toBe(review.id);
       expect(environment.processes()).toHaveLength(0);
       expect(environment.windows()).toHaveLength(0);
+    } finally {
+      environment.dispose();
+    }
+  });
+
+  test("two native document activations remain independent Process and Window instances", async () => {
+    const environment = createHeadlessPlasmonEnvironment();
+    try {
+      await environment.ready;
+      const documents = requireDirectory(await environment.node("/Documents"), "/Documents");
+      const first = await environment.services.fs.createFile(documents.id, "Window One.txt", {
+        mime: "text/plain",
+      });
+      const second = await environment.services.fs.createFile(documents.id, "Window Two.txt", {
+        mime: "text/plain",
+      });
+
+      await environment.open("/Documents/Window One.txt");
+      await environment.open("/Documents/Window Two.txt");
+
+      const processes = environment.processes();
+      const windows = environment.windows();
+      expect(processes).toHaveLength(2);
+      expect(windows).toHaveLength(2);
+      expect(new Set(processes.map((process) => process.id)).size).toBe(2);
+      expect(new Set(windows.map((window) => window.id)).size).toBe(2);
+      expect(new Set(processes.map((process) => process.target.nodeId)))
+        .toEqual(new Set([first.id, second.id]));
+      expect(new Set(windows.map((window) => window.processId)))
+        .toEqual(new Set(processes.map((process) => process.id)));
+
+      environment.services.process.close(processes[0]!.id);
+      expect(environment.processes()).toHaveLength(1);
+      expect(environment.windows()).toHaveLength(1);
+      expect(environment.windows()[0]?.processId).toBe(environment.processes()[0]?.id);
+    } finally {
+      environment.dispose();
+    }
+  });
+
+  test("Start and Search project native, Neutron, and ordinary filesystem authorities instead of parallel catalogs", async () => {
+    const environment = createHeadlessPlasmonEnvironment({ elements: [reviewElement] });
+    try {
+      await environment.ready;
+      const documents = requireDirectory(await environment.node("/Documents"), "/Documents");
+      const startMenu = requireDirectory(
+        await environment.node("/System/Start Menu"),
+        "/System/Start Menu",
+      );
+      const document = await environment.services.fs.createFile(documents.id, "Projection Note.txt", {
+        mime: "text/plain",
+      });
+      await createShortcut(
+        environment.services.fs,
+        startMenu.id,
+        { kind: "node", nodeId: document.id },
+        { name: "Projection Note" },
+      );
+
+      const startShortcuts = await collectStartShortcuts(environment);
+      expect(startShortcuts.filter(
+        ({ target }) => target.kind === "native" && target.handlerId === "native:settings",
+      )).toHaveLength(1);
+      expect(startShortcuts.filter(
+        ({ target }) => target.kind === "element" && target.elementId === reviewElement.id,
+      )).toHaveLength(1);
+      expect(startShortcuts.filter(
+        ({ target }) => target.kind === "node" && target.nodeId === document.id,
+      )).toHaveLength(1);
+
+      const nativeSearch = await searchShell(
+        environment.services.fs,
+        environment.services.nativeApps.list(),
+        [reviewElement],
+        "Settings",
+      );
+      expect(nativeSearch.results.filter(
+        (result) => result.kind === "native-app" && result.app.handlerId === "native:settings",
+      )).toHaveLength(1);
+
+      const reviewProjection = requireNode(
+        await environment.node("/Apps/Review.neutron"),
+        "/Apps/Review.neutron",
+      );
+      const reviewSearch = await searchShell(
+        environment.services.fs,
+        environment.services.nativeApps.list(),
+        [reviewElement],
+        "Review",
+      );
+      expect(reviewSearch.results.filter(
+        (result) => result.kind === "neutron-projection"
+          && result.elementId === reviewElement.id
+          && result.node.id === reviewProjection.id,
+      )).toHaveLength(1);
+      expect(reviewSearch.results.filter((result) => result.kind === "element")).toHaveLength(0);
+
+      const documentSearch = await searchShell(
+        environment.services.fs,
+        environment.services.nativeApps.list(),
+        [reviewElement],
+        "Projection Note",
+      );
+      expect(documentSearch.results.filter(
+        (result) => result.kind === "file" && result.node.id === document.id,
+      )).toHaveLength(1);
+      expect(documentSearch.results.filter(
+        (result) => result.kind === "start-shortcut"
+          && result.target.kind === "node"
+          && result.target.nodeId === document.id,
+      )).toHaveLength(1);
     } finally {
       environment.dispose();
     }
