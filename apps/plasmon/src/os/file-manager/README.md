@@ -15,6 +15,7 @@ Deterministic behavior already lives in production helper modules such as:
 - `preferences.ts` — the small filesystem-backed FileManager presentation preference store;
 - `visibility.ts` — the presentation-only filesystem view that selects the canonical `includeHidden` list mode without classifying resources itself;
 - `keyboard.ts`, `drag.ts`, `drop-target.ts`, `rename.ts` — interaction decisions;
+- `spatial-navigation.ts` — deterministic NodeId-preserving neighbor selection from browser-supplied entry rectangles for compact spatial views;
 - `properties.tsx` — Properties/Open With presentation.
 
 `FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering.
@@ -27,6 +28,14 @@ Create Shortcut eligibility follows canonical filesystem resource capabilities. 
 
 Hidden-resource classification also remains filesystem-owned. FileManager's `Show hidden files` preference stores only whether Explorer should request hidden entries, using namespaced metadata on the filesystem root through `FsService`. The visibility layer passes `includeHidden` to the canonical filesystem list contract and never reimplements hidden detection from filenames or metadata. Showing hidden entries changes presentation only and does not weaken resource protection.
 
+### List presentation
+
+List is deliberately distinct from Grid and Details. At normal Explorer widths it uses compact resource cells that make horizontal use of the viewport across multiple rendered columns. Details remains the full metadata-row presentation for Name/Type/Size/Modified-style columns; List must not grow a second metadata table or a separate selection/command implementation.
+
+List arrow navigation follows the geometry that the browser actually rendered. `FileManager.tsx` supplies current entry rectangles to the pure `spatialNeighborId()` helper, which returns another stable `NodeId`; the existing `selectNode()` path then remains selection authority. If there is no resource in the requested spatial direction, focus remains on the current resource. Open, rename, context menu, drag/drop, shortcut/resource presentation, and filesystem operations remain the same shared FileEntry/FileManager paths used by the other views.
+
+Reference investigation for #173 found that daedalOS also models List as a dedicated compact FileManager view with compact rows while reusing shared focus/keyboard infrastructure. Plasmon's accepted #173 contract is more specific: normal-width List must visibly form multiple compact columns and horizontal arrow navigation must follow the resulting geometry. This note does not freeze an exact column count, breakpoint, CSS mechanism, or the future #196 architecture.
+
 ## Refactor direction
 
 `FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer.
@@ -35,8 +44,8 @@ Do not split by historical feature wave or create separate Desktop/Explorer oper
 
 ## Testing
 
-Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, and persisted view preferences. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
+Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, and pure spatial navigation. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
 
-Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, and packaged visible workflows.
+Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, rendered List/Details geometry, and packaged visible workflows.
 
 When a UI bug is fundamentally a shared command/model bug, add the regression below React first instead of relying only on click-path coverage.
