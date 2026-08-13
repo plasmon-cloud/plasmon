@@ -77,8 +77,6 @@ Sources searched:
 | #124 | game save screenshot thumbnails | blocked on #64 and Luna-C/runtime boundary; no competing #94 packet |
 | #177 | bounded repeated native-window placement | Luna-B/Windowing ownership; distinct from Desktop #192 placement |
 | #185 | Show Desktop command | Luna-B Shell/Windowing ownership; no competing packet |
-| #123 | game artwork | Luna-C ownership; not FileManager primary |
-| #124 | game save screenshots | Luna-C ownership and blocked; not duplicate #94 |
 | #169 | Start reconciliation | today's/unattended or B ownership; #194 waits; no competing packet |
 | #176 | browser context ownership | today's/B ownership; drag map records boundary only |
 | #181 | first-demo fixtures | Luna-D/testing ownership; not duplicate FileManager fixtures |
