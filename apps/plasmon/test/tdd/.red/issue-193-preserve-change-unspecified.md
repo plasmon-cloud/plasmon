@@ -2,7 +2,7 @@
 
 Status: **WAIT FOR DEPENDENCY** for final packet. #193 has no active PR. The
 release at refresh is `f4ac3b4`; #174 and #190 are active today's ownership,
-while #189 is not yet integrated in the observed release. This document is
+while #189 is integrated in the observed release. This document is
 architecture-independent preparation and must not make today's implementations
 conform to an unintegrated assumption.
 

@@ -77,10 +77,11 @@ test("#175 browser specification — Search frame and controls survive category 
     clientHeight: element.clientHeight,
   }));
   expect(resultMetrics.clientHeight).toBeGreaterThan(0);
-  // The production fixture must contain enough results for this boundary. Do
-  // not fake overflow with a test stylesheet or mount a replacement surface.
-  if (resultMetrics.scrollHeight > resultMetrics.clientHeight) {
-    const body = await rectOf(resultRegion);
-    assertViewportContained(body, viewport, "Search result region");
-  }
+  // The accepted production fixture must contain enough results for this
+  // boundary. Do not fake overflow with a test stylesheet or mount a
+  // replacement surface.
+  expect(resultMetrics.scrollHeight, "Search result region must own overflow for the populated fixture")
+    .toBeGreaterThan(resultMetrics.clientHeight);
+  const body = await rectOf(resultRegion);
+  assertViewportContained(body, viewport, "Search result region");
 });
