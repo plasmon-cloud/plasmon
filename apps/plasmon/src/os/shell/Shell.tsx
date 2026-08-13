@@ -349,7 +349,7 @@ export function Shell({
         }),
         (batch) => { setSearchBatch(batch); setSearchBusy(false); setSearchError(null); },
       ).catch((cause: unknown) => {
-        if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError") return;
+        if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
         setSearchBusy(false);
         setSearchError(formatError(cause));
       });
