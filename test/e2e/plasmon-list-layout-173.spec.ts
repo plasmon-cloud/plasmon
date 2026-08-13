@@ -29,7 +29,7 @@ test("#173 — List flows compact entries across columns and navigates spatially
   const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
   await expect(explorer).toBeVisible({ timeout: 15_000 });
 
-  await explorer.getByRole("combobox").selectOption("list");
+  await explorer.getByRole("combobox", { name: /^View/ }).selectOption("list");
   const list = explorer.getByRole("listbox", { name: "Files" });
   await expect(list).toBeVisible();
   const entries = list.getByRole("option");
@@ -60,7 +60,7 @@ test("#173 — List flows compact entries across columns and navigates spatially
   if (!focusedBox) throw new Error("Spatially focused List entry has no bounds");
   expect(focusedBox.x).toBeGreaterThan(firstBox.x + 20);
 
-  await explorer.getByRole("combobox").selectOption("details");
+  await explorer.getByRole("combobox", { name: /^View/ }).selectOption("details");
   const details = explorer.getByRole("listbox", { name: "Files" });
   await expect(details.locator(".fm-details-head")).toBeVisible();
   const detailEntry = details.getByRole("option").first();
