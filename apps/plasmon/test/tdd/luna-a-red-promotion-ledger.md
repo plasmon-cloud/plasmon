@@ -16,6 +16,7 @@ integrated `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 | #108 | Phase-2 current HEAD | `issue-108-closure-audit.md` | Explorer history model | none | navigation/file-manager tests | observed green | CORE GREEN / BROWSER GAP |
 | #110 | prior packet + Phase-2 contract | existing browser spec + contract | Fs-backed hidden preference | none | pref/visibility tests | observed green; browser blocked | BROWSER SPEC ONLY |
 | #171 | Phase-2 current HEAD | installed spec + budget contract | bounded Element icon requests | none | resolver tests | observed deterministic green; browser blocked | BROWSER SPEC ONLY |
+| #45 | closure audit | `issue-45-closure-audit.md` | Native Recycle Bin projection and canonical Trash actions | integrated `17ef2c1` | model/filesystem closure test | packaged session journal absent | ALREADY GREEN core / browser pending |
 | #172 | existing composed packet | `issue-172.composed.red.test.ts` | Trash restore collision | #192 integrated dependency | composed regression at integrated head | stale lane intentionally fails overlap | WAIT FOR STAGING REFRESH |
 | #173 | prior repaired packet | existing List spec | compact spatial List | today's ownership | implementor promotion | not re-run | ACTIVE — DO NOT TOUCH |
 | #174 | prior packet | existing Search RED | single canonical `.sys` projection | today's ownership | implementor promotion | not re-run | ACTIVE — DO NOT TOUCH |
