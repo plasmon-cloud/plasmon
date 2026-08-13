@@ -1,6 +1,7 @@
 # #123 game artwork RED/specification
 
-**Disposition: VERIFIED CORE RED / INCOMPLETE ACCEPTANCE.** A supported game
+**Disposition: WAIT FOR SPECIFIC UNINTEGRATED DEPENDENCY (#190 shared
+presentation seam and #121 fixture).** A supported game
 resource with accepted artwork metadata must render artwork through the shared
 ResourcePresentation/Visual consumer in Desktop, FileManager and Search;
 invalid/missing artwork falls back canonically; lookup is stable-resource

@@ -26,5 +26,5 @@
 
 Current package structural tests prove emitted worker files and #57 proves
 managed-root reconciliation. They do not yet prove the final installed URL,
-Program Files projection, or Worker startup; therefore this is **VERIFIED CORE
-RED / INCOMPLETE ACCEPTANCE**, not GREEN.
+Program Files projection, or Worker startup; therefore this is **VERIFIED FULL RED PACKET + exact installed Worker/browser
+remainder**, not GREEN.

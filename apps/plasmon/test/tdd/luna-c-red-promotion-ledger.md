@@ -1,22 +1,26 @@
-# Luna-C RED promotion ledger
+# Luna-C RED promotion ledger (Phase 2)
 
-| Issue | staging RED | acceptance criterion | permanent destination | implementation PR later | durable GREEN? | stronger equivalent? | promotion gap |
-|---|---|---|---|---|---|---|---|
-| #64 | not yet staged; runtime save authority absent | close/reopen preserves js-dos changes through FsService | runtime Bun + packaged browser | future runtime owner | no | no | RED seam/owner |
-| #67 | browser contract/spec | real Worker startup/communication + edit/save/reopen | `test/e2e/plasmon-monaco-packaged.spec.ts` | future Monaco owner | no | visible editor only (insufficient) | yes |
-| #89 | path authority characterization | canonical Program Files path + installed asset failure | package + installed browser | runtime/path owner | partial | package output only | yes |
-| #96 | characterization | packaged identity assets resolve for native apps | package/RTL | future packaging owner | partial | structural package test | yes |
-| #112 | characterization | common semantic chrome/theme remains coherent | RTL/manual packaged | future Visual/native owner | no | no | no honest structural RED |
-| #113 | core matrix | title/language/status/minimap/commands | Bun/RTL + packaged Monaco | Text owner | partial | existing status tests | yes |
-| #114 | core matrix | formatter/commands and safe preview | Bun/RTL + packaged Monaco | Markdown owner | partial | mode/render tests | yes |
-| #121 | closure audit | explicit fixture through normal installed path | package + Playwright | Testing owner | partial | PR163/package tests | final installed rerun |
-| #123 | no gate yet | shared artwork metadata/fallback | Bun/RTL/manual packaged | Visual/Games owner | no | no | needs stable metadata seam |
-| #124 | wait #64 | screenshot preview never blocks save | Bun + packaged browser | runtime owner | no | no | dependency |
-| #107 | closure audit | every integrated row has truthful evidence | durable acceptance report | Testing | no | #187 smoke only | yes |
-| #179 | `.red/issue-179.red.test.ts` | default-off bytes/dirty/save-failure/close semantics | `text/document.test.ts` + RTL | native-app owner | no | current forced autosave (contrary) | yes |
-| #180 | browser spec | denied fullscreen expands/restores cleanly | packaged Playwright | Photos owner | helper GREEN only | no | yes |
-| #202 | browser RED/spec | no storage bootstrap errors, no allowance | runtime browser + #187 | authorized runtime owner | no | canvas readiness (insufficient) | blocked owner |
+| Issue | validated contract | staging RED/current test | permanent GREEN | current strength/gap |
+|---|---|---|---|---|
+| #58 | standalone typed Atom/revision/history/portability | Review tests/e2e existing | Review semantic + package e2e | model green; installed rerun |
+| #64 | NodeId-bound FS save/restore | save seam absent; packet | runtime Bun + installed e2e | RED bridge/API gap |
+| #67 | actual Worker creation/communication | packaged e2e currently shell/edit; v2 spec | `test/e2e/plasmon-monaco-packaged.spec.ts` | visible ready insufficient |
+| #79 | Process/Window/document close composition | D-owned missing composed gate | headless cross-authority test | D gap |
+| #83 | two-runtime association/open selection | D-owned separate tests | headless runtime selection test | D gap |
+| #89 | canonical Program Files Worker route | `.red/issue-89.red.test.ts` | package + installed browser | current top-level route fails |
+| #96 | packaged stable app identity assets | current generated glyph inventory | package + RTL/manual | glyph placeholders fail |
+| #107 | integrated C native rows | closure audit | D report + specialist e2e | browser/manual |
+| #112 | common semantic chrome/theme | characterization | RTL/manual app states | no honest structural RED |
+| #113 | Text title/language/status/commands/minimap | full matrix | Text RTL + Monaco e2e | deterministic/browser RED |
+| #114 | Markdown formatter/commands/preview | full matrix | Markdown Bun/RTL/e2e | formatter absent |
+| #121 | explicit fixture normal installed route | package/e2e closure | demo-game e2e | current release rerun |
+| #122 | direct observable Games UX audit | reference matrix | parity ledger/manual | research evidence |
+| #123 | stable artwork metadata/shared fallback | packet; waits #190/#121 | visual/resource tests | dependency |
+| #124 | non-authoritative screenshot preview | packet; waits #64 | runtime + visual browser | dependency |
+| #170 | readable truthful Review first demo | e2e + visual history | Review e2e/manual | current rerun |
+| #179 | default autosave OFF | `.red/issue-179` fails current writes | DocumentSession + RTL | strong RED |
+| #180 | denied fullscreen workspace fallback | helper green; packaged spec | Photos e2e | browser remainder |
+| #202 | no storage errors under unchanged sandbox | #187 exact allowances/spec | jsdos e2e + strict health | owner blocked |
 
-`.red` is staging only; each behavior row must be copied/adopted as a normal
-regression when implementation begins. No production implementation is part of
-this ledger.
+No aggregate test count is used as promotion proof. A permanent destination must
+assert the behavior at its owning layer; browser specs remain separate from Bun.
