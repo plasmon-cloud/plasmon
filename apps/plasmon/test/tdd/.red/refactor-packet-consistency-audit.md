@@ -15,7 +15,7 @@ said so.
 | #66 | Browser gate now checks real multi-drag, overlapping native window, temporary stack probe, normal hit testing, drop, Escape cleanup | BROWSER SPEC ONLY | packaged execution blocked; actual destination outcome should be confirmed |
 | #86 | Browser gate uses Selection API, diagnostic role, no drag and ordinary drag | BROWSER SPEC ONLY | packaged execution blocked |
 | #92 | No gate claims a competing operation model | WAIT FOR DEPENDENCY | #65 PR is open, not integrated |
-| #93 | deterministic containment/cleanup green; new portrait/landscape/square browser gate | VERIFIED CORE GREEN / BROWSER PENDING | actual packaged visual execution |
+| #93 | deterministic containment/cleanup green; new portrait/landscape/square browser gate | CHARACTERIZATION ONLY | actual packaged visual execution |
 | #95 | dedicated browser gate separates selected-label overlay from #191 bounded rename editor | BROWSER SPEC ONLY | packaged execution blocked |
 | #108 | existing navigation model/RTL/browser characterization | CHARACTERIZATION ONLY | no missing deterministic criterion identified |
 | #110 | real packaged toggle/reopen/reload gate, no swallowed setup catch | BROWSER SPEC ONLY | packaged execution blocked |
@@ -26,9 +26,9 @@ said so.
 | #174 | core duplicate RED plus hidden/running/identity/activation characterization | VERIFIED CORE RED / INCOMPLETE | final accepted native projection/type vocabulary |
 | #176 | no production event-policy seam; propagation matrix only | RECONNAISSANCE | production seam and representative browser gate |
 | #178 | invalid cast/helper test deleted; actual accepted classifier not integrated | WAIT FOR DEPENDENCY | #189 seam then full matrix |
-| #189 | current RED/PR implementation separate from this branch; no invented #178 API | CHARACTERIZATION/PACKET EXISTS BUT NOT INTEGRATED | release integration and downstream evidence |
+| #189 | current RED/PR implementation separate from this branch; no invented #178 API | WAIT FOR DEPENDENCY | release integration and downstream evidence |
 | #190 | strict #187 baseline retains unrelated allowances and omits only #190 icon allowances | BROWSER SPEC ONLY / REAL DEFECT | packaged execution and allowance removal |
-| #191 | existing geometry packet targets bounded rename editor, not selected labels | PACKET EXISTS BUT NOT INTEGRATED | PR #204 integration and rerun |
+| #191 | existing geometry packet targets bounded rename editor, not selected labels | WAIT FOR DEPENDENCY | PR #204 integration and rerun |
 | #192 | integrated controller and tests inspect actual release implementation | VERIFIED INTEGRATED | #172 composed closure evidence |
 | #195 | characterization only, no source-shape gate | CHARACTERIZATION ONLY | inspect after #191 |
 | #196 | reconnaissance intentionally architecture-deferred | WAIT FOR DEPENDENCY | #195 implementation seam |
