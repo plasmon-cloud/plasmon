@@ -25,8 +25,12 @@ const NATIVE_PRESENTATION_BY_HANDLER: Readonly<Record<string, ResourceIconPresen
   "native:video": { kind: "file-type", icon: "video" },
 });
 
+export function isImageResourceReference(value: string | null | undefined): value is string {
+  return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/)/u.test(value);
+}
+
 export function applicationResourcePresentation(src?: string | null): ResourceIconPresentation {
-  return { kind: "application", src: src ?? null };
+  return { kind: "application", src: isImageResourceReference(src) ? src : null };
 }
 
 /** Visual identity for an already-authoritative native handler. */
@@ -34,7 +38,7 @@ export function nativeHandlerResourcePresentation(
   handlerId: string,
   registeredIcon?: string | null,
 ): ResourceIconPresentation {
-  if (registeredIcon) return applicationResourcePresentation(registeredIcon);
+  if (isImageResourceReference(registeredIcon)) return applicationResourcePresentation(registeredIcon);
   return NATIVE_PRESENTATION_BY_HANDLER[handlerId] ?? applicationResourcePresentation();
 }
 
