@@ -33,11 +33,12 @@ export function ShellIcon({ icon, label }: ShellIconProps) {
   const presentation = resolveShellIconPresentation(icon, label, null);
   return (
     <span className="plasmon-shell__app-icon" aria-hidden="true">
-      {presentation.kind === "image" ? (
-        <ResourceIcon context="start" presentation={applicationResourcePresentation(presentation.src)} />
-      ) : (
-        <span data-shell-icon-fallback="true">{presentation.text}</span>
-      )}
+      <ResourceIcon
+        context="start"
+        presentation={presentation.kind === "image"
+          ? applicationResourcePresentation(presentation.src)
+          : { kind: "custom", content: presentation.text }}
+      />
     </span>
   );
 }
