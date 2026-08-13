@@ -11,6 +11,8 @@ on:
       - "packages/neutron-provision/**"
       - "packages/neutron-tools/**"
       - "test/e2e/plasmon-demo-environment.ts"
+      - "test/e2e/plasmon-browser-health.ts"
+      - "test/e2e/plasmon-refactor-smoke.spec.ts"
       - "test/e2e/plasmon-golden-path.spec.ts"
       - "test/e2e/plasmon-monaco-packaged.spec.ts"
       - "test/e2e/plasmon-review-demo.spec.ts"
@@ -29,6 +31,8 @@ on:
       - "packages/neutron-provision/**"
       - "packages/neutron-tools/**"
       - "test/e2e/plasmon-demo-environment.ts"
+      - "test/e2e/plasmon-browser-health.ts"
+      - "test/e2e/plasmon-refactor-smoke.spec.ts"
       - "test/e2e/plasmon-golden-path.spec.ts"
       - "test/e2e/plasmon-monaco-packaged.spec.ts"
       - "test/e2e/plasmon-review-demo.spec.ts"
@@ -50,7 +54,7 @@ concurrency:
 
 jobs:
   packaged-browser:
-    name: Packaged Playwright golden path
+    name: Packaged Playwright specialist acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -63,7 +67,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Package and run Plasmon browser acceptance
+      - name: Package and run Plasmon specialist browser acceptance
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -95,5 +99,5 @@ jobs:
 
             npm run plasmon:demo:status
             npm run plasmon:demo:reinstall
-            npm run test:e2e:plasmon
+            npm run test:e2e:plasmon:specialist
           '
