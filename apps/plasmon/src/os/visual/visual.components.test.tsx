@@ -11,17 +11,17 @@ test("native app presentation preserves developer artwork and contain sizing", (
 
 test("native app presentation has a non-letter application fallback", () => {
   const markup = renderToStaticMarkup(<NativeAppIcon src={null} />);
-  expect(markup).toContain("/static/plasmon/icons/application.svg");
+  expect(markup).toContain("static/plasmon/icons/application.svg");
 });
 
 test("shared pin presentation uses canonical artwork and structural pinned state", () => {
   const unpinned = renderToStaticMarkup(<PinIcon pinned={false} />);
   const pinned = renderToStaticMarkup(<PinIcon pinned />);
 
-  expect(unpinned).toContain("/static/plasmon/icons/pin.svg");
+  expect(unpinned).toContain("static/plasmon/icons/pin.svg");
   expect(unpinned).toContain('data-pin-state="unpinned"');
   expect(unpinned).not.toContain("is-pinned");
-  expect(pinned).toContain("/static/plasmon/icons/pin.svg");
+  expect(pinned).toContain("static/plasmon/icons/pin.svg");
   expect(pinned).toContain('data-pin-state="pinned"');
   expect(pinned).toContain("plasmon-pin-icon is-pinned");
   expect(pinned).toContain("plasmon-pin-icon__state");
@@ -43,7 +43,7 @@ test("generic application presentation uses the shared fallback when artwork is 
   const markup = renderToStaticMarkup(
     <ResourceIcon context="file-list" presentation={{ kind: "application", src: null }} />,
   );
-  expect(markup).toContain("/static/plasmon/icons/application.svg");
+  expect(markup).toContain("static/plasmon/icons/application.svg");
 });
 
 test("resource shortcut keeps target artwork and adds only the lower-left overlay", () => {
@@ -59,7 +59,7 @@ test("resource shortcut keeps target artwork and adds only the lower-left overla
   );
   expect(markup).toContain("/games/doom/icon.png");
   expect(markup).toContain("plasmon-custom-icon");
-  expect(markup).toContain("/static/plasmon/icons/shortcut-overlay.svg");
+  expect(markup).toContain("static/plasmon/icons/shortcut-overlay.svg");
   expect(markup).toContain("--plasmon-icon-frame-size:var(--plasmon-icon-desktop-frame)");
   expect(markup).toContain("--plasmon-icon-art-size:var(--plasmon-icon-desktop-art)");
 });
