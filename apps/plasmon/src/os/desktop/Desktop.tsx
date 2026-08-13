@@ -106,9 +106,11 @@ export function Desktop({
 }: DesktopProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const workspaceRef = useRef<HTMLElement | null>(null);
+  const activeIdsRef = useRef<readonly NodeId[]>([]);
   const [desktop, setDesktop] = useState<FsNode | null>(null);
   const [positions, setPositions] = useState<DesktopPositions>({});
-  const [orderedNodes, setOrderedNodes] = useState<readonly FsNode[]>([]);
+  const [orderedIds, setOrderedIds] = useState<readonly NodeId[]>([]);
+  const [incumbentIds, setIncumbentIds] = useState<readonly NodeId[]>([]);
   const [workspace, setWorkspace] = useState<DesktopWorkspace | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,10 +156,9 @@ export function Desktop({
     });
   }, [desktop, fs, fsEvents]);
 
-  const orderedIds = useMemo(() => orderedNodes.map((node) => node.id), [orderedNodes]);
   const resolvedPositions = useMemo(
-    () => reconcileDesktopPositions(positions, orderedIds, workspace),
-    [orderedIds, positions, workspace],
+    () => reconcileDesktopPositions(positions, orderedIds, workspace, incumbentIds),
+    [incumbentIds, orderedIds, positions, workspace],
   );
 
   useEffect(() => {
@@ -169,7 +170,12 @@ export function Desktop({
   }, [desktop, fs, orderedIds.length, positions, resolvedPositions]);
 
   const handleSnapshot = useCallback((snapshot: FileManagerSnapshot) => {
-    setOrderedNodes(snapshot.nodes);
+    const nextIds = snapshot.nodes.map((node) => node.id);
+    const previousIds = activeIdsRef.current;
+    if (previousIds.length === nextIds.length && previousIds.every((id, index) => id === nextIds[index])) return;
+    setIncumbentIds(previousIds);
+    activeIdsRef.current = nextIds;
+    setOrderedIds(nextIds);
   }, []);
 
   const sectionClassName = `plasmon-desktop${className ? ` ${className}` : ""}`;
