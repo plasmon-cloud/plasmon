@@ -128,10 +128,34 @@ The Review browser proof remains responsible for the actual independently instal
 
 Do not add broad Desktop/FileManager/Start/Search scripts merely because Playwright can click them. Screenshot regression is outside this lane unless visual fidelity itself becomes a separately accepted contract.
 
+### Real-browser persistence boundary
+
+`test/e2e/plasmon-persistence.spec.ts` is the browser-owned filesystem durability gate for #186. It deliberately stays above the headless repository tests because the contract depends on the lifetime of the real packaged resident background and browser profile.
+
+The supported automated journey is:
+
+```text
+real packaged Plasmon
+  -> import a Desktop resource through FileManager
+  -> preserve its NodeId across Plasmon tile close/reopen
+  -> preserve it across top-level page reload
+  -> close the Chromium process
+  -> relaunch Chromium with the same retained user-data directory
+  -> preserve the resident background origin, NodeId, and written bytes
+```
+
+Browser restart must not be simulated by creating a fresh ephemeral automation profile. Likewise, `plasmon:demo:reinstall` is an environment/provisioning reset, not a browser restart; the persistence test establishes any fresh installed baseline before the browser lifecycle begins and does not reinstall between browser launches.
+
+The automated repository lane uses Chromium. Firefox/LibreWolf manual persistence evidence must record whether the tested browser profile retains website data between sessions; a browser configuration that does not retain that data is a different lifecycle condition and must not be silently classified as ordinary supported restart behavior.
+
+If this browser gate exposes a production persistence defect, preserve the browser evidence and route the smallest canonical product Issue to the owning lane. Do not repair filesystem or Neutron product behavior inside the Testing Lead branch.
+
 ## CI and handoff
 
 `Plasmon Fast CI` executes the same fast command used locally. Agents without Bun must push their branch, use that workflow as the feedback loop, and report the exact result.
 
 `Plasmon Packaged Browser CI` consumes the same manifest-driven preparation/provision path used locally. It is a separate acceptance lane; a green fast suite does not supersede a failure in package/install/browser acceptance.
+
+`Plasmon Browser Persistence CI` owns the #186 retained-profile browser-process restart guard. It packages and provisions through the same demo environment but keeps that installation live while the persistence spec closes and relaunches Chromium.
 
 Escaped repeatable failures should gain the lowest-level reliable automated coverage possible.
