@@ -33,7 +33,7 @@ Process identity, window identity, app identity, pin identity, pinned-only/runni
 
 ## #91 — Search cap/safety
 
-`searchShell` is canonical authority. The deterministic gate creates 20 ordinary documents and fails because `batch.truncated` is `true`; this is the exact current value and desired value is false/structured cap state. Traversal safety truncation must remain detectable. Classification: **VERIFIED FULL RED PACKET**, command `bun test ./apps/plasmon/test/tdd/.red/issue-91.red.test.ts`.
+`searchShell` is canonical authority. The refreshed deterministic gate creates ordinary category overflow and combined presentation overflow, proves the configured category/total bounds remain enforced, and fails because `batch.truncated` is `true` in both ordinary-cap cases. The traversal case remains green with `batch.truncated === true`. Exact current result: **2 failures, 1 pass, 9 assertions** from `bun test ./apps/plasmon/test/tdd/.red/issue-91.red.test.ts`. The implementation must expose a model distinction without requiring one representation: ordinary cap metadata may be separate, but only genuine filesystem incomplete/safety state may drive technical warning presentation. Latest-result/cancellation behavior is out of scope and must remain intact.
 
 ## #109 — pin presentation (ALREADY GREEN)
 
