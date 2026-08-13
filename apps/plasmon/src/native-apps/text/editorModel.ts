@@ -1,3 +1,5 @@
+import { classifyResource } from "../../os/fs/index.ts";
+
 export interface EditorValueModel { getValue(): string; setValue(value: string): void; }
 export function syncEditorModelValue(model: EditorValueModel, nextValue: string): boolean { if (model.getValue() === nextValue) return false; model.setValue(nextValue); return true; }
 
@@ -46,5 +48,18 @@ export function createEditorSurfaceModelOwner<Model extends DisposableEditorMode
   };
 }
 
-const LANGUAGE_BY_EXTENSION: Readonly<Record<string, string>> = Object.freeze({ ".c": "c", ".cc": "cpp", ".cpp": "cpp", ".cxx": "cpp", ".css": "css", ".go": "go", ".h": "cpp", ".hpp": "cpp", ".htm": "html", ".html": "html", ".ini": "ini", ".java": "java", ".js": "javascript", ".cjs": "javascript", ".mjs": "javascript", ".jsx": "javascript", ".json": "json", ".md": "markdown", ".markdown": "markdown", ".py": "python", ".rs": "rust", ".scss": "scss", ".sh": "shell", ".svg": "xml", ".toml": "ini", ".ts": "typescript", ".cts": "typescript", ".mts": "typescript", ".tsx": "typescript", ".txt": "plaintext", ".xml": "xml", ".yaml": "yaml", ".yml": "yaml" });
-export function editorLanguageForName(name: string): string { const lower = name.trim().toLowerCase(); const dot = lower.lastIndexOf("."); if (dot < 0) return "plaintext"; return LANGUAGE_BY_EXTENSION[lower.slice(dot)] ?? "plaintext"; }
+/** Text maps canonical resource classification onto Monaco's language vocabulary. */
+export function editorLanguageForResource(name: string, mime?: string): string {
+  const classification = classifyResource({
+    name,
+    kind: "file",
+    metadata: {},
+    ...(mime ? { mime } : {}),
+  });
+  return classification.type.language ?? "plaintext";
+}
+
+/** Compatibility adapter for callers that have no stronger MIME fact. */
+export function editorLanguageForName(name: string): string {
+  return editorLanguageForResource(name);
+}
