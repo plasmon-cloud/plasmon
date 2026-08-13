@@ -28,7 +28,7 @@ describe("renderPlasmon", () => {
       await app.user.type(searchInput, "Review");
 
       expect((searchInput as HTMLInputElement).value).toBe("Review");
-      await within(searchRegion).findByRole("button", { name: /^Review/ });
+      await within(searchRegion).findByText(/Collaborative review workspace\./);
       expect(app.environment.services).toBeDefined();
     } finally {
       app.dispose();
