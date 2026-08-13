@@ -1,0 +1,80 @@
+name: Plasmon Browser Persistence CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/plasmon/**"
+      - "apps/kernel/src/workspace/AppBackgroundFrames.tsx"
+      - "apps/kernel/src/capabilities/**"
+      - "apps/kernel/src/runtime_deployment.ts"
+      - "packages/neutron-compiler/**"
+      - "packages/neutron-provision/**"
+      - "packages/neutron-tools/**"
+      - "test/e2e/local-playwright-identity.ts"
+      - "test/e2e/plasmon-demo-environment.ts"
+      - "test/e2e/plasmon-persistence.spec.ts"
+      - "playwright.config.ts"
+      - "plasmon-local.ndeploy.json"
+      - "package-lock.json"
+      - ".github/workflows/plasmon-browser-persistence-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plasmon-browser-persistence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packaged-persistence:
+    name: Packaged browser persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and run browser persistence gate
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm ci
+            npm run plasmon:demo:prepare
+
+            npm run plasmon:demo:serve > /tmp/plasmon-pocketic-persistence.log 2>&1 &
+            server_pid=$!
+            trap '\''status=$?; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/plasmon-pocketic-persistence.log || true; fi; exit "$status"'\'' EXIT
+
+            pocketic_ready=0
+            for attempt in $(seq 1 180); do
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                echo "PocketIC serve exited before becoming ready" >&2
+                cat /tmp/plasmon-pocketic-persistence.log >&2 || true
+                exit 1
+              fi
+              if grep -q "^PocketIC .* is ready$" /tmp/plasmon-pocketic-persistence.log 2>/dev/null; then
+                pocketic_ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$pocketic_ready" -ne 1 ]; then
+              echo "PocketIC serve did not complete startup" >&2
+              cat /tmp/plasmon-pocketic-persistence.log >&2 || true
+              exit 1
+            fi
+
+            npm run plasmon:demo:status
+            # Establish one known installed baseline. The test itself never reinstalls:
+            # browser restart is modeled only by closing/relaunching Chromium against
+            # the same profile while this PocketIC process and installation remain live.
+            npm run plasmon:demo:reinstall
+            NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json npx --no-install playwright test test/e2e/plasmon-persistence.spec.ts
+          '
