@@ -4,6 +4,7 @@ import {
   NEUTRON_APP_MIME,
   readNeutronAppMetadata,
 } from "../src/os/fs/resourcePolicy.ts";
+import { searchShell } from "../src/os/shell/search.ts";
 import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
 
 const reviewElement: ExternalElement = {
@@ -61,6 +62,31 @@ describe("installed Review application integration", () => {
       ]);
       expect(env.processes()).toHaveLength(0);
       expect(env.windows()).toHaveLength(0);
+    } finally {
+      env.dispose();
+    }
+  });
+
+  test("coalesces Kernel discovery and the /Apps projection into one Review Search result", async () => {
+    const env = createHeadlessPlasmonEnvironment({ elements: [reviewElement] });
+
+    try {
+      await env.ready;
+      const discovered = await env.neutron.loadElements();
+      const batch = await searchShell(
+        env.services.fs,
+        env.services.nativeApps.list(),
+        discovered,
+        "Review",
+      );
+      const reviewResults = batch.results.filter((result) => result.id === "element:review");
+
+      expect(reviewResults).toHaveLength(1);
+      expect(reviewResults[0]).toMatchObject({
+        kind: "neutron-projection",
+        title: "Review",
+        elementId: "review",
+      });
     } finally {
       env.dispose();
     }
