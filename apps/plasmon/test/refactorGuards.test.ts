@@ -234,6 +234,10 @@ describe("Plasmon refactor guards", () => {
         await environment.node("/System/Start Menu"),
         "/System/Start Menu",
       );
+      const settingsDefinition = environment.services.nativeApps.list()
+        .find((app) => app.id === "native:settings");
+      if (!settingsDefinition) throw new Error("Settings native definition is unavailable");
+
       const document = await environment.services.fs.createFile(documents.id, "Projection Note.txt", {
         mime: "text/plain",
       });
@@ -246,7 +250,7 @@ describe("Plasmon refactor guards", () => {
 
       const startShortcuts = await collectStartShortcuts(environment);
       expect(startShortcuts.filter(
-        ({ target }) => target.kind === "native" && target.handlerId === "native:settings",
+        ({ target }) => target.kind === "native" && target.handlerId === settingsDefinition.handlerId,
       )).toHaveLength(1);
       expect(startShortcuts.filter(
         ({ target }) => target.kind === "element" && target.elementId === reviewElement.id,
@@ -262,7 +266,7 @@ describe("Plasmon refactor guards", () => {
         "Settings",
       );
       expect(nativeSearch.results.filter(
-        (result) => result.kind === "native-app" && result.app.handlerId === "native:settings",
+        (result) => result.kind === "native-app" && result.app.id === settingsDefinition.id,
       )).toHaveLength(1);
 
       const reviewProjection = requireNode(
