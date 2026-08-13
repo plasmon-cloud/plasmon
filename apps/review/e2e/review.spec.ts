@@ -6,7 +6,7 @@ test("packaged Review first-run is readable and self-explanatory", async ({ page
   const harness = await openReview(page);
 
   await expect(harness.review.getByRole("heading", { name: "Structured reviews without the guesswork" })).toBeVisible();
-  await expect(harness.review.getByText("Completed actions are stored automatically by Review’s provider.")).toBeVisible();
+  await expect(harness.review.getByTestId("persistence-status").getByText("Completed actions are stored automatically by Review’s provider.", { exact: true })).toBeVisible();
   await expect(harness.review.getByText("Live sharing isn’t available in this build")).toBeVisible();
   await expect(harness.review.getByText(/Markdown export is portability only/)).toBeVisible();
   await expect(harness.review.getByRole("button", { name: /save/i })).toHaveCount(0);
@@ -44,7 +44,10 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await harness.review.getByRole("button", { name: "Add item" }).click();
   const card = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
   await expect(card).toBeVisible();
-  await expect(card.getByText("Desired", { exact: true })).toBeVisible();
+  await expect(card.getByLabel("Desired")).toBeVisible();
+  await expect(card.getByLabel("Effort")).toBeVisible();
+  await expect(card.getByLabel("Owner")).toBeVisible();
+  await expect(card.getByLabel("Work")).toBeVisible();
   await expect(card.getByText("How strongly this outcome needs to be true.")).toBeVisible();
   await expect(card.getByText("The expected size of the work.")).toBeVisible();
   await expect(card.getByText("No owner is assigned yet.")).toBeVisible();
