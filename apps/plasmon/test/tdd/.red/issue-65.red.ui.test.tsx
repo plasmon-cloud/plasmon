@@ -44,11 +44,12 @@ test("#65 RED — multi-file import exposes item progress and clears status dete
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const started: string[] = [];
+  let view: ReturnType<typeof render> | undefined;
   try {
     await environment.ready;
     const fs = delayedWrites(environment.services.fs, (name) => started.push(name), gate);
     const manager = renderManager(environment, fs);
-    const view = await manager.render();
+    view = await manager.render();
     const input = view.container.querySelector('input[type="file"]');
     if (!(input instanceof HTMLInputElement)) throw new Error("FileManager import input is unavailable");
     const files = [
@@ -63,8 +64,8 @@ test("#65 RED — multi-file import exposes item progress and clears status dete
     await waitFor(() => expect(view.queryByRole("status")).toBeNull());
     expect(await environment.node("/Documents/first.txt")).not.toBeNull();
     expect(await environment.node("/Documents/second.txt")).not.toBeNull();
-    view.unmount();
   } finally {
+    view?.unmount();
     release?.();
     environment.dispose();
   }
@@ -75,10 +76,11 @@ test("#65 RED — partial import remains actionable and a conflicting trigger ca
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const started: string[] = [];
+  let view: ReturnType<typeof render> | undefined;
   try {
     await environment.ready;
     const fs = delayedWrites(environment.services.fs, (name) => started.push(name), gate, "bad.txt");
-    const view = await renderManager(environment, fs).render();
+    view = await renderManager(environment, fs).render();
     const input = view.container.querySelector('input[type="file"]');
     if (!(input instanceof HTMLInputElement)) throw new Error("FileManager import input is unavailable");
     const files = [
@@ -95,8 +97,8 @@ test("#65 RED — partial import remains actionable and a conflicting trigger ca
     expect(await environment.node("/Documents/bad.txt")).toBeNull();
     expect(await environment.node("/Documents/duplicate.txt")).toBeNull();
     expect(view.queryByRole("status")).toBeNull();
-    view.unmount();
   } finally {
+    view?.unmount();
     release?.();
     environment.dispose();
   }
@@ -106,6 +108,7 @@ test("#65 RED — paste uses the same running operation vocabulary without byte-
   const environment = createHeadlessPlasmonEnvironment();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
+  let view: ReturnType<typeof render> | undefined;
   try {
     await environment.ready;
     const documents = await directory(environment, "/Documents");
@@ -118,13 +121,13 @@ test("#65 RED — paste uses the same running operation vocabulary without byte-
         return async (...args: Parameters<FsService["copy"]>) => { await gate; return target.copy(...args); };
       },
     });
-    const view = await renderManager(environment, fs, clipboard).render();
+    view = await renderManager(environment, fs, clipboard).render();
     await act(async () => { view.getByRole("button", { name: "Paste" }).click(); });
     await waitFor(() => expect(view.getByRole("status").textContent ?? "").toContain("Pasting 1 item"));
     release();
     await waitFor(() => expect(view.queryByRole("status")).toBeNull());
-    view.unmount();
   } finally {
+    view?.unmount();
     release?.();
     environment.dispose();
   }
