@@ -32,3 +32,11 @@ fake RTL selection assertion is staged.
 refactor smoke cover structure and interaction. The missing claim is actual
 mouse selection under inherited CSS, which requires a real browser selection
 range. Do not convert this into a source-shape test or weaken entry drag rules.
+
+Exact runnable gate: `test/e2e/plasmon-diagnostic-selection-86.red.spec.ts`.
+It creates a real FileManager document, induces a user-visible invalid-address
+error in the packaged Explorer, selects the diagnostic text with a browser
+mouse gesture, asserts `window.getSelection()` contains the message, verifies
+no FileEntry enters drag state, then performs an ordinary entry drag and
+requires the normal drag state. Missing packaged session/browser crashes are
+operational blocks, not expected RED.
