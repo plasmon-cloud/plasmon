@@ -4,17 +4,41 @@
 
 Applies to `apps/plasmon/test/**`. Also follow `apps/plasmon/AGENTS.md`, [`../TESTING.md`](../TESTING.md), and the nearest subsystem instructions for the behavior under test.
 
-## Required lane
+`createHeadlessPlasmonEnvironment()` is the canonical deterministic cross-system composition. It uses the real production `PlasmonServices` graph and replaces only true environment boundaries. Do not create feature-specific fake filesystem, association, open, Process, Windowing, Shell, Desktop, native-app, or runtime implementations in this directory.
 
-Run focused Bun tests while iterating, then run:
+`renderPlasmon()` is the bounded React adapter around that same headless composition. It is not a second OS model and must not grow into a Page Object Model.
+
+## Required lanes
+
+Run the smallest focused Bun test while iterating, then run:
 
 ```sh
 npm --workspace neutron-plasmon test
 ```
 
-before handoff. Do not use repository-root `npm test` as the normal Plasmon test command.
+before handoff. The fast command includes deterministic/headless coverage plus the bounded RTL layer.
 
-If Bun is unavailable locally, push the branch and use **Plasmon Fast CI**. Handoffs must report the focused command/result and fast-suite result, whether local or CI.
+Run only the RTL adapter layer with:
+
+```sh
+npm --workspace neutron-plasmon run test:ui
+```
+
+Use package or Playwright lanes only when the acceptance claim crosses those boundaries. Do not use repository-root `npm test` as the normal Plasmon test command.
+
+If Bun is unavailable locally, push the Issue branch and use **Plasmon Fast CI**. Handoffs must report the focused command/result and fast-suite result, whether local or CI.
+
+## HARNESS GAP intake
+
+Classify a missing test capability before adding infrastructure:
+
+- **A — existing production seam:** the owning production model/service/controller/command is already callable. Use it directly through focused tests or `createHeadlessPlasmonEnvironment()`; do not add a helper just to rename the call.
+- **B — missing test adapter/helper:** production composition is sufficient but repeated deterministic setup or inspection needs a small reusable builder/adapter. Keep it behavior-free.
+- **C — missing RTL composition:** the claim belongs to React/DOM adapter behavior and needs `renderPlasmon()`, Happy DOM setup, or a small semantic DOM helper. Do not move OS policy into this layer.
+- **D — deterministic production behavior trapped in React:** extract the smallest behavior into the owning production controller/model/command, preserve behavior, and add focused coverage there before exercising the thin React adapter.
+- **E — genuine browser/package boundary:** the claim depends on installed archives, Neutron installation/runtime, iframe/sandbox behavior, real layout/hit-testing, workers, Monaco/runtime initialization, media, fullscreen/download/file-picker, or another browser-owned facility. Keep the Playwright proof minimal and do not re-prove deterministic OS semantics there.
+
+Testing / Integration owns shared A-D harness repairs. Domain implementors should raise a `HARNESS GAP` instead of inventing local infrastructure. E remains an explicit packaged/browser boundary.
 
 ## Testing rules
 
@@ -22,12 +46,34 @@ If Bun is unavailable locally, push the branch and use **Plasmon Fast CI**. Hand
 - Prefer executable production behavior over broad source-string assertions.
 - Put testable user-action semantics in real production models/services/controllers/commands. Tests should invoke the same logic as React adapters.
 - When several UI surfaces expose one operation, add cross-surface tests against the shared authority rather than duplicating semantics in each surface.
+- Use `renderPlasmon()` only when React/browser-adapter behavior itself matters. Prefer accessible role/name/state queries and `userEvent`; `data-testid` is exceptional.
+- Keep setup/builders small and domain-neutral. Repeated use must justify shared helpers.
 - Include negative cases for protection, authorization, persistence, projections, and forbidden operations where applicable.
 - Keep package/browser tests for claims that actually cross those boundaries.
 - Keep browser tests semantic and redesign-resistant; avoid assertions tied to incidental DOM nesting, CSS geometry, or screenshots unless visual fidelity is the contract being tested.
 
-## Failures
+## Installed Plasmon acceptance environment
+
+`plasmon-local.ndeploy.json` is the source of truth for required production archives. The repository-owned `test/e2e/plasmon-demo-environment.ts` path derives the required workspaces from that manifest, packages only those artifacts, verifies the archives, and delegates lifecycle work to existing `neutron-provision`.
+
+Do not add a second hand-maintained package list, a second PocketIC implementation, or test-only product behavior. Preserve the real boundary:
+
+```text
+package
+  -> .neutron archive
+  -> neutron-provision install/reinstall
+  -> Neutron
+  -> Plasmon
+  -> /Apps projection
+  -> canonical filesystem/open dispatch
+```
+
+Authenticated Neutron applications remain Kernel-owned sibling tiles. Tests must not create Plasmon-native fake processes/windows for them.
+
+## Failures and boundaries
 
 When a test and an accepted product/architecture rule disagree, determine which is stale. Do not automatically change production code to satisfy a brittle test, and do not weaken a valid test merely to make CI green.
+
+If a required capability is actually missing from Kernel or shared Neutron tooling, identify and escalate that boundary rather than emulating it in Plasmon tests.
 
 A green fast suite does not supersede a failing packaged workflow or explicit manual acceptance failure.
