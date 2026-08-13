@@ -16,9 +16,11 @@ export interface BrowserHealthIssue {
 
 export interface BrowserHealthAllowRule {
   readonly kind: BrowserHealthIssueKind;
-  readonly message: string;
+  readonly message?: string;
+  readonly messageIncludes?: string;
   readonly reason: string;
   readonly url?: string;
+  readonly urlPathPrefix?: string;
   readonly status?: number;
 }
 
@@ -30,10 +32,21 @@ export interface BrowserHealthLedgerOptions {
   readonly allow?: readonly BrowserHealthAllowRule[];
 }
 
+function urlPathMatches(prefix: string, url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).pathname.startsWith(prefix);
+  } catch {
+    return false;
+  }
+}
+
 function allowRuleMatches(rule: BrowserHealthAllowRule, issue: BrowserHealthIssue): boolean {
   return rule.kind === issue.kind
-    && rule.message === issue.message
+    && (rule.message === undefined || rule.message === issue.message)
+    && (rule.messageIncludes === undefined || issue.message.includes(rule.messageIncludes))
     && (rule.url === undefined || rule.url === issue.url)
+    && (rule.urlPathPrefix === undefined || urlPathMatches(rule.urlPathPrefix, issue.url))
     && (rule.status === undefined || rule.status === issue.status);
 }
 
@@ -135,7 +148,10 @@ function failedResponseIssue(response: Response): BrowserHealthIssue {
  *
  * Product semantics remain outside this helper. It observes browser-owned
  * failure signals only and records them in a deterministic ledger that tests
- * assert at the end of their representative workflow.
+ * assert at the end of their representative workflow. Allow rules remain
+ * scenario-owned and narrow: exact matches are preferred, while substring and
+ * pathname-prefix matching exist only for browser diagnostics containing
+ * dynamic origins, hashes, or stack text.
  */
 export function installPlasmonBrowserHealth(
   page: Page,
