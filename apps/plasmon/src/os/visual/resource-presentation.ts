@@ -26,7 +26,7 @@ const NATIVE_PRESENTATION_BY_HANDLER: Readonly<Record<string, ResourceIconPresen
 });
 
 export function isImageResourceReference(value: string | null | undefined): value is string {
-  return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/)/u.test(value);
+  return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/|[^/:?#]+\/)/u.test(value);
 }
 
 export function applicationResourcePresentation(src?: string | null): ResourceIconPresentation {
