@@ -49,11 +49,12 @@ function renderDesktopEntry(options: {
   );
 }
 
-test("unselected Desktop filename keeps only the compact label", () => {
+test("unselected Desktop filename keeps only the compact label at its NodeId-backed placement", () => {
   const markup = renderDesktopEntry();
   expect(markup).not.toContain("fm-entry__expanded-name");
   expect(markup).toContain(`title="${LONG_NAME}"`);
-  expect(markup).toContain("--fm-desktop-entry-x:16px");
+  expect(markup).toContain('style="left:16px;top:24px"');
+  expect(markup).not.toContain("--fm-desktop-entry-x");
 });
 
 test("selected or focused Desktop filename adds one pointer-independent visual overlay", () => {
