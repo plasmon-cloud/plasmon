@@ -169,12 +169,13 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
     expect(renameBox.x).toBeGreaterThanOrEqual(desktopBounds.x - 1);
     expect(renameBox.x + renameBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
     expect(renameBox.width).toBeLessThanOrEqual(Math.min(desktopBounds.width * 0.6, 520));
-    await rename.press("Escape");
+    await rename.fill("Refactor Smoke.txt");
+    await rename.press("Enter");
 
-    const textEntry = plasmon.getByRole("option", { name: "New Text Document.txt" });
+    const textEntry = desktopFiles.locator('[data-fm-node-id]').filter({ hasText: "Refactor Smoke.txt" }).first();
     await expect(textEntry).toBeVisible();
     await textEntry.dblclick();
-    const editorWindow = plasmon.getByRole("dialog", { name: "New Text Document.txt" }).last();
+    const editorWindow = plasmon.getByRole("dialog", { name: "Refactor Smoke.txt" }).last();
     await expect(editorWindow).toBeVisible({ timeout: 20_000 });
     await expect(editorWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]'))
       .toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
