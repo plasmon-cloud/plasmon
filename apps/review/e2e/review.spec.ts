@@ -43,11 +43,12 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await harness.review.getByLabel("New review item").fill("Review launches in vanilla Neutron");
   await harness.review.getByRole("button", { name: "Add item" }).click();
   const card = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
+  const workControl = card.locator(".work-field select");
   await expect(card).toBeVisible();
   await expect(card.getByLabel("Desired")).toBeVisible();
   await expect(card.getByLabel("Effort")).toBeVisible();
   await expect(card.getByLabel("Owner")).toBeVisible();
-  await expect(card.getByLabel("Work")).toBeVisible();
+  await expect(workControl).toBeVisible();
   await expect(card.getByText("How strongly this outcome needs to be true.")).toBeVisible();
   await expect(card.getByText("The expected size of the work.")).toBeVisible();
   await expect(card.getByText("No owner is assigned yet.")).toBeVisible();
@@ -58,7 +59,7 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await card.getByLabel("Desired").selectOption("must");
   await card.getByLabel("Effort").selectOption("small");
   await card.getByLabel("Owner").fill("Agent 13");
-  await card.getByLabel("Work").selectOption("needs_retest");
+  await workControl.selectOption("needs_retest");
   await expect(card.getByText("Unsaved changes")).toBeVisible();
   await expect(harness.review.getByTestId("persistence-status").getByText("1 unsaved item")).toBeVisible();
   await card.getByRole("button", { name: "Save details" }).click();
@@ -119,7 +120,7 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await expect(importedCard.getByLabel("Desired")).toHaveValue("");
   await expect(importedCard.getByLabel("Effort")).toHaveValue("");
   await expect(importedCard.getByLabel("Owner")).toHaveValue("");
-  await expect(importedCard.getByLabel("Work")).toHaveValue("untriaged");
+  await expect(importedCard.locator(".work-field select")).toHaveValue("untriaged");
   await expect(importedCard.locator(".comment")).toHaveCount(0);
   await expect(harness.review.locator(".history-entry")).toHaveCount(1);
   await expect(harness.review.getByTestId("sharing-status").getByText("Live sharing isn’t available in this build")).toBeVisible();
