@@ -6,7 +6,12 @@ import {
   readNeutronAppMetadata,
 } from "../src/os/fs/index.ts";
 import { EMULATORJS_NES_MIME } from "../src/native-apps/emulatorjs/runtime.ts";
-import { parseStartShortcut, searchShell, type StartShortcut } from "../src/os/shell/index.ts";
+import {
+  parseStartShortcut,
+  reconcileStartMenu,
+  searchShell,
+  type StartShortcut,
+} from "../src/os/shell/index.ts";
 import {
   createHeadlessPlasmonEnvironment,
   type HeadlessPlasmonEnvironment,
@@ -230,14 +235,21 @@ describe("Plasmon refactor guards", () => {
     try {
       await environment.ready;
       const documents = requireDirectory(await environment.node("/Documents"), "/Documents");
-      const startMenu = requireDirectory(
-        await environment.node("/System/Start Menu"),
-        "/System/Start Menu",
-      );
       const settingsDefinition = environment.services.nativeApps.list()
         .find((app) => app.id === "native:settings");
       if (!settingsDefinition) throw new Error("Settings native definition is unavailable");
 
+      // Start reconciliation is Shell-owned production behavior; it intentionally
+      // is not part of filesystem bootstrap in createHeadlessPlasmonEnvironment.
+      await reconcileStartMenu(
+        environment.services.fs,
+        environment.services.nativeApps.list(),
+        [reviewElement],
+      );
+      const startMenu = requireDirectory(
+        await environment.node("/System/Start Menu"),
+        "/System/Start Menu",
+      );
       const document = await environment.services.fs.createFile(documents.id, "Projection Note.txt", {
         mime: "text/plain",
       });
