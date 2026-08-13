@@ -30,6 +30,7 @@ export {
   allocateDesktopPositions,
   defaultDesktopPosition,
   reconcileDesktopPositions,
+  repositionDesktopNodes,
 } from "./layout.ts";
 export type { DesktopPositions, DesktopWorkspace } from "./layout.ts";
 
