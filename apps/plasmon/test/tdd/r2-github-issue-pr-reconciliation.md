@@ -12,12 +12,12 @@ Snapshot: 2026-08-13, live GitHub API; release target `origin/release/0.1.0-r2` 
 | #43 | #75 | merged, ancestor | OPEN BUT IMPLEMENTED |
 | #44 | #149 | merged, ancestor | OPEN BUT IMPLEMENTED |
 | #46 | #84, #104, #163 | merged, ancestor | OPEN BUT IMPLEMENTED; capability boundary remains |
-| #51 | #210 | open, head `6fef9235` (not release ancestor) | ACTIVE PR |
+| #51 | #210 | open, head `b7e5a52d123d847cce98aea3e0aef2dfce20b392` (not release ancestor) | ACTIVE PR |
 | #58 | #101, #104 | merged, ancestor | OPEN BUT IMPLEMENTED |
 | #61 | none | no implementation | NO IMPLEMENTATION |
 | #63 | none | no implementation | NO IMPLEMENTATION |
 | #64 | #103 | merged, ancestor | OPEN BUT IMPLEMENTED |
-| #65 | #208 | open, head `be166810` (not ancestor) | ACTIVE PR |
+| #65 | #208 | open, head `665670102efd63bbc766c5a51f1b24fcace2ced5` (not release ancestor) | ACTIVE PR |
 | #66 | none | no implementation | NO IMPLEMENTATION |
 | #67 | #131, #188 | merged, ancestor | OPEN BUT IMPLEMENTED; packaged evidence remains |
 | #72 | #139 | merged, ancestor | OPEN BUT IMPLEMENTED |
@@ -72,8 +72,8 @@ Snapshot: 2026-08-13, live GitHub API; release target `origin/release/0.1.0-r2` 
 | #186 | #209 | merged `f4ac3b4c` ancestor | OPEN BUT IMPLEMENTED; durable proof exists |
 | #187 | #188 | merged `3467309` ancestor | OPEN BUT IMPLEMENTED; allowance retirement remains |
 | #189 | #207 | merged `e259d15` ancestor | OPEN BUT IMPLEMENTED |
-| #190 | #211 | open, head `2367448a` (not ancestor) | ACTIVE PR |
-| #191 | #204 | open, draft/active head (no merge commit) | ACTIVE PR |
+| #190 | #211 | open draft, head `7618dfe2cd692410cd337756cb97c29ad92157bf` (not release ancestor) | ACTIVE PR |
+| #191 | #204 | open draft, head `a4ad1b3f4a536e5a24b5f2a24e8d5a1a053c9ff4` (no merge commit) | ACTIVE PR |
 | #192 | #205 | merged `51cd761` ancestor | OPEN BUT IMPLEMENTED |
 | #193 | none | no implementation | NO IMPLEMENTATION |
 | #194 | none | no implementation | NO IMPLEMENTATION |
