@@ -1,13 +1,13 @@
 # r2 LUNA CLOSEOUT BLOCKED
 
-This is an audit closeout, **not** a closure certificate. The required certificate cannot truthfully be issued.
+This is an audit checkpoint, **not** a closure certificate. The second-pass deep audit is recorded in `r2-deep-completeness-audit.md`, which expands the universe to 103 Issues and supersedes the original 79-row scope count. The required certificate still cannot truthfully be issued.
 
 ## Snapshot
 
 - Luna-D branch: `tdd/r2/luna-d-harness-audit`
 - Luna-D HEAD: `e815c46358f20b25fd5b15f6409adefa19dfcad3`
 - integrated release observed at finish: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`
-- r2 Issues enumerated: **79**; unclassified: **0**
+- checkpoint Issues enumerated: **79**; expanded second-pass universe: **103**; unclassified: **0**
 - disposition counts: **ALREADY GREEN 17; CHARACTERIZATION READY 19; VERIFIED CORE RED / INCOMPLETE ACCEPTANCE 6; WAIT FOR DEPENDENCY 13; WAIT FOR INTEGRATION 4; ACTIVE IMPLEMENTATION 2; BROWSER SPEC ONLY 4; PACKAGED BROWSER SPEC ONLY 5; CLOSURE AUDIT COMPLETE 4; DEFERRED 3; INVALID PACKET 1; RED PROMOTION GAP 1**
 - fast tests: `npm --workspace neutron-plasmon test` → **454 Bun + 4 RTL passed, 0 failed**
 - browser: no local packaged session executed; this is an operational browser block
