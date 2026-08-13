@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { waitFor, within } from "@testing-library/react";
+import { act, waitFor, within } from "@testing-library/react";
 import type { ExternalElement, FsNode } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -25,8 +25,10 @@ describe("renderPlasmon", () => {
 
     try {
       const desktop = await requireDesktop(app);
-      await app.environment.services.fs.createFile(desktop.id, "Harness Note.txt", { mime: "text/plain" });
-      await app.environment.services.fs.mkdir(desktop.id, "Harness Folder");
+      await act(async () => {
+        await app.environment.services.fs.createFile(desktop.id, "Harness Note.txt", { mime: "text/plain" });
+        await app.environment.services.fs.mkdir(desktop.id, "Harness Folder");
+      });
 
       const note = await app.findByRole("option", { name: "Harness Note.txt" });
       await app.user.click(note);
