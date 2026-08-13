@@ -15,7 +15,8 @@ import {
 
 export type SearchTab = "all" | "apps" | "documents" | "media" | "atoms";
 export type FsSearchCategory = Exclude<SearchTab, "all">;
-export type FileSearchCategory = Exclude<FsSearchCategory, "apps">;
+export type FileSearchCategory = FsSearchCategory;
+type NonApplicationSearchCategory = Exclude<FsSearchCategory, "apps">;
 
 export const SEARCH_TOTAL_LIMIT = 48;
 export const SEARCH_CATEGORY_LIMITS: Readonly<Record<Exclude<SearchTab, "all">, number>> = Object.freeze({
@@ -127,7 +128,7 @@ function atomRecord(node: FsNode): Record<string, JsonValue> | null {
   return value as Record<string, JsonValue>;
 }
 
-function categorizeNonApplicationFsNode(node: FsNode): FileSearchCategory {
+function categorizeNonApplicationFsNode(node: FsNode): NonApplicationSearchCategory {
   const classification = classifyResource(node);
   const atom = atomRecord(node);
   if (classification.kind === "atom" || atom?.format === "plasmon.atom" || classification.type.extension === ".atom") {
@@ -172,14 +173,15 @@ export function searchableNodeText(node: FsNode): string {
 }
 
 function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
+  const classification = classifyResource(node);
+  if (category === "apps" && classification.kind === "system-app") return "Plasmon application";
   if (category === "atoms") {
     const atom = atomRecord(node);
     const title = typeof atom?.title === "string" ? atom.title : null;
     const atomType = typeof atom?.atomType === "string" ? atom.atomType : null;
     return [title, atomType, "Atom"].filter(Boolean).join(" · ");
   }
-  const mime = classifyResource(node).type.mime;
-  if (mime) return mime;
+  if (classification.type.mime) return classification.type.mime;
   return category === "media" ? "Media" : "Document";
 }
 
@@ -372,14 +374,8 @@ export async function searchFilesystem(
         projections.push(projectionSearchResult(node, classification.neutronApp));
         continue;
       }
-      if (classification.kind === "system-app") {
-        // Native application presentation remains supplied by the native registry in
-        // this Issue. The canonical filesystem resource must never leak back out as
-        // an ordinary Document while #174 owns full projection convergence.
-        continue;
-      }
 
-      const category = categorizeNonApplicationFsNode(node);
+      const category = categorizeFsNode(node);
       files.push({
         kind: "file",
         id: `node:${node.id}`,
@@ -446,7 +442,19 @@ export async function searchShell(
     emittedProjectionIds.add(projection.elementId);
   }
 
-  const nonProjectionFilesystemResults = filesystem.results.filter((result) => result.kind !== "neutron-projection");
+  const directNativeHandlers = new Set(
+    applicationResults
+      .filter((result): result is NativeAppSearchResult => result.kind === "native-app")
+      .map((result) => result.app.handlerId),
+  );
+  const nonProjectionFilesystemResults = filesystem.results.filter((result) => {
+    if (result.kind === "neutron-projection") return false;
+    if (result.kind !== "file") return true;
+    const classification = classifyResource(result.node);
+    return classification.kind !== "system-app"
+      || !classification.systemApp
+      || !directNativeHandlers.has(classification.systemApp.handlerId);
+  });
   const limited = applyResultLimits([...applicationResults, ...nonProjectionFilesystemResults]);
   return {
     results: limited.results,
