@@ -169,3 +169,30 @@ test("certified package imports use the normal directory fallback", async () => 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("direct package modules do not fall back after recursive failures", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "neutron-walk-direct-"));
+  try {
+    const pkg = path.join(dir, "pkg");
+    await mkdir(path.join(pkg, "Entry"), { recursive: true });
+    const filePath = path.join(dir, "main.mo");
+    await writeFile(
+      filePath,
+      'import Entry "mo:pkg/Entry"; module { public let entry = Entry }',
+    );
+    await writeFile(
+      path.join(pkg, "Entry.mo"),
+      'import Missing "./Missing"; module { public let missing = Missing }',
+    );
+    await writeFile(
+      path.join(pkg, "Entry", "lib.mo"),
+      "module { public let fallback = 1 }",
+    );
+
+    await expect(
+      getDependencies(null, filePath, { pkg }, {}),
+    ).rejects.toThrow(/Missing\.mo/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
-import { JS_DOS_EMULATORS_ROOT, loadJsDosRuntime, type JsDosPlayerHandle } from "./runtime.ts";
+import {
+  jsDosPackageAssetUrl,
+  loadJsDosRuntime,
+  startJsDosPlayer,
+  type JsDosPlayerHandle,
+} from "./runtime.ts";
 
 type PlayerState = "loading" | "starting" | "ready" | "error";
 
@@ -42,9 +47,9 @@ export default function JsDosPlayer({ target, fs }: NativeAppComponentProps) {
       const Dos = await loadJsDosRuntime();
       if (disposed) return;
 
-      const player = Dos(root, {
+      const player = startJsDosPlayer(Dos, root, {
         url: bundleUrl,
-        pathPrefix: JS_DOS_EMULATORS_ROOT,
+        pathPrefix: jsDosPackageAssetUrl(document.baseURI, "emulators/"),
         workerThread: true,
         autoStart: true,
         autoSave: false,

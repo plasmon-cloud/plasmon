@@ -374,10 +374,10 @@
     "packages": [
       {
         "name": "core",
-        "path": "apps/kernel/.mops/_github/core#v2.6.0/src",
+        "path": "apps/kernel/.mops/core@2.6.0/src",
         "source_bytes": 1200060,
         "source_files": 53,
-        "source_sha256": "68539e03c7f3c6d5e8385e25a70caa603660dcc1d027b7ddb0c7f6190411525c"
+        "source_sha256": "2d1ab11fab572f55d70d142fbe2a7dcf23c210b60c5a62914d0a45eba82d1822"
       },
       {
         "name": "ic-certification",
@@ -472,7 +472,7 @@
       }
     ],
     "schema": "neutron.kernel.certified-assets-motoko-package-set.v1",
-    "source_set_sha256": "ed7efe020b35bfbb4fc104f5af741efc68bcdae08bcbbc68f9284b5520900fa7"
+    "source_set_sha256": "fd5e40860abf1d62db56c404486f155e99b05d20ef60696710cfa61e1048bfdf"
   },
   "package_lock": {
     "bytes": 343507,
@@ -503,12 +503,12 @@
   },
   "runner": {
     "fingerprint_schema": "neutron.kernel.certified-assets-qualification-runner.v2",
-    "source_set_sha256": "6ee5940c379cb1a8ba11219e9fd192d9641e9f5d82e5a7d97cd56749505ef876",
+    "source_set_sha256": "2417ec52f332a29ef8adc0d4c9fc69abfb73af60fc67d9ad8d195fefa54f4bc6",
     "sources": [
       {
-        "bytes": 19788,
+        "bytes": 19779,
         "path": "apps/kernel/evidence/certified_assets_candidate_binding.ts",
-        "sha256": "2361f39904de7a17476ca9121c9758a9b40974f4d51d86666108009f3dfd8107"
+        "sha256": "c18522c22db298b39b5a3a8337c8c0ef7e47d096b058209b39529195d301423c"
       },
       {
         "bytes": 13245,
@@ -591,9 +591,9 @@
         "sha256": "7909480bb7dcd1b4dcb7ca15b4c8d9cc734cf54f10447fb9e8a0f14e4744f888"
       },
       {
-        "bytes": 200,
+        "bytes": 160,
         "path": "apps/kernel/mops.toml",
-        "sha256": "07f185c246294d277f6d9f7bb67a4204594386290689fe12125963f50f436e1f"
+        "sha256": "4880a36eb6d34ac23f94eca0e44d0cefd16fe7b4fed95cb63d140ba0248eb4ed"
       },
       {
         "bytes": 41583,
@@ -836,9 +836,9 @@
         "sha256": "ef5b1354715ad4a616d6b7951c99233170b52f11b3eacd5b392bb47c69841e1d"
       },
       {
-        "bytes": 12313,
+        "bytes": 12447,
         "path": "packages/neutron-scripts/src/walk.ts",
-        "sha256": "d06256f34ae97c0d0597c5bd7af4433ae180f5e34f7bf6cfa371d17b360729f3"
+        "sha256": "18fcc37e01549cb2f43cfc21154bc17fd3034463925dc25c7391f910020d92be"
       },
       {
         "bytes": 890,

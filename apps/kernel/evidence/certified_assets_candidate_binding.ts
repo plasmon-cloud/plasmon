@@ -87,7 +87,7 @@ export const CERTIFIED_ASSETS_QUALIFICATION_MOTOKO_PACKAGE_SET_SCHEMA =
 export const CERTIFIED_ASSETS_QUALIFICATION_MOTOKO_PACKAGES = [
   {
     name: "core",
-    path: "apps/kernel/.mops/_github/core#v2.6.0/src",
+    path: "apps/kernel/.mops/core@2.6.0/src",
   },
   {
     name: "ic-certification",

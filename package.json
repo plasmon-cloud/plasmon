@@ -20,7 +20,7 @@
     "test:e2e:local:fresh": "npm run local:deploy && npm run test:e2e:local:ii",
     "test:e2e:package-updates": "playwright test test/e2e/package-updates.spec.ts",
     "test:e2e:package-updates:fresh": "npm run local:deploy && NEUTRON_E2E_WITH_II=1 npm run test:e2e:package-updates",
-    "test:e2e:plasmon": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-golden-path.spec.ts",
+    "test:e2e:plasmon": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-golden-path.spec.ts test/e2e/plasmon-monaco-packaged.spec.ts",
     "test:e2e:plasmon:fresh": "npm --workspace neutron-kernel run package && npm --workspace neutron-plasmon run test:package && npm run provision -- plasmon-local.ndeploy.json reinstall && npm run test:e2e:plasmon",
     "provision": "bun packages/neutron-provision/src/index.ts",
     "local:authorize": "bun packages/neutron-provision/src/index.ts local.ndeploy.json authorize",

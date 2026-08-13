@@ -14,7 +14,7 @@
     "package": "npm run validate && npm run build && npm run mopack && npm run schema && bun ../../packages/neutron-scripts/src/pack.ts",
     "watch": "bun build.ts watch",
     "test": "npm run test:fast",
-    "test:fast": "bun test src ./test/os-contracts.test.ts ./test/platform.test.ts ./test/storage-security-regression.test.ts ./test/wave2-integration.test.ts ./test/headlessEnvironment.test.ts ./test/managedRootBootstrap.test.ts ./test/fileManagerActivation.test.ts ./test/fileManagerDelete.test.ts ./test/trashLifecycle.test.ts ./test/resourceOpenCrossSurface.test.ts",
+    "test:fast": "bun test src ./test/os-contracts.test.ts ./test/platform.test.ts ./test/storage-security-regression.test.ts ./test/wave2-integration.test.ts ./test/headlessEnvironment.test.ts ./test/managedRootBootstrap.test.ts ./test/fileManagerActivation.test.ts ./test/fileManagerDelete.test.ts ./test/trashLifecycle.test.ts ./test/resourceOpenCrossSurface.test.ts ./test/emulatorJsRuntime.test.ts",
     "test:package": "npm run package && bun test ./test/package.test.ts",
     "test:all": "npm run test:fast && npm run test:package"
   },

@@ -32,6 +32,25 @@ jobs:
             exit 0
           fi
 
+          kernel_relevant() {
+            case "$1" in
+              apps/plasmon/*|test/e2e/plasmon-golden-path.spec.ts|README.md|AGENTS.md|LICENSE|doc/*|.github/workflows/README.md)
+                return 1
+                ;;
+              *)
+                return 0
+                ;;
+            esac
+          }
+
+          # Keep the scope boundary deterministic: Plasmon/docs cheap-skip,
+          # while Kernel/workflow changes still enter the full required lane.
+          ! kernel_relevant "apps/plasmon/src/index.tsx"
+          ! kernel_relevant "test/e2e/plasmon-golden-path.spec.ts"
+          ! kernel_relevant "doc/testing-and-verification.md"
+          kernel_relevant "apps/kernel/package.json"
+          kernel_relevant ".github/workflows/kernel-ci.yml"
+
           base_sha="${{ github.event.pull_request.base.sha }}"
           head_sha="${{ github.event.pull_request.head.sha }}"
           git diff --name-only "$base_sha" "$head_sha" > /tmp/kernel-changed-files.txt
@@ -40,14 +59,10 @@ jobs:
           run_kernel=false
           while IFS= read -r path; do
             [ -n "$path" ] || continue
-            case "$path" in
-              apps/plasmon/*|README.md|AGENTS.md|LICENSE|doc/*|.github/workflows/README.md)
-                ;;
-              *)
-                run_kernel=true
-                break
-                ;;
-            esac
+            if kernel_relevant "$path"; then
+              run_kernel=true
+              break
+            fi
           done < /tmp/kernel-changed-files.txt
 
           echo "run_kernel=$run_kernel" >> "$GITHUB_OUTPUT"

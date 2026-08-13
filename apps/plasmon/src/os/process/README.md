@@ -6,12 +6,12 @@ A native application definition, a running process record, a window, a filesyste
 
 ## Architecture
 
-- `registry.ts` stores native application metadata and lazy loaders.
+- `registry.ts` stores native application/process-host metadata and lazy loaders. The registry remains complete even when a definition declares `runtimeOnly: true`; that flag classifies product exposure for application inventories and does not make the definition non-runnable.
 - `controller.ts` owns process creation, singleton/multi-instance behavior, target/title updates, focus delegation, close lifecycle, and reconciliation when windows disappear.
 - `store.ts` owns process records/subscriptions.
 - `NativeProcessHost.tsx` is the React adapter that subscribes to process state and mounts the registered lazy component.
 
-The controller delegates geometry/chrome/focus mechanics to `WindowManager`; the window manager does not become process storage. Real Neutron Elements remain outside this process model.
+The controller delegates geometry/chrome/focus mechanics to `WindowManager`; the window manager does not become process storage. Real Neutron Elements remain outside this process model. Process does not infer user-launchable application identity from registration; Shell/application-inventory consumers project that distinction from shared native definition metadata.
 
 ## Activation and concurrent launch contract
 

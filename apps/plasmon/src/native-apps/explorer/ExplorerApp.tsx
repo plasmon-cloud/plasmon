@@ -32,11 +32,10 @@ import {
   type FileManagerSnapshot,
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
-import { ExplorerHistory, type ExplorerLocation } from "./history.ts";
-import { resolveExplorerAddress } from "./navigation.ts";
+import type { ExplorerLocation } from "./history.ts";
+import { ExplorerNavigationModel, resolveExplorerAddress } from "./navigation.ts";
 
 const FAVORITE_PATHS = ["/Desktop", "/Documents", "/Downloads", "/Pictures", "/Videos"] as const;
-type NavigationMode = "push" | "replace" | "history";
 
 export interface ExplorerAppProps {
   processId: ProcessId;
@@ -92,7 +91,7 @@ export function ExplorerApp({
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const preferenceStore = useMemo(() => new FileManagerPreferenceStore(fs), [fs]);
-  const historyRef = useRef(new ExplorerHistory());
+  const navigationRef = useRef<ExplorerNavigationModel | null>(null);
   const addressRef = useRef<HTMLInputElement | null>(null);
   const [location, setLocation] = useState<ExplorerLocation | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -112,47 +111,44 @@ export function ExplorerApp({
     [fs, viewPreferences.showHiddenFiles],
   );
 
-  const applyLocation = useCallback((next: ExplorerLocation, mode: NavigationMode = "push") => {
-    if (mode === "push") historyRef.current.push(next);
-    else if (mode === "replace") historyRef.current.replaceCurrent(next);
+  const applyLocation = useCallback((next: ExplorerLocation) => {
     setLocation(next);
     setAddress(next.path);
     setHistoryVersion((value) => value + 1);
     setError(null);
   }, []);
 
-  const navigate = useCallback(async (nextId: NodeId, mode: NavigationMode = "push") => {
+  const navigate = useCallback(async (nextId: NodeId) => {
+    const navigation = navigationRef.current;
+    if (!navigation) return;
     try {
-      const node = await fs.stat(nextId);
-      if (node.kind !== "directory") throw new Error(`${node.name} is not a folder`);
-      applyLocation({ nodeId: node.id, path: await fs.pathOf(node.id) }, mode);
+      applyLocation(await navigation.navigateNode(nextId));
     } catch (cause: unknown) {
       setError(errorMessage(cause));
     }
-  }, [applyLocation, fs]);
+  }, [applyLocation]);
 
   const navigatePath = useCallback(async (path: string) => {
+    const navigation = navigationRef.current;
+    if (!navigation) return;
     try {
-      applyLocation(await resolveExplorerAddress(fs, path));
+      applyLocation(await navigation.navigatePath(path));
     } catch (cause: unknown) {
       setError(errorMessage(cause));
     }
-  }, [applyLocation, fs]);
+  }, [applyLocation]);
 
   useEffect(() => {
     let active = true;
     void resolveInitialLocation(fs, target)
       .then((initial) => {
         if (!active) return;
-        historyRef.current = new ExplorerHistory(initial);
-        setLocation(initial);
-        setAddress(initial.path);
-        setHistoryVersion((value) => value + 1);
-        setError(null);
+        navigationRef.current = new ExplorerNavigationModel(fs, initial);
+        applyLocation(initial);
       })
       .catch((cause: unknown) => { if (active) setError(errorMessage(cause)); });
     return () => { active = false; };
-  }, [fs, target.nodeId]);
+  }, [applyLocation, fs, target.nodeId]);
 
   useEffect(() => {
     let active = true;
@@ -185,38 +181,44 @@ export function ExplorerApp({
   useEffect(() => {
     if (!fsEvents || !location) return undefined;
     return fsEvents.subscribe((event) => {
-      if (event.type === "moved" && event.node.id === location.nodeId || event.type === "changed" && event.node.id === location.nodeId || event.type === "reset") {
-        void fs.pathOf(location.nodeId)
-          .then((path) => applyLocation({ nodeId: location.nodeId, path }, "replace"))
+      if (
+        event.type === "moved" && event.node.id === location.nodeId ||
+        event.type === "changed" && event.node.id === location.nodeId ||
+        event.type === "reset"
+      ) {
+        const navigation = navigationRef.current;
+        if (!navigation) return;
+        void navigation.refreshCurrent()
+          .then((next) => { if (next) applyLocation(next); })
           .catch((cause: unknown) => setError(errorMessage(cause)));
       }
     });
-  }, [applyLocation, fs, fsEvents, location]);
+  }, [applyLocation, fsEvents, location]);
 
   const goHistory = async (direction: "back" | "forward") => {
-    const candidate = direction === "back" ? historyRef.current.back() : historyRef.current.forward();
-    setHistoryVersion((value) => value + 1);
-    if (candidate) await navigate(candidate.nodeId, "history");
+    const navigation = navigationRef.current;
+    if (!navigation) return;
+    try {
+      const next = direction === "back" ? await navigation.back() : await navigation.forward();
+      if (next) applyLocation(next);
+      else setHistoryVersion((value) => value + 1);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause));
+    }
   };
 
   const goUp = async () => {
-    if (!location) return;
+    const navigation = navigationRef.current;
+    if (!navigation) return;
     try {
-      const current = await fs.stat(location.nodeId);
-      if (current.parentId) await navigate(current.parentId);
+      const next = await navigation.up();
+      if (next) applyLocation(next);
     } catch (cause: unknown) {
       setError(errorMessage(cause));
     }
   };
 
-  const goAddress = async () => {
-    try {
-      const next = await resolveExplorerAddress(fs, address);
-      applyLocation(next);
-    } catch (cause: unknown) {
-      setError(errorMessage(cause));
-    }
-  };
+  const goAddress = async () => navigatePath(address);
 
   const setShowHiddenFiles = async (showHiddenFiles: boolean) => {
     const next: FileManagerPreferences = { version: 1, showHiddenFiles };
@@ -233,7 +235,8 @@ export function ExplorerApp({
     setSelectedCount(snapshot.selectedIds.size);
   }, []);
 
-  const history = historyRef.current.snapshot();
+  const navigation = navigationRef.current;
+  const history = navigation?.snapshot() ?? { entries: [], index: -1 };
   void historyVersion;
 
   return (
@@ -251,8 +254,8 @@ export function ExplorerApp({
     >
       <header className="explorer-app__toolbar">
         <div className="explorer-app__nav" role="toolbar" aria-label="Navigation">
-          <button type="button" aria-label="Back" disabled={!historyRef.current.canBack()} onClick={() => void goHistory("back")}>←</button>
-          <button type="button" aria-label="Forward" disabled={!historyRef.current.canForward()} onClick={() => void goHistory("forward")}>→</button>
+          <button type="button" aria-label="Back" disabled={!navigation?.canBack()} onClick={() => void goHistory("back")}>←</button>
+          <button type="button" aria-label="Forward" disabled={!navigation?.canForward()} onClick={() => void goHistory("forward")}>→</button>
           <button type="button" aria-label="Up one level" disabled={!location || location.path === "/"} onClick={() => void goUp()}>↑</button>
         </div>
         <nav className="explorer-app__breadcrumbs" aria-label="Location breadcrumb">

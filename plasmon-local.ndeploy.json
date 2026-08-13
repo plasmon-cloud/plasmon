@@ -19,7 +19,10 @@
     },
     "packages": [
       {
-        "path": "apps/plasmon/plasmon.v0.1.1.neutron"
+        "path": "apps/plasmon/plasmon.v0.1.0.neutron"
+      },
+      {
+        "path": "apps/review/review.v0.1.0.neutron"
       }
     ]
   }

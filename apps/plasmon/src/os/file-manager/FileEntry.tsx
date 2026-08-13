@@ -10,8 +10,14 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import type { FsNode, FsService } from "../contracts/index.ts";
-import { fileVisualKind, iconForFile } from "./file-icons.ts";
+import type { AssociationRegistry, FsNode, FsService } from "../contracts/index.ts";
+import { ResourceIcon, type IconContext, type ResourceIconPresentation } from "../visual/index.ts";
+import {
+  fallbackFileResourcePresentation,
+  fileVisualKind,
+  resolveFileResourcePresentation,
+  type FileResourcePresentation,
+} from "./file-icons.ts";
 import {
   RenameSelectionController,
   renameKeyAction,
@@ -26,6 +32,7 @@ export interface FileEntryPosition { x: number; y: number }
 
 export interface FileEntryProps {
   fs: FsService;
+  associations?: AssociationRegistry;
   node: FsNode;
   selected: boolean;
   focused: boolean;
@@ -63,6 +70,12 @@ function typeLabel(node: FsNode): string {
   return node.mime ?? "File";
 }
 
+function iconContext(presentation: FileEntryPresentation): IconContext {
+  if (presentation === "desktop") return "desktop";
+  if (presentation === "grid") return "file-grid";
+  return "file-list";
+}
+
 export function fileEntryClassName(
   presentation: FileEntryPresentation,
   selected: boolean,
@@ -75,6 +88,7 @@ export function fileEntryClassName(
 
 export const FileEntry = memo(function FileEntry({
   fs,
+  associations,
   node,
   selected,
   focused,
@@ -95,13 +109,20 @@ export const FileEntry = memo(function FileEntry({
 }: FileEntryProps) {
   const isRenaming = rename?.nodeId === node.id;
   const style: CSSProperties | undefined = presentation === "desktop" && position
-    ? { left: position.x, top: position.y }
+    ? ({
+        left: position.x,
+        top: position.y,
+        "--fm-desktop-entry-x": `${position.x}px`,
+      } as CSSProperties)
     : undefined;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
   const suppressBlurCommitRef = useRef(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [resourcePresentation, setResourcePresentation] = useState<FileResourcePresentation>(
+    () => fallbackFileResourcePresentation(node, associations),
+  );
 
   useLayoutEffect(() => {
     if (!isRenaming || !rename || !inputRef.current) {
@@ -116,6 +137,20 @@ export const FileEntry = memo(function FileEntry({
       node.kind === "directory",
     );
   }, [isRenaming, rename?.initialName, rename?.session]);
+
+  useEffect(() => {
+    let active = true;
+    const fallback = fallbackFileResourcePresentation(node, associations);
+    setResourcePresentation(fallback);
+    void resolveFileResourcePresentation(fs, node, associations)
+      .then((resolved) => {
+        if (active) setResourcePresentation(resolved);
+      })
+      .catch(() => {
+        if (active) setResourcePresentation(fallback);
+      });
+    return () => { active = false; };
+  }, [associations, fs, node]);
 
   useEffect(() => {
     let active = true;
@@ -162,6 +197,9 @@ export const FileEntry = memo(function FileEntry({
   }, [fs, node.contentHash, node.id, node.mime, node.modifiedAt, node.name, node.size]);
 
   const visualKind = fileVisualKind(node);
+  const iconPresentation: ResourceIconPresentation = thumbnailUrl
+    ? { kind: "thumbnail", src: thumbnailUrl, mediaKind: "image" }
+    : resourcePresentation.presentation;
 
   return (
     <div
@@ -184,7 +222,11 @@ export const FileEntry = memo(function FileEntry({
       onContextMenu={onContextMenu}
     >
       <span className={`fm-entry__icon fm-entry__icon--${visualKind}`} aria-hidden="true">
-        {thumbnailUrl ? <img className="fm-entry__thumbnail" src={thumbnailUrl} alt="" draggable={false} /> : iconForFile(node)}
+        <ResourceIcon
+          context={iconContext(presentation)}
+          presentation={iconPresentation}
+          shortcut={!thumbnailUrl && resourcePresentation.shortcut}
+        />
       </span>
       <span className="fm-entry__selection-mark" aria-hidden="true">{selected ? "✓" : ""}</span>
       <span className="fm-entry__name" title={!selected && !isRenaming ? node.name : undefined}>
@@ -218,6 +260,9 @@ export const FileEntry = memo(function FileEntry({
           </>
         ) : node.name}
       </span>
+      {presentation === "desktop" && (selected || focused) && !isRenaming ? (
+        <span className="fm-entry__expanded-name" aria-hidden="true">{node.name}</span>
+      ) : null}
       {presentation === "details" ? (
         <>
           <span className="fm-entry__type">{typeLabel(node)}</span>

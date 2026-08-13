@@ -7,6 +7,10 @@ import { dirname, join } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
+import {
+  PACKAGED_DEMO_GAME_FILENAME,
+  createPlasmonDemoGameBundle,
+} from "./src/games/demoFixtureBundle.ts";
 import { assertMatureNativeAppBundle, cacheBustEntryAssets } from "./src/native-apps/packaging.ts";
 
 const mainOutfile = "./dist/web/main.js";
@@ -19,10 +23,23 @@ const devMode = args[0] === "dev";
 const JS_DOS_VERSION = "8.4.1";
 const JS_DOS_RELEASE_URL = `https://github.com/caiiiycuk/js-dos/releases/download/v${JS_DOS_VERSION}/release.zip`;
 const JS_DOS_RELEASE_SHA256 = "26118692bbb180aec78ec1697eb1ea6b28ff410101870cfa3e68309914c7eaa6";
-const DOOM_SOURCE_URL = "https://raw.githubusercontent.com/GG-O-BP/mendix-doom/c42008f2f9542854a921104c65adc7f2105099aa/src/assets/doom.jsdos";
-const DOOM_GIT_BLOB_SHA1 = "421f4c1ace76f33737bfcb87fc51b04f39aa6c3a";
-const PACKAGED_JS_DOS_ROOT = "/System/Program Files/js-dos/";
+const PACKAGED_JS_DOS_ROOT = "./System/Program Files/js-dos/";
+const JS_DOS_BROWSER_RUNTIME_ROOT = "./runtime/jsdos/";
+const JS_DOS_BROWSER_RUNTIME_DIRECTORY = "./dist/web/runtime/jsdos";
 let proofAssetsPromise: Promise<void> | null = null;
+
+const EMULATORJS_VERSION = "4.2.3";
+const EMULATORJS_DATA_URL = `https://cdn.emulatorjs.org/${EMULATORJS_VERSION}/data`;
+const EMULATORJS_ASSETS = [
+  "loader.js",
+  "emulator.min.js",
+  "emulator.min.css",
+  "cores/fceumm-wasm.data",
+  "cores/fceumm-legacy-wasm.data",
+  "compression/extract7z.js",
+] as const;
+const EMULATORJS_BROWSER_DATA_DIRECTORY = "./dist/web/runtime/emulatorjs/data";
+let emulatorJsAssetsPromise: Promise<void> | null = null;
 
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(mainOutfile, "utf8");
@@ -63,13 +80,6 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
-}
-
-function gitBlobSha1(bytes: Uint8Array): string {
-  const hash = createHash("sha1");
-  hash.update(`blob ${bytes.length}\0`);
-  hash.update(bytes);
-  return hash.digest("hex");
 }
 
 function findZipEnd(bytes: Uint8Array): number {
@@ -130,11 +140,11 @@ async function extractReleaseZip(bytes: Uint8Array, destination: string): Promis
   }
 }
 
-async function rebaseJsDosRelease(runtimeDirectory: string): Promise<void> {
+async function rebaseJsDosRelease(runtimeDirectory: string, packageRoot: string): Promise<void> {
   for (const name of ["js-dos.js", "js-dos.css"]) {
     const path = join(runtimeDirectory, name);
     const source = await readFile(path, "utf8");
-    const rebased = source.replaceAll("/latest/", PACKAGED_JS_DOS_ROOT);
+    const rebased = source.replaceAll("/latest/", packageRoot);
     if (rebased !== source) await writeFile(path, rebased);
   }
 }
@@ -142,40 +152,146 @@ async function rebaseJsDosRelease(runtimeDirectory: string): Promise<void> {
 async function installPlayableProofAssets(): Promise<void> {
   if (proofAssetsPromise) return proofAssetsPromise;
   proofAssetsPromise = (async () => {
-    const [releaseZip, doomBundle] = await Promise.all([
-      fetchBytes(JS_DOS_RELEASE_URL),
-      fetchBytes(DOOM_SOURCE_URL),
-    ]);
+    const releaseZip = await fetchBytes(JS_DOS_RELEASE_URL);
 
     if (sha256(releaseZip) !== JS_DOS_RELEASE_SHA256) {
       throw new Error("Pinned js-dos release digest mismatch");
     }
-    if (gitBlobSha1(doomBundle) !== DOOM_GIT_BLOB_SHA1) {
-      throw new Error("Pinned Doom hackathon bundle Git blob digest mismatch");
-    }
 
     const runtimeDirectory = "./dist/web/System/Program Files/js-dos";
-    await rm(runtimeDirectory, { recursive: true, force: true });
-    await mkdir(runtimeDirectory, { recursive: true });
-    await extractReleaseZip(releaseZip, runtimeDirectory);
-    await rebaseJsDosRelease(runtimeDirectory);
+    const browserRuntimeDirectory = JS_DOS_BROWSER_RUNTIME_DIRECTORY;
     await Promise.all([
-      access(join(runtimeDirectory, "js-dos.js")),
-      access(join(runtimeDirectory, "js-dos.css")),
-      access(join(runtimeDirectory, "emulators", "emulators.js")),
-      access(join(runtimeDirectory, "emulators", "wdosbox.js")),
-      access(join(runtimeDirectory, "emulators", "wdosbox.wasm")),
+      rm(runtimeDirectory, { recursive: true, force: true }),
+      rm(browserRuntimeDirectory, { recursive: true, force: true }),
     ]);
+    await Promise.all([
+      mkdir(runtimeDirectory, { recursive: true }),
+      mkdir(browserRuntimeDirectory, { recursive: true }),
+    ]);
+    await Promise.all([
+      extractReleaseZip(releaseZip, runtimeDirectory),
+      extractReleaseZip(releaseZip, browserRuntimeDirectory),
+    ]);
+    await Promise.all([
+      rebaseJsDosRelease(runtimeDirectory, PACKAGED_JS_DOS_ROOT),
+      rebaseJsDosRelease(browserRuntimeDirectory, JS_DOS_BROWSER_RUNTIME_ROOT),
+    ]);
+    for (const directory of [runtimeDirectory, browserRuntimeDirectory]) {
+      await Promise.all([
+        access(join(directory, "js-dos.js")),
+        access(join(directory, "js-dos.css")),
+        access(join(directory, "emulators", "emulators.js")),
+        access(join(directory, "emulators", "wdosbox.js")),
+        access(join(directory, "emulators", "wdosbox.wasm")),
+      ]);
+    }
     await writeFile(
       join(runtimeDirectory, "runtime.json"),
-      `${JSON.stringify({ runtime: "js-dos", version: JS_DOS_VERSION, releaseSha256: JS_DOS_RELEASE_SHA256 }, null, 2)}\n`,
+      `${JSON.stringify({
+        runtime: "js-dos",
+        version: JS_DOS_VERSION,
+        releaseSha256: JS_DOS_RELEASE_SHA256,
+        browserRuntimeRoot: "runtime/jsdos/",
+      }, null, 2)}\n`,
     );
 
-    const gamePath = "./dist/web/Games/DOS Bundles/Doom.jsdos";
-    await mkdir(dirname(gamePath), { recursive: true });
-    await writeFile(gamePath, doomBundle);
+    const fixturePath = join("./dist/web/fixtures", PACKAGED_DEMO_GAME_FILENAME);
+    await mkdir(dirname(fixturePath), { recursive: true });
+    await writeFile(fixturePath, createPlasmonDemoGameBundle());
   })();
   return proofAssetsPromise;
+}
+
+function createPlasmonNesTestRom(): Uint8Array {
+  const headerBytes = 16;
+  const prgBytes = 16_384;
+  const chrBytes = 8_192;
+  const rom = new Uint8Array(headerBytes + prgBytes + chrBytes);
+
+  // iNES 1.0, mapper 0 / NROM-128, one PRG bank, one CHR bank, no battery SRAM.
+  rom.set([0x4e, 0x45, 0x53, 0x1a, 0x01, 0x01, 0x00, 0x00], 0);
+
+  // Minimal original 6502 program: initialize the stack, then remain in a
+  // stable loop. It is acceptance data, not a bundled third-party game.
+  rom.set([0x78, 0xd8, 0xa2, 0xff, 0x9a, 0x4c, 0x05, 0x80], headerBytes);
+  const vectors = headerBytes + prgBytes - 6;
+  rom.set([
+    0x00, 0x80, // NMI -> $8000
+    0x00, 0x80, // RESET -> $8000
+    0x00, 0x80, // IRQ -> $8000
+  ], vectors);
+  return rom;
+}
+
+async function installEmulatorJsProofAssets(): Promise<void> {
+  if (emulatorJsAssetsPromise) return emulatorJsAssetsPromise;
+  emulatorJsAssetsPromise = (async () => {
+    const downloaded = await Promise.all(
+      EMULATORJS_ASSETS.map(async (relative) => ({
+        relative,
+        bytes: await fetchBytes(`${EMULATORJS_DATA_URL}/${relative}`),
+      })),
+    );
+
+    const runtimeDirectory = "./dist/web/System/Program Files/EmulatorJS";
+    const dataDirectory = join(runtimeDirectory, "data");
+    const browserDataDirectory = EMULATORJS_BROWSER_DATA_DIRECTORY;
+    await Promise.all([
+      rm(runtimeDirectory, { recursive: true, force: true }),
+      rm("./dist/web/runtime/emulatorjs", { recursive: true, force: true }),
+    ]);
+    await Promise.all([
+      mkdir(dataDirectory, { recursive: true }),
+      mkdir(browserDataDirectory, { recursive: true }),
+    ]);
+
+    for (const asset of downloaded) {
+      if (asset.bytes.length === 0) throw new Error(`Empty EmulatorJS asset: ${asset.relative}`);
+      const parts = asset.relative.split("/");
+      const canonicalTarget = join(dataDirectory, ...parts);
+      const browserTarget = join(browserDataDirectory, ...parts);
+      await Promise.all([
+        mkdir(dirname(canonicalTarget), { recursive: true }),
+        mkdir(dirname(browserTarget), { recursive: true }),
+      ]);
+      await Promise.all([
+        writeFile(canonicalTarget, asset.bytes),
+        writeFile(browserTarget, asset.bytes),
+      ]);
+    }
+
+    const loader = new TextDecoder().decode(
+      downloaded.find(({ relative }) => relative === "loader.js")?.bytes ?? new Uint8Array(),
+    );
+    if (!loader.includes("EJS_emulator") || !loader.includes("EJS_onGameStart")) {
+      throw new Error("Pinned EmulatorJS loader does not expose the expected 4.2.3 lifecycle hooks");
+    }
+
+    // EmulatorJS treats a missing core report as optional. Publish the same
+    // package-local report into both the managed Program Files authority and
+    // the URL-safe browser transport path used by Kernel app-host routing.
+    for (const root of [dataDirectory, browserDataDirectory]) {
+      const reportPath = join(root, "cores", "reports", "fceumm.json");
+      await mkdir(dirname(reportPath), { recursive: true });
+      await writeFile(reportPath, "{}\n");
+    }
+    await writeFile(
+      join(runtimeDirectory, "runtime.json"),
+      `${JSON.stringify({
+        runtime: "EmulatorJS",
+        version: EMULATORJS_VERSION,
+        source: `https://github.com/EmulatorJS/EmulatorJS/releases/tag/v${EMULATORJS_VERSION}`,
+        core: "fceumm",
+        resourceType: ".nes",
+        browserDataRoot: "runtime/emulatorjs/data/",
+      }, null, 2)}\n`,
+    );
+
+    const fixturePath = "./dist/web/Games/Test ROMs/PlasmonTest.nes";
+    await mkdir(dirname(fixturePath), { recursive: true });
+    await writeFile(fixturePath, createPlasmonNesTestRom());
+  })();
+  return emulatorJsAssetsPromise;
 }
 
 const config: BuildOptions = {
@@ -215,7 +331,7 @@ const config: BuildOptions = {
         build.onEnd(async (result) => {
           if (result.errors.length !== 0) return;
           if (!result.metafile) throw new Error("Plasmon build requires an esbuild metafile");
-          await installPlayableProofAssets();
+          await Promise.all([installPlayableProofAssets(), installEmulatorJsProofAssets()]);
           assertMatureNativeAppBundle(result.metafile);
           await mergeApplicationStyles();
           if (!devMode) await stripRemoteDiagnostics();

@@ -100,11 +100,13 @@ npm run provision -- plasmon-local.ndeploy.json serve
 npm run test:e2e:plasmon:fresh
 ```
 
-`plasmon-local.ndeploy.json` installs only the packaged Kernel plus the packaged Plasmon app. `test/e2e/plasmon-golden-path.spec.ts` is intentionally small: it verifies the installed registry entry, package-owned HTTP/Monaco-worker assets, and real Kernel tile launch/render using semantic roles and stable Kernel test identifiers.
+`plasmon-local.ndeploy.json` is the explicit local/demo deployment fixture. It installs the packaged Kernel plus Plasmon and the standalone Review Element as sibling Neutron packages. Neutron remains authoritative for both application installations; Plasmon discovers installed siblings through its normal bridge and projects them under `/Apps/*.neutron`.
 
-Use `npm run test:e2e:plasmon` to rerun the browser spec against an already deployed matching session. CI runs the same boundary through **Plasmon Packaged Browser CI**.
+`test/e2e/plasmon-golden-path.spec.ts` protects the core packaged Plasmon boundary. `test/e2e/plasmon-review-demo.spec.ts` is the narrow sibling-app demo proof: it verifies Review is independently installed, projected under `/Apps`, found/opened through canonical Plasmon Search/resource activation, and still executes its existing standalone Review provider after launch.
 
-Do not grow this lane into general Desktop/FileManager/Start/Search scripting or screenshot regression. Deterministic resource, process, window, and command semantics belong in Bun/headless coverage, including `test/headlessEnvironment.ts` for cross-surface workflows.
+Use `npm run test:e2e:plasmon` to rerun the browser specs against an already deployed matching session. CI runs the same boundaries through **Plasmon Packaged Browser CI**.
+
+Do not grow this lane into general Desktop/FileManager/Start/Search scripting or screenshot regression. Deterministic resource, process, window, and command semantics belong in Bun/headless coverage, including `test/headlessEnvironment.ts` for cross-surface workflows. Sibling-app browser journeys should remain limited to the real install/discovery/projection/open boundary they exist to protect.
 
 ### 5. Manual packaged review — visual/interaction acceptance
 
@@ -149,7 +151,7 @@ npm --workspace neutron-plasmon test
 
 It intentionally does not install Nix, package the Kernel, run Motoko tests, run Playwright, or package Plasmon.
 
-`.github/workflows/plasmon-browser-ci.yml` is the separate package/browser gate. It packages Kernel and Plasmon, provisions `plasmon-local.ndeploy.json`, and runs only `test/e2e/plasmon-golden-path.spec.ts`. Keep this separate from the fast lane so ordinary Plasmon edits retain a seconds-scale deterministic feedback path.
+`.github/workflows/plasmon-browser-ci.yml` is the separate package/browser gate. It packages Kernel, Plasmon, and the standalone Review sibling required by the explicit demo fixture, provisions `plasmon-local.ndeploy.json`, and runs the focused packaged Plasmon and Review-discovery browser journeys. Keep this separate from the fast lane so ordinary Plasmon edits retain a seconds-scale deterministic feedback path.
 
 If an agent environment does not provide Bun, the agent must push the branch and use Plasmon Fast CI as the required feedback loop. `Tests not run` is not a complete handoff when CI is available.
 

@@ -39,6 +39,11 @@ export class ExplorerHistory {
     return value ? { ...value } : null;
   }
 
+  at(index: number): ExplorerLocation | null {
+    const value = this.entries[index];
+    return value ? { ...value } : null;
+  }
+
   canBack(): boolean {
     return this.index > 0;
   }
@@ -47,16 +52,31 @@ export class ExplorerHistory {
     return this.index >= 0 && this.index < this.entries.length - 1;
   }
 
+  moveTo(index: number): ExplorerLocation | null {
+    if (index < 0 || index >= this.entries.length) return null;
+    this.index = index;
+    return this.current();
+  }
+
+  removeAt(index: number): void {
+    if (index < 0 || index >= this.entries.length) return;
+    this.entries.splice(index, 1);
+    if (this.entries.length === 0) {
+      this.index = -1;
+      return;
+    }
+    if (index < this.index) this.index -= 1;
+    else if (index === this.index && this.index >= this.entries.length) this.index = this.entries.length - 1;
+  }
+
   back(): ExplorerLocation | null {
     if (!this.canBack()) return this.current();
-    this.index -= 1;
-    return this.current();
+    return this.moveTo(this.index - 1);
   }
 
   forward(): ExplorerLocation | null {
     if (!this.canForward()) return this.current();
-    this.index += 1;
-    return this.current();
+    return this.moveTo(this.index + 1);
   }
 
   snapshot(): ExplorerHistorySnapshot {

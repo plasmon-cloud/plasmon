@@ -139,16 +139,20 @@ interface SeedSpec {
   target: StartShortcutTarget;
 }
 
+function nativeSeedSpec(app: NativeAppDefinition): SeedSpec {
+  const target: StartShortcutTarget = { kind: "native", handlerId: app.handlerId };
+  return {
+    identity: startShortcutTargetIdentity(target),
+    name: safeEntryName(app.name),
+    folder: seedFolderForNative(app),
+    target,
+  };
+}
+
 function desiredSeeds(nativeApps: readonly NativeAppDefinition[], elements: readonly ExternalElement[]): SeedSpec[] {
-  const native = nativeApps.map<SeedSpec>((app) => {
-    const target: StartShortcutTarget = { kind: "native", handlerId: app.handlerId };
-    return {
-      identity: startShortcutTargetIdentity(target),
-      name: safeEntryName(app.name),
-      folder: seedFolderForNative(app),
-      target,
-    };
-  });
+  const native = nativeApps
+    .filter((app) => app.runtimeOnly !== true)
+    .map(nativeSeedSpec);
   const neutron = elements.map<SeedSpec>((element) => {
     const target: StartShortcutTarget = { kind: "element", elementId: element.id };
     return {
@@ -209,12 +213,57 @@ async function migrateRetiredSystemFolder(
   }
 }
 
+function isExactManagedSeed(node: FsNode, spec: SeedSpec): boolean {
+  if (node.kind !== "shortcut" || node.name !== spec.name || node.size !== 0 || node.mime !== undefined) return false;
+  const metadataKeys = Object.keys(node.metadata);
+  if (metadataKeys.length !== 1 || metadataKeys[0] !== START_SHORTCUT_METADATA_KEY) return false;
+  const shortcut = parseStartShortcut(node);
+  return !!shortcut && startShortcutTargetIdentity(shortcut.target) === spec.identity;
+}
+
+/**
+ * Runtime hosts used to be seeded because Start projected every Process
+ * definition. Retire only an exact old managed default: the durable seed ledger
+ * must prove that identity was seeded, and the shortcut must still have its
+ * canonical direct folder/name plus untouched shortcut-only metadata/content.
+ * Renamed, moved, deleted, content-bearing, metadata-customized, or user-created
+ * entries are intentionally preserved because their managed ownership is not
+ * provable from the durable reconciliation state.
+ */
+async function retireManagedRuntimeOnlySeeds(
+  fs: FsService,
+  root: FsNode,
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+): Promise<void> {
+  const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+
+  for (const app of nativeApps) {
+    if (app.runtimeOnly !== true) continue;
+    const spec = nativeSeedSpec(app);
+    if (!seeded.has(spec.identity)) continue;
+
+    let parent = root;
+    if (spec.folder !== null) {
+      const folder = rootChildren.find((node) => node.name === spec.folder);
+      if (!folder || folder.kind !== "directory") continue;
+      parent = folder;
+    }
+
+    const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
+    const candidate = children.find((node) => node.name === spec.name);
+    if (!candidate || !isExactManagedSeed(candidate, spec)) continue;
+    await fs.remove(candidate.id);
+  }
+}
+
 /**
  * Conservative reconciliation: stable target identity is authoritative. Existing
  * shortcuts anywhere under Start Menu are preserved, including user renames and
  * moves. Once an identity has been seeded, its later absence is treated as an
  * intentional deletion and is not recreated. Newly discovered identities are
- * seeded exactly once.
+ * seeded exactly once. Exact previously-managed defaults that are now classified
+ * runtime-only are retired without weakening those user-customization semantics.
  */
 export async function reconcileStartMenu(
   fs: FsService,
@@ -224,6 +273,7 @@ export async function reconcileStartMenu(
   const root = await ensureStartRoot(fs);
   const seeded = stringList(root.metadata[START_SEEDED_IDENTITIES_KEY]);
   await migrateRetiredSystemFolder(fs, root, nativeApps, seeded);
+  await retireManagedRuntimeOnlySeeds(fs, root, nativeApps, seeded);
   const existing = await scanStartTree(fs, root);
   let created = 0;
   let preserved = 0;

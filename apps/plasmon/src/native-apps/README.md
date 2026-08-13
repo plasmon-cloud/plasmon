@@ -14,7 +14,7 @@ Native application UI consumes the same OS authorities as other surfaces:
 - common resource/application presentation through the shared visual system;
 - Kernel application behavior through the Neutron boundary rather than local emulation.
 
-An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns.
+An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns. Such definitions declare `runtimeOnly: true` on their existing `NativeAppDefinition`; that classification does not unregister the Process host or association handler, and consumers that specifically need user-launchable application inventory exclude runtime-only definitions. js-dos and EmulatorJS use this shared classification rather than a parallel catalog or handler-name rule.
 
 Document applications consume Process close negotiation rather than replacing it. Text and Markdown share a Native Apps close-decision model: a clean document allows ordinary close immediately; a dirty document defers the Process request while Native Apps presents Save / Discard / Cancel. Save completes the same request only after persistence succeeds, failed save/conflict keeps it pending, Discard suppresses document autosave/unmount flush for that close, and Cancel restores normal document-session behavior.
 
@@ -30,12 +30,13 @@ Document applications consume Process close negotiation rather than replacing it
 - `properties/` — native wrapper for shared filesystem/resource inspection.
 - `recycle-bin/` — native restore/permanent-delete/empty surface over the canonical filesystem Trash service.
 - `jsdos/` — association-backed packaged runtime/player integration.
+- `emulatorjs/` — association-backed packaged EmulatorJS runtime for the initial NES (`.nes`) slice.
 
 ## Package structural coverage
 
 `packaging.ts` validates the esbuild metafile for the accepted user-launchable first-party native app component inputs: Text, Markdown, Photos, Video, Browser, Settings, Explorer, Properties, and Recycle Bin. The assertion searches the complete build graph rather than depending on generated chunk filenames, so eager and dynamically imported loaders remain covered without freezing bundler output naming.
 
-This structural check proves that required application code is represented in the package build graph; it does **not** prove application UI behavior, browser APIs, focus/input behavior, or successful user interaction. Those claims remain in focused/headless/browser/manual layers as appropriate. Runtime-only hosts such as js-dos are not treated as launchable native apps by this package inventory; js-dos keeps its dedicated pinned packaged-runtime asset contract.
+This structural check proves that required application code is represented in the package build graph; it does **not** prove application UI behavior, browser APIs, focus/input behavior, or successful user interaction. Those claims remain in focused/headless/browser/manual layers as appropriate. Runtime-only hosts such as js-dos and EmulatorJS are not treated as launchable native apps by this package inventory; they keep dedicated packaged-runtime asset and browser acceptance contracts.
 
 ## Refactor direction
 

@@ -48,6 +48,7 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
   }
 
   const saveDisabled = readOnly || !snapshot.dirty || snapshot.status === "saving";
+  const loadingDocument = snapshot.status === "idle" || snapshot.status === "loading";
 
   return (
     <section style={styles.root} aria-label="Markdown editor" onKeyDownCapture={captureSave}>
@@ -75,7 +76,7 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
         )}
       </div>
 
-      {snapshot.status === "loading" ? (
+      {loadingDocument ? (
         <div style={styles.message} role="status">Loading Markdown…</div>
       ) : snapshot.status === "error" && !snapshot.text ? (
         <div style={styles.fatalError} role="alert">{snapshot.error}</div>

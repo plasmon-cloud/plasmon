@@ -37,6 +37,7 @@ export const jsDosRuntimeDefinition: NativeAppDefinition = {
   name: "js-dos",
   icon,
   singleton: false,
+  runtimeOnly: true,
   defaultWindow: {
     width: 960,
     height: 720,

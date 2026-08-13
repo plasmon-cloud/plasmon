@@ -723,6 +723,7 @@ export function FileManager({
           <FileEntry
             key={node.id}
             fs={fs}
+            {...(associations ? { associations } : {})}
             node={node}
             selected={selection.ids.has(node.id)}
             focused={selection.focus === node.id}

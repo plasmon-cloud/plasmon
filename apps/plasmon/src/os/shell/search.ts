@@ -266,6 +266,7 @@ export function searchApplicationEntries(
   options: Pick<ShellSearchOptions, "pinnedNative" | "pinnedElements"> = {},
 ): ShellSearchResult[] {
   const native = nativeApps
+    .filter((app) => app.runtimeOnly !== true)
     .filter((app) => matches(normalize(`${app.name}\n${app.id}\n${app.handlerId}`), query))
     .sort((left, right) => {
       const rank = pinnedRank(left.handlerId, options.pinnedNative) - pinnedRank(right.handlerId, options.pinnedNative);
