@@ -1,4 +1,4 @@
-import { render, type RenderResult } from "@testing-library/react";
+import { render, waitFor, type RenderResult } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { PlasmonOS } from "../src/os/PlasmonOS.tsx";
 import {
@@ -25,6 +25,13 @@ export async function renderPlasmon(
   await environment.ready;
 
   const view = render(<PlasmonOS services={environment.services} />);
+  await waitFor(() => {
+    const shell = view.container.querySelector(".plasmon-shell");
+    if (!shell || shell.getAttribute("aria-busy") !== "false") {
+      throw new Error("Plasmon Shell did not finish its initial adapter state load");
+    }
+  });
+
   const user = userEvent.setup({ document: window.document });
   let disposed = false;
 
