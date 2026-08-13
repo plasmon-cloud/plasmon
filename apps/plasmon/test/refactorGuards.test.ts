@@ -5,6 +5,7 @@ import {
   createShortcut,
   readNeutronAppMetadata,
 } from "../src/os/fs/index.ts";
+import { EMULATORJS_NES_MIME } from "../src/native-apps/emulatorjs/runtime.ts";
 import {
   createHeadlessPlasmonEnvironment,
   type HeadlessPlasmonEnvironment,
@@ -110,7 +111,7 @@ describe("Plasmon refactor guards", () => {
         mime: "text/markdown",
       });
       const rom = await environment.services.fs.createFile(documents.id, "Refactor Guard.nes", {
-        mime: "application/x-nes-rom",
+        mime: EMULATORJS_NES_MIME,
       });
       await environment.services.fs.write(rom.id, emulatorFixture(), { truncate: true });
 
@@ -215,7 +216,7 @@ describe("Plasmon refactor guards", () => {
       );
       shortcutId = shortcut.id;
 
-      await first.open("/Desktop/Lifecycle Shortcut.lnk");
+      await first.open("/Desktop/Lifecycle Shortcut");
       expect(first.processes()).toHaveLength(1);
       expect(first.processes()[0]).toMatchObject({
         handlerId: "native:text",
@@ -244,7 +245,7 @@ describe("Plasmon refactor guards", () => {
       expect(resource.id).toBe(resourceId);
       expect(new TextDecoder().decode(await second.services.fs.read(resource.id)))
         .toBe("refactor guard state");
-      expect((await second.node("/Desktop/Lifecycle Shortcut.lnk"))?.id).toBe(shortcutId);
+      expect((await second.node("/Desktop/Lifecycle Shortcut"))?.id).toBe(shortcutId);
       expect((await second.node("/System/Settings.sys"))?.id).toBe(settingsId);
       expect((await second.node("/Apps/Review.neutron"))?.id).toBe(reviewProjectionId);
 
@@ -253,7 +254,7 @@ describe("Plasmon refactor guards", () => {
         .filter((node) => readNeutronAppMetadata(node)?.elementId === reviewElement.id);
       expect(reviewProjections).toHaveLength(1);
 
-      await second.open("/Desktop/Lifecycle Shortcut.lnk");
+      await second.open("/Desktop/Lifecycle Shortcut");
       expect(second.processes()).toHaveLength(1);
       expect(second.processes()[0]).toMatchObject({
         handlerId: "native:text",
