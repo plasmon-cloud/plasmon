@@ -14,10 +14,12 @@ Deterministic behavior already lives in production helper modules such as:
 - `delete.ts` — the thin ordinary-Delete adapter to the canonical filesystem Trash authority, including deterministic multi-selection success/failure reporting;
 - `preferences.ts` — the small filesystem-backed FileManager presentation preference store;
 - `visibility.ts` — the presentation-only filesystem view that selects the canonical `includeHidden` list mode without classifying resources itself;
+- `file-entry-state.ts` — pure `NodeId`-keyed FileEntry render state, including Desktop placement consumption and rename/selection/focus presentation state;
+- `use-file-entry-presentation.ts` — the React/browser lifecycle adapter around the existing shared resource-presentation resolver and image-thumbnail loader; it does not classify, open, or mutate resources;
 - `keyboard.ts`, `drag.ts`, `drop-target.ts`, `rename.ts` — interaction decisions;
 - `properties.tsx` — Properties/Open With presentation.
 
-`FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering.
+`FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering. `FileEntry.tsx` is a rendered adapter: it consumes stable resource identity, derived render state, and resolved shared presentation, then translates user interaction back to FileManager's existing command/service paths.
 
 FileManager is not a filesystem repository and must not grow private application-opening or Trash policy. All normal resource activation delegates to the filesystem core's canonical open dispatcher. FileManager may provide presentation-owned directory navigation so an existing Explorer window can navigate in place, but resource classification, shortcut dereference, system/Neutron application opening, and ordinary association dispatch remain filesystem/opening authority concerns.
 
@@ -27,16 +29,20 @@ Create Shortcut eligibility follows canonical filesystem resource capabilities. 
 
 Hidden-resource classification also remains filesystem-owned. FileManager's `Show hidden files` preference stores only whether Explorer should request hidden entries, using namespaced metadata on the filesystem root through `FsService`. The visibility layer passes `includeHidden` to the canonical filesystem list contract and never reimplements hidden detection from filenames or metadata. Showing hidden entries changes presentation only and does not weaken resource protection.
 
+Desktop FileEntry labels and inline rename editors are overlays bounded by the entry tile. Long selected or renaming labels therefore do not participate in neighboring Desktop entry placement. Desktop layout remains owned by the Desktop placement model; FileEntry only consumes the resulting position.
+
 ## Refactor direction
 
 `FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer.
 
 Do not split by historical feature wave or create separate Desktop/Explorer operation stacks. Preserve one set of filesystem actions and capability-aware commands, with React responsible mainly for rendering and translating browser events.
 
+For later presentation refactors, prefer the same humble-adapter pattern only where a demonstrated deterministic policy can be extracted cleanly. Do not copy FileEntry-specific browser lifecycle hooks into parallel presentation authorities; shared resource identity/presentation convergence belongs in the canonical visual/presentation seams.
+
 ## Testing
 
-Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, and persisted view preferences. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
+Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, and pure FileEntry render-state derivation. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
 
-Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, and packaged visible workflows.
+Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, and packaged visible workflows. Desktop label/rename geometry that depends on actual CSS layout is protected by the focused packaged-browser FileEntry gate rather than a headless approximation.
 
 When a UI bug is fundamentally a shared command/model bug, add the regression below React first instead of relying only on click-path coverage.
