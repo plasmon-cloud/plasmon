@@ -212,7 +212,10 @@ export function Desktop({
         positions={resolvedPositions}
         onSnapshot={handleSnapshot}
         onDesktopReposition={async (ids, delta, bounds) => {
-          const next = applyDesktopDragDelta(resolvedPositions, orderedIds, ids, delta, bounds);
+          const candidates = applyDesktopDragDelta(resolvedPositions, orderedIds, ids, delta, bounds);
+          const movedIds = new Set(ids);
+          const stationaryIds = orderedIds.filter((id) => !movedIds.has(id));
+          const next = reconcileDesktopPositions(candidates, orderedIds, bounds, stationaryIds);
           setPositions(next);
           try {
             await persistDesktopPositions(fs, desktop.id, next);
