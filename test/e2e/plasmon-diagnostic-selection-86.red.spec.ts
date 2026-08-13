@@ -19,7 +19,7 @@ test("#86 browser boundary — diagnostic text selects without stealing FileEntr
   const desktop = app.locator(".fm-root--desktop");
   const box = await desktop.boundingBox();
   if (!box) throw new Error("Desktop has no bounds");
-  await desktop.click({ button: "right", position: { x: Math.max(120, box.width / 2), y: Math.max(120, box.height / 2) });
+  await desktop.click({ button: "right", position: { x: Math.max(120, box.width / 2), y: Math.max(120, box.height / 2) }});
   await app.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
   await app.getByRole("textbox", { name: "Rename New Text Document.txt" }).press("Escape");
   const root = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();

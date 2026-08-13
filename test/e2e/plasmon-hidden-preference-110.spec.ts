@@ -21,7 +21,7 @@ test("#110 packaged boundary — Show Hidden Files persists through reopen and r
   const desktop = app.locator(".fm-root--desktop");
   const box = await desktop.boundingBox();
   if (!box) throw new Error("Desktop has no bounds");
-  await desktop.click({ button: "right", position: { x: Math.max(120, box.width / 2), y: Math.max(120, box.height / 2) });
+  await desktop.click({ button: "right", position: { x: Math.max(120, box.width / 2), y: Math.max(120, box.height / 2) }});
   await app.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
   const rename = app.getByRole("textbox", { name: "Rename New Text Document.txt" });
   await rename.fill(".hidden-110.txt");

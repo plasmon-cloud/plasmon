@@ -20,7 +20,7 @@ test("#173 RED — List is a compact spatial column view distinct from Details",
   const desktop = app.locator(".fm-root--desktop");
   const desktopBox = await desktop.boundingBox();
   if (!desktopBox) throw new Error("Desktop FileManager has no bounds");
-  await desktop.click({ button: "right", position: { x: Math.max(120, desktopBox.width / 2), y: Math.max(120, desktopBox.height / 2) });
+  await desktop.click({ button: "right", position: { x: Math.max(120, desktopBox.width / 2), y: Math.max(120, desktopBox.height / 2) }});
   await app.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
   await app.getByRole("textbox", { name: "Rename New Text Document.txt" }).press("Escape");
   const root = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
