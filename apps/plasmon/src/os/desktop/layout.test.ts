@@ -45,6 +45,20 @@ test("restore collision preserves the already-visible occupant even when display
   expect(reconciled.restored).not.toEqual(reconciled.incumbent);
 });
 
+test("drag collision repairs the moved entry without shifting a stationary unrelated icon", () => {
+  const ids = ["moved", "stationary"];
+  const persisted = {
+    moved: { x: 16, y: 16 },
+    stationary: { x: 120, y: 16 },
+  };
+  const candidates = applyDesktopDragDelta(persisted, ids, ["moved"], { dx: 104, dy: 0 }, workspace);
+
+  const reconciled = reconcileDesktopPositions(candidates, ids, workspace, ["stationary"]);
+
+  expect(reconciled.stationary).toEqual(persisted.stationary);
+  expect(reconciled.moved).not.toEqual(reconciled.stationary);
+});
+
 test("workspace shrink repairs only entries that no longer fit", () => {
   const persisted = {
     stable: { x: 16, y: 16 },
