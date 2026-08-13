@@ -48,4 +48,4 @@ Observed integrated release: `f4ac3b4c`.
 
 ## Conclusions
 
-Merged PRs #188/#205/#206/#207/#209 are not automatically closure-ready for every linked Issue. The principal integrated promotion failures are the old/weak #51 and #65 adoption in active PRs, plus browser allowances for #190/#67/#200/#202 and exact geometry #175. No product code was changed by this audit.
+Merged PRs #188/#205/#206/#207/#209 are not automatically closure-ready for every linked Issue. The remaining integrated promotion concerns are browser allowances for #190/#67/#200/#202 and exact geometry #175; the bounded exact-head audit now accepts active #51/#65 promotion, pending their normal merge/release ancestry. No product code was changed by this audit.

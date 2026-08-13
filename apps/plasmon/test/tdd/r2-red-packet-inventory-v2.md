@@ -16,7 +16,7 @@ Result: **148 packet/artifact files** (A 139, B 8, C 1), covering **44 issue IDs
 |---|---|---|
 | #43, #177 | Windowing/browser pointer or repeated placement contracts; B has executable #177, A has pointer contract | lower manager guards are useful; browser pointer continuity remains BROWSER SPEC ONLY; no stale implementation claim |
 | #44, #108, #110, #115 | closure/audit/docs plus A gates | #44/#110 promoted/core green; #108 lower model green but packaged Back proof missing; #115 characterization/authority docs, no structural RED |
-| #51, #65 | executable A primitive/UI gates | final A packet is strong; active PRs #210/#208 adopted weaker UI slices; **STALE PACKET PROMOTED / PARTIAL RED PROMOTION GAP** |
+| #51, #65 | executable A primitive/UI gates | final A packet is strong; exact current PR heads #210/#208 satisfy the deterministic contracts through equivalent ordinary helper/model/RTL coverage; stale one-file packets remain quarantined |
 | #52, #189 | presentation/classifier matrices and #189 executable gate | #189 promoted by PR207; #52 waits #190 installed presentation promotion |
 | #63, #91 | B executable RTL/headless gates | valid core REDs; no implementation PR; permanent destinations named in B ledger |
 | #66, #86, #93, #94, #95, #171, #173, #175, #176 | browser specs/geometry or authority docs | browser-only where real geometry/media/event loading matters; #94 has a genuine missing thumbnail production seam; no parse/list success counted |

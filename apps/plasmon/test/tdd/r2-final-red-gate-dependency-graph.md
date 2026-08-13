@@ -4,7 +4,7 @@ Edges are current acceptance dependencies, not historical Issue prose.
 
 | edge | kind | rationale / current state |
 |---|---|---|
-| #65 → #92 | HARD | multi-item move uses the same FileOperationState contract; #65 promotion gap blocks #92 |
+| #65 → #92 | HARD | multi-item move must reuse the now-accepted FileOperationState contract; #92 still waits for #65's integration/release ancestry, not a behavioral promotion gap |
 | #169 → #194 | ACCEPTANCE | Start idempotent reconciliation is a prerequisite for the reconstructed Start surface |
 | #174 + #190 + #175 → #193 | ACCEPTANCE | Search needs canonical `.sys`, presentation, and stable geometry; #175 remains browser-owned |
 | #169 → #194; #174 → #194 | ACCEPTANCE | filesystem-backed Start depends on canonical inventory/projection |

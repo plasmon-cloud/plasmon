@@ -5,19 +5,18 @@ This is an audit checkpoint, **not** a closure certificate. The second-pass deep
 ## Snapshot
 
 - Luna-D branch: `tdd/r2/luna-d-harness-audit`
-- Luna-D HEAD: `e815c46358f20b25fd5b15f6409adefa19dfcad3`
+- Luna-D HEAD at this audit start: `c29c42be9d452f01d51f5286e50fc8071384c21b`
 - integrated release observed at finish: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`
 - checkpoint Issues enumerated: **79**; expanded second-pass universe: **103**; unclassified: **0**
-- disposition counts: **ALREADY GREEN 17; CHARACTERIZATION READY 19; VERIFIED CORE RED / INCOMPLETE ACCEPTANCE 6; WAIT FOR DEPENDENCY 13; WAIT FOR INTEGRATION 4; ACTIVE IMPLEMENTATION 2; BROWSER SPEC ONLY 4; PACKAGED BROWSER SPEC ONLY 5; CLOSURE AUDIT COMPLETE 4; DEFERRED 3; INVALID PACKET 1; RED PROMOTION GAP 1**
+- prior checkpoint disposition counts are superseded for these two rows: **#51 and #65 are now PROMOTION ACCEPTED; RED PROMOTION GAP 0 for this bounded audit**
 - fast tests: `npm --workspace neutron-plasmon test` → **454 Bun + 4 RTL passed, 0 failed**
 - browser: no local packaged session executed; this is an operational browser block
 
 ## Blocking gaps
 
-1. **RED promotion gap #65:** PR #208 adopted the earlier one-file tests, not the final repaired two-file/partial-failure/duplicate/paste contract. Exact absent assertions are in `r2-red-promotion-master-ledger.md`.
-2. **Executed product RED #190:** active PR #211's installed asset gate reached the browser but failed required 200 response evidence for representative icons; its broad smoke also failed on unallowed icon aborts. See `r2-browser-health-allowance-audit-v2.md`.
-3. **RED promotion gap #51:** PR #210 adopted only the one-file happy path; primitive negative/identity/collision/repeated-creation assertions are not in the PR or release.
-4. **Active PRs:** #204/#191, #208/#65, #210/#51, #211/#190 are not integrated. Luna-D did not edit or merge them.
+1. **Executed product RED #190:** active PR #211's installed asset gate reached the browser but failed required 200 response evidence for representative icons; its broad smoke also failed on unallowed icon aborts. See `r2-browser-health-allowance-audit-v2.md`.
+2. **Promotion audit resolved:** exact heads #208/#65 and #210/#51 are PROMOTION ACCEPTED; see `r2-red-promotion-master-ledger.md` and `r2-active-pr-promotion-audit-v2.md`. They remain unintegrated, so release ancestry is still pending, but no behavioral promotion gap remains.
+3. **Active PRs:** #204/#191, #208/#65, #210/#51, #211/#190 are not integrated. Luna-D did not edit or merge them.
 5. **Browser proofs pending:** #66, #67/#89/#113/#200, #175, #180, #190, #191, #202 and the packaged portion of #181 require a real installed session/CI result. #187 allowances remain for #190, #175/#193, #67/#200 and #202 (plus the unrelated Kernel iframe warning).
 6. **Unresolved packets:** B/C have no published packet tree in this snapshot; A future packets are mixed characterization/readiness and RED. #181 lacks an explicit production opt-in fixture seam and therefore has no honest executable RED yet.
 7. **Invalid packets:** #66 fake stacking, #173 old single-column, #178 cast/API, #182 test-local Favorites, old #190/#191 health/selector packets, and old one-file #51/#65 packets are quarantined.
@@ -27,7 +26,7 @@ This is an audit checkpoint, **not** a closure certificate. The second-pass deep
 
 ## Required next work
 
-- Active implementation owners must adopt the final #51/#65 packets with full behavioral strength and land ordinary discovery tests.
+- Coordinator must consume the exact-head PROMOTION ACCEPTED dispositions for #51/#65 after their normal review/merge process; Luna-D must not merge them.
 - Merge and verify #190/#191, retiring only their own allowances and preserving #95 as a separate contract.
 - Testing/Integration must settle the #181 explicit fixture seam, then D stages the production-backed RED and packaged proof.
 - Run the packaged CI/browser lanes for the listed browser specs and update the allowance ledger with actual retirement evidence.

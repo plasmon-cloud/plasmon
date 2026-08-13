@@ -6,7 +6,7 @@
 | real production vocabulary? | generally yes: FsService, NodeId, classifier, FileOperationState; #182 violates this | cannot validate | cannot validate |
 | invented API? | old #178 cast gate and old #66 are quarantined | no evidence | no evidence |
 | test-local policy? | old #182 Favorites policy is invalid | no evidence | no evidence |
-| title stronger than assertion? | yes for old one-file #65 adoption and one-file #51 PR adoption | queue titles have no executable packet | queue titles have no executable packet |
+| title stronger than assertion? | stale one-file #51/#65 packets were quarantined; exact PR heads now satisfy repaired contracts through equivalent ordinary coverage | queue titles have no executable packet | queue titles have no executable packet |
 | dependency integrated? | #189/#192 yes; future #193–#201 no | Window/Shell dependencies largely not implemented | browser/runtime dependencies not executed |
 | browser evidence executed? | #187/#192 historical CI evidence; current #190/#191 active and not release | no packet | PR206/#170 and #186 provide separate evidence; future browser gates are specs |
 | intended RED reason? | repaired packets appear targeted; stale classes do not | not determinable | not determinable |

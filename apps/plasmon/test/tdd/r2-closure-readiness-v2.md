@@ -10,7 +10,7 @@ This supplements the checkpoint `r2-issue-closure-readiness.md` with the second-
 
 ## Keep open for implementation/promotion
 
-- **#51/#65:** active PRs have stale/partial promotion; final A contracts must survive in ordinary tests.
+- **#51/#65:** exact current PR heads are **PROMOTION ACCEPTED** by the bounded Luna-D audit. They remain open/unintegrated, so coordinator review and release ancestry are still required; no behavioral promotion gap remains.
 - **#190:** active PR #211 has executed packaged RED; asset response/health failure and allowance retirement remain.
 - **#191:** active draft PR #204 is externally held by #161; exact-head packaged rerun required after resolver integration.
 - **#52, #89, #108, #173, #175, #179, #180, #193–#201, #202:** incomplete implementation, packaged proof, or explicit dependency as described in v2 ledgers.

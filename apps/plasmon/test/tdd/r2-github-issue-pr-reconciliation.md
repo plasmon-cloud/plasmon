@@ -91,6 +91,6 @@ Snapshot: 2026-08-13, live GitHub API; release target `origin/release/0.1.0-r2` 
 1. **OPEN BUT IMPLEMENTED:** at minimum #25, #38, #43, #44, #46, #58, #64, #67, #72, #82, #87, #89, #95, #107, #109, #110, #111, #113, #117, #121, #155, #167, #170, #172, #186, #187, #189, #192. GitHub closure is not performed by this audit.
 2. **ACTIVE PR:** #204/#191, #208/#65, #210/#51, #211/#190. Do not stage underneath these owners.
 3. **CLOSED WITHOUT ACCEPTANCE EVIDENCE:** none of the 79 inventory Issues was closed at snapshot; this flag is therefore zero, but several merged/open Issues still lack full acceptance.
-4. **MERGED BUT TEST PROMOTION INCOMPLETE:** #175, #200, #202 (shared smoke/allowance evidence is not implementation acceptance); #51 and #65 have active PRs with promotion gaps documented separately.
+4. **MERGED BUT TEST PROMOTION INCOMPLETE:** #175, #200, #202 (shared smoke/allowance evidence is not implementation acceptance); #51/#65 active PR promotion is now accepted by the exact-head Luna-D audit, but both remain unintegrated.
 5. **CANONICAL ISSUE MISSING:** no missing Issue number was found for the queue or milestone inventory. #155 is explicitly retained as a superseded predecessor rather than dropped.
 6. GitHub labels `blocked` and `needs-verification` are not proof of a current dependency graph; see `r2-final-red-gate-dependency-graph.md`.

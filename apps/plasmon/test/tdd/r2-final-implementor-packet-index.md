@@ -4,8 +4,8 @@ Consume only the packet named here; do not search `.red` by filename alone.
 
 | Issue | owner | validated packet | RED files / prerequisites | permanent GREEN | browser / active PR | do not consume |
 |---|---|---|---|---|---|---|
-| #51 | A | `d522336` repaired tree | `.red/issue-51.red.test.ts`, `.red/issue-51.red.ui.test.tsx`; #44 | FileManager normal RTL + primitive tests | no new B; PR210 active | PR210 one-file-only adoption |
-| #65 | A | repaired A tree at `8453df4` | `.red/issue-65.red.ui.test.tsx`; production FileOperationState | normal `test/rtl` with 2-file/failure/paste assertions | no package; PR208 active | PR208 two one-file tests |
+| #51 | A | `d522336` repaired tree | `.red/issue-51.red.test.ts`, `.red/issue-51.red.ui.test.tsx`; #44 | PR210 `send-to-desktop.test.ts` + ordinary RTL journey | no new B; PR210 exact head promotion accepted | stale one-file packet only; consume ordinary equivalent coverage |
+| #65 | A | repaired A tree at `8453df4` | `.red/issue-65.red.ui.test.tsx`; production FileOperationState | PR208 model/RTL delayed lifecycle plus exact-head supplemental two-file audit | no package; PR208 exact head promotion accepted | stale one-file packet only; consume ordinary equivalent coverage |
 | #66 | A | `ac07da4` plan | browser session required | `test/e2e` only | B; no PR | old fake stacking gate |
 | #86/#92/#93/#94 | A | issue-specific `.red/issue-*` docs | production seam first | src/test or RTL by contract | no | unvalidated title-only packets |
 | #109/#110 | A/B | merged evidence / A maps | existing ordinary guards | Visual/FileManager ordinary tests | no | stale duplicate maps |
