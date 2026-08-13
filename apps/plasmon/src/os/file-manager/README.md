@@ -27,6 +27,12 @@ Create Shortcut eligibility follows canonical filesystem resource capabilities. 
 
 Hidden-resource classification also remains filesystem-owned. FileManager's `Show hidden files` preference stores only whether Explorer should request hidden entries, using namespaced metadata on the filesystem root through `FsService`. The visibility layer passes `includeHidden` to the canonical filesystem list contract and never reimplements hidden detection from filenames or metadata. Showing hidden entries changes presentation only and does not weaken resource protection.
 
+### Resource presentation boundary
+
+FileManager consumes the integrated resource classifier and the shared Visual presentation seam rather than maintaining its own icon identity tables. `file-icons.ts` may read filesystem/application metadata needed to resolve a shortcut target or Element projection, but it delegates classification-to-artwork and native-handler fallback mapping to `visual/resource-presentation.ts`. `ResourceIcon` remains the renderer/composition primitive.
+
+This means FileManager still owns presentation lifecycle that genuinely depends on its surface, such as image-thumbnail leases and resolving a shortcut target's metadata through `FsService`; it does **not** own MIME/type classification, native handler identity, application artwork fallback, shortcut execution, or shared icon sizing. Shortcut target artwork is composed with the shared shortcut overlay rather than replaced.
+
 ## Refactor direction
 
 `FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer.
@@ -35,8 +41,8 @@ Do not split by historical feature wave or create separate Desktop/Explorer oper
 
 ## Testing
 
-Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, and persisted view preferences. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
+Use fast tests for selection/range/marquee math, clipboard/collision naming, refresh ordering, command eligibility, activation routing, rename/create/import/delete helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, and deterministic shared-presentation mapping. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
 
-Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, and packaged visible workflows.
+Use real-browser tests for pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, and packaged visible workflows. Installed Plasmon-owned artwork paths require packaged-browser coverage because standalone rendering cannot prove the Neutron application mount.
 
 When a UI bug is fundamentally a shared command/model bug, add the regression below React first instead of relying only on click-path coverage.
