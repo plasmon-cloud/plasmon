@@ -4,40 +4,18 @@ import {
   classifyResource,
   readNeutronAppMetadata,
   readSharedShortcut,
-  readSystemAppMetadata,
 } from "../fs/index.ts";
 import {
   composeShortcutPresentation,
-  type FileTypeIconName,
   type ResourceIconPresentation,
 } from "../visual/index.ts";
+import {
+  applicationResourcePresentation,
+  nativeHandlerResourcePresentation,
+  resourcePresentationForClassification,
+} from "../visual/resource-presentation.ts";
 
 export type FileVisualKind = "folder" | "text" | "markdown" | "image" | "video" | "shortcut" | "atom" | "unknown";
-
-const SHARED_FILE_ICON: Readonly<Record<FileVisualKind, FileTypeIconName>> = Object.freeze({
-  folder: "folder",
-  text: "text",
-  markdown: "markdown",
-  image: "image",
-  video: "video",
-  shortcut: "file",
-  atom: "atom",
-  unknown: "file",
-});
-
-const SHARED_NATIVE_PRESENTATION: Readonly<Record<string, ResourceIconPresentation>> = Object.freeze({
-  "native:explorer": { kind: "system", icon: "file-manager" },
-  "native:settings": { kind: "system", icon: "settings" },
-  "native:photos": { kind: "system", icon: "photos" },
-  "native:browser": { kind: "system", icon: "browser" },
-  "native:properties": { kind: "system", icon: "properties" },
-  "native:start": { kind: "system", icon: "start" },
-  "native:search": { kind: "system", icon: "search" },
-  "native:recycle-bin": { kind: "system", icon: "recycle-bin" },
-  "native:text": { kind: "file-type", icon: "text" },
-  "native:markdown": { kind: "file-type", icon: "markdown" },
-  "native:video": { kind: "file-type", icon: "video" },
-});
 
 export function fileVisualKind(node: FsNode): FileVisualKind {
   const classification = classifyResource(node);
@@ -56,27 +34,14 @@ export function fileVisualKind(node: FsNode): FileVisualKind {
   }
 }
 
-/** Maps FileManager's already-resolved ordinary semantic kind onto shared visual artwork. */
+/** Maps an already-classified filesystem resource onto shared Visual identity. */
 export function resourceIconPresentationForFile(node: FsNode): ResourceIconPresentation {
-  return { kind: "file-type", icon: SHARED_FILE_ICON[fileVisualKind(node)] };
+  return resourcePresentationForClassification(classifyResource(node));
 }
 
 export interface FileResourcePresentation {
   presentation: ResourceIconPresentation;
   shortcut: boolean;
-}
-
-function applicationPresentation(src?: string | null): ResourceIconPresentation {
-  return { kind: "application", src: src ?? null };
-}
-
-function nativeApplicationPresentation(
-  handlerId: string,
-  associations?: AssociationRegistry,
-): ResourceIconPresentation {
-  const registeredIcon = associations?.getHandler(handlerId)?.icon;
-  if (registeredIcon) return applicationPresentation(registeredIcon);
-  return SHARED_NATIVE_PRESENTATION[handlerId] ?? applicationPresentation();
 }
 
 /**
@@ -87,13 +52,11 @@ export function directFileResourcePresentation(
   node: FsNode,
   associations?: AssociationRegistry,
 ): ResourceIconPresentation {
-  const systemApp = readSystemAppMetadata(node);
-  if (systemApp) return nativeApplicationPresentation(systemApp.handlerId, associations);
-
-  const neutronApp = readNeutronAppMetadata(node);
-  if (neutronApp) return applicationPresentation(neutronApp.icon);
-
-  return resourceIconPresentationForFile(node);
+  const classification = classifyResource(node);
+  const nativeIcon = classification.systemApp
+    ? associations?.getHandler(classification.systemApp.handlerId)?.icon
+    : undefined;
+  return resourcePresentationForClassification(classification, { nativeIcon });
 }
 
 /** Safe synchronous presentation used immediately and whenever richer target lookup fails. */
@@ -101,8 +64,9 @@ export function fallbackFileResourcePresentation(
   node: FsNode,
   associations?: AssociationRegistry,
 ): FileResourcePresentation {
+  const classification = classifyResource(node);
   const direct = directFileResourcePresentation(node, associations);
-  if (fileVisualKind(node) !== "shortcut") return { presentation: direct, shortcut: false };
+  if (classification.kind !== "shortcut") return { presentation: direct, shortcut: false };
   const composed = composeShortcutPresentation(direct);
   return { presentation: composed.target, shortcut: composed.shortcut };
 }
@@ -112,10 +76,17 @@ async function neutronElementPresentation(
   elementId: string,
 ): Promise<ResourceIconPresentation> {
   const apps = await fs.resolvePath(APPS_PATH);
-  if (!apps || apps.kind !== "directory") return applicationPresentation();
+  if (!apps || apps.kind !== "directory") return applicationResourcePresentation();
   const projections = await fs.list(apps.id, { includeHidden: true, sort: "name" });
   const projection = projections.find((candidate) => readNeutronAppMetadata(candidate)?.elementId === elementId);
-  return projection ? directFileResourcePresentation(projection) : applicationPresentation();
+  return projection ? directFileResourcePresentation(projection) : applicationResourcePresentation();
+}
+
+function nativeShortcutPresentation(
+  handlerId: string,
+  associations?: AssociationRegistry,
+): ResourceIconPresentation {
+  return nativeHandlerResourcePresentation(handlerId, associations?.getHandler(handlerId)?.icon);
 }
 
 async function shortcutTargetPresentation(
@@ -130,7 +101,7 @@ async function shortcutTargetPresentation(
   try {
     switch (shortcut.target.kind) {
       case "native":
-        return nativeApplicationPresentation(shortcut.target.handlerId, associations);
+        return nativeShortcutPresentation(shortcut.target.handlerId, associations);
       case "element":
         return await neutronElementPresentation(fs, shortcut.target.elementId);
       case "node": {
@@ -145,8 +116,8 @@ async function shortcutTargetPresentation(
         return { kind: "file-type", icon: "file" };
     }
   } catch {
-    if (shortcut.target.kind === "native") return nativeApplicationPresentation(shortcut.target.handlerId, associations);
-    if (shortcut.target.kind === "element") return applicationPresentation();
+    if (shortcut.target.kind === "native") return nativeShortcutPresentation(shortcut.target.handlerId, associations);
+    if (shortcut.target.kind === "element") return applicationResourcePresentation();
     return { kind: "file-type", icon: "file" };
   }
 }
@@ -161,7 +132,7 @@ export async function resolveFileResourcePresentation(
   associations?: AssociationRegistry,
   visited: ReadonlySet<string> = new Set(),
 ): Promise<FileResourcePresentation> {
-  if (fileVisualKind(node) !== "shortcut") {
+  if (classifyResource(node).kind !== "shortcut") {
     return { presentation: directFileResourcePresentation(node, associations), shortcut: false };
   }
 
