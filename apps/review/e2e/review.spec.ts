@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { approveFilesTool, login, openReview } from "./harness.ts";
 
 test("packaged Review first-run is readable and self-explanatory", async ({ page }, testInfo) => {
@@ -14,12 +14,12 @@ test("packaged Review first-run is readable and self-explanatory", async ({ page
   await page.emulateMedia({ colorScheme: "light" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "first-run-light");
+  await attachBrowserScreenshot(page, testInfo, "first-run-light");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "first-run-dark");
+  await attachBrowserScreenshot(page, testInfo, "first-run-dark");
 
   await page.setViewportSize({ width: 560, height: 900 });
   const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({
@@ -27,7 +27,7 @@ test("packaged Review first-run is readable and self-explanatory", async ({ page
     scrollWidth: body.scrollWidth,
   }));
   expect(narrowMetrics.scrollWidth).toBeLessThanOrEqual(narrowMetrics.clientWidth + 1);
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "first-run-narrow");
+  await attachBrowserScreenshot(page, testInfo, "first-run-narrow");
 });
 
 test("packaged vanilla Neutron Review completes the first-demo workflow and persists it", async ({ page }, testInfo) => {
@@ -70,16 +70,19 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await card.getByRole("button", { name: "Add note" }).click();
   await expect(card.getByText("Packaged workflow verified.")).toBeVisible();
   await expect(card.getByText("Local reviewer")).toBeVisible();
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "populated-review");
+  await attachBrowserScreenshot(page, testInfo, "populated-review");
 
   const originalAtomId = await harness.review.locator(".atom-details dd").first().innerText();
   await expect(harness.review.locator(".history-entry")).toHaveCount(5);
   const revisionFour = harness.review.locator(".history-entry").filter({ hasText: "r4" }).first();
   await revisionFour.getByRole("button", { name: "Restore…" }).click();
-  await expect(revisionFour.getByText("Restore revision r4?")).toBeVisible();
-  await expect(revisionFour.getByText(/keeping the same Review Atom and preserving all history/)).toBeVisible();
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "restore-confirmation");
-  await revisionFour.getByRole("button", { name: "Restore revision" }).click();
+  const restoreConfirm = revisionFour.getByRole("alert");
+  await expect(restoreConfirm.getByText("Restore revision r4?")).toBeVisible();
+  await expect(restoreConfirm.getByText(/keeping the same Review Atom and preserving all history/)).toBeVisible();
+  await attachBrowserScreenshot(page, testInfo, "restore-confirmation");
+  const restoreAction = restoreConfirm.getByRole("button", { name: "Restore revision" });
+  await expect(restoreAction).toBeVisible();
+  await restoreAction.click();
   await expect(harness.review.locator(".history-entry")).toHaveCount(6);
   await expect(card.getByText("Packaged workflow verified.")).toHaveCount(0);
   expect(await harness.review.locator(".atom-details dd").first().innerText()).toBe(originalAtomId);
@@ -91,7 +94,7 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await page.setViewportSize({ width: 620, height: 900 });
   const populatedNarrow = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
   expect(populatedNarrow.scrollWidth).toBeLessThanOrEqual(populatedNarrow.clientWidth + 1);
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "populated-review-narrow");
+  await attachBrowserScreenshot(page, testInfo, "populated-review-narrow");
   await page.setViewportSize({ width: 1440, height: 900 });
 
   const exportPath = `/e2e/review-${Date.now()}.md`;
@@ -144,7 +147,7 @@ test("packaged vanilla Neutron Review completes the first-demo workflow and pers
   await expect(reopenedOriginalCard.getByRole("button", { name: "Working", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(reopenedOriginalCard.getByText("Verified again after deliberate restore.")).toBeVisible();
   await expect(harness.review.getByTestId("persistence-status").getByText("Saved", { exact: true })).toBeVisible();
-  await attachFrameScreenshot(harness.review.locator("body"), testInfo, "reopened-persisted-review");
+  await attachBrowserScreenshot(page, testInfo, "reopened-persisted-review");
 });
 
 async function expectReadable(locator: Locator, minimumRatio: number): Promise<void> {
@@ -187,6 +190,6 @@ function luminance([red, green, blue]: [number, number, number]): number {
   return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
-async function attachFrameScreenshot(locator: Locator, testInfo: TestInfo, name: string): Promise<void> {
-  await testInfo.attach(name, { body: await locator.screenshot(), contentType: "image/png" });
+async function attachBrowserScreenshot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
+  await testInfo.attach(name, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
 }
