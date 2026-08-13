@@ -1,8 +1,13 @@
 import { expect, test } from "bun:test";
+import { HandlerAssociationRegistry } from "../../../src/os/associations/index.ts";
+import type { FsNode, HandlerDefinition } from "../../../src/os/contracts/index.ts";
+import { fileVisualKind } from "../../../src/os/file-manager/file-icons.ts";
+import { friendlyKind } from "../../../src/os/file-manager/properties.tsx";
 import { classifyResource, NEUTRON_APP_MIME, SYSTEM_APP_MIME, systemAppMetadata, neutronAppMetadata } from "../../../src/os/fs/index.ts";
 import { categorizeFsNode } from "../../../src/os/shell/search.ts";
-import { fileVisualKind } from "../../../src/os/file-manager/file-icons.ts";
-import type { FsNode } from "../../../src/os/contracts/index.ts";
+import { inferImageMime } from "../../../src/native-apps/photos/media.ts";
+import { editorLanguageForResource } from "../../../src/native-apps/text/editorModel.ts";
+import { inferVideoMime } from "../../../src/native-apps/video/media.ts";
 
 const node = (name: string, input: Partial<FsNode> = {}): FsNode => ({
   id: `node:${name}`,
@@ -44,6 +49,44 @@ test("#189 characterization — rename changes only derived classification while
   const before = node("guide.txt", { id: "stable-guide", mime: undefined });
   const after = { ...before, name: "guide.md" };
   expect(before.id).toBe(after.id);
-  expect(fileVisualKind(before)).toBe("text");
-  expect(fileVisualKind(after)).toBe("markdown");
+  expect(classifyResource(before).type).toMatchObject({ mime: "text/plain", contentKind: "text", source: "filename" });
+  expect(classifyResource(after).type).toMatchObject({ mime: "text/markdown", contentKind: "markdown", source: "filename" });
+});
+
+test("#189 canonical classifier covers representative derived families and safe unknown fallback", () => {
+  expect(classifyResource(node("notes.txt")).type).toMatchObject({ mime: "text/plain", contentKind: "text", source: "filename" });
+  expect(classifyResource(node("app.ts")).type).toMatchObject({ mime: "text/typescript", contentKind: "source", language: "typescript" });
+  expect(classifyResource(node("README.md")).type).toMatchObject({ mime: "text/markdown", contentKind: "markdown", language: "markdown" });
+  expect(classifyResource(node("photo.png")).type).toMatchObject({ mime: "image/png", contentKind: "image" });
+  expect(classifyResource(node("song.mp3")).type).toMatchObject({ mime: "audio/mpeg", contentKind: "audio" });
+  expect(classifyResource(node("movie.webm")).type).toMatchObject({ mime: "video/webm", contentKind: "video" });
+  expect(classifyResource(node("mystery.blob")).type).toMatchObject({ mime: null, contentKind: "unknown", source: "fallback" });
+  expect(classifyResource(node("folder", { kind: "directory" })).kind).toBe("directory");
+});
+
+test("#189 RED — Properties, Text, Photos, and Video consume the same explicit-over-derived type precedence", () => {
+  expect(friendlyKind(node("script.js"))).toBe("application/javascript");
+  expect(friendlyKind(node("script.js", { mime: "application/octet-stream" }))).toBe("application/octet-stream");
+  expect(editorLanguageForResource("README.md", "text/plain")).toBe("plaintext");
+  expect(inferImageMime("poster.png")).toBe("image/png");
+  expect(inferImageMime("poster.png", "application/octet-stream")).toBeNull();
+  expect(inferVideoMime("movie.mp4")).toBe("video/mp4");
+  expect(inferVideoMime("movie.mp4", "application/octet-stream")).toBe("application/octet-stream");
+});
+
+test("#189 AssociationRegistry remains an independent handler-matching authority", async () => {
+  const registry = new HandlerAssociationRegistry();
+  const handler: HandlerDefinition = {
+    id: "native:markdown",
+    kind: "native",
+    name: "Markdown",
+    icon: "system:test",
+    capabilities: ["read"],
+  };
+  registry.registerHandler(handler);
+  registry.registerRule({ id: "markdown-by-extension", handlerId: handler.id, extensions: [".md"], priority: 1 });
+
+  const resource = node("notes.md", { mime: "text/plain" });
+  expect(classifyResource(resource).type.contentKind).toBe("text");
+  expect((await registry.resolve(resource)).map((candidate) => candidate.id)).toEqual([handler.id]);
 });
