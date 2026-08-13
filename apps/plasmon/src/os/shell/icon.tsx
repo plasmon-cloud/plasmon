@@ -3,11 +3,13 @@ import {
   applicationResourcePresentation,
   isImageResourceReference,
 } from "../visual/resource-presentation.ts";
+import type { IconContext } from "../visual/sizing.ts";
 
 export interface ShellIconProps {
   icon?: string;
   label: string;
   shortcut?: boolean;
+  context?: Extract<IconContext, "start" | "search" | "taskbar">;
 }
 
 export type ShellIconPresentation =
@@ -33,12 +35,12 @@ export function resolveShellIconPresentation(
   return { kind: "fallback", text: symbolic || shellIconInitials(label) };
 }
 
-export function ShellIcon({ icon, label, shortcut = false }: ShellIconProps) {
+export function ShellIcon({ icon, label, shortcut = false, context = "start" }: ShellIconProps) {
   const presentation = resolveShellIconPresentation(icon, label, null);
   return (
     <span className="plasmon-shell__app-icon" aria-hidden="true">
       <ResourceIcon
-        context="start"
+        context={context}
         shortcut={shortcut}
         presentation={presentation.kind === "image"
           ? applicationResourcePresentation(presentation.src)
