@@ -172,7 +172,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
     await rename.fill("Refactor Smoke.txt");
     await rename.press("Enter");
 
-    const textEntry = desktopFiles.locator('[data-fm-node-id]').filter({ hasText: "Refactor Smoke.txt" }).first();
+    const textEntry = desktopFiles.locator('[data-fm-node-id]', { hasText: "Refactor Smoke.txt" }).first();
     await expect(textEntry).toBeVisible();
     await textEntry.dblclick();
     const editorWindow = plasmon.getByRole("dialog", { name: "Refactor Smoke.txt" }).last();
@@ -196,15 +196,19 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
 
     // One real runtime-handled resource proves the installed package still
     // reaches its generic runtime host without inventing a .sys application.
-    const rootShortcut = plasmon.getByRole("option", { name: "Root" });
+    const rootShortcut = desktopFiles.locator('[data-fm-node-id]', { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible();
     await rootShortcut.dblclick();
     const rootExplorer = plasmon.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    await rootExplorer.getByRole("option", { name: "Games" }).dblclick();
+    const games = rootExplorer.locator('[data-fm-node-id]', { hasText: "Games" }).first();
+    await expect(games).toBeVisible();
+    await games.dblclick();
     const gamesExplorer = plasmon.getByRole("dialog", { name: "Games" }).last();
     await expect(gamesExplorer).toBeVisible({ timeout: 20_000 });
-    await gamesExplorer.getByRole("option", { name: "Plasmon Demo.jsdos" }).dblclick();
+    const demo = gamesExplorer.locator('[data-fm-node-id]', { hasText: "Plasmon Demo.jsdos" }).first();
+    await expect(demo).toBeVisible({ timeout: 20_000 });
+    await demo.dblclick();
     const gameWindow = plasmon.getByRole("dialog", { name: "js-dos" }).last();
     await expect(gameWindow).toBeVisible({ timeout: 20_000 });
     const player = gameWindow.getByLabel("DOS game");
