@@ -4,7 +4,7 @@
 
 ## Scope and result
 
-The canonical inventory is **79 Issues**: the 35 issues in the `0.1.0-r2` milestone, the historical cross-surface/product issues explicitly carried by the r2 TDD queue, #155 (superseded demo-fixture predecessor), and #202 (r2 browser-health dependency). Issues #184 and #185 are included despite lacking a milestone because they are in the active r2 shell backlog. No issue is silently treated as complete because a PR or aggregate test count exists.
+The checkpoint inventory is **79 Issues**. The independent second pass expands the complete dependency/release universe to **103 Issues** by adding closed prerequisites, implemented unmilestoned consumers, and later-scope deferred dependencies. See `r2-deep-completeness-audit.md` for the 24 added rows and exact scope rationale. Issues #184 and #185 are included despite lacking a milestone because they are in the active r2 shell backlog. No issue is silently treated as complete because a PR or aggregate test count exists.
 
 Fields are abbreviated in the table: **target** = canonical acceptance authority; **impl** = implementation owner/PR; **RED** = staging path; **GREEN** = intended ordinary discovery destination; **B** = real browser/package boundary; **gap** = unresolved evidence.
 
@@ -92,7 +92,7 @@ Fields are abbreviated in the table: **target** = canonical acceptance authority
 | #201 visual cleanup | Visual; open; A | none; completed migrations | WAIT FOR DEPENDENCY | cleanup readiness doc / ordinary visual tests | migration inventory not complete |
 | #202 js-dos sandbox storage | runtime/browser; open; C | none; #64/#121 | PACKAGED BROWSER SPEC ONLY | browser-health allowance / specialist browser | explicit browser execution required |
 
-**UNCLASSIFIED: 0.** “Complete” above means evidence was found at the stated layer, not that GitHub closure is authorized.
+**UNCLASSIFIED: 0 in the 79-row checkpoint; 0 in the expanded 103-row universe.** “Complete” above means evidence was found at the stated layer, not that GitHub closure is authorized. The second pass corrected #45, #48, #58, #88, #90, #108, and #89 classifications; do not consume the first-pass row in isolation.
 
 ## Evidence roots
 

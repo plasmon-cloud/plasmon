@@ -38,6 +38,8 @@ Rule applied: a passing fast-suite count is not promotion evidence. Each row nam
 | #187 | D packet/PR188 | assembled boot, open, authorities, health, geometry | PR188 merged | `test/refactorGuards.test.ts`, `test/rtl/refactorGuardSmoke.test.tsx`, packaged smoke/docs | PROMOTED AS STRONGER EQUIVALENT |
 | #167 | D harness packet/PR188 | shared headless production graph + RTL + package policy | PR188 merged | `test/headlessEnvironment.ts`, `test/renderPlasmon.tsx`, `test/rtl/*`, TESTING.md | PROMOTED EXACTLY |
 | #170 | C/PR206 packet | readable Review workflow, identity and browser assertions | PR206 merged | PR206 ordinary Review tests/e2e | PROMOTED EXACTLY |
+| #58 | C/PR101 + integration PR104 | standalone logical Atom identity, typed commands, one revision/command, concurrency conflict, history/restore, persistence/reopen, Markdown/TODO portability | PR101 merged through PR104 | `apps/review/test/engine.test.ts`, `persistence.test.ts`, `markdown.test.ts`, validation tests, `apps/review/e2e/review.spec.ts` and Review CI | PROMOTED EXACTLY |
+| #38 | Backend/Agent 9 PR39 reconciled through PR104 | provider chunks/integrity/revisions, safe share/revoke subset, no bearer persistence; fail-closed MTN import | PR39 source integrated by PR104 | `apps/plasmon/src/os/sharing/provider.test.ts`, `shareService.test.ts`, backend package/schema/docs | PROMOTED AS STRONGER EQUIVALENT for Phase A; future MTN remains explicitly deferred |
 
 ## Required #65 gap (not prose-only)
 
@@ -46,6 +48,14 @@ PR #208's adopted file has exactly two tests. Its import test supplies one `File
 ## Required #51 gap
 
 PR #210's `test/rtl/issue-51-send-to-desktop.test.tsx` proves one selected text file yields a shortcut whose serialized metadata contains its target ID. It does not prove repeated creation/collision naming, original target parent/identity preservation, shortcut rename preserving identities, missing target failure, missing Desktop failure, eligibility rejection, or no partial shortcut state. The repaired lower packet has those assertions, but they are not in the PR or integrated release.
+
+## Second-pass corrections
+
+- #58 is not waiting for implementation: PR #101 and the standalone Review CI/e2e are integrated. The remaining #125/#127 live-sharing boundary is not part of #58 MVP.
+- #45's packaged launch/render assertion is in `test/e2e/plasmon-golden-path.spec.ts`; the native model tests cover the canonical Trash operations.
+- #48 has implementation and a real packaged EmulatorJS proof; it remains a packaged/browser acceptance row, not an absent production seam.
+- #108 has a durable navigation model but no Issue-specific packaged Back-button assertion in the configured specialist lane.
+- #89 remains a true implementation gap: current `build.ts` emits top-level `monaco-workers/*`, not `/System/Program Files/MonacoEditor`.
 
 ## Promotion rule for implementors
 
