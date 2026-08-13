@@ -1,5 +1,8 @@
 import { ResourceIcon } from "../visual/primitives.tsx";
-import { applicationResourcePresentation } from "../visual/resource-presentation.ts";
+import {
+  applicationResourcePresentation,
+  isImageResourceReference,
+} from "../visual/resource-presentation.ts";
 
 export interface ShellIconProps {
   icon?: string;
@@ -11,7 +14,7 @@ export type ShellIconPresentation =
   | { kind: "fallback"; text: string };
 
 export function isShellImageRef(value: string | undefined): value is string {
-  return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/)/u.test(value);
+  return isImageResourceReference(value);
 }
 
 export function shellIconInitials(value: string): string {
