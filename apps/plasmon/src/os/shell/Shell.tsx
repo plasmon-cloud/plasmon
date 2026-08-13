@@ -569,7 +569,7 @@ export function Shell({
       <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety/result limit; refine the query for more matches.</p> : null}{filteredSearch.map((result) => {
         const presentation = result.kind === "start-shortcut" ? shortcutPresentation(result.target) : null;
         const icon = searchApplicationIcon(result) ?? presentation?.icon;
-        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}>{icon ? <ShellIcon icon={icon} label={result.title} shortcut={presentation !== null} context="search" /> : null}<span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
+        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}><ShellIcon icon={icon} label={result.title} shortcut={presentation !== null} context="search" /><span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
       })}{!searchBusy && filteredSearch.length === 0 ? <p>No results in this category.</p> : null}</div>
     </section> : null}
 
