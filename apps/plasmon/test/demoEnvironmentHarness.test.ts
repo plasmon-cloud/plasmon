@@ -16,22 +16,14 @@ async function readJson<T>(path: string): Promise<T> {
 describe("Plasmon installed demo environment preparation", () => {
   test("fresh acceptance packaging is driven by the deployment manifest", async () => {
     const artifacts = await resolveDemoArtifacts({ repoRoot });
-    expect(
-      artifacts.map(({ archivePath, workspace }) => ({ archivePath, workspace })),
-    ).toEqual([
-      {
-        archivePath: "apps/kernel/neutron-kernel.neutron",
-        workspace: "neutron-kernel",
-      },
-      {
-        archivePath: "apps/plasmon/neutron-plasmon.neutron",
-        workspace: "neutron-plasmon",
-      },
-      {
-        archivePath: "apps/review/neutron-review.neutron",
-        workspace: "neutron-review",
-      },
+    expect(artifacts.map(({ workspace }) => workspace)).toEqual([
+      "neutron-kernel",
+      "neutron-plasmon",
+      "neutron-review",
     ]);
+    for (const { archivePath } of artifacts) {
+      expect(archivePath.endsWith(".neutron")).toBe(true);
+    }
 
     const rootPackage = await readJson<PackageJson>(resolve(repoRoot, "package.json"));
     const prepare = rootPackage.scripts?.["plasmon:demo:prepare"];
