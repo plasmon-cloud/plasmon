@@ -266,11 +266,12 @@ export async function getDependencies(
           ` ${filePath} Imports a package, but it doesn't exist. Something is wrong`,
         );
       }
+
+      const packageFullPath = await resolvePackageModulePath(
+        packageRoot,
+        packagePath,
+      );
       try {
-        // Standard way of defining package path
-
-        const packageFullPath = path.join(packageRoot, `${packagePath}.mo`);
-
         dependencyNode.mods[importName] = await getDependencies(
           [fileHash, importPath, filePath],
           packageFullPath,
@@ -278,31 +279,16 @@ export async function getDependencies(
           hashfiles,
           dependencyCache,
         );
-      } catch {
-        try {
-          // Another way of definding package path
-          const packageFullPath = path.join(
-            packageRoot,
-            `${packagePath}/lib.mo`,
-          );
-          // console.log("Secondary package path", packageFullPath);
-          dependencyNode.mods[importName] = await getDependencies(
-            [fileHash, importPath, filePath],
-            packageFullPath,
-            packages,
-            hashfiles,
-            dependencyCache,
-          );
-        } catch (e) {
-          console.error({
-            filePath,
-            importName,
-            importPath,
-            packagePath,
-            packages,
-          });
-          throw e;
-        }
+      } catch (e) {
+        console.error({
+          filePath,
+          importName,
+          importPath,
+          packagePath,
+          packageFullPath,
+          packages,
+        });
+        throw e;
       }
     } else {
       const fullPath = path.resolve(path.dirname(filePath), `${importPath}.mo`);
@@ -317,6 +303,32 @@ export async function getDependencies(
   }
 
   return dependencyNode;
+}
+
+async function resolvePackageModulePath(
+  packageRoot: string,
+  packagePath: string,
+): Promise<string> {
+  const directPath = path.join(packageRoot, `${packagePath}.mo`);
+  try {
+    await fs.access(directPath);
+    return directPath;
+  } catch (error) {
+    if (!isMissingPathError(error)) throw error;
+  }
+
+  const directoryPath = path.join(packageRoot, packagePath, "lib.mo");
+  await fs.access(directoryPath);
+  return directoryPath;
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
 }
 
 function isInstalledPackageSource(

@@ -15,3 +15,5 @@ If formatting or richer Markdown tooling is added, expose it through reusable co
 ## Testing
 
 Use fast tests for rendering/sanitization, mode visibility, Markdown commands, and shared document/close semantics. Use real-browser/package tests for Monaco/workers, the actual rendered dirty-close interaction, split-pane focus/layout, editor commands, and rendered-link/browser behavior where DOM/engine behavior matters.
+
+The packaged golden-path acceptance creates a real `.md` document through Explorer, opens it through normal filesystem association/process/window routing, waits for the shared semantic Monaco readiness contract (`data-editor-engine="monaco"`, `data-editor-ready="true"`, and the `Markdown source` editor label), edits and saves through the production document session, then closes/reopens and verifies the persisted source from the rendered Monaco model. Keep deterministic Markdown/session behavior in fast tests rather than duplicating it in Playwright.

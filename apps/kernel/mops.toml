@@ -1,5 +1,5 @@
 [dependencies]
-core = "https://github.com/dfinity/motoko-core#v2.6.0"
+core = "2.6.0"
 ic-certification = "1.1.0"
 "json.mo" = "0.1.2"
 neutron-capabilities = "../../packages/neutron-motoko-capabilities"

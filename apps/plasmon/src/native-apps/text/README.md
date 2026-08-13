@@ -17,3 +17,5 @@ Shared language/type metadata should come from common association/content metada
 ## Testing
 
 Use fast tests for document sessions, dirty-close decisions, conflicts/save/reopen, discard/flush behavior, editor models/commands, language/type mapping, and adapter configuration. Use real-browser/package tests for Monaco creation/readiness, workers/assets, focus/selection, keyboard commands, and the actual rendered close interaction.
+
+The packaged golden-path acceptance creates a real `.txt` document through Explorer, opens it through normal filesystem association/process/window routing, waits for the semantic Monaco readiness contract (`data-editor-engine="monaco"`, `data-editor-ready="true"`, and the `Text content` editor label), edits and saves through the production document session, then closes/reopens and verifies the persisted text from the rendered Monaco model. Keep deterministic save/conflict/session cases in fast tests rather than expanding that browser journey.

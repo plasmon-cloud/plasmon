@@ -63,6 +63,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
 
   const saveDisabled = readOnly || !snapshot.dirty || snapshot.status === "saving";
   const saveAsDisabled = !saveAsName.trim();
+  const loadingDocument = snapshot.status === "idle" || snapshot.status === "loading";
 
   return (
     <section style={styles.root} aria-label="Text editor" onKeyDownCapture={captureSave}>
@@ -98,7 +99,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         )}
       </div>
 
-      {snapshot.status === "loading" ? (
+      {loadingDocument ? (
         <div style={styles.message} role="status">Loading text…</div>
       ) : snapshot.status === "error" && !snapshot.text ? (
         <div style={styles.fatalError} role="alert">{snapshot.error}</div>

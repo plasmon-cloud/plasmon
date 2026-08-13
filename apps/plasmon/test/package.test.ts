@@ -6,12 +6,21 @@ import {
 } from "neutron-scripts/src/method_schema.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
+import { createPlasmonDemoGameBundle } from "../src/games/demoFixtureBundle.ts";
 
 const manifestUrl = new URL("../neutron.json", import.meta.url);
 const backendUrl = new URL("../backend/main.mo", import.meta.url);
 const htmlUrl = new URL("../dist/web/index.html", import.meta.url);
 const cssUrl = new URL("../dist/web/main.css", import.meta.url);
 const appDirectoryUrl = new URL("../", import.meta.url);
+const demoGameUrl = new URL("../dist/web/fixtures/PlasmonDemo.jsdos", import.meta.url);
+const jsDosRuntimeUrl = new URL("../dist/web/System/Program Files/js-dos/runtime.json", import.meta.url);
+const jsDosScriptUrl = new URL("../dist/web/System/Program Files/js-dos/js-dos.js", import.meta.url);
+const jsDosStyleUrl = new URL("../dist/web/System/Program Files/js-dos/js-dos.css", import.meta.url);
+const jsDosWasmUrl = new URL("../dist/web/System/Program Files/js-dos/emulators/wdosbox.wasm", import.meta.url);
+const jsDosBrowserScriptUrl = new URL("../dist/web/runtime/jsdos/js-dos.js", import.meta.url);
+const jsDosBrowserStyleUrl = new URL("../dist/web/runtime/jsdos/js-dos.css", import.meta.url);
+const jsDosBrowserWasmUrl = new URL("../dist/web/runtime/jsdos/emulators/wdosbox.wasm", import.meta.url);
 const emulatorHostHtmlUrl = new URL("../dist/web/emulatorjs-host.html", import.meta.url);
 const emulatorHostScriptUrl = new URL("../dist/web/emulatorjs-host.js", import.meta.url);
 const emulatorRuntimeUrl = new URL("../dist/web/System/Program Files/EmulatorJS/runtime.json", import.meta.url);
@@ -107,6 +116,31 @@ test("plasmon bundles the shared design system stylesheet", async () => {
   expect(css).toContain("--nt-bg-panel");
 });
 
+test("plasmon packages js-dos authority and URL-safe browser runtime", async () => {
+  const [runtime, script, style, wasm, browserScript, browserStyle, browserWasm] = await Promise.all([
+    readFile(jsDosRuntimeUrl, "utf8"),
+    readFile(jsDosScriptUrl),
+    readFile(jsDosStyleUrl),
+    readFile(jsDosWasmUrl),
+    readFile(jsDosBrowserScriptUrl),
+    readFile(jsDosBrowserStyleUrl),
+    readFile(jsDosBrowserWasmUrl),
+  ]);
+
+  expect(JSON.parse(runtime)).toMatchObject({
+    runtime: "js-dos",
+    version: "8.4.1",
+    browserRuntimeRoot: "runtime/jsdos/",
+  });
+  expect(script.length).toBeGreaterThan(10_000);
+  expect(style.length).toBeGreaterThan(1_000);
+  expect(wasm.length).toBeGreaterThan(100_000);
+  expect(browserScript.length).toBeGreaterThan(10_000);
+  expect(browserStyle.length).toBeGreaterThan(1_000);
+  expect(browserWasm).toEqual(wasm);
+  expect(browserScript.toString("utf8")).toContain("./runtime/jsdos/");
+});
+
 test("plasmon packages EmulatorJS authority, URL-safe browser assets, NES core, and legal proof ROM", async () => {
   const [
     hostHtml,
@@ -183,4 +217,12 @@ test("plasmon packages EmulatorJS authority, URL-safe browser assets, NES core, 
   expect(browserExtract7z).toEqual(extract7z);
   expect(fixture.length).toBe(16 + 16_384 + 8_192);
   expect([...fixture.subarray(0, 8)]).toEqual([0x4e, 0x45, 0x53, 0x1a, 0x01, 0x01, 0x00, 0x00]);
+});
+
+test("plasmon package contains the deterministic redistributable js-dos demo fixture", async () => {
+  const packaged = new Uint8Array(await readFile(demoGameUrl));
+  const expected = createPlasmonDemoGameBundle();
+
+  expect(packaged.length).toBeGreaterThan(0);
+  expect(Array.from(packaged)).toEqual(Array.from(expected));
 });
