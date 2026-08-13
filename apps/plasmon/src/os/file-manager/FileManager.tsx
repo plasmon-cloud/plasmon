@@ -60,6 +60,7 @@ import { finishEntryDragGesture } from "./drag.ts";
 import { ErrorBanner } from "./ErrorBanner.tsx";
 import { FileEntry } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
+import { spatialNeighborId, type SpatialDirection } from "./list-layout.ts";
 import type { InlineRenameState } from "./rename.ts";
 import { readSharedShortcut } from "./shortcut.ts";
 import { OpenWithPanel, PropertiesPanel } from "./properties.tsx";
@@ -619,9 +620,29 @@ export function FileManager({
     if (["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key) && orderedIds.length > 0) {
       event.preventDefault();
       const currentId = selection.focus ?? orderedIds[0] ?? null;
-      const index = currentId ? Math.max(0, orderedIds.indexOf(currentId)) : 0;
-      const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
-      const nextId = orderedIds[Math.max(0, Math.min(orderedIds.length - 1, index + delta))];
+      if (!currentId) return;
+
+      let nextId: NodeId | null | undefined;
+      if (presentation === "list") {
+        const direction: SpatialDirection = event.key === "ArrowUp"
+          ? "up"
+          : event.key === "ArrowRight"
+            ? "right"
+            : event.key === "ArrowDown"
+              ? "down"
+              : "left";
+        const rectangles = new Map<NodeId, RectLike>();
+        for (const id of orderedIds) {
+          const rect = entriesRef.current.get(id)?.getBoundingClientRect();
+          if (rect) rectangles.set(id, { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+        }
+        nextId = spatialNeighborId(orderedIds, currentId, direction, rectangles);
+      } else {
+        const index = Math.max(0, orderedIds.indexOf(currentId));
+        const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
+        nextId = orderedIds[Math.max(0, Math.min(orderedIds.length - 1, index + delta))];
+      }
+
       if (nextId) setSelection(selectNode(selection, orderedIds, nextId, { range: event.shiftKey, additive: commandModifier }));
     }
   };
