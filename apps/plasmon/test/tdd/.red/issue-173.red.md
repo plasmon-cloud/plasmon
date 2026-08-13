@@ -1,47 +1,49 @@
-# Issue #173 — FULL PRODUCT RED PACKET
+# Issue #173 — repaired browser RED packet
 
-Classification: **FULL RED PACKET**
+Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
 
-## Current evidence
+## Reference interpretation
 
-The current FileManager has separate `grid`, `list`, and `details` class names,
-but List is a single vertical flex column with only icon/name content while
-Details owns metadata columns. Keyboard handling in `FileManager.tsx` currently
-uses one linear ordered-id delta for all non-Desktop presentations. This leaves
-List without an accepted spatial-navigation contract and makes List/Details
-primarily a CSS/content difference rather than a deliberate view behavior.
+Canonical #173 explicitly rejects the current vertical full-width List as
+“Details with information removed.” The accepted reference behavior is a
+compact desktop file-list arrangement that uses multiple horizontal columns
+(or an equally deliberate compact arrangement), while Details remains a
+metadata table/column view. The packet therefore does **not** preserve the
+current single vertical column.
 
-## Executable gate
+## PRESERVE
 
-- `test/e2e/plasmon-list-layout-173.red.spec.ts`
-- Layer: Playwright packaged browser boundary, because useful width, flow,
-  actual focus movement, and rendered column geometry belong to the browser.
-- Intended RED: after selecting List, `ArrowRight` advances to the next entry
-  under the universal linear policy; the gate requires horizontal arrows to
-  respect the accepted single-column spatial arrangement. The test also guards
-  full-width compact rows and Details metadata header/row distinction.
+- one shared NodeId selection model;
+- activation/open, rename, context menu, clipboard, drag/drop eligibility and
+  shared resource presentation;
+- Details metadata columns (`Type`, `Size`, `Modified`);
+- responsive usability and no new filesystem authority.
 
-The gate requires the existing local packaged session and does not convert a
-missing session, browser crash, or runtime error into product failure. A focused
-attempt on this head stopped before app boot because
-`local.ndeploy.session.json` is absent; this is an operational browser block,
-not product RED.
+## CHANGE
 
-## Contract fence
+- List entries are compact and flow through more than one spatial column at
+  normal window widths, rather than occupying one full-width vertical row;
+- List uses the available horizontal area efficiently without becoming Details;
+- keyboard arrows follow rendered spatial neighbors;
+- List remains distinct from Icons/Grid and Details.
 
-Preserve one shared FileManager authority for NodeId selection, activation,
-rename, context commands, clipboard, drag/drop eligibility, and resource
-presentation. The packet does not prescribe a `FileManagerViewStrategy` API or
-component decomposition; #196 owns that architecture after #195 stabilizes.
+## UNSPECIFIED
 
-List acceptance:
+- CSS grid versus another layout mechanism;
+- exact column count, row height, breakpoints and strategy/component names;
+- final #196 view-strategy API.
 
-- compact row/column presentation makes useful horizontal use of the normal
-  FileManager width;
-- List is visibly and functionally distinct from Details;
-- keyboard movement follows its actual spatial arrangement;
-- narrow windows remain usable without duplicating command semantics.
+## Executable browser gate
 
-Details remains metadata-column presentation. Icons remains spatial icon
-presentation. Shared behavior is verified once at lower layers and not copied
-into three view-specific test suites.
+`test/e2e/plasmon-list-layout-173.red.spec.ts` measures actual rendered option
+geometry and does not assert CSS class implementation as the product contract.
+It requires multiple rendered x-columns, compact width, ArrowRight movement to a
+later rendered column, and a wider Details metadata row. The current production
+List is one full-width flex column and universal linear keyboard policy, so the
+intended assertions fail after packaged boot; missing session/browser failure is
+an operational block, not product RED.
+
+The gate creates a real document through Desktop/FileManager, opens the real
+Explorer window, and selects views through the accessible View control. It does
+not define #196 architecture. Lower-layer common selection/activation semantics
+remain covered once by FileManager model/RTL tests.

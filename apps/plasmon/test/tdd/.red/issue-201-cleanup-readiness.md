@@ -1,33 +1,33 @@
-# Issue #201 candidate-retirement inventory
+# Issue #201 cleanup readiness — refreshed after #192 integration
 
-Audit only. No candidate is deleted by Luna-A. Classification is based on
-current TDD staging branch, not unmerged implementation branches.
+Integrated release inspected: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
 
-| Candidate | Evidence | Classification |
+Audit only. Luna-A deletes nothing.
+
+| Candidate | Current evidence | Classification |
 |---|---|---|
-| `FileManager.tsx` inline selection/rename/context/drag/render orchestration | active production consumer and broad adapter | STILL CONSUMED; wait for #195 |
-| `FileEntry.tsx` local presentation/type mapping | active FileEntry consumer; shared Visual already used but local semantic labels remain | WAIT FOR #191 / #190 |
-| `FileEntry` desktop expanded-label CSS | active selected/focused Desktop behavior and #95/#191 geometry | STILL CONSUMED; wait for #191 acceptance |
-| `FileManager` Desktop placement adapter compatibility | current branch calls layout helpers; PR #205 has unmerged replacement | WAIT FOR #192 |
-| `Desktop.tsx` local placement/reposition helper export | active current consumer; PR #205 moves policy | WAIT FOR #192 |
-| `resourcePolicy.ts` semantic classification | active canonical semantic authority | STILL CONSUMED; wait for #189 only for richer type seam |
-| `search.ts` MIME/media/category tables | active Search consumer; current duplicated inference | WAIT FOR #189 |
-| `photos/media.ts` extension MIME table | active Photos consumer; current explicit MIME precedence defect | WAIT FOR #178/#189 |
-| `text/editorModel.ts` extension language table | active Text consumer; #189 PR has replacement path but unmerged | WAIT FOR #178/#189 |
-| `Shell.tsx` Search JSX/state/effects | active result surface | WAIT FOR #193 |
-| `Shell.tsx` Start JSX/reconciliation lifecycle | active Start surface | WAIT FOR #169/#194 |
-| `ExplorerApp.tsx` hard-coded Favorites path list | active projection, includes Downloads | WAIT FOR #182/#194 |
-| `.fm-entry__thumbnail` legacy cover selector | search current CSS/source and verify no active runtime consumer before removal | UNKNOWN; do not delete based on selector name |
-| local `ShellIcon`/taskbar fallback mapping | active Shell icon consumer, some state-specific policy | WAIT FOR #190/#193/#194 |
+| FileManager inline selection/rename/context/drag/render orchestration | active release consumer | STILL CONSUMED; wait for #195 |
+| FileEntry local presentation/type mapping | active release consumer; #191 PR still not integrated | WAIT FOR #191 / #190 |
+| FileEntry selected-label/rename CSS | active #95/#191 behavior | STILL CONSUMED |
+| Desktop pre-controller placement helpers | integrated #192 release code still exposes compatibility/adapter paths as active consumers; inspect after downstream migration | STILL CONSUMED / #192 migration follow-up |
+| Desktop old placement exports | integrated release retains compatibility exports for callers/tests | STILL CONSUMED; do not retire from PR history alone |
+| resourcePolicy semantic classification | active canonical authority | STILL CONSUMED; wait for #189 richer seam |
+| Search MIME/media/category tables | active release consumer | WAIT FOR #189 |
+| Photos extension MIME helper | active consumer and #178 dependency | WAIT FOR #178/#189 |
+| Text editor extension-language helper | active consumer; accepted #189 branch has migration but release does not | WAIT FOR #189 |
+| Shell Search JSX/state/effects | active release consumer | WAIT FOR #193 |
+| Shell Start JSX/reconciliation lifecycle | active release consumer | WAIT FOR #169/#194 |
+| Explorer hard-coded Favorites paths | active release consumer and #182 defect | WAIT FOR #182 |
+| `.fm-entry__thumbnail` legacy `cover` selector | current source selector; runtime uses shared thumbnail path but zero-consumer proof is not staged | UNKNOWN |
+| `/static/plasmon/icons` health allowances | active #187 smoke allowance | WAIT FOR #190; remove only after gate passes |
 | Visual shared primitives/assets | active shared authority | STILL CONSUMED |
-| `/static/plasmon/icons` browser-health allowances | active temporary acceptance annotation for package defect | WAIT FOR #190; remove only after installed URL fix |
-| `Visual2`/`FileManager2`/`SearchPanel2` names | no such permanent path found in current branch | PROVEN SUPERSEDED / NOT PRESENT |
-| stale `allocateDesktopPositions` compatibility wrapper | active tests/adapters on current branch; may be retained temporarily after #192 | WAIT FOR #192 |
-| duplicate Neutron icon compatibility resolver | current bridge/resolver is active and tested | STILL CONSUMED; #171 owns future retirement only after supported consumers migrate |
+| Neutron icon resolver compatibility candidates | active tested installed-Element authority | STILL CONSUMED; wait for #171 browser evidence |
+| hypothetical `FileManager2`/`SearchPanel2`/`Visual2` | absent from integrated source | PROVEN SUPERSEDED / NOT PRESENT |
 
-## Retirement rules
+## Retirement rule
 
-Delete only after zero supported consumers, accepted replacement evidence, and
-focused tests remain. Do not use line-count, file-count, or arbitrary source
-shape as proof. Candidate cleanup is downstream of #189/#190/#191/#192/#193/#194/
-#195 and should not preempt those implementation owners.
+#192 integration removes the prior placement defect but does not prove every
+compatibility helper is zero-consumer. Retire candidates only after actual
+imports/consumers, accepted replacement tests, and package/browser evidence are
+inspected on the integrated head. No line-count or PR-history inference is
+sufficient.

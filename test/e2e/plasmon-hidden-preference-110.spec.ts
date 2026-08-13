@@ -49,7 +49,9 @@ test("#110 packaged boundary — Show Hidden Files persists through reopen and r
   await appFrame.reload();
   const reloadedApp = page.frameLocator(frameSelector).first();
   await expect(reloadedApp.locator(".fm-root--desktop")).toBeVisible({ timeout: 30_000 });
-  await reloadedApp.getByRole("button", { name: /Root/ }).first().dblclick().catch(() => undefined);
+  const reloadedRoot = reloadedApp.locator("[data-fm-node-id]", { hasText: "Root" }).first();
+  await expect(reloadedRoot).toBeVisible();
+  await reloadedRoot.dblclick();
   const reloadedExplorer = reloadedApp.getByRole("dialog", { name: "Root" }).last();
   await expect(reloadedExplorer.getByRole("checkbox", { name: "Show hidden files" })).toBeChecked();
   await expect(reloadedExplorer.locator("[data-fm-node-id]", { hasText: ".hidden-110.txt" })).toBeVisible();

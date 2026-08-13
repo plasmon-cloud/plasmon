@@ -45,11 +45,13 @@ composition. They are not replaced by the browser gate.
 
 ## Browser acceptance gate
 
-The implementor should run a packaged Playwright journey and assert that the
-representative shared icon requests are successful under the installed
-`/app/plasmon/static/plasmon/icons/` path, with no first-party 404/ORB failures.
-Do not weaken browser-health or substitute a static URL-string assertion for
-actual asset loading.
+`test/e2e/plasmon-presentation-190.red.spec.ts` runs the packaged journey with
+the accepted #187 health allowances for unrelated #67/#200/#202 diagnostics,
+while intentionally omitting only the old #190 icon failure allowances. It
+observes the resolved `currentSrc`, successful response ownership under the
+installed Plasmon mount, failed icon requests, and strict health cleanliness.
+It does not require a source-string constructor or broaden/remove unrelated
+health allowances. Missing packaged session/runtime is an operational block.
 
 ## Authority boundary
 

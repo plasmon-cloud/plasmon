@@ -17,7 +17,7 @@ refactor plan.
 | Trash/protection/restore | protected FS + Trash authority | FileManager delete, Desktop, Recycle Bin | delete/trash lifecycle, refactor guards | none for current queue | #40/#77 | safe |
 | Selection/range/marquee identity | FileManager `model.ts` | FileManager/desktop adapter | file-manager/model and RTL guards | per-view keyboard policy remains unspecified | #195/#196 | safe if model remains NodeId-based |
 | FileManager refresh/event reconciliation | `RefreshGate`, `isFsEventRelevant`, Fs events | FileManager, Properties, Recycle Bin | file-manager tests, prefs tests | operation state must not race refresh | #65/#92 | safe after operation seam |
-| Desktop coordinate policy | `layout.ts` / #192 controller gate | Desktop and FileManager desktop presentation | layout and #192 RED tests | duplicate slots/out-of-bounds/restore collisions | #192 | implement before broad Desktop refactor |
+| Desktop coordinate policy | integrated #192 `layout.ts` controller | Desktop and FileManager desktop presentation | integrated layout/controller tests plus #172 composed gate | duplicate slots/out-of-bounds/restore collisions | #192/#172 | integrated; retain NodeId/Trash fence |
 | Desktop position persistence | Desktop metadata + FsService | Desktop | desktop tests, refactor guards | preserve unrelated NodeIds on repair | #192 | safe after controller |
 | File entry presentation identity | #189 classification + #190 Visual presentation | FileEntry, Properties, Search/Shell | file-icons and visual suites | packaged asset root currently wrong | #52/#190 | safe after package path fix |
 | Shortcut visual composition | `composeShortcutPresentation`, `ResourceIcon` | FileEntry, Properties, Shell | visual components, file-icons | no duplicate overlay/glyph table | #52/#190 | safe |
@@ -44,6 +44,7 @@ second filesystem identity, association matcher, shortcut format, Trash policy,
 classification table, or Windowing z-order authority.
 
 Current blocking dependencies are #92 on the accepted #65 operation vocabulary,
-#196 on the surviving #195 view seam, and packaged browser execution on the
-currently missing local PocketIC session in this worktree. No unrelated new
-Issue is opened by this audit.
+#196 on the surviving #195 view seam, #178 on the accepted #189 classifier
+vocabulary, and packaged browser execution on the currently missing local
+PocketIC session in this worktree. #192 is integrated; #172 now has a composed
+Trash/placement gate. No unrelated new Issue is opened by this audit.

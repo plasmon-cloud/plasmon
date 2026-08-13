@@ -1,32 +1,21 @@
-# Issue #92 — multi-item drag-move progress state
+# Issue #92 — dependency wait refreshed
 
-## Disposition
+Disposition: **WAIT FOR DEPENDENCY**.
 
-**RECONNAISSANCE COMPLETE — WAIT FOR #65 OPERATION-STATE ARCHITECTURE.** The
-current drag path has a real missing visible operation state, but the canonical
-Issue explicitly requires reuse of a suitable #65 primitive if one lands.
-Staging a second operation model now would freeze competing architecture.
+PR #208 is open but not integrated into `release/0.1.0-r2`. Its actual proposed
+#65 seam is `FileOperationState` with `FileOperationKind`,
+`FileOperationSnapshot`, running/completed/failed status, total/processed/
+succeeded/failed item counts, current index/item, partial failures, duplicate
+`begin` protection and deterministic completion. It intentionally covers import
+per-item progress and paste known-total status only.
 
-## Preserve / change
+Do not finalize #92 against the PR branch or introduce a second operation model.
+Once #65 integrates, inspect the accepted API again and add a real drag-move
+adapter gate covering multi-item operation identity, selected NodeIds, item
+progress, full success, partial failure, refresh/selection reconciliation,
+cleanup and duplicate gesture protection. The drag mutation remains
+`moveNodesToDirectory`/FsService authority and #66 remains presentation-only.
 
-Preserve current selection identity, one validated directory drop, sequential
-filesystem moves, partial-success semantics, and NodeIds. Change only the
-visible truthful item-level running/completed/failed lifecycle, duplicate
-submission protection, and accessible status presentation after #65's seam is
-observable.
-
-Do not claim byte progress or cancellation without filesystem contracts.
-
-## Current evidence
-
-`FileManager.tsx` awaits `moveNodesToDirectory()` after pointer release and
-renders no operation status. `model.ts` validates the complete source set once
-then moves each NodeId. Existing drag/drop tests cover the semantic outcome.
-
-## Follow-up gate plan
-
-After #65 implementation lands, add deterministic model/headless transitions
-for success, partial failure, active-operation protection, and a narrow RTL
-status journey. Reuse the accepted operation vocabulary; do not create a second
-job manager. Browser coverage is optional for status visibility, not move
-semantics.
+Current lower-layer drag validation and move semantics are already green; the
+missing visible operation lifecycle is not yet a valid #92 RED until its shared
+state vocabulary is integrated.

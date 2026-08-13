@@ -1,43 +1,31 @@
-# Issue #65 — import/paste operation progress state
+# Issue #65 — repaired packet
 
-## Disposition
+Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
 
-**RTL RED.** A delayed production filesystem write reaches the current import
-path, but FileManager exposes no accessible running operation status. The gate
-uses a real FileManager adapter with a deterministic delayed FsService wrapper;
-it does not fake timers or filesystem completion.
+## Executable gate
 
-Run:
+`issue-65.red.ui.test.tsx` now uses the real headless Plasmon services and real
+FileManager adapter. It covers:
 
-```sh
-bun test --preload ./apps/plasmon/test/setupHappyDom.ts ./apps/plasmon/test/tdd/.red/issue-65.red.ui.test.tsx
-```
+- two-file import, item total, current item/name, completion and deterministic
+  status cleanup;
+- partial import failure with successful item retained, actionable alert and
+  failed item absent;
+- a conflicting second import trigger while the first operation is running;
+- paste through the same accepted operation vocabulary (`Pasting N item(s)…`)
+  with no fabricated byte progress.
 
-## PRESERVE
+The first test's intentional RED occurs only after delayed real FsService writes
+begin and the expected accessible status is missing. No production operation API
+is fabricated by the packet.
 
-- FsService owns create/write/copy/move semantics and resource identity.
-- Existing collision-aware paste and chunked import behavior remain unchanged.
-- Partial success must preserve successful nodes and report failures.
-- No byte progress is claimed unless the filesystem contract supplies bytes.
+## Vocabulary fence
 
-## CHANGE
+The accepted future seam is the small item-level operation vocabulary described
+by Issue #65: import/paste kind, running/completed/failed status, known total and
+processed counts, current import item where truthful, partial failures, duplicate
+start protection, and deterministic cleanup. #92 must reuse that seam if #65 is
+accepted; it must not create a second progress model.
 
-- Add a small production operation-state vocabulary for import and paste:
-  kind, running/completed/failed, item totals/current item, and partial results
-  where known.
-- Render the state accessibly while work is pending and prevent duplicate
-  expensive submissions where appropriate.
-- Keep React as a consumer of the operation model, not a second filesystem
-  authority.
-
-## UNSPECIFIED
-
-- Exact operation model/module names and status wording.
-- Cancellation; no cancellation contract currently exists.
-- Byte-level progress.
-
-## Existing guards
-
-`final-gate.test.ts`, `gate3.test.tsx`, `polish.test.tsx`, clipboard tests, and
-filesystem tests cover chunking, collision naming, cleanup, and copy/cut
-semantics. This gate covers only the missing visible lifecycle boundary.
+Filesystem write/copy semantics, collision naming, identity and rollback remain
+FsService/helper authority. React only renders observed production state.

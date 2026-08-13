@@ -30,7 +30,7 @@ test("#86 browser boundary — diagnostic text selects without stealing FileEntr
   const address = explorer.getByRole("textbox", { name: "Address" });
   await address.fill("/does-not-exist-for-selection-86");
   await address.press("Enter");
-  const diagnostic = explorer.locator(".fm-error-banner").last();
+  const diagnostic = explorer.getByRole("alert").last();
   await expect(diagnostic).toBeVisible();
   const diagnosticText = await diagnostic.locator("span").innerText();
   expect(diagnosticText.length).toBeGreaterThan(8);
@@ -43,7 +43,7 @@ test("#86 browser boundary — diagnostic text selects without stealing FileEntr
   await page.mouse.up();
   const selectedText = await explorer.locator("body").evaluate(() => window.getSelection()?.toString() ?? "");
   expect(selectedText).toContain(diagnosticText.slice(0, Math.min(12, diagnosticText.length)));
-  expect(await explorer.locator(".is-dragging").count()).toBe(0);
+  expect(await explorer.locator("[data-fm-node-id].is-dragging").count()).toBe(0);
 
   await address.fill("/");
   await address.press("Enter");

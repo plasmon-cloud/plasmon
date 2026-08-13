@@ -5,7 +5,7 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-test("#173 RED — List is a compact spatial column view distinct from Details", async ({ page }) => {
+test("#173 RED — List flows compact entries across columns and navigates spatially", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   await page.goto(kernelUrl);
@@ -29,33 +29,42 @@ test("#173 RED — List is a compact spatial column view distinct from Details",
   const explorer = app.getByRole("dialog", { name: "Root" }).last();
   await expect(explorer).toBeVisible({ timeout: 15_000 });
 
-  const view = explorer.getByLabel("View");
-  await view.selectOption("list");
-  const listRoot = explorer.locator(".fm-root--list");
-  await expect(listRoot).toBeVisible();
-  const listBox = await listRoot.boundingBox();
-  const listEntry = listRoot.locator(".fm-entry--list").first();
-  const listEntryBox = await listEntry.boundingBox();
-  if (!listBox || !listEntryBox) throw new Error("List view has no measurable entry");
-  expect(listEntryBox.width).toBeGreaterThan(listBox.width * 0.75);
-  expect(listEntry.locator(".fm-entry__name")).toHaveCSS("text-align", "left");
+  await explorer.getByLabel("View").selectOption("list");
+  const list = explorer.getByRole("listbox", { name: "Files" });
+  await expect(list).toBeVisible();
+  const entries = list.getByRole("option");
+  expect(await entries.count()).toBeGreaterThanOrEqual(4);
+  const boxes = [] as Array<{ x: number; y: number; width: number; height: number }>;
+  for (let index = 0; index < await entries.count(); index += 1) {
+    const box = await entries.nth(index).boundingBox();
+    if (!box) throw new Error(`List entry ${index} has no browser bounds`);
+    boxes.push(box);
+  }
+  const rootBox = await list.boundingBox();
+  if (!rootBox) throw new Error("List view has no browser bounds");
+  const distinctColumns = [...new Set(boxes.map((box) => Math.round(box.x)))];
+  expect(distinctColumns.length).toBeGreaterThan(1);
+  expect(Math.max(...boxes.map((box) => box.width))).toBeLessThan(rootBox.width * 0.75);
+  expect(Math.min(...boxes.map((box) => box.width))).toBeGreaterThan(120);
 
-  // List is a single vertical compact column: horizontal arrows must not use
-  // the generic linear next-item policy. Details remains a metadata-column
-  // layout and shares the same resource/selection semantics.
-  const entries = listRoot.locator(".fm-entry--list");
-  expect(await entries.count()).toBeGreaterThan(1);
-  await entries.first().click();
-  await listRoot.press("ArrowRight");
-  await expect(entries.first()).toHaveClass(/is-focused/);
-  await expect(entries.nth(1)).not.toHaveClass(/is-focused/);
+  // The first entry's right neighbor is determined by actual rendered geometry,
+  // not by an implementation-specific index. ArrowRight must focus an entry
+  // in a later rendered column; Details remains a metadata-column surface.
+  const first = entries.nth(0);
+  await first.click();
+  const firstBox = boxes[0]!;
+  await list.press("ArrowRight");
+  const focused = list.locator("[data-fm-node-id].is-focused").first();
+  await expect(focused).toBeVisible();
+  const focusedBox = await focused.boundingBox();
+  if (!focusedBox) throw new Error("Spatially focused List entry has no bounds");
+  expect(focusedBox.x).toBeGreaterThan(firstBox.x + 20);
 
-  await view.selectOption("details");
-  const detailsRoot = explorer.locator(".fm-root--details");
-  await expect(detailsRoot).toBeVisible();
-  await expect(detailsRoot.locator(".fm-details-head")).toBeVisible();
-  const detailsEntry = detailsRoot.locator(".fm-entry--details").first();
-  const detailsBox = await detailsEntry.boundingBox();
-  if (!detailsBox) throw new Error("Details view has no measurable entry");
-  expect(detailsBox.width).toBeGreaterThan(listEntryBox.width - 1);
+  await explorer.getByLabel("View").selectOption("details");
+  const details = explorer.getByRole("listbox", { name: "Files" });
+  await expect(details.locator(".fm-details-head")).toBeVisible();
+  const detailEntry = details.getByRole("option").first();
+  const detailBox = await detailEntry.boundingBox();
+  if (!detailBox) throw new Error("Details entry has no browser bounds");
+  expect(detailBox.width).toBeGreaterThan(rootBox.width * 0.75);
 });

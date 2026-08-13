@@ -54,8 +54,10 @@ rendering in one function.
 
 ### Duplicated or React-trapped policy found
 
-- Desktop position resolution is invoked during React render and currently
-  preserves invalid/conflicting points; #192 owns its production controller.
+- Desktop position resolution is now delegated to the integrated #192
+  controller on the release head; this staging lane's pre-integration source
+  still shows the old adapter and must not be used to infer current release
+  cleanup.
 - Context action mapping (`menuAction`) and keyboard-to-action dispatch are
   concentrated in the adapter, though the underlying commands are delegated.
 - Rename commit orchestration, create/import refresh/selection sequencing, and

@@ -1,7 +1,7 @@
 # Issue #94 — bounded video thumbnail specification
 
-Classification: **BROWSER BOUNDARY / RED SPECIFICATION** with a production media
-policy seam still required.
+Disposition: **IMPLEMENTATION SPECIFICATION / BROWSER BOUNDARY — NOT EXECUTABLE RED YET**.
+A production media policy seam and redistribution-safe fixture are still required.
 
 ## Current boundary
 

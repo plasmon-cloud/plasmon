@@ -6,10 +6,30 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 test("#190 RED — packaged shared Plasmon assets load from the installed package mount", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  // Match the accepted #187 packaged-health baseline. The two historical
+  // /static/plasmon/icons allowances are intentionally absent: this gate must
+  // fail on the #190 defect without broadening or deleting unrelated waivers.
+  const health = installPlasmonBrowserHealth(page, {
+    firstPartyOrigins: [kernelUrl],
+    allow: [
+      { kind: "pageerror", message: "Canceled", reason: "Monaco cancellation lifecycle allowance from #187" },
+      { kind: "console.warn", messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute", urlPathPrefix: "/chunks/", reason: "Kernel-owned iframe warning from #187" },
+      { kind: "console.warn", messageIncludes: "Could not create web worker(s). Falling back to loading web worker code in main thread", urlPathPrefix: "/app/plasmon/main.js", reason: "Tracked Monaco worker issue #67/#200" },
+      { kind: "console.warn", messageIncludes: "cannot be accessed from origin 'null'", urlPathPrefix: "/app/plasmon/main.js", reason: "Tracked opaque-origin Monaco worker issue #67/#200" },
+      { kind: "console.error", messageIncludes: "Failed to execute 'estimate' on 'StorageManager'", reason: "Tracked js-dos sandbox issue #202" },
+      { kind: "console.error", messageIncludes: "Storage directory access is denied because the context is sandboxed", reason: "Tracked js-dos sandbox issue #202" },
+      { kind: "console.warn", messageIncludes: "Can't create audio node with sampleRate === 0", urlPathPrefix: "/app/plasmon/runtime/jsdos/js-dos.js", reason: "js-dos headless audio diagnostic from #187" },
+      { kind: "console.warn", messageIncludes: "GPU stall due to ReadPixels", urlPathPrefix: "/app/plasmon/index.html", reason: "Chromium software-rendering diagnostic from #187" },
+    ],
+  });
   const failed: string[] = [];
+  const loaded: string[] = [];
   page.on("requestfailed", (request) => {
     if (/\/static\/plasmon\/icons\//u.test(new URL(request.url()).pathname)) failed.push(request.url());
+  });
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (/\/app\/plasmon\/static\/plasmon\/icons\//u.test(url.pathname) && response.ok()) loaded.push(url.href);
   });
   try {
     await page.goto(kernelUrl);
@@ -23,8 +43,9 @@ test("#190 RED — packaged shared Plasmon assets load from the installed packag
     await expect(plasmon.getByRole("listbox", { name: "Files" }).first()).toBeVisible({ timeout: 30_000 });
     const icon = plasmon.locator('img[src*="/static/plasmon/icons/"]').first();
     await expect(icon).toBeVisible();
-    const src = await icon.getAttribute("src");
-    expect(src, "shared asset must use the installed Plasmon package mount").toMatch(/^\/app\/plasmon\/static\/plasmon\/icons\//u);
+    const resolved = await icon.evaluate((element) => (element as HTMLImageElement).currentSrc || (element as HTMLImageElement).src);
+    expect(new URL(resolved).pathname, "shared asset must resolve inside installed Plasmon package").toMatch(/\/app\/plasmon\/static\/plasmon\/icons\//u);
+    expect(loaded.length, "at least one installed shared asset response must succeed").toBeGreaterThan(0);
     expect(failed, "first-party shared icon requests must not fail").toEqual([]);
     health.assertClean();
   } finally {

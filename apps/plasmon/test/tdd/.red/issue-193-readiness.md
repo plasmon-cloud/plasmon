@@ -1,25 +1,27 @@
-# Issue #193 Search readiness
+# Issue #193 readiness — refreshed after r2 integration
 
-Reviewed canonical #193, #174, #175, #189, #190, #187, current `src/os/shell/search.ts`
-and Search tests. This is a readiness audit, not Luna-B's full Search packet.
+Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`.
 
-| Prerequisite | Status | Evidence / handoff |
+This is a readiness audit, not Luna-B's Search implementation packet.
+
+| Prerequisite / criterion | Status | Evidence and remaining work |
 |---|---|---|
-| #174 native `.sys` single projection | PACKET EXISTS BUT NOT INTEGRATED | #174 headless RED exists; current `searchFilesystem` can emit system `.sys` as a file/document alongside native app result. |
-| #189 canonical classification | PACKET EXISTS BUT NOT INTEGRATED | PR #207 is open, not on release; current branch has only semantic `classifyResource`, not full MIME/language result. |
-| #190 shared presentation | PACKET EXISTS BUT NOT INTEGRATED | current Visual seam/tests exist; installed Plasmon asset root remains #190 RED. |
-| #175 stable Search frame geometry | IMPLEMENTATION MISSING / SPEC GAP | Search panel remains rendered in `Shell.tsx`; no dedicated #175 packet was owned in this lane. Needs focused browser geometry gate. |
-| Search result model/query/category/loading/error | READY | `search.ts` has typed result unions, limits, cancellation, warnings and category filtering. |
-| canonical activation | READY | `activation.ts`, cross-surface and refactor guards delegate to filesystem/open authorities. |
-| no second app catalog | READY | native registry + Neutron discovery + filesystem projections are composed in `searchShell`; projection de-duplication tests cover Neutron. |
-| React isolation | IMPLEMENTATION MISSING | Search state/render remains coordinated by `Shell.tsx`; #193 owns extraction after source convergence. |
-| keyboard/focus/dismissal | READY characterization | existing Shell/RTL/refactor smoke covers accepted semantic behavior; geometry is not goldenized. |
-| package/browser health | BROWSER RED | #187 smoke has temporary `/static/plasmon/icons` allowances for #190 and operational session availability is separate. |
+| Canonical native source composition | PACKET EXISTS BUT NOT INTEGRATED | #174 lower tests now cover hidden policy, identity and activation; current Search still assembles direct native results plus filesystem `.sys` results. |
+| Visible result uniqueness | VERIFIED CORE RED / INCOMPLETE | #174 RED reaches `searchShell` and receives two Browser results. “No second app catalog” is not READY for visible projection uniqueness. |
+| #189 classification | PACKET EXISTS BUT NOT INTEGRATED | PR #207 remains open; #178 waits for its accepted result seam. |
+| #190 shared presentation/assets | BROWSER RED / PACKET EXISTS | deterministic Visual is green; installed Plasmon asset URL gate is repaired but browser-blocked without session. |
+| #175 stable Search frame geometry | SPEC GAP / BROWSER RED | Search remains inline in `Shell.tsx`; no accepted stable-frame geometry gate was integrated. |
+| typed query/category/loading/empty/error/result state | READY CHARACTERIZATION | `search.ts` typed result/state helpers and existing Shell/RTL tests cover behavior. |
+| canonical activation | READY | activation and cross-surface tests delegate to filesystem/open authorities. |
+| no parallel installation catalog | READY AUTHORITY FENCE, NOT PROJECTION ACCEPTANCE | registry, filesystem projections and Neutron discovery remain separate authorities; this does not excuse the duplicate visible results. |
+| React isolation | IMPLEMENTATION MISSING | Search state/render remains in `Shell.tsx`; #193 owns extraction after source convergence. |
+| keyboard/focus/dismissal | CHARACTERIZATION READY | existing RTL/refactor smoke covers semantic behavior; geometry remains separate. |
+| packaged health | BROWSER BLOCKED | strict #187 baseline is available; local session JSON is absent in this worktree. |
 
-## Ordering
+## Correct dependency statement
 
-Land/accept #189 and #174 consumer convergence before final Search extraction;
-#190 presentation migration may proceed in parallel but must expose the real
-installed asset contract. #193 can characterize existing result state now, but
-its final cutover should not freeze the known #175 geometry defect or duplicate
-classification/projection policy.
+The authoritative-source composition and visible-projection uniqueness are two
+separate claims. The former is an architecture fence already protected by
+existing source/composition tests; the latter is an active #174 RED and is not
+READY. #193 must consume the accepted converged Search result model rather than
+repairing duplicates locally or creating a second app catalog.

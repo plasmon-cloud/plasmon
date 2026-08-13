@@ -1,8 +1,6 @@
 # Issue #186 — persistence boundary reconnaissance and executable plan
 
-Classification: **RECONNAISSANCE**. No reproducible product data-loss evidence
-exists in the current headless graph, and no dedicated Testing-lane ownership
-was visible in the live queue during this pass.
+Classification: **HANDOFF INPUT FOR TESTING LEAD**. PR #209 (`work/testing/186-real-browser-persistence`) now owns the real packaged-browser investigation. Luna-A does not claim #186 ownership.
 
 ## Survival matrix
 
@@ -17,6 +15,14 @@ was visible in the live queue during this pass.
 | PocketIC reinstall | No; explicit reset may remove test state | provisioner/reinstall | provisioning commands | never label reinstall as browser persistence failure |
 | explicit site-data clearing | No | browser policy | Playwright context clear/Firefox profile controls | expected destructive boundary |
 | restrictive Firefox/LibreWolf privacy configuration | Only if configuration permits supported storage | browser policy | dedicated real-profile/manual evidence | document unsupported clearing/partition modes; no localStorage workaround |
+
+## Handoff input for Testing Lead
+
+The existing matrix and evidence rules below are supplied to PR #209. Its
+persistent-profile browser probe should retain the distinctions between app
+close/reopen, page reload, browser restart, PocketIC lifecycle and deliberate
+site-data clearing. Luna-A will not add another #186 gate or alter the Testing
+Lead branch.
 
 ## Smallest executable browser plan
 

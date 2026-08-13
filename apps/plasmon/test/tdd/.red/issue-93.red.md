@@ -1,26 +1,28 @@
-# Issue #93 — preserve image thumbnail aspect ratio
+# Issue #93 — image thumbnail acceptance
 
-## Disposition
+Disposition: **DETERMINISTIC CONTAINMENT GREEN / BROWSER-VISUAL ACCEPTANCE PENDING**.
 
-**ALREADY GREEN (deterministic/runtime path).** Current FileEntry image
-thumbnails consume `ResourceIcon`/`MediaThumbnail`; the shared Visual stylesheet
-uses `object-fit: contain`, and visual component tests assert the contain
-contract. The older `.fm-entry__thumbnail { object-fit: cover }` selector is a
-legacy/dead selector not used by the current FileEntry rendering path; no
-source-shape RED is manufactured.
+## Deterministic evidence
 
-## Preserved behavior
+`src/os/visual/visual.test.ts`, `visual.components.test.tsx`, FileManager polish
+and thumbnail lifecycle tests prove shared containment policy, aspect-preserving
+presentation, safe fallback, lazy loading and object URL cleanup at the
+headless/RTL layer. The current runtime path is no longer an ALREADY GREEN
+complete Issue disposition because the canonical Issue also requires rendered
+visual evidence.
 
-- Image bytes, MIME inference, lazy loading, object URL cleanup, and fallback
-  remain FileManager/thumbnail responsibilities.
-- Shared Visual owns thumbnail framing and containment.
-- Portrait, landscape, and square artwork fit within bounded icon frames without
-  distortion; exact pixels are not frozen.
+## Browser gate
 
-## Existing evidence
+`test/e2e/plasmon-image-thumbnails-93.spec.ts` imports redistribution-safe inline
+SVG fixtures for portrait, landscape and square images through the real packaged
+FileManager. It observes natural dimensions, actual thumbnail bounds, contained
+object-fit behavior, nonzero decoded images, and bounded frame geometry. It does
+not require exact pixels or screenshot goldens. Missing packaged session/browser
+failure is an operational block, not product RED.
 
-`src/os/file-manager/thumbnail.ts`, `file-icons.test.ts`,
-`src/os/visual/presentation.ts`, `visual.components.test.tsx`, and
-`visual/visual.scss` provide the lowest truthful deterministic guards. A human
-visual review may still inspect representative artwork, but no missing
-architecture-independent behavior remains on this branch.
+## Preserve
+
+- image bytes/resource identity and lazy thumbnail loading;
+- one-time object URL revocation and failed-image fallback;
+- pointer/selection semantics;
+- shared Visual presentation rather than a new thumbnail service.

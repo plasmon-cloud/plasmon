@@ -1,42 +1,28 @@
-# Issue #51 — Send to Desktop shortcut command
+# Issue #51 — repaired packet
 
-## Disposition
+Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
 
-**RTL RED.** The production FileManager renders no `Send to Desktop` command for
-an eligible selected resource. The gate uses the canonical headless filesystem,
-real FileManager React adapter, and user-event selection/click vocabulary; it
-will also verify the resulting Desktop node stores the target NodeId.
+## Executable evidence
 
-Run:
+- `issue-51.red.ui.test.tsx` remains the intentional RTL RED for the missing
+  production `Send to Desktop` consumer command.
+- `issue-51.red.test.ts` adds production-backed headless protection around the
+  real `createFileManagerShortcut` consumer primitive: canonical NodeId target,
+  unchanged original parent/identity, collision-safe repeated creation, normal
+  shortcut rename, missing target/destination errors, and no partial shortcut.
 
-```sh
-bun test --preload ./apps/plasmon/test/setupHappyDom.ts ./apps/plasmon/test/tdd/.red/issue-51.red.ui.test.tsx
-```
+The lower test intentionally tests the existing primitive-backed consumer helper
+and does not pretend it proves the missing Desktop command. #51 remains RED
+until FileManager exposes the destination command and the RTL journey passes.
 
-## PRESERVE
+## Preserve
 
-- `createShortcut()` and `shortcutMetadata()` remain the only shortcut format
-  and serializer.
-- Filesystem owns target identity, collision naming, and resource protection.
-- FileManager owns selection and command presentation only.
-- The original resource remains in its original location and NodeId.
+#44's shortcut serializer/primitive, FsService target identity and collision
+naming remain authoritative. The original resource is never moved or copied.
 
-## CHANGE
+## Remaining criterion
 
-- Expose a bounded Send to Desktop action for one eligible selected resource.
-- Resolve `/Desktop` through FsService and delegate creation to the canonical
-  shortcut primitive.
-- Surface deterministic unavailable-target/Desktop errors.
-
-## UNSPECIFIED
-
-- Toolbar versus context-menu placement, exact label punctuation, and helper
-  names.
-- Whether the action is grouped under a `Send to` submenu.
-
-## Existing guards
-
-`create-shortcut.test.tsx`, `desktopCore.test.ts`, activation/open tests, and
-resource policy tests already protect canonical shortcut serialization,
-collision naming, stable NodeId dereference, and protected resources. This gate
-only adds the missing Desktop-destination consumer journey.
+The missing production Desktop destination command must resolve `/Desktop`,
+check one eligible selection, delegate to the canonical helper, surface
+unavailable/ineligible errors, and preserve normal selection/rename behavior for
+the created shortcut. No generic command framework is required by this packet.

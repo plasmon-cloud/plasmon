@@ -1,28 +1,33 @@
-# Issue #172 closure audit
+# Issue #172 closure audit — refreshed after #192 integration
 
 Date: 2026-08-13
-Upstream implementation reviewed: PR #205 (`work/refactor/192-desktop-placement-controller`), current tip `6479170`.
+Integrated release: `51cd761c207573a59197d53c9e2884335f2e7cc7`
 
-This is an audit only. It does not close #172 or modify PR #205.
+PR #205/#192 is now integrated. The previous audit correctly identified the
+missing composed Trash/Desktop proof; this revision stages it.
 
-| #172 acceptance criterion | Classification | Evidence / smallest missing gate |
+## Acceptance matrix
+
+| #172 criterion | Status | Evidence |
 |---|---|---|
-| Restore to an unoccupied prior slot preserves original coordinates | **PROVEN BY #192** | PR #205 `apps/plasmon/src/os/desktop/layout.test.ts` valid explicit position/recomposition coverage and controller behavior. |
-| Restore to an occupied slot does not overlap existing icon | **PROVEN BY #192** | `issue-192.test.ts` occupied persisted slot gate plus `layout.test.ts` restore collision coverage. |
-| Restored resource receives deterministic free placement | **PROVEN BY #192** | Pure `reconcileDesktopPositions` allocation and repeated recomposition tests; implementation uses deterministic grid scan. |
-| Unrelated positioned icons do not move | **PROVEN BY #192** | Incumbent-priority and stationary drag-collision tests preserve incumbent coordinates. |
-| Stable NodeId/Trash restore behavior remains unchanged | **OUTSIDE #192** | #192 intentionally does not own Trash. Existing `desktopCore.test.ts`, Trash lifecycle, and refactor guards prove NodeId/Trash semantics. A composed restore-to-Desktop test would be the smallest additional evidence if closure requires one test crossing both authorities. |
-| Deterministic layout/composition coverage proves the r1 case | **PROVEN BY #192** | PR #205 pure layout/controller tests and packaged `plasmon-desktop-placement-192.spec.ts` adapter gate cover resolved positions and browser rendering. |
+| Restore to an unoccupied prior slot preserves original coordinates | PROVEN BY #192 | integrated `layout.test.ts` valid explicit position/recomposition coverage |
+| Restore to occupied slot does not overlap existing icon | PROVEN BY #192 + composed gate | integrated controller tests plus `issue-172.composed.red.test.ts` real Trash restore path |
+| Restored resource gets deterministic free placement | PROVEN BY #192 + composed gate | repeated `allocateDesktopPositions` result is asserted stable |
+| Unrelated positioned icons do not move | PROVEN BY #192 + composed gate | real occupant is snapshotted and its coordinates/FS node remain unchanged |
+| Stable NodeId/Trash restore behavior remains unchanged | PROVEN BY existing Trash tests + composed gate | `desktopCore.test.ts`/Trash lifecycle plus real restore assertion preserves original NodeId |
+| Pure layout plus smallest composed Desktop/Trash regression | PROVEN BY #192 + composed gate | integrated pure layout tests and `issue-172.composed.red.test.ts` |
 
-## Audit conclusion
+## Executable gate
 
-PR #205 fully proves the placement-specific criteria and preserves the existing
-Trash/NodeId authority by keeping it out of the controller. Criterion 5 is not a
-new #192 RED gap, but it remains an external closure dependency: acceptance
-should retain the existing Trash/identity regression evidence or add one small
-composed test that restores a real trashed Desktop node and feeds the resulting
-NodeId/position into Desktop reconciliation.
+`apps/plasmon/test/tdd/.red/issue-172.composed.red.test.ts` uses the real
+headless Plasmon filesystem, real `FilesystemTrashService`, real NodeId-backed
+resources and the production Desktop placement helper. It trashes a real
+Desktop node, creates a real incumbent at its old position, restores the original
+NodeId, reconciles, asserts incumbent stability/non-overlap and checks
+recomposition idempotence.
 
-Do not treat PR existence or a passing pure controller suite as proof that the
-release branch has accepted #172; PR #205 remains open and is not integrated into
-`release/0.1.0-r2` at audit time.
+The gate is intentionally a RED staging gate against this lane's pre-#192
+composition; when adopted onto the integrated release it exercises the accepted
+controller. It does not move Trash semantics into layout and does not close #172
+itself. The coordinator should rerun it on the exact integrated release head
+before closing the Issue.
