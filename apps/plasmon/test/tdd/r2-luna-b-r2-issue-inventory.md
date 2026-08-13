@@ -1,0 +1,51 @@
+# Luna-B r2 Shell / Windowing issue inventory
+
+Observed against `release/0.1.0-r2` ancestry `f4ac3b4` and live GitHub on 2026-08-13. GitHub state is authoritative; an open PR is not treated as integrated acceptance.
+
+| Issue | title | state / target | primary authority | active PR? | Luna owner? | dependency | B disposition | reason |
+|---|---|---|---|---|---|---|---|---|
+| #25 | retire legacy gui2 desktop | open / older r2 queue | composition / Testing | no | Lane D | active entrypoint audit | ACTIVE OWNERSHIP — DO NOT TOUCH | Lane D compatibility audit, not a B packet. |
+| #26 | retire legacy src/platform | open / older r2 queue | composition / Testing | no | Lane D | active import audit | ACTIVE OWNERSHIP — DO NOT TOUCH | Lane D compatibility audit, not a B packet. |
+| #43 | left/right edge snapping | open / older, shipped in r2 base | Windowing + browser adapter | merged PR #75; no active PR | unassigned | #199 consumes browser contract | BROWSER SPEC ONLY | Manager transitions are green; pointer-relative unsnap continuity is browser-only and was not independently executed here. |
+| #49 | classify Neutron projections as Apps | closed | Neutron / Shell Search | integrated | none | consumed by #174/#90 | CLOSURE AUDIT | Closed prerequisite; no competing Search packet. |
+| #61 | headless Shell overlay controller | open / older r2 queue | Shell overlay policy | no | luna-b | #32 integrated | CHARACTERIZATION READY | Existing behavior is characterized by `interactions.ts` tests; extracting a controller is structural and has no honest behavioral RED. |
+| #62 | deterministic Windowing focus history | closed | Windowing | integrated | none | prerequisite for #63 | CLOSURE AUDIT | `focusSnapshot()` and MRU tests are green. |
+| #63 | Alt-Tab switcher | open / older r2 queue | Shell keyboard + Windowing MRU | no | luna-b | #62 integrated | VERIFIED CORE RED / INCOMPLETE ACCEPTANCE | RTL gate proves Alt-Tab does not switch focus; visible switcher/accessibility and real-browser key delivery remain to be completed. |
+| #72 | coherent taskbar presentation | open / milestone r2 | Shell projection | no | luna-b | Process/Windowing/Neutron | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | Existing `taskbarPresentation.test.ts`, `shell.test.ts`, and current taskbar DOM prove pinned/running/active/launching/unknown without raw runtime tokens. #81 remains a separate composed regression owned by Lane D. |
+| #81 | composed taskbar lifecycle regression | open / older r2 queue | Testing composition | no | Lane D | #72 | ACTIVE OWNERSHIP — DO NOT TOUCH | Lane D queue item; B supplies the #72 projection evidence only. |
+| #87 | retire default Start System folder | open / milestone r2 | Shell Start + filesystem reconciliation | no | luna-b | #32 integrated | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | Current reconciliation and `gate3.test.ts` cover fresh, migration, preservation, idempotency, and top-level Settings/Explorer/Properties. |
+| #90 | Neutron Search application presentation | open / older | Shell Search + Neutron metadata | no | implementor/#174 | #49/#174 | WAIT FOR DEPENDENCY | Do not duplicate the current #174 canonical `.sys` source-of-truth packet. |
+| #91 | distinguish result caps from safety truncation | open / milestone r2 | Shell Search model | no | luna-b | none | VERIFIED FULL RED PACKET | Headless gate fails because ordinary category cap sets `batch.truncated = true`; warning cannot be truthful until model separates cap from safety stop. |
+| #109 | shared pin/unpin presentation | open / older needs-verification | Visual primitive consumed by Shell | no active PR | luna-b characterization | #190 shared presentation active | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | Start/context use `PinIcon`; visual component and interaction tests prove deterministic state, labels, persistence seam remains unchanged. |
+| #111 | Shell visual-system convergence | open / milestone r2 | Shell + Visual consumers | no | luna-b | #72/#90/#109/#190 | CLOSURE AUDIT | Consumer audit is required; broad visual convergence cannot honestly be a source-shape RED and packaged/manual appearance remains unverified. |
+| #115 | thin shared resource-command layer | open / older | shared commands consumed by Shell/FileManager | no (Lane A queue ownership) | Lane A | accepted open/Trash/shortcut seams | CHARACTERIZATION READY | B does not own the canonical packet. Matrix records Shell consumers and rejects structural/source-only RED claims. |
+| #117 | persist native window placement | open / older | Windowing + Fs-backed preference | no | luna-b | WindowManager geometry | VERIFIED FULL RED PACKET | Recomposition after a moved/closed native window restores default geometry; deterministic headless gate fails through real services. |
+| #118 | group native app instances | open / older | Shell projection over Process/Windowing | no | luna-b | #72 | VERIFIED FULL RED PACKET | Pure gate fails: two native processes currently emit two unrelated taskbar entries. |
+| #119 | native dialog/transient ownership | open / older | Windowing + Process contracts | no | luna-b | #41/#42 related | CHARACTERIZATION READY | Current product has no accepted true native transient. No honest test may invent an owner API; contract and ownership matrix are staged for implementor decision. |
+| #112 | shared first-party native-app chrome | open / older | Native Apps / Visual | no | Luna-C | #190/#201 | ACTIVE OWNERSHIP — DO NOT TOUCH | Not Shell-primary; B records only visual dependency. |
+| #174 | canonical `.sys` Search projection | open / milestone r2 | Shell Search + filesystem/Neutron | implementor queue | today implementor | #49/#90 | ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH | Explicit assignment fence; B consumes it only. |
+| #175 | Search geometry | open / milestone r2 | Shell Search browser geometry | no; Luna-A packet exists | Luna-A | #193 | WAIT FOR DEPENDENCY | Consume A's `issue-175.red.md`; do not create a competing packet. |
+| #176 | context-menu leakage | open / milestone r2 | Shell/browser event ownership | no | today implementor | #183/#197 | ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH | Explicit assignment fence. |
+| #177 | bounded default placement | open / milestone r2 | WindowManager geometry | no | luna-b | #43/#117 separate | VERIFIED FULL RED PACKET | Repeated open/close reaches the bottom-right clamp instead of deterministic wrap/restart. |
+| #178 | MIME/language inference | open / milestone r2 | classification / Native Apps | no | Luna-A | #189 | ACTIVE OWNERSHIP — DO NOT TOUCH | Future/refactor packet owned by A. |
+| #183 | taskbar context / Close / alignment | open / milestone r2 | Shell taskbar + Process/Windowing | no | luna-b | #41/#42, #118 | VERIFIED CORE RED / INCOMPLETE ACCEPTANCE | RTL Close gate fails. Geometry, canonical Close negotiation, alignment preference persistence, and browser placement need follow-up. |
+| #184 | TaskManager.sys | open / later r2 | Native resource + Process/Windowing projection | no | luna-b | #72/#174 | VERIFIED CORE RED / INCOMPLETE ACCEPTANCE | Headless resource-existence gate fails; process/window actions, Search exclusion, and taskbar activation remain unimplemented. |
+| #185 | Show Desktop | open / later r2 | Shell command + WindowManager | no | luna-b | #183 | VERIFIED CORE RED / INCOMPLETE ACCEPTANCE | RTL taskbar-background action gate fails; deterministic affected-window snapshot/restore contract remains to implement. |
+| #187 | r2 refactor guards | open / milestone r2 | Testing / browser health | active integrated smoke | Testing Lead | all browser packets | ACTIVE OWNERSHIP — DO NOT TOUCH | B consumes the strict baseline; no duplicate guard suite. |
+| #190 | resource presentation identity | open / milestone r2 | Visual/resource presentation | PR #211 active | implementor | #109/#111 | ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH | Explicit active PR fence. |
+| #192 | Desktop placement controller | open / milestone r2 | Desktop / Lane A | no | Luna-A | #177 related | ACTIVE OWNERSHIP — DO NOT TOUCH | Future packet and Desktop ownership. |
+| #193 | Search surface reconstruction | open / milestone r2 | Shell Search refactor | no | Luna-A | #175/#174/#190 | ACTIVE OWNERSHIP — DO NOT TOUCH | Consume A readiness only; no competing RED. |
+| #194 | Start surface reconstruction | open / milestone r2 | Shell Start refactor | no | Luna-A | #169/#190 | ACTIVE OWNERSHIP — DO NOT TOUCH | Consume A readiness only; #169 is implementor-owned. |
+| #197 | Shell root decomposition | open / milestone r2 | Shell refactor | no | Luna-A | #61/#176/#111 | ACTIVE OWNERSHIP — DO NOT TOUCH | Future/refactor packet owned by A. |
+| #198 | taskbar reconstruction | open / milestone r2 | Shell taskbar refactor | no | Luna-A | #72/#118/#183/#190 | ACTIVE OWNERSHIP — DO NOT TOUCH | Future/refactor packet owned by A; B supplies concrete defects only. |
+| #199 | native-window adapter reconstruction | open / milestone r2 | Windowing browser adapter | no | Luna-A | #43/#177/#117 | ACTIVE OWNERSHIP — DO NOT TOUCH | Future/refactor packet owned by A. |
+| #200 | Monaco host | open / milestone r2 | Native Apps/browser runtime | no | Luna-A/C | #89/#113/#114 | ACTIVE OWNERSHIP — DO NOT TOUCH | Not Shell-primary. |
+| #201 | visual cleanup | open / milestone r2 | Visual/tooling | no | Luna-A | all presentation migrations | ACTIVE OWNERSHIP — DO NOT TOUCH | Future cleanup packet; B only supplies token audit input. |
+
+## Search completeness
+
+Queries covered milestone `0.1.0-r2` and older bodies/titles containing Shell, taskbar, Windowing, Process, focus, snap, minimize, maximize, placement, tray, calendar, settings, menus, keyboard, and shell preferences. Closed prerequisites (#32, #41, #42, #49, #62) were retained as closure/dependency evidence. #112, #174, #175, #176, #178, #190, #192–#201, #25/#26, and #81 were explicitly excluded from B implementation ownership above.
+
+## Evidence rule
+
+`ALREADY GREEN` appears only for #72, #87, and #109 because every meaningful acceptance item has current production tests or a direct current-source proof. All other green-looking partial behavior is called a core/incomplete, characterization, browser, or closure disposition instead.
