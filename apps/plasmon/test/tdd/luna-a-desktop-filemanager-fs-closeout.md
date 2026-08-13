@@ -38,7 +38,9 @@ accordingly.
 ## Canonical inventory
 
 The exhaustive issue table is in
-`r2-luna-a-desktop-filemanager-fs-inventory.md`. Its dispositions are:
+`r2-luna-a-desktop-filemanager-fs-inventory.md`. It now accounts for all title
+search hits, including cross-lane #64/#113/#117/#123/#124/#177/#185, without
+creating competing Luna-A packets. Its dispositions are:
 
 - **Already green / closure evidence:** #44 complete canonical shortcut
   acceptance, #45 deterministic Recycle Bin core, #108 deterministic navigation,

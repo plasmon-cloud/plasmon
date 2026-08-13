@@ -66,11 +66,17 @@ Sources searched:
 | #70 | Cross-surface open regression, closed | CLOSURE PROVEN by `test/resourceOpenCrossSurface.test.ts` and refactor guards |
 | #77 | Cross-surface Trash lifecycle, closed | CLOSURE PROVEN by `test/trashLifecycle.test.ts` and filesystem tests |
 | #80 | Association/OpenService composition, closed | D/cross-surface closure; `resourceOpenCrossSurface.test.ts` is permanent destination |
+| #64 | js-dos save-state persistence | Luna-C/native-runtime ownership; filesystem identity dependency only; no competing packet |
 | #96 | native app identity assets | Luna-C/native-app ownership; #190 dependency only, no competing packet |
 | #109 | shared pin presentation | Luna-B ownership; no competing packet |
+| #113 | Text/Monaco editor chrome | Luna-C ownership; no FileManager packet |
 | #115 | shared resource-command layer | Luna-B ownership; FileManager preservation matrix records dependency only |
 | #117 | native placement persistence | Luna-B ownership; #199 dependency only |
 | #118 | taskbar grouping | Luna-B ownership; #198 dependency only |
+| #123 | game artwork thumbnails | Luna-C ownership; presentation dependency only, no competing #94 packet |
+| #124 | game save screenshot thumbnails | blocked on #64 and Luna-C/runtime boundary; no competing #94 packet |
+| #177 | bounded repeated native-window placement | Luna-B/Windowing ownership; distinct from Desktop #192 placement |
+| #185 | Show Desktop command | Luna-B Shell/Windowing ownership; no competing packet |
 | #123 | game artwork | Luna-C ownership; not FileManager primary |
 | #124 | game save screenshots | Luna-C ownership and blocked; not duplicate #94 |
 | #169 | Start reconciliation | today's/unattended or B ownership; #194 waits; no competing packet |
