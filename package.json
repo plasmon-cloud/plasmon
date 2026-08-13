@@ -21,7 +21,7 @@
     "test:e2e:package-updates": "playwright test test/e2e/package-updates.spec.ts",
     "test:e2e:package-updates:fresh": "npm run local:deploy && NEUTRON_E2E_WITH_II=1 npm run test:e2e:package-updates",
     "test:e2e:plasmon": "npm run test:e2e:plasmon:smoke && npm run test:e2e:plasmon:specialist",
-    "test:e2e:plasmon:smoke": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-refactor-smoke.spec.ts",
+    "test:e2e:plasmon:smoke": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-refactor-smoke.spec.ts test/e2e/plasmon-desktop-placement-192.spec.ts",
     "test:e2e:plasmon:specialist": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-golden-path.spec.ts test/e2e/plasmon-monaco-packaged.spec.ts test/e2e/plasmon-review-demo.spec.ts test/e2e/plasmon-emulatorjs-proof.spec.ts test/e2e/plasmon-demo-game.spec.ts",
     "test:e2e:plasmon:fresh": "npm run plasmon:demo:prepare && npm run plasmon:demo:reinstall && npm run test:e2e:plasmon",
     "test:e2e:plasmon:smoke:fresh": "npm run plasmon:demo:prepare && npm run plasmon:demo:reinstall && npm run test:e2e:plasmon:smoke",
