@@ -47,6 +47,7 @@ import { useFileManagerDirectoryState } from "./use-file-manager-directory-state
 import { useFileManagerKeyboardAdapter } from "./use-file-manager-keyboard-adapter.ts";
 import { useFileManagerPointerAdapter } from "./use-file-manager-pointer-adapter.ts";
 import { useFileManagerRename } from "./use-file-manager-rename.ts";
+import { fileManagerViewStrategy } from "./view-strategy.ts";
 import "./file-manager.scss";
 
 export type {
@@ -131,6 +132,7 @@ export function FileManager({
     }),
     [directory.nodes, filterQuery, positions, presentation, selection],
   );
+  const viewStrategy = fileManagerViewStrategy(presentation);
 
   useEffect(() => {
     setOperation(operationState.snapshot());
@@ -381,20 +383,15 @@ export function FileManager({
         <p className="fm-empty">Loading…</p>
       ) : null}
 
-      {presentation === "details" ? (
-        <div className="fm-details-head" aria-hidden="true">
-          <span>Name</span><span>Type</span><span>Size</span><span>Modified</span>
-        </div>
-      ) : null}
-
       <FileManagerEntries
         fs={fs}
         {...(associations ? { associations } : {})}
         nodes={renderState.visibleNodes}
         selection={selection}
         dropTargetId={pointer.dropTargetId}
-        presentation={presentation}
-        desktopPositions={renderState.desktopPositions}
+        mode={viewStrategy
+          ? { kind: "view", strategy: viewStrategy }
+          : { kind: "desktop", positions: renderState.desktopPositions }}
         rename={rename.rename}
         setEntryRef={pointer.setEntryRef}
         onPointerDown={pointer.handleEntryPointerDown}

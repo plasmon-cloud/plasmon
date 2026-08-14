@@ -5,7 +5,6 @@ import type {
 } from "react";
 import type { FsNode, NodeId } from "../contracts/index.ts";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
-import { spatialNeighborId, type SpatialDirection } from "./list-layout.ts";
 import {
   clearSelection,
   selectAll,
@@ -14,6 +13,7 @@ import {
   type SelectionState,
 } from "./model.ts";
 import type { FileManagerPresentation } from "./render-state.ts";
+import { nextFileManagerViewId } from "./view-strategy.ts";
 
 interface UseFileManagerKeyboardAdapterOptions {
   nodes: readonly FsNode[];
@@ -32,6 +32,14 @@ interface UseFileManagerKeyboardAdapterOptions {
   onOpen: (node: FsNode) => void;
   onCancelRename: () => void;
   onCloseOverlays: () => void;
+}
+
+function arrowDirection(key: string): "up" | "right" | "down" | "left" | null {
+  if (key === "ArrowUp") return "up";
+  if (key === "ArrowRight") return "right";
+  if (key === "ArrowDown") return "down";
+  if (key === "ArrowLeft") return "left";
+  return null;
 }
 
 export function useFileManagerKeyboardAdapter(
@@ -75,37 +83,20 @@ export function useFileManagerKeyboardAdapter(
       return;
     }
 
-    if (
-      !["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key)
-      || options.orderedIds.length === 0
-    ) return;
+    const direction = arrowDirection(event.key);
+    if (!direction || options.orderedIds.length === 0) return;
 
     event.preventDefault();
     const currentId = options.selection.focus ?? options.orderedIds[0] ?? null;
     if (!currentId) return;
 
-    let nextId: NodeId | null | undefined;
-    if (options.presentation === "list") {
-      const direction: SpatialDirection = event.key === "ArrowUp"
-        ? "up"
-        : event.key === "ArrowRight"
-          ? "right"
-          : event.key === "ArrowDown"
-            ? "down"
-            : "left";
-      nextId = spatialNeighborId(
-        options.orderedIds,
-        currentId,
-        direction,
-        options.entryRectangles(),
-      );
-    } else {
-      const index = Math.max(0, options.orderedIds.indexOf(currentId));
-      const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
-      nextId = options.orderedIds[
-        Math.max(0, Math.min(options.orderedIds.length - 1, index + delta))
-      ];
-    }
+    const nextId = nextFileManagerViewId({
+      presentation: options.presentation,
+      orderedIds: options.orderedIds,
+      currentId,
+      direction,
+      rectangles: options.entryRectangles(),
+    });
 
     if (nextId) {
       options.setSelection(selectNode(
