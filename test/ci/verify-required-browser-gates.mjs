@@ -16,6 +16,7 @@ const gates = [
       "test/e2e/plasmon-demo-environment.ts",
       "test/e2e/plasmon-browser-health.ts",
       "test/e2e/plasmon-refactor-smoke.spec.ts",
+      "test/ci/*playwright-gate*",
       "playwright.config.ts",
       "plasmon-local.ndeploy.json",
       "package.json",
@@ -189,6 +190,13 @@ for (const gate of selectedGates) {
   const guardCount = source.split(guard).length - 1;
   if (guardCount < 2) {
     throw new Error(`${gate.context} must guard both Nix setup and the expensive browser step`);
+  }
+
+  if (gate.id === "smoke") {
+    const expensiveStep = stepSectionByName(lines, "Package and run Plasmon refactor smoke");
+    if (!expensiveStep.includes("node test/ci/verify-playwright-gate.mjs")) {
+      throw new Error(`${gate.context} must preserve the fail-on-flaky Playwright gate proof`);
+    }
   }
 
   if (gate.id !== "browser") {
