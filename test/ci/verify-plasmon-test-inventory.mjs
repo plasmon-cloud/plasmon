@@ -13,6 +13,8 @@ import {
 const args = new Set(process.argv.slice(2));
 const activeQuarantineIssues = Object.freeze({
   'test/e2e/plasmon-golden-path-right-snap.spec.ts': '@issue-244',
+});
+const restoredRequiredIssues = Object.freeze({
   'test/e2e/plasmon-emulatorjs-proof.spec.ts': '@issue-245',
 });
 
@@ -105,10 +107,16 @@ async function verify(inventory) {
     } else {
       assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
     }
+
+    const restoredIssue = restoredRequiredIssues[path];
+    if (restoredIssue) {
+      assert(source.includes(`"${restoredIssue}"`), `${path} restored required acceptance must retain ${restoredIssue} evidence ownership`);
+    }
   }
 
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
-  assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
+  assert(quarantineDoc.includes('#244'), 'Quarantine documentation must retain #244 restoration ownership');
+  assert(quarantineDoc.includes('Restored required acceptance — #245'), 'Quarantine documentation must record #245 as restored to required execution');
   assert(quarantineDoc.includes('#250') && quarantineDoc.includes('#251'), 'Quarantine documentation must state that #250/#251 evidence remains tracked while their tests stay required');
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
