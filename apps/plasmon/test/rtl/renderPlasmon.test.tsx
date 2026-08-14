@@ -116,6 +116,8 @@ describe("renderPlasmon", () => {
       const searchInput = within(searchRegion).getByRole("textbox", { name: "Search Plasmon" });
       await app.user.type(searchInput, "Review");
 
+      await within(searchRegion).findByText("Searching…");
+      await waitFor(() => expect(within(searchRegion).queryByText("Searching…")).toBeNull());
       await within(searchRegion).findByText(/Collaborative review workspace\./);
       await within(searchRegion).findByText(/Archived review workspace\./);
 
