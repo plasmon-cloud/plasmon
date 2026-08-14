@@ -1,3 +1,5 @@
+import type { ProcessController, ProcessId } from "../contracts/index.ts";
+
 export interface ShellDismissHit {
   insideFlyout: boolean;
   insideToggle: boolean;
@@ -26,6 +28,94 @@ export function resolveShellContextMenuPolicy(hit: ShellContextMenuHit): ShellCo
   if (hit.nativeTask) return "native-task";
   if (hit.elementTask) return "element-task";
   return "generic";
+}
+
+export interface ShellContextAnchor {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface ShellContextViewport {
+  width: number;
+  height: number;
+}
+
+export interface ShellContextMenuSize {
+  width: number;
+  height: number;
+}
+
+export interface ShellContextMenuPosition {
+  x: number;
+  y: number;
+}
+
+function finite(value: number, fallback = 0): number {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+}
+
+/**
+ * Places a taskbar context surface adjacent to its invoking item/point while
+ * keeping the complete menu inside the viewport. Bottom-anchored taskbar
+ * sources prefer the space above and fall back below only when needed.
+ */
+export function placeShellContextMenu(
+  anchorInput: ShellContextAnchor,
+  viewportInput: ShellContextViewport,
+  menuInput: ShellContextMenuSize,
+  options: { gap?: number; margin?: number } = {},
+): ShellContextMenuPosition {
+  const margin = Math.max(0, finite(options.margin ?? 8, 8));
+  const gap = Math.max(0, finite(options.gap ?? 6, 6));
+  const viewport = {
+    width: Math.max(1, finite(viewportInput.width, 1)),
+    height: Math.max(1, finite(viewportInput.height, 1)),
+  };
+  const menu = {
+    width: Math.max(1, finite(menuInput.width, 1)),
+    height: Math.max(1, finite(menuInput.height, 1)),
+  };
+  const anchor = {
+    left: finite(anchorInput.left),
+    top: finite(anchorInput.top),
+    width: Math.max(0, finite(anchorInput.width)),
+    height: Math.max(0, finite(anchorInput.height)),
+  };
+
+  const maxX = viewport.width - menu.width - margin;
+  const maxY = viewport.height - menu.height - margin;
+  const centeredX = anchor.left + anchor.width / 2 - menu.width / 2;
+  const aboveY = anchor.top - gap - menu.height;
+  const belowY = anchor.top + anchor.height + gap;
+  const canFitAbove = aboveY >= margin;
+  const canFitBelow = belowY + menu.height <= viewport.height - margin;
+  const preferredY = canFitAbove || !canFitBelow ? aboveY : belowY;
+
+  return {
+    x: clamp(centeredX, margin, maxX),
+    y: clamp(preferredY, margin, maxY),
+  };
+}
+
+/** App-scoped multi-member groups must never guess which process Close means. */
+export function nativeTaskContextProcessId(
+  members: readonly Pick<{ id: ProcessId }, "id">[],
+): ProcessId | null {
+  return members.length === 1 ? members[0]!.id : null;
+}
+
+/** Ordinary Close always delegates through the negotiable Process lifecycle. */
+export function closeNativeTaskContextProcess(
+  process: Pick<ProcessController, "close">,
+  processId: ProcessId | null | undefined,
+): boolean {
+  return processId ? process.close(processId) : false;
 }
 
 export interface TaskbarPinAction {
