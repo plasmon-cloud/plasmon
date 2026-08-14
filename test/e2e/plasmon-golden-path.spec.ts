@@ -163,6 +163,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(recycleBin).toBeVisible({ timeout: 10_000 });
   await expect(recycleBin.getByText("Recycle Bin is empty.")).toBeVisible();
   await expect(recycleBin.getByRole("button", { name: "Empty Recycle Bin" })).toBeDisabled();
+  await expect(recycleBin.locator('.plasmon-window__icon [data-icon-context="titlebar"]')).toBeVisible();
 
   const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
   const initialWindowCount = await nativeWindows.count();
@@ -176,10 +177,8 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const titlebar = dialog.locator(".plasmon-window__titlebar");
 
   // Issue #199 packaged browser boundary: explicit focus remains WindowManager
-  // state while chrome renders a real active/inactive distinction and shared
-  // titlebar Visual identity.
+  // state while chrome renders a real active/inactive distinction.
   await expect(dialog).toHaveClass(/plasmon-window--active/);
-  await expect(dialog.locator('.plasmon-window__icon [data-icon-context="titlebar"]')).toBeVisible();
   const activeBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
   const recycleTitlebar = recycleBin.locator(".plasmon-window__titlebar");
   await recycleTitlebar.click({ position: { x: 80, y: 16 } });
