@@ -34,6 +34,7 @@ import {
   nativeTaskContextProcessId,
   placeShellContextMenu,
   resolveShellContextMenuPolicy,
+  shellContextMenuHeight,
   shouldDismissShellFlyout,
   taskbarPinAction,
   type ShellContextMenuPolicy,
@@ -533,6 +534,14 @@ export function Shell({
     event.stopPropagation();
     setOpenTaskbarGroupHandlerId(null);
 
+    const contextProcessId = nativeTask?.dataset.shellContextProcess as ProcessId | undefined;
+    const itemCount = taskbarBackground
+      ? 2
+      : policy === "native-task"
+        ? (contextProcessId ? 2 : 1)
+        : policy === "element-task"
+          ? 1
+          : 3;
     const source = nativeTask ?? elementTask;
     const sourceRect = source?.getBoundingClientRect();
     const position = placeShellContextMenu(
@@ -543,14 +552,14 @@ export function Shell({
         width: typeof window === "undefined" ? 1024 : window.innerWidth,
         height: typeof window === "undefined" ? 768 : window.innerHeight,
       },
-      { width: 230, height: 180 },
+      { width: 230, height: shellContextMenuHeight(itemCount) },
     );
 
     setContextMenu({
       ...position,
       policy,
       ...(nativeTask?.dataset.shellContextNative ? { handlerId: nativeTask.dataset.shellContextNative } : {}),
-      ...(nativeTask?.dataset.shellContextProcess ? { processId: nativeTask.dataset.shellContextProcess as ProcessId } : {}),
+      ...(contextProcessId ? { processId: contextProcessId } : {}),
       ...(elementTask?.dataset.shellContextElement ? { elementId: elementTask.dataset.shellContextElement } : {}),
       ...(taskbarBackground ? { taskbarBackground: true } : {}),
     });
