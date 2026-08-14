@@ -116,11 +116,8 @@ describe("renderPlasmon", () => {
       const searchInput = within(searchRegion).getByRole("textbox", { name: "Search Plasmon" });
       await app.user.type(searchInput, "Review");
 
-      const reviewDescription = await within(searchRegion).findByText(/Collaborative review workspace\./);
-      const archiveDescription = await within(searchRegion).findByText(/Archived review workspace\./);
-      const reviewResult = reviewDescription.closest("button");
-      const archiveResult = archiveDescription.closest("button");
-      if (!reviewResult || !archiveResult) throw new Error("Expected two Search result buttons");
+      await within(searchRegion).findByText(/Collaborative review workspace\./);
+      await within(searchRegion).findByText(/Archived review workspace\./);
 
       await app.user.click(within(searchRegion).getByRole("tab", { name: "Documents" }));
       await within(searchRegion).findByText("No results in this category.");
@@ -128,6 +125,11 @@ describe("renderPlasmon", () => {
 
       await app.user.click(within(searchRegion).getByRole("tab", { name: "Apps" }));
       await waitFor(() => expect(within(searchRegion).queryByText("No results in this category.")).toBeNull());
+      const liveReviewDescription = await within(searchRegion).findByText(/Collaborative review workspace\./);
+      const liveArchiveDescription = await within(searchRegion).findByText(/Archived review workspace\./);
+      const reviewResult = liveReviewDescription.closest("button");
+      const archiveResult = liveArchiveDescription.closest("button");
+      if (!reviewResult || !archiveResult) throw new Error("Expected two live Search result buttons");
 
       reviewResult.focus();
       expect(document.activeElement).toBe(reviewResult);
