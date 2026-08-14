@@ -7,7 +7,14 @@ const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
 
-test("explicit packaged demo fixture opens through the normal js-dos desktop path", async ({ page, request }) => {
+// Quarantined from required r2 Specialist CI under #250 after Packaged Browser
+// run #884 failed this journey and then passed it on Playwright retry #1.
+// Keep the test in the Specialist inventory; --grep-invert @r2-quarantine
+// excludes only this acceptance while #250 tracks deterministic restoration.
+test(
+  "explicit packaged demo fixture opens through the normal js-dos desktop path",
+  { tag: ["@r2-quarantine", "@issue-250"] },
+  async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -143,7 +150,8 @@ test("explicit packaged demo fixture opens through the normal js-dos desktop pat
   await page.keyboard.press("Space");
 
   expect(pageErrors).toEqual([]);
-});
+  },
+);
 
 declare global {
   interface Window {
