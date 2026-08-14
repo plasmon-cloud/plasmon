@@ -101,7 +101,18 @@ function eventSection(lines, eventName) {
   return lines.slice(start + 1, end);
 }
 
-function stepSection(lines, stepId) {
+function stepSectionFromIndex(lines, start) {
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^      - name: /.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
+}
+
+function stepSectionById(lines, stepId) {
   const idMarker = `        id: ${stepId}`;
   const idIndex = lines.findIndex((line) => line === idMarker);
   if (idIndex < 0) throw new Error(`Missing workflow step id ${stepId}`);
@@ -111,19 +122,24 @@ function stepSection(lines, stepId) {
   if (!/^      - name: /.test(lines[start])) {
     throw new Error(`Cannot locate workflow step start for ${stepId}`);
   }
+  return stepSectionFromIndex(lines, start);
+}
 
-  let end = lines.length;
-  for (let index = idIndex + 1; index < lines.length; index += 1) {
-    if (/^      - name: /.test(lines[index])) {
-      end = index;
-      break;
-    }
-  }
-  return lines.slice(start, end).join("\n");
+function stepSectionByName(lines, stepName) {
+  const marker = `      - name: ${stepName}`;
+  const start = lines.findIndex((line) => line === marker);
+  if (start < 0) throw new Error(`Missing workflow step ${stepName}`);
+  return stepSectionFromIndex(lines, start);
 }
 
 function stepCount(source, stepName) {
   return source.split(`      - name: ${stepName}`).length - 1;
+}
+
+function assertUnconditionalStep(step, label) {
+  if (/^        if:/m.test(step)) {
+    throw new Error(`${label} must run unconditionally`);
+  }
 }
 
 for (const gate of selectedGates) {
@@ -147,7 +163,9 @@ for (const gate of selectedGates) {
     throw new Error(`${gate.context} must not mask required-gate failures with continue-on-error`);
   }
 
-  const detector = stepSection(lines, gate.scopeId);
+  const detector = stepSectionById(lines, gate.scopeId);
+  assertUnconditionalStep(detector, `${gate.context} scope detector`);
+
   for (const pattern of gate.scopePatterns) {
     if (!detector.includes(pattern)) {
       throw new Error(`${gate.context} cheap-skip scope lost required path pattern ${pattern}`);
@@ -174,9 +192,20 @@ for (const gate of selectedGates) {
   }
 
   if (gate.id !== "browser") {
+    const verifierName = "Verify required-gate workflow contract";
     const verifierCommand = `node test/ci/verify-required-browser-gates.mjs ${gate.id}`;
-    if (!source.includes(verifierCommand) || stepCount(source, "Verify required-gate workflow contract") !== 1) {
+    if (stepCount(source, verifierName) !== 1) {
       throw new Error(`${gate.context} must execute its required-gate verifier exactly once`);
+    }
+
+    const verifier = stepSectionByName(lines, verifierName);
+    assertUnconditionalStep(verifier, `${gate.context} required-gate verifier`);
+    if (!verifier.includes(verifierCommand)) {
+      throw new Error(`${gate.context} required-gate verifier must run ${verifierCommand}`);
+    }
+
+    if (source.indexOf(`      - name: ${verifierName}`) > source.indexOf(`        id: ${gate.scopeId}`)) {
+      throw new Error(`${gate.context} required-gate verifier must run before its scope detector`);
     }
   }
 }
