@@ -278,6 +278,22 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
+  const normalTitlebar = await titlebar.boundingBox();
+  if (!normalTitlebar) throw new Error("Restored native titlebar has no browser bounds");
+  const normalVisibleLeft = Math.max(workspace.x, normalTitlebar.x);
+  const normalVisibleRight = Math.min(workspace.x + workspace.width, normalTitlebar.x + normalTitlebar.width);
+  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored titlebar lost its reachable segment");
+  const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
+  const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
+  await page.mouse.move(normalDragStartX, normalDragY);
+  await page.mouse.down();
+  await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
+  await page.mouse.up();
+  const normalizedBounds = await dialog.boundingBox();
+  if (!normalizedBounds) throw new Error("Normalized Explorer has no browser bounds");
+  expect(normalizedBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
+  expect(normalizedBounds.x + normalizedBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
+
   const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
 
   const beginTitlebarDrag = async (): Promise<{ x: number; y: number; offsetX: number; offsetY: number }> => {
