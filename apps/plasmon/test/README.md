@@ -71,7 +71,7 @@ Use RTL for things such as adapter wiring, form/button/keyboard semantics, focus
 
 `plasmon-local.ndeploy.json` is the source of truth for the real local/CI Plasmon acceptance environment. Do not maintain a second package list in shell scripts or CI.
 
-The repository-owned coordinator is `test/e2e/plasmon-demo-environment.ts`. It reads the manifest, resolves each inline archive to its owning workspace, runs only that workspace's production `package` command, verifies every required archive exists, then delegates lifecycle operations to the existing `neutron-provision` command.
+The repository-owned coordinator is `test/e2e/plasmon-demo-environment.ts`. It reads the deployment manifest to identify each inline artifact's owning workspace, reads that workspace's `neutron.json`, derives the exact archive filename through the same Neutron package-archive naming authority used by the production packer, runs only that workspace's production `package` command, verifies every derived required archive exists, then delegates lifecycle operations to the existing `neutron-provision` command. The deployment manifest therefore owns which workspaces participate while each workspace manifest owns its package ID/version; changing package bytes and incrementing `neutron.json` must not require separately editing a frozen archive-version filename in the demo harness.
 
 Current manifest-derived artifacts are Kernel, Plasmon, and the independently installed Review application. When the manifest changes, preparation follows it automatically.
 
