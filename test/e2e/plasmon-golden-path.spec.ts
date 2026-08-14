@@ -252,7 +252,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const smallDragY = smallTitlebar.y + Math.min(16, smallTitlebar.height / 2);
   await page.mouse.move(smallDragStartX, smallDragY);
   await page.mouse.down();
-  await page.mouse.move(smallWorkspace.x + 8, smallDragY, { steps: 8 });
+  await page.mouse.move(smallWorkspace.x + 20, smallDragY, { steps: 8 });
   await page.mouse.up();
 
   const maximizeControl = dialog.getByRole("button", { name: "Maximize" });
