@@ -68,7 +68,7 @@ describe("Search surface view state", () => {
       tab: "all",
       searching: false,
       error: "Search failed",
-    })).toMatchObject({ searching: false, error: "Search failed", empty: true });
+    })).toMatchObject({ searching: false, error: "Search failed", empty: false });
 
     expect(deriveSearchSurfaceViewState({
       batch: empty,
@@ -76,5 +76,28 @@ describe("Search surface view state", () => {
       searching: false,
       error: null,
     })).toMatchObject({ searching: false, error: null, empty: true });
+  });
+
+  test("does not expose stale results or batch warnings while the current request is in error", () => {
+    const stale = result("stale.txt", "documents");
+    const batch: SearchBatch = {
+      results: [stale],
+      warnings: ["stale warning"],
+      truncated: true,
+    };
+
+    expect(deriveSearchSurfaceViewState({
+      batch,
+      tab: "all",
+      searching: false,
+      error: "Search failed",
+    })).toEqual({
+      results: [],
+      searching: false,
+      error: "Search failed",
+      empty: false,
+      warnings: [],
+      truncated: false,
+    });
   });
 });
