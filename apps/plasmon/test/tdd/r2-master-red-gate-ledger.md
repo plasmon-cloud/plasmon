@@ -1,6 +1,6 @@
 # r2 master RED-gate ledger (Luna-D closeout)
 
-**Audit snapshot:** 2026-08-13; Luna-D `e815c463`; integrated release observed `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3` (`origin/release/0.1.0-r2`). The Luna branch intentionally does not contain the release head. GitHub was reconciled live with `gh issue list --state all` and the pull-request API.
+**Audit snapshot:** 2026-08-13 21:07 -0400; Luna-D `4b6009a`; integrated release observed `2b6984e96647eae1f3abe5719d3a3782809ceeb9` (`origin/release/0.1.0-r2`). The Luna branch intentionally does not contain the release head. GitHub was reconciled live with `gh` and GraphQL.
 
 ## Scope and result
 
@@ -12,18 +12,18 @@ Fields are abbreviated in the table: **target** = canonical acceptance authority
 
 | Issue / title | target; state; owner | impl / deps | final disposition | RED / GREEN / B | gap; evidence |
 |---|---|---|---|---|---|
-| #25 Retire legacy gui2 | architecture; open; D | none; #167 baseline | WAIT FOR DEPENDENCY | no packet / `test/refactorGuards.test.ts` | removal proof not staged; Issue, queue |
-| #26 Retire platform compatibility | architecture; open; D | none; #167 baseline | WAIT FOR DEPENDENCY | no packet / refactor guards | no dependency-free proof; Issue, queue |
-| #38 Sharing reconciliation | sharing; open; C | PR104/160 merged; provider guards | CLOSURE AUDIT COMPLETE | historical packet / `src/os/sharing/*.test.ts` | Issue is still blocked-labeled; Issue, release tests |
+| #25 Retire legacy gui2 | architecture; open; D | none; #167 baseline | HEADLESS RED | `.red/issue-25-26.red.test.ts` / refactor guards | current release still retains tree; removal proof fails intentionally |
+| #26 Retire platform compatibility | architecture; open; D | none; #167 baseline | HEADLESS RED | `.red/issue-25-26.red.test.ts` / refactor guards | current release still retains tree/imports; removal proof fails intentionally |
+| #38 Sharing reconciliation | sharing; open; external Sharing/Backend | Phase-A provider/backend integrated; MTN remains deferred | ALREADY GREEN PHASE A / COORDINATOR REVIEW | `src/os/sharing/*.test.ts`, backend methods, memory declaration | no new Plasmon RED; verify package/backend/docs and retain fail-closed MTN boundary |
 | #43 edge snapping | WindowManager; open; B | PR75 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `src/os/windowing/snap.test.ts` | closure state mismatch only; Issue, release tests |
 | #44 Create Shortcut primitive | FsService; open; A | PR149 merged; #51 | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `src/os/file-manager/create-shortcut.test.tsx` | #51 consumer is separate; Issue, release tests |
 | #46 uninstall capability | Kernel boundary; open; D | PR84/104/163 merged | BROWSER SPEC ONLY | contract docs / package boundary | vanilla capability audit still required; Issue, #46 PR history |
-| #51 Send to Desktop | FileManager command; open; A | PR210 active exact head; #44 | PROMOTION ACCEPTED — A contract satisfied | repaired `.red` packet compared with `send-to-desktop.test.ts` and RTL journey; no B required | exact-head helper/RTL and CI evidence in promotion audit; pending merge/release ancestry |
-| #58 Review Atom MVP | Neutron/Review; open; C | PR101/104 merged; #167 | CLOSURE AUDIT COMPLETE | historical / installed Review tests | Issue remains open; acceptance ownership is Kernel/Review, not a new Plasmon gate |
+| #51 Send to Desktop | FileManager command; open; A | PR210 active exact head; #44 | PROMOTION ACCEPTED — NOT INTEGRATED | exact-head `send-to-desktop.test.ts` + RTL journey; no B required | current release lacks PR210; coordinator must consume promotion after merge |
+| #58 Review Atom MVP | Neutron/Review; open; C | PR101/104 merged; #167 | CORE GREEN / PACKAGED REMAINDER | Review semantic/provider tests + installed e2e | standalone MVP is independent of #38/#125/#127; packaged evidence remains separately recorded |
 | #61 Shell overlay controller | Shell model; open; B | none | CHARACTERIZATION READY | no packet / shell tests | no canonical packet on B branch |
-| #63 Alt-Tab | Windowing MRU; open; B | none; WindowManager MRU green | CHARACTERIZATION READY | no packet / `src/os/windowing/mru.test.ts` | UI command missing |
+| #63 Alt-Tab | Windowing MRU; open; B | none; WindowManager MRU green | VALID HEADLESS + RTL RED | B `issue-63.red.ui.test.tsx` / MRU tests | switcher command and accessible adapter remain absent |
 | #64 js-dos persistence | filesystem/runtime; open; C | PR103 merged; #202 | CLOSURE AUDIT COMPLETE | historical / runtime tests | packaged storage boundary remains #202 |
-| #65 operation progress | FileOperationState; open; A | PR208 active exact head | PROMOTION ACCEPTED — A contract satisfied | repaired `.red` packet compared with `operation-state.test.ts`, RTL delayed lifecycle, and supplemental exact-head audit | exact-head model/CI and source evidence in promotion audit; pending merge/release ancestry |
+| #65 operation progress | FileOperationState; open; A | PR208 merged in current release | ALREADY GREEN — COMPLETE CORE ACCEPTANCE | `operation-state.test.ts`, FileManager wiring, PR208 RTL/CI | current release is `2b6984e`; old one-file RED is provenance only |
 | #66 drag preview stack | browser geometry; open; A | none | BROWSER SPEC ONLY | `.red` browser plan / Playwright | old packet is invalid/fake stacking; no executed gate |
 | #67 packaged Monaco | installed runtime; open; C | PR131/188 merged; #200 | PACKAGED BROWSER SPEC ONLY | packet docs / specialist Playwright | local session/package execution not observed in this audit |
 | #72 taskbar state | Shell projection; open; B | PR139 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `taskbarPresentation.test.ts` | Issue label needs closure reconciliation |
@@ -34,24 +34,24 @@ Fields are abbreviated in the table: **target** = canonical acceptance authority
 | #83 runtime selection | runtime associations; open; D | none; #64 | WAIT FOR DEPENDENCY | no packet / runtime tests | composed js-dos/EmulatorJS gate absent |
 | #86 selectable diagnostic text | FileManager adapter; open; A | none | CHARACTERIZATION READY | `.red/issue-86.red.md` / normal FileManager RTL | no executable packet on integrated release |
 | #87 retire System Start folder | Shell/filesystem; open; B | PR148 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `startMenuSystemMigration.test.ts` | closure state mismatch |
-| #89 Program Files Monaco workers | package/runtime; open; C | PR131 merged; #67/#200 | PACKAGED BROWSER SPEC ONLY | `.red/issue-67...` / specialist browser | browser worker proof not run here |
-| #91 search safety cap | Search model; open; B | none | CHARACTERIZATION READY | no packet / shell search tests | criterion-specific regression absent |
+| #89 Program Files Monaco workers | package/runtime; open; C | PR131 merged; #67/#200 | VALID HEADLESS RED + BROWSER REMAINDER | C `.red/issue-89.red.test.ts` / package + worker browser | current release still emits top-level `monaco-workers/*`; path gate fails |
+| #91 search safety cap | Search model; open; B | none | VALID HEADLESS RED | B refreshed `issue-91.red.test.ts` / search model | ordinary-cap versus safety-truncation distinction remains failing |
 | #92 multi-item move progress | FileOperationState; open; A | none; #65 | WAIT FOR DEPENDENCY | `.red/issue-92.red.md` / operation tests | #65 state model must land first |
-| #93 image aspect ratio | Visual; open; A | none | CHARACTERIZATION READY | `.red/issue-93.red.md` / visual component tests | no focused executable gate |
-| #94 video thumbnails | Visual/media; open; A | none | CHARACTERIZATION READY | `.red/issue-94.red.md` / media tests | no focused executable gate |
+| #93 image aspect ratio | Visual; open; A | none | CORE GREEN / BROWSER VISUAL REMAINDER | visual/thumbnail tests + packaged geometry spec | lower containment is green; decoded rendered geometry remains |
+| #94 video thumbnails | Visual/media; open; A | none | SPECIFICATION / MISSING PRODUCT SEAM | `.red/issue-94.red.md` / future browser media gate | no production frame-extraction lease; do not fake Bun decoder |
 | #95 selected long labels | FileEntry geometry; open; A | PR159 merged; #191 distinction | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | `.red/issue-95.red.md` / label tests | must not be conflated with #191 bounds |
-| #96 native identity assets | packaging/Visual; open; C | none | CHARACTERIZATION READY | no packet / packaging tests | asset acceptance not staged |
+| #96 native identity assets | packaging/Visual; open; C | none | VALID HEADLESS/PACKAGE RED | C `.red/issue-96.red.test.ts` / package asset checks | six canonical app definitions still use generated data-URI glyphs |
 | #100 dependency metadata | repository/GraphQL metadata; open; D | Coordinator migration | HEADLESS RED — semantic gate | `.red/issue-100.red.test.ts` + `r2-dependency-metadata-audit.md` | live gate fails stale #32→#30/#90→#49 and missing #78/#81/#83 native edges; no prose/source-shape assertions |
-| #107 packaged baseline | Testing/Integration; open; D | PR152 merged; #167/#187 | CLOSURE AUDIT COMPLETE | baseline docs / smoke and fast tests / B | issue says needs verification; packaged result is not re-executed here |
+| #107 packaged baseline | Testing/Integration; open; D | PR152 merged; #167/#187 | BROWSER BOUNDARY — REFRESH REQUIRED | baseline matrix / smoke + specialist package lanes | current release advanced to `2b6984e`; no local packaged session evidence |
 | #109 shared pin icon | Shell/Visual; open; A/B | PR150 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / visual + taskbar tests | closure state mismatch |
-| #110 hidden-file preference | FileManager/FsService; open; A | PR151 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `preferences.test.ts` | closure state mismatch |
+| #110 hidden-file preference | FileManager/FsService; open; A | PR151 merged | CORE GREEN / BROWSER REMAINDER | `preferences.test.ts` + packaged preference spec | persistence/filtering green; visible reopen/reload remains |
 | #111 Shell visual convergence | Shell/Visual; open; B | PR150 merged; #190 | WAIT FOR INTEGRATION | no current B packet / Visual tests | broader convergence is not proven by pin icon alone |
 | #112 native-app chrome | native apps; open; C | none | CHARACTERIZATION READY | no packet / native-app tests | shared chrome acceptance absent |
 | #113 Text Monaco parity | Text; open; C | PR131 merged; #200 | PACKAGED BROWSER SPEC ONLY | packet docs / browser | chrome affordance proof not run |
 | #114 Markdown commands | Markdown/Monaco; open; C | PR131 merged; #200 | CHARACTERIZATION READY | no packet / markdown tests | command UI acceptance absent |
-| #115 resource commands | FileManager/FsService; open; A | none | CHARACTERIZATION READY | `.red/issue-115.red.md` / command tests | no accepted packet on integrated release |
-| #117 window placement persistence | WindowManager; open; B | PR146 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / windowing tests | persistence/reload scope needs explicit closure note |
-| #118 taskbar grouping | Shell/Process; open; A/B | none | CHARACTERIZATION READY | `.red/issue-118...` / taskbar tests | no executable packet |
+| #115 resource commands | FileManager/FsService; open; A | none | QUESTIONABLE CHARACTERIZATION — NOT GREEN | `.red/issue-115.red.md` / delegated outcome tests | shared two-consumer command seam is not proven; no source-shape RED authorized |
+| #117 window placement persistence | WindowManager; open; B | none integrated | VALID HEADLESS RED | B `issue-117.red.test.ts` / WindowManager graph | durable moved placement does not survive recomposition |
+| #118 taskbar grouping | Shell/Process; open; A/B | none | VALID HEADLESS RED | B `issue-118.red.test.ts` / taskbar projection | multiple native instances remain separate taskbar entries |
 | #119 transient window ownership | Windowing; open; B | none | CHARACTERIZATION READY | no packet / process tests | acceptance not staged |
 | #121 game fixture | package/runtime; open; C | PR163 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `src/games/demoFixture.test.ts` | separate from #181 fixture |
 | #123 game artwork | Visual/games; open; C | none | CHARACTERIZATION READY | no packet / visual tests | artwork acceptance absent |
@@ -80,10 +80,10 @@ Fields are abbreviated in the table: **target** = canonical acceptance authority
 | #189 classification | FsService/classifier; open; A | PR207 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | ordinary `src/os/fs` and consumer tests / fast lane | issue open; promotion verified below |
 | #190 presentation/assets | Visual/package; open; A | PR211 active; #189/#187 | ACTIVE IMPLEMENTATION — DO NOT TOUCH | `.red/issue-190.red.test.ts` + packaged gate / `src/os/visual/issue-190.test.ts` + e2e | current PR not merged; allowance remains until merge |
 | #191 FileEntry pilot | FileEntry/geometry; open; A | PR204 active; #187/#190 | ACTIVE IMPLEMENTATION — DO NOT TOUCH | `.red/issue-191.*` / ordinary Bun+RTL+Playwright in PR | active PR; #95 must remain separate |
-| #192 placement controller | Desktop/WindowManager; open; A | PR205 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | `.red/issue-192.red.test.ts` adopted as ordinary tests / fast+packaged | acceptance evidence is integrated in release |
+| #192 placement controller | Desktop/WindowManager; open; A | PR205 merged | ALREADY GREEN CORE / BROWSER REMAINDER | `src/os/desktop/issue-192.test.ts` + packaged spec | current controller/tests are integrated; packaged execution evidence remains separate |
 | #193 Search surface | Shell/Search; open; A | none; #175/#174 | WAIT FOR DEPENDENCY | readiness/state docs / future RTL | no implementation packet |
 | #194 Start surface | Shell/Start; open; A | none; #169/#174 | WAIT FOR DEPENDENCY | readiness/state docs / future RTL | no implementation packet |
-| #195 FileManager decomposition | FileManager; open; A | none; #191 | VERIFIED CORE RED / INCOMPLETE ACCEPTANCE | `.red/issue-195.red.{md,test.ts}` / future ordinary tests | dependency and browser adapter proof pending |
+| #195 FileManager decomposition | FileManager; open; A | none; #191 | QUESTIONABLE CHARACTERIZATION — IMPLEMENTATION ABSENT | `.red/issue-195.red.{md,test.ts}` / authority map | current broad adapter still owns substantial state; do not call ALREADY GREEN or add source-shape guards |
 | #196 view strategies | FileManager; open; A | none; #173/#195 | CHARACTERIZATION READY | recon docs / future RTL | no executable accepted packet |
 | #197 Shell decomposition | Shell; open; B | none; #193/#194 | WAIT FOR DEPENDENCY | readiness docs only / future tests | no B implementation |
 | #198 taskbar reconstruction | Shell/taskbar; open; B | none; #72/#117/#118 | WAIT FOR DEPENDENCY | future contract docs / future RTL | no B implementation |

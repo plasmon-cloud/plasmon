@@ -1,5 +1,7 @@
 # r2 queue assignment reconciliation (live queue)
 
+Refresh: 2026-08-13 21:07 -0400; current release `2b6984e`; #100 semantic RED committed at `4b6009a`.
+
 The authoritative queue is `/home/bhare/plasmon/agents/control/todo.md`; the repository `apps/plasmon/test/tdd/todo.md` is stale and must not be used for coordination. Snapshot after `todoctl` claims: 2026-08-13.
 
 | queue Issue | required canonical owner | current live queue state | truthful disposition / corrective action |
