@@ -7,11 +7,12 @@ function snapshot(overrides: Partial<FileOperationSnapshot>): FileOperationSnaps
     status: "idle",
     kind: null,
     totalItems: 0,
-    completedItems: 0,
+    processedItems: 0,
+    succeededItems: 0,
+    failedItems: 0,
     currentIndex: null,
     currentItem: null,
     failures: [],
-    error: null,
     ...overrides,
   };
 }
