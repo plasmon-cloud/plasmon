@@ -12,20 +12,22 @@ test("#217 keeps resolved shortcut artwork stable across authoritative Desktop r
     if (!desktop || desktop.kind !== "directory") throw new Error("Desktop did not bootstrap");
 
     const appsEntry = await app.findByRole("option", { name: "Apps" });
-    const icon = appsEntry.querySelector<HTMLImageElement>("img.plasmon-icon-art");
-    if (!icon) throw new Error("Apps shortcut did not render its resource icon");
+    const renderedIconSource = (): string | null =>
+      appsEntry.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? null;
 
-    await waitFor(() => expect(icon.getAttribute("src")).toBe(FOLDER_ICON));
+    await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
 
     const observedSources: string[] = [];
-    const observer = new MutationObserver((records) => {
-      for (const record of records) {
-        if (record.type !== "attributes") continue;
-        const src = icon.getAttribute("src");
-        if (src) observedSources.push(src);
-      }
+    const observer = new MutationObserver(() => {
+      const src = renderedIconSource();
+      if (src) observedSources.push(src);
     });
-    observer.observe(icon, { attributes: true, attributeFilter: ["src"] });
+    observer.observe(appsEntry, {
+      attributes: true,
+      attributeFilter: ["src"],
+      childList: true,
+      subtree: true,
+    });
 
     await act(async () => {
       await app.environment.services.fs.createFile(desktop.id, "Issue 217 refresh.txt", {
@@ -33,7 +35,7 @@ test("#217 keeps resolved shortcut artwork stable across authoritative Desktop r
       });
     });
     await app.findByRole("option", { name: "Issue 217 refresh.txt" });
-    await waitFor(() => expect(icon.getAttribute("src")).toBe(FOLDER_ICON));
+    await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
     await act(async () => { await Promise.resolve(); });
     observer.disconnect();
 
