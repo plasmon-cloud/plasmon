@@ -11,6 +11,7 @@ on:
       - "test/e2e/plasmon-demo-environment.ts"
       - "test/e2e/plasmon-browser-health.ts"
       - "test/e2e/plasmon-refactor-smoke.spec.ts"
+      - "test/ci/playwright-gate*"
       - "playwright.config.ts"
       - "plasmon-local.ndeploy.json"
       - "package.json"
@@ -45,6 +46,7 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
+            node test/ci/verify-playwright-gate.mjs
             npm run plasmon:demo:prepare
 
             npm run plasmon:demo:serve > /tmp/plasmon-pocketic-smoke.log 2>&1 &
