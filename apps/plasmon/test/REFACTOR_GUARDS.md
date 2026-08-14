@@ -55,16 +55,17 @@ Using the fixed Nix/Chromium environment, animations disabled and caret hidden, 
 
 That demonstrates focused region screenshots can be deterministic in the current hosted environment. They are **not** a required r2 gate. The same spike surfaced active packaged-browser defects (#190 and the Kernel iframe warning), so adding owned image baselines now would add review/update cost while semantic and gross-geometry checks already protect the refactor contracts more robustly. A future visual-specific Issue may add a small owned baseline set after those browser-health defects are resolved and a product owner defines which visual states are design contracts.
 
-## Known product defects surfaced by the smoke
+## Browser-health defect history and current allowances
 
-The strict packaged smoke intentionally keeps unknown failures fatal while temporarily allowing only issue-linked current defects needed to keep this testing PR operational:
+The strict packaged smoke keeps unknown failures fatal. Scenario-owned allow rules remain narrow and issue-linked; they must not be generalized to absorb a different URL or lifecycle failure.
 
+- #190 is the **wrong Kernel-root URL class**: `/static/plasmon/icons/**` instead of the installed application root `/app/plasmon/static/plasmon/icons/**`. The broad smoke still contains narrow #190 `ERR_BLOCKED_BY_ORB` / `ERR_ABORTED` allowances for that exact wrong-root prefix. Those allowances do not cover canonical application-mounted icon requests and should be removed separately once their continued necessity is disproven on the current packaged path.
+- #217 is a distinct **canonical app-mounted request cancellation**. Stable-NodeId FileEntries briefly regressed already-resolved shortcut presentation (`folder.svg -> file.svg -> folder.svg`) while authoritative filesystem snapshots re-resolved presentation, causing Chromium to abort the superseded `/app/plasmon/static/plasmon/icons/folder.svg` request. #217 fixed the product lifecycle by retaining the last resolved presentation for the same NodeId. BrowserHealth was not weakened and no #217 allow rule was added.
 - #175 / #193: Search popup geometry; broad refactor smoke permits the currently observed small right-edge overflow while exact geometry remains product-owned.
-- #190: packaged Plasmon icon URLs incorrectly resolve at Kernel root and can be ORB-blocked; only `/static/plasmon/icons/**` failed-request diagnostics are allowlisted.
 - #67 / #200: packaged Monaco worker startup under the current sandbox/opaque origin; the smoke still requires the real packaged editor to reach ready state.
 - #202: packaged js-dos storage bootstrap under the sandbox; the smoke still requires the real js-dos player and canvas to reach ready state.
 
-Remove each temporary allow rule when its owner Issue lands. Do not broaden an allow rule to absorb a new failure signature.
+Remove each temporary allow rule when its owner condition is no longer required. Do not broaden an allow rule to absorb a new failure signature.
 
 ## Refactor review rule
 
