@@ -16,6 +16,7 @@ import {
   deriveStartEntries,
   deriveTaskbarEntries,
   deriveTrayEntries,
+  focusNativeTaskbarMember,
   openExternalElement,
 } from "./model.ts";
 import {
@@ -108,11 +109,11 @@ test("pinned native handler merges with its single open process", () => {
     kind: "native",
     id: "native:native:text",
     pinned: true,
-    process: { id: running.id },
+    members: [{ id: running.id }],
   });
 });
 
-test("multiple native process records remain distinct taskbar entries", () => {
+test("multiple native process records form one deterministic application group", () => {
   const first = processRecord("native:text#1");
   const second = processRecord("native:text#2");
   const entries = deriveTaskbarEntries({
@@ -121,10 +122,13 @@ test("multiple native process records remain distinct taskbar entries", () => {
     processes: [first, second],
     elements: [],
   });
-  expect(entries.map((entry) => entry.id)).toEqual([
-    "process:native:text#1",
-    "process:native:text#2",
-  ]);
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({
+    kind: "native",
+    id: "native:native:text",
+    pinned: true,
+    members: [{ id: first.id }, { id: second.id }],
+  });
 });
 
 test("native taskbar action focuses minimized/background windows and minimizes focused window", () => {
@@ -142,6 +146,31 @@ test("native taskbar action focuses minimized/background windows and minimizes f
   const other = processRecord("native:other#1");
   expect(decideNativeTaskbarAction(entry, [windowState(running, 3), windowState(other, 4)])).toBe("focus");
   expect(decideNativeTaskbarAction(entry, [windowState(running, 5), windowState(other, 4)])).toBe("minimize");
+});
+
+test("multi-member taskbar action chooses without mutation and member selection delegates Process focus", () => {
+  const first = processRecord("native:text#1");
+  const second = processRecord("native:text#2");
+  const entry = deriveTaskbarEntries({
+    preferences: preferences(),
+    nativeApps: [nativeText],
+    processes: [first, second],
+    elements: [],
+  })[0];
+  if (!entry || entry.kind !== "native") throw new Error("Expected grouped native taskbar entry");
+  expect(decideNativeTaskbarAction(entry, [windowState(first, 4), windowState(second, 5)])).toBe("choose");
+
+  const focused: string[] = [];
+  const process = {
+    focus(id: string) { focused.push(id); },
+  } as unknown as ProcessController;
+  expect(focusNativeTaskbarMember(entry, second.id, process)).toBe(true);
+  expect(focused).toEqual([second.id]);
+
+  const starting = { ...second, state: "starting" as const };
+  const startingEntry = { ...entry, members: [first, starting] };
+  expect(focusNativeTaskbarMember(startingEntry, starting.id, process)).toBe(false);
+  expect(focused).toEqual([second.id]);
 });
 
 test("external taskbar entries preserve yes, no, and unknown", () => {
@@ -260,12 +289,13 @@ function subscriptionFakes() {
   const windowListeners = new Set<() => void>();
   const process: ProcessController = {
     async open() { return null; },
-    focus() {}, close() {}, setTitle() {}, setTarget() {}, list() { return []; },
+    focus() {}, close() { return true; }, forceClose() { return true; }, registerCloseHandler() { return () => undefined; }, setTitle() {}, setTarget() {}, list() { return []; },
     subscribe(listener) { processListeners.add(listener); return () => processListeners.delete(listener); },
   };
   const windows: WindowManager = {
     create() { return "window"; },
     focus() {}, move() {}, resize() {}, minimize() {}, maximize() {}, restore() {}, close() {}, list() { return []; },
+    focusSnapshot() { return { focusedId: null, mru: [] }; },
     subscribe(listener) { windowListeners.add(listener); return () => windowListeners.delete(listener); },
   };
   return { process, windows, processListeners, windowListeners };

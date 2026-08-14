@@ -171,7 +171,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await rootShortcut.dblclick();
 
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
-  const dialog = nativeWindows.last();
+  const dialogCandidate = nativeWindows.last();
+  const dialogId = await dialogCandidate.getAttribute("data-window-id");
+  if (!dialogId) throw new Error("Explorer native window has no stable window id");
+  const dialog = app.locator(`.plasmon-window-layer [data-window-id="${dialogId}"]`);
   await expect(dialog).toBeVisible();
 
   // Issue #108 visible boundary: folder activation and toolbar Back/Forward must
@@ -193,6 +196,54 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(explorerAddress).toHaveValue("/Documents");
   await back.click();
   await expect(explorerAddress).toHaveValue("/");
+
+  // Issue #118 packaged browser boundary: two canonical Explorer processes are
+  // one taskbar application group. The chooser exposes Process-owned member
+  // titles and selecting a member delegates focus/restore through Process and
+  // Windowing instead of keeping Shell-owned lifecycle state.
+  await dialog.locator(".plasmon-window__controls").getByRole("button", { name: "Minimize" }).click();
+  await expect(dialog).toHaveAttribute("aria-hidden", "true");
+  await rootShortcut.dblclick();
+  await expect(nativeWindows).toHaveCount(initialWindowCount + 2, { timeout: 20_000 });
+
+  const siblingCandidate = nativeWindows.last();
+  const siblingId = await siblingCandidate.getAttribute("data-window-id");
+  if (!siblingId) throw new Error("Sibling Explorer native window has no stable window id");
+  const sibling = app.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
+  await expect(sibling).toBeVisible();
+  const siblingAddress = sibling.getByRole("textbox", { name: "Address" });
+  await expect(siblingAddress).toHaveValue("/");
+  const siblingDocuments = sibling.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+  await expect(siblingDocuments).toBeVisible();
+  await siblingDocuments.dblclick();
+  await expect(siblingAddress).toHaveValue("/Documents");
+
+  const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+  const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
+  await expect(filesGroup).toHaveCount(1);
+  await filesGroup.click();
+
+  const chooser = app.getByRole("region", { name: "Files windows" });
+  await expect(chooser).toBeVisible();
+  const minimizedMember = chooser.getByRole("button", { name: "This Plasmon; Minimized" });
+  const activeMember = chooser.getByRole("button", { name: "Documents; Active" });
+  await expect(minimizedMember).toBeVisible();
+  await expect(activeMember).toBeVisible();
+  await minimizedMember.click();
+  await expect(chooser).toHaveCount(0);
+  await expect(dialog).not.toHaveAttribute("aria-hidden", "true");
+  await expect(dialog).toHaveClass(/plasmon-window--active/);
+  await expect(sibling).not.toHaveClass(/plasmon-window--active/);
+
+  await filesGroup.click();
+  const reopenedChooser = app.getByRole("region", { name: "Files windows" });
+  await expect(reopenedChooser).toBeVisible();
+  await reopenedChooser.getByRole("button", { name: "Documents; Running" }).click();
+  await expect(sibling).toHaveClass(/plasmon-window--active/);
+  await sibling.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
+  await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
+  await expect(taskbar.getByRole("button", { name: /^Files;/ })).toHaveCount(1);
+  await expect(taskbar.getByRole("button", { name: /^Files;.*2 windows$/ })).toHaveCount(0);
 
   const titlebar = dialog.locator(".plasmon-window__titlebar");
   const workspace = await app.locator(".plasmon-window-layer").first().boundingBox();
