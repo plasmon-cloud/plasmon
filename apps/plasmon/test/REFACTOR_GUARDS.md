@@ -53,7 +53,7 @@ Using the fixed Nix/Chromium environment, animations disabled and caret hidden, 
 - Search results state: `6448e955484558f8197feee605cefecf5a234727d7eac8dba02e98dc4f5492f8`
 - Native window state: `8a5c6b5cc02d8fdf0c4fe14e6fcfc0d89940b99107b2e6ae465d4c1f5a1fa5b2`
 
-That demonstrates focused region screenshots can be deterministic in the current hosted environment. They are **not** a required r2 gate. The same spike surfaced active packaged-browser defects (#190 and the Kernel iframe warning), so adding owned image baselines now would add review/update cost while semantic and gross-geometry checks already protect the refactor contracts more robustly. A future visual-specific Issue may add a small owned baseline set after those browser-health defects are resolved and a product owner defines which visual states are design contracts.
+That demonstrates focused region screenshots can be deterministic in the current hosted environment. They are **not** a required r2 gate. At the time of that spike it surfaced #190 and the Kernel iframe warning; those findings are historical evidence rather than a claim that every defect remains active. Adding owned image baselines now would still add review/update cost while semantic and gross-geometry checks protect the refactor contracts more robustly. A future visual-specific Issue may add a small owned baseline set after a product owner defines which visual states are design contracts.
 
 ## Browser-health defect history and current allowances
 
