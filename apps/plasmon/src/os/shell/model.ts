@@ -58,6 +58,7 @@ export interface TaskbarModelInput {
   processes: readonly ProcessRecord[];
   elements: readonly ExternalElement[];
   windows?: readonly WindowState[];
+  focusedWindowId?: WindowState["id"] | null;
   busyTaskId?: string | null;
 }
 
@@ -92,21 +93,23 @@ function presentation(
  * Projects canonical Process/Windowing/Neutron observations into user-facing
  * taskbar state. It never stores or strengthens lifecycle knowledge: in
  * particular, an unknown Element runtime observation remains uncertain.
+ * Window focus is supplied from WindowManager.focusSnapshot(); z-order is not
+ * treated as a substitute focus authority.
  */
 export function deriveTaskbarPresentation(
   entry: TaskbarEntry,
   windows: readonly WindowState[] = [],
   busyTaskId: string | null = null,
+  focusedWindowId: WindowState["id"] | null = null,
 ): TaskbarPresentation {
   const busy = busyTaskId === entry.id;
 
   if (entry.kind === "native") {
     const runningMembers = entry.members.filter((member) => member.state === "running");
     if (runningMembers.length > 0) {
-      const focusedId = focusedWindow(windows)?.id;
       const active = runningMembers.some((member) => {
         const targetWindow = windowForProcess(member, windows);
-        return !!targetWindow && !targetWindow.minimized && focusedId === targetWindow.id;
+        return !!targetWindow && !targetWindow.minimized && focusedWindowId === targetWindow.id;
       });
       if (active) {
         return presentation(entry, "active", "Active and focused", {
@@ -252,10 +255,11 @@ export function deriveTaskbarEntries(input: TaskbarModelInput): PresentedTaskbar
   }
 
   const windows = input.windows ?? [];
+  const focusedWindowId = input.focusedWindowId ?? null;
   const busyTaskId = input.busyTaskId ?? null;
   return entries.map((entry) => ({
     ...entry,
-    presentation: deriveTaskbarPresentation(entry, windows, busyTaskId),
+    presentation: deriveTaskbarPresentation(entry, windows, busyTaskId, focusedWindowId),
   }));
 }
 
@@ -272,25 +276,26 @@ export function windowForProcess(
   return windows.find((window) => window.processId === process.id) ?? null;
 }
 
-export function focusedWindow(windows: readonly WindowState[]): WindowState | null {
-  let focused: WindowState | null = null;
-  for (const window of windows) {
-    if (window.minimized) continue;
-    if (!focused || window.z > focused.z) focused = window;
-  }
-  return focused;
+/** Resolve a canonical focus snapshot to its current window projection. */
+export function focusedWindow(
+  windows: readonly WindowState[],
+  focusedWindowId: WindowState["id"] | null,
+): WindowState | null {
+  if (!focusedWindowId) return null;
+  return windows.find((window) => window.id === focusedWindowId && !window.minimized) ?? null;
 }
 
 export function decideNativeTaskbarAction(
   entry: NativeTaskbarEntry,
   windows: readonly WindowState[],
+  focusedWindowId: WindowState["id"] | null = null,
 ): NativeTaskbarAction {
   if (entry.members.length === 0) return "launch";
   if (entry.members.length > 1) return "choose";
   const member = entry.members[0]!;
   const targetWindow = windowForProcess(member, windows);
   if (!targetWindow || targetWindow.minimized) return "focus";
-  return focusedWindow(windows)?.id === targetWindow.id ? "minimize" : "focus";
+  return focusedWindowId === targetWindow.id ? "minimize" : "focus";
 }
 
 export async function executeNativeTaskbarAction(
@@ -299,7 +304,7 @@ export async function executeNativeTaskbarAction(
   windows: WindowManager,
   target: OpenTarget = {},
 ): Promise<NativeTaskbarAction> {
-  const action = decideNativeTaskbarAction(entry, windows.list());
+  const action = decideNativeTaskbarAction(entry, windows.list(), windows.focusSnapshot().focusedId);
   if (action === "launch") {
     await process.open(entry.handlerId, target);
   } else if (action === "focus") {
