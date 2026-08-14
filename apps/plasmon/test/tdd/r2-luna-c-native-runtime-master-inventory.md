@@ -32,7 +32,7 @@ product implementation. D/Luna-A/Luna-B ownership is recorded, not consumed.
 | #180 | open r2 | Photos denied fullscreen | Photos + browser policy | Luna-C claimed | fullscreen helper tests | packaged spec | installed geometry/health | yes | VERIFIED FULL RED PACKET + BROWSER REMAINDER |
 | #181 | open r2 | first-demo files/media | bootstrap/testing | D/testing | fixture harness | not consumed | explicit setup | yes | ACTIVE D OWNERSHIP |
 | #187 | open r2 | strict browser health | Testing | D/testing | health helper/smoke | closure audit | owner-specific allowance retirement | yes | ACTIVE D OWNERSHIP |
-| #200 | open r2 | shared Monaco host | app-side dependency; A architecture | Luna-A | existing model tests | non-authority packet | host refactor | yes | ACTIVE LUNA-A OWNERSHIP |
+| #200 | open r2 | shared Monaco host | app-side dependency; A architecture | Luna-A | `issue-200-monaco-host-final-packet.md` + existing model/e2e evidence | non-authority packet | host refactor | yes | FINAL PACKET READY — LUNA-A IMPLEMENTATION |
 | #202 | open | js-dos storage sandbox | js-dos vendor/host | implementation blocked | #187 allowance | deep call-chain packet | owner fix, no security weakening | yes | BLOCKED — IMPLEMENTATION OWNER UNAVAILABLE |
 
 No unclassified candidate remains. Browser/packaged rows are not treated as

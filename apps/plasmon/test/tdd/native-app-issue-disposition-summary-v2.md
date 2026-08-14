@@ -28,7 +28,8 @@ artifact and explicit save boundary.
 
 **RECONCILED:** #79/#83 are **ALREADY GREEN / RECON COMPLETE** on deterministic
 contracts; visible close UI and runtime engine startup remain their separate
-browser boundaries.
+browser boundaries. #200 has a final non-authority packet ready for Luna-A,
+with #67/#89/#113/#114/#189 evidence and explicit Bun/browser boundaries.
 
 **ACTIVE OWNERSHIP:** #38 Sharing, #94/#107/#181 Testing/A/D, #178/#200 A,
 #169/#173/#174/#176/#182/#190/#191 active implementors.
