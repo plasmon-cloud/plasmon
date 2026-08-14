@@ -2,20 +2,6 @@ name: Plasmon Packaged Smoke CI
 
 on:
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "apps/review/**"
-      - "apps/kernel/**"
-      - "packages/neutron-provision/**"
-      - "packages/neutron-tools/**"
-      - "test/e2e/plasmon-demo-environment.ts"
-      - "test/e2e/plasmon-browser-health.ts"
-      - "test/e2e/plasmon-refactor-smoke.spec.ts"
-      - "playwright.config.ts"
-      - "plasmon-local.ndeploy.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-browser-smoke-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -34,13 +20,48 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect packaged-smoke-relevant changes
+        id: packaged_smoke_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_packaged_smoke=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$base_sha" "$head_sha" > /tmp/plasmon-packaged-smoke-changed-files.txt
+          cat /tmp/plasmon-packaged-smoke-changed-files.txt
+
+          run_packaged_smoke=false
+          while IFS= read -r path; do
+            case "$path" in
+              apps/plasmon/*|apps/review/*|apps/kernel/*|packages/neutron-provision/*|packages/neutron-tools/*|test/e2e/plasmon-demo-environment.ts|test/e2e/plasmon-browser-health.ts|test/e2e/plasmon-refactor-smoke.spec.ts|playwright.config.ts|plasmon-local.ndeploy.json|package.json|package-lock.json|.github/workflows/plasmon-browser-smoke-ci.yml)
+                run_packaged_smoke=true
+                break
+                ;;
+            esac
+          done < /tmp/plasmon-packaged-smoke-changed-files.txt
+
+          echo "run_packaged_smoke=$run_packaged_smoke" >> "$GITHUB_OUTPUT"
+          if [ "$run_packaged_smoke" != "true" ]; then
+            echo "No packaged-smoke-relevant changes; satisfying required Packaged refactor smoke without packaging."
+          fi
 
       - name: Install Nix
+        if: steps.packaged_smoke_scope.outputs.run_packaged_smoke == 'true'
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon refactor smoke
+        if: steps.packaged_smoke_scope.outputs.run_packaged_smoke == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
