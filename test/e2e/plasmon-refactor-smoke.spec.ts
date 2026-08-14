@@ -191,7 +191,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
     await expect(settingsTask).toBeVisible();
     const taskBounds = await settingsTask.boundingBox();
     await settingsTask.click({ button: "right" });
-    const taskMenu = plasmon.getByRole("menu", { name: "Shell context menu" });
+    const taskMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
     await expect(taskMenu).toBeVisible();
     const menuBounds = await taskMenu.boundingBox();
     if (!taskBounds || !menuBounds) throw new Error("Taskbar menu has no browser bounds");
