@@ -35,6 +35,35 @@ test("repeated open/close restarts default placement instead of accumulating lif
   }
 });
 
+test("closing a middle default slot reuses that free slot before colliding with a later live slot", () => {
+  const windows = new NativeWindowManager({
+    idFactory: ids(),
+    viewport: () => ({ x: 0, y: 0, width: 1280, height: 800 }),
+    listenForViewportChanges: false,
+  });
+  try {
+    const firstId = windows.create("process:first");
+    const secondId = windows.create("process:second");
+    const thirdId = windows.create("process:third");
+    const first = geometry(windows, firstId);
+    const second = geometry(windows, secondId);
+    const third = geometry(windows, thirdId);
+
+    expect(second.x).toBe(first.x + 28);
+    expect(second.y).toBe(first.y + 28);
+    expect(third.x).toBe(second.x + 28);
+    expect(third.y).toBe(second.y + 28);
+
+    windows.close(secondId);
+    const replacement = geometry(windows, windows.create("process:replacement"));
+
+    expect(replacement).toEqual(second);
+    expect(replacement).not.toEqual(third);
+  } finally {
+    windows.dispose();
+  }
+});
+
 test("live default windows cascade through bounded slots and wrap deterministically", () => {
   const windows = new NativeWindowManager({
     idFactory: ids(),
