@@ -1,7 +1,10 @@
 # Phase 2 disposition summary
 
-**FULL RED:** #89 path/worker route, #96 first-party identity metadata, and
-#179 autosave (existing executable RED). #96 was re-audited against PR #211's
+**FINAL IMPLEMENTOR PACKETS:** #67/#89 packaged Monaco/path, #96 first-party
+identity metadata, #113/#114 editor parity, #179 autosave, #180 Photos
+fallback, and #200 shared Monaco host. #89 path/worker route, #96 identity,
+and #179 autosave retain executable RED evidence. #96 was re-audited against
+PR #211's
 #190 candidate: the shared consumer/fallback/path seam is now ready, but six
 canonical HandlerDefinition/NativeAppDefinition values still publish generated
 SVG data URIs. #113/#114 are **CORE RED + EXACT RTL/BROWSER REMAINDER**; their
@@ -20,16 +23,18 @@ vanilla package); #121 fixture/package mechanics (current installed closure);
 #89 installed Worker path, #107 C native rows, #180 denied fullscreen, #202
 storage bootstrap, media decode/codec, Review package visual/persistence.
 
-**HARNESS GAPS / DEPENDENCIES:** #64 lacks the shipped js-dos save/export/import
-boundary; #113/#114 have confirmed core REDs but the canonical RTL harness
-cannot truthfully mount Monaco because Happy DOM lacks its CSS runtime; #123
-lacks an accepted game-artwork metadata contract; #124 waits for #64's save
-artifact and explicit save boundary.
+**BLOCKED / EXACT DEPENDENCIES:** #64 lacks the shipped js-dos save/export/import
+product seam; #123 lacks an accepted game-artwork metadata contract; #124 waits
+for #64's save artifact and explicit save boundary; #202 is blocked under the
+current owner/coordination policy. #113/#114 retain only the exact category-A
+shared RTL gap for Monaco mounting; their product REDs and browser remainder are
+in the READY packets.
 
 **RECONCILED:** #79/#83 are **ALREADY GREEN / RECON COMPLETE** on deterministic
 contracts; visible close UI and runtime engine startup remain their separate
-browser boundaries. #200 has a final non-authority packet ready for Luna-A,
-with #67/#89/#113/#114/#189 evidence and explicit Bun/browser boundaries.
+browser boundaries. #112 is **COMPLETE / NO IMPLEMENTATION REQUIRED**. #200 has
+a final non-authority packet ready for Luna-A, with #67/#89/#113/#114/#189
+evidence, explicit Bun/browser boundaries, and a file-level overlap map.
 
 **ACTIVE OWNERSHIP:** #38 Sharing, #94/#107/#181 Testing/A/D, #178/#200 A,
 #169/#173/#174/#176/#182/#190/#191 active implementors.

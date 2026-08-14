@@ -1,5 +1,9 @@
 # #179 save state machine
 
+**Terminal disposition: FINAL IMPLEMENTOR PACKET READY.** The deterministic RED
+is implementation-ready below the browser; Monaco is not required to prove
+byte/dirty/save/close semantics.
+
 ```text
 ready + edit -> dirty/ready
  dirty + autosave OFF + debounce elapsed -> dirty/ready, bytes unchanged

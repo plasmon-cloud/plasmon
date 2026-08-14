@@ -13,8 +13,7 @@
 | narrow window | min width/window constraints | definitions | browser/manual |
 | focus/keyboard/Ctrl+S/context | keydown capture and Monaco | source/package edit | RTL/browser |
 
-Disposition at integrated `origin/release/0.1.0-r2`: **HARNESS GAP for executable
-RTL proof, with a confirmed core RED and exact browser remainder**. The
+Terminal disposition at integrated `origin/release/0.1.0-r2`: **FINAL IMPLEMENTOR PACKET READY** — confirmed core RED plus exact category-A shared RTL Testing gap and browser remainder. The
 production Text component still sets the process title to the filename only and
 Monaco options still disable the minimap; no visible command affordances or
 language indicator are present. A real `renderPlasmon()` attempt reaches the

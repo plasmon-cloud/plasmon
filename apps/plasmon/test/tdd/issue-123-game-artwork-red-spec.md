@@ -1,6 +1,6 @@
 # #123 game artwork RED/specification
 
-**Disposition: HARNESS GAP / WAIT FOR SPECIFIC ARTWORK METADATA CONTRACT.**
+**Disposition: BLOCKED — underspecified product artwork metadata contract.**
 The integrated #190 seam now exists and #121 provides a legal packaged fixture,
 but `ResourceClassification`/`resourcePresentationForClassification` has no
 accepted game-artwork metadata field or source contract. The headless

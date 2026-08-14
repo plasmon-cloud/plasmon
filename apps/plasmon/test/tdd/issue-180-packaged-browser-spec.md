@@ -14,4 +14,4 @@ Against an actually installed Plasmon iframe under the normal Neutron sandbox:
 A separate environment where fullscreen is legitimately available may verify
 browser-fullscreen enter/exit, but it is not the required product path. Do not
 make fullscreen itself a prerequisite or swallow failures in a broad listener.
-Status: **BROWSER SPEC ONLY** until installed environment execution is available.
+Status: **FINAL IMPLEMENTOR PACKET READY**; installed environment execution remains the acceptance boundary.

@@ -1,6 +1,6 @@
 # #64 js-dos progress persistence packet
 
-**Disposition: HARNESS GAP / BLOCKED EXTERNAL CAPABILITY / FUTURE OWNER; exact engine API and browser remainder.**
+**Disposition: BLOCKED — missing product/runtime seam; exact engine API and browser remainder.**
 
 Authority is the runtime host reading the selected game bytes through FsService
 and persisting a runtime-specific changes artifact through FsService keyed by
