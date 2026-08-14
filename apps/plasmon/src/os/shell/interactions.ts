@@ -60,6 +60,12 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
 }
 
+/** Mirrors the Shell menu presentation contract: 8px panel padding, 48px rows, 5px row gaps, 1px border. */
+export function shellContextMenuHeight(itemCountInput: number): number {
+  const itemCount = Math.max(1, Math.floor(finite(itemCountInput, 1)));
+  return 18 + itemCount * 48 + (itemCount - 1) * 5;
+}
+
 /**
  * Places a taskbar context surface adjacent to its invoking item/point while
  * keeping the complete menu inside the viewport. Bottom-anchored taskbar
