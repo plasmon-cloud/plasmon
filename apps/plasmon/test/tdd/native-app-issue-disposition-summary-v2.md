@@ -20,7 +20,11 @@ vanilla package); #121 fixture/package mechanics (current installed closure);
 #89 installed Worker path, #107 C native rows, #180 denied fullscreen, #202
 storage bootstrap, media decode/codec, Review package visual/persistence.
 
-**WAIT:** #123 on #190/#121 metadata/fixture; #124 on #64 artifact.
+**HARNESS GAPS / DEPENDENCIES:** #64 lacks the shipped js-dos save/export/import
+boundary; #113/#114 have confirmed core REDs but the canonical RTL harness
+cannot truthfully mount Monaco because Happy DOM lacks its CSS runtime; #123
+lacks an accepted game-artwork metadata contract; #124 waits for #64's save
+artifact and explicit save boundary.
 
 **ACTIVE OWNERSHIP:** #38 Sharing, #79/#83 D, #94/#107/#181 Testing/A/D,
 #178/#200 A, #169/#173/#174/#176/#182/#190/#191 active implementors.
