@@ -5,13 +5,12 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-// Quarantined from required r2 Specialist CI under #251 after Packaged Browser
-// run #884 exhausted both attempts while an Explorer sidebar intercepted the
-// repeated Root shortcut dblclick. Keep this acceptance executable and in the
-// Specialist inventory; --grep-invert @r2-quarantine excludes only this debt.
+// #251 preserves the prior Packaged Browser #884 sibling-window failure evidence.
+// This acceptance remains required under the serialized Specialist harness and
+// is intentionally not an active r2 quarantine.
 test(
   "packaged Plasmon repeatedly opens and closes reachable Explorer siblings",
-  { tag: ["@r2-quarantine", "@issue-251"] },
+  { tag: ["@issue-251"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

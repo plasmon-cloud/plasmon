@@ -7,13 +7,12 @@ const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
 
-// Quarantined from required r2 Specialist CI under #250 after Packaged Browser
-// run #884 failed this journey and then passed it on Playwright retry #1.
-// Keep the test in the Specialist inventory; --grep-invert @r2-quarantine
-// excludes only this acceptance while #250 tracks deterministic restoration.
+// #250 preserves the prior fail-then-pass evidence from Packaged Browser #884.
+// This acceptance remains required under the serialized Specialist harness and
+// is intentionally not an active r2 quarantine.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@r2-quarantine", "@issue-250"] },
+  { tag: ["@issue-250"] },
   async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

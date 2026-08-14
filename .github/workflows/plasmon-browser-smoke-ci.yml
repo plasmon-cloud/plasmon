@@ -38,6 +38,7 @@ jobs:
             npm ci
             node test/ci/verify-playwright-gate.mjs
             npm run plasmon:demo:prepare
+            bun test apps/plasmon/test/package.test.ts
 
             npm run plasmon:demo:serve > /tmp/plasmon-pocketic-smoke.log 2>&1 &
             server_pid=$!
