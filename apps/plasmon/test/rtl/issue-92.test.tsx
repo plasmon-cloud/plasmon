@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { createHeadlessPlasmonEnvironment } from "../headlessEnvironment.ts";
 import { FileManager } from "../../src/os/file-manager/FileManager.tsx";
 import { FileOperationClipboard } from "../../src/os/file-manager/model.ts";
@@ -130,6 +130,7 @@ test("#92 multi-item drag move exposes running state and truthful completion", a
   } finally {
     release?.();
     document.elementFromPoint = originalElementFromPoint;
+    cleanup();
     environment.dispose();
   }
 });
@@ -182,6 +183,7 @@ test("#92 multi-item drag move surfaces partial success and failure", async () =
     expect(view.getByRole("alert").textContent).toContain("expected move failure");
   } finally {
     document.elementFromPoint = originalElementFromPoint;
+    cleanup();
     environment.dispose();
   }
 });
@@ -222,6 +224,7 @@ test("#92 drag move refuses to start while another FileManager operation is acti
     expect(operationState.snapshot()).toMatchObject({ kind: "paste", status: "running" });
   } finally {
     document.elementFromPoint = originalElementFromPoint;
+    cleanup();
     environment.dispose();
   }
 });
