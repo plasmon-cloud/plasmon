@@ -441,22 +441,40 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
   private defaultCascade(width: number, height: number, minWidth: number, minHeight: number): number {
     if (this.cascadeOffset === 0) return 0;
     const viewport = this.getViewport();
+    const constraintOptions = {
+      minWidth,
+      minHeight,
+      reachableTitlebarWidth: this.reachableTitlebarWidth,
+      reachableTitlebarHeight: this.reachableTitlebarHeight,
+    };
     const first = constrainGeometry(
       { x: this.initialX, y: this.initialY, width, height },
       viewport,
-      {
-        minWidth,
-        minHeight,
-        reachableTitlebarWidth: this.reachableTitlebarWidth,
-        reachableTitlebarHeight: this.reachableTitlebarHeight,
-      },
+      constraintOptions,
     );
     const maxX = viewport.x + Math.max(0, viewport.width - first.width);
     const maxY = viewport.y + Math.max(0, viewport.height - first.height);
     const xSteps = Math.max(0, Math.floor((maxX - first.x) / this.cascadeOffset));
     const ySteps = Math.max(0, Math.floor((maxY - first.y) / this.cascadeOffset));
     const slotCount = Math.max(1, Math.min(xSteps, ySteps) + 1);
-    return (this.windows.size % slotCount) * this.cascadeOffset;
+
+    for (let slot = 0; slot < slotCount; slot += 1) {
+      const cascade = slot * this.cascadeOffset;
+      const candidate = constrainGeometry(
+        { x: this.initialX + cascade, y: this.initialY + cascade, width, height },
+        viewport,
+        constraintOptions,
+      );
+      const occupied = [...this.windows.values()].some((state) => {
+        const current = stateGeometry(state);
+        const restorable = state.restoreGeometry;
+        return (current.x === candidate.x && current.y === candidate.y)
+          || (restorable !== undefined && restorable.x === candidate.x && restorable.y === candidate.y);
+      });
+      if (!occupied) return cascade;
+    }
+
+    return 0;
   }
 
   private constrain(geometry: WindowGeometry, minWidth: number, minHeight: number): WindowGeometry {
