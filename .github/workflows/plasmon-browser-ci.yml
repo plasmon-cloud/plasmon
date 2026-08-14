@@ -25,25 +25,6 @@ on:
       - "package-lock.json"
       - ".github/workflows/plasmon-browser-ci.yml"
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "apps/review/**"
-      - "apps/kernel/**"
-      - "packages/neutron-provision/**"
-      - "packages/neutron-tools/**"
-      - "test/e2e/plasmon-demo-environment.ts"
-      - "test/e2e/plasmon-browser-health.ts"
-      - "test/e2e/plasmon-refactor-smoke.spec.ts"
-      - "test/e2e/plasmon-golden-path.spec.ts"
-      - "test/e2e/plasmon-monaco-packaged.spec.ts"
-      - "test/e2e/plasmon-review-demo.spec.ts"
-      - "test/e2e/plasmon-emulatorjs-proof.spec.ts"
-      - "test/e2e/plasmon-demo-game.spec.ts"
-      - "playwright.config.ts"
-      - "plasmon-local.ndeploy.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-browser-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -62,6 +43,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify required-gate workflow contract
+        run: node test/ci/verify-required-browser-gates.mjs browser
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31

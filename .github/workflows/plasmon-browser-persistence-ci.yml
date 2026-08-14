@@ -2,21 +2,6 @@ name: Plasmon Browser Persistence CI
 
 on:
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "apps/kernel/src/workspace/AppBackgroundFrames.tsx"
-      - "apps/kernel/src/capabilities/**"
-      - "apps/kernel/src/runtime_deployment.ts"
-      - "packages/neutron-compiler/**"
-      - "packages/neutron-provision/**"
-      - "packages/neutron-tools/**"
-      - "test/e2e/local-playwright-identity.ts"
-      - "test/e2e/plasmon-demo-environment.ts"
-      - "test/e2e/plasmon-persistence.spec.ts"
-      - "playwright.config.ts"
-      - "plasmon-local.ndeploy.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-browser-persistence-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,6 +20,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify required-gate workflow contract
+        run: node test/ci/verify-required-browser-gates.mjs persistence
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
