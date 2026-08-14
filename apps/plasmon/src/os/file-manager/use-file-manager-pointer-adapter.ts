@@ -253,9 +253,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
             if (operationState.snapshot().failedItems > 0) operationState.complete();
             else operationState.fail(message);
           }
-          setError(message);
           try {
             await refresh();
+            setError(message);
           } catch (refreshCause: unknown) {
             setError(`${message} (refresh failed: ${errorMessage(refreshCause)})`);
           }
