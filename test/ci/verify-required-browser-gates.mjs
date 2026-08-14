@@ -87,6 +87,27 @@ function eventSection(lines, eventName) {
   return lines.slice(start + 1, end);
 }
 
+function stepSection(lines, stepId) {
+  const idMarker = `        id: ${stepId}`;
+  const idIndex = lines.findIndex((line) => line === idMarker);
+  if (idIndex < 0) throw new Error(`Missing workflow step id ${stepId}`);
+
+  let start = idIndex;
+  while (start > 0 && !/^      - name: /.test(lines[start])) start -= 1;
+  if (!/^      - name: /.test(lines[start])) {
+    throw new Error(`Cannot locate workflow step start for ${stepId}`);
+  }
+
+  let end = lines.length;
+  for (let index = idIndex + 1; index < lines.length; index += 1) {
+    if (/^      - name: /.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
+}
+
 for (const gate of gates) {
   const source = readFileSync(gate.path, "utf8");
   const lines = source.split(/\r?\n/);
@@ -104,17 +125,14 @@ for (const gate of gates) {
     throw new Error(`${gate.context} cannot reliably diff the PR base/head for cheap-skip scope`);
   }
 
-  if (!source.includes(`id: ${gate.scopeId}`)) {
-    throw new Error(`${gate.context} is missing its cheap-skip scope detector`);
-  }
-
+  const detector = stepSection(lines, gate.scopeId);
   for (const pattern of gate.scopePatterns) {
-    if (!source.includes(pattern)) {
+    if (!detector.includes(pattern)) {
       throw new Error(`${gate.context} cheap-skip scope lost required path pattern ${pattern}`);
     }
   }
 
-  if (!source.includes(`echo "${gate.output}=true" >> "$GITHUB_OUTPUT"`)) {
+  if (!detector.includes(`echo "${gate.output}=true" >> "$GITHUB_OUTPUT"`)) {
     throw new Error(`${gate.context} must run its expensive path outside pull_request events`);
   }
 
