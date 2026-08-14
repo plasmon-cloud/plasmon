@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify required-gate workflow contract
+        run: node test/ci/verify-required-browser-gates.mjs smoke
+
       - name: Detect packaged-smoke-relevant changes
         id: packaged_smoke_scope
         shell: bash
