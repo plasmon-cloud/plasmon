@@ -127,7 +127,8 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(boundedRename).toBeVisible();
   const renameBox = await boundedRename.boundingBox();
   if (!renameBox) throw new Error("Desktop rename input has no browser bounds");
-  expect(renameBox.width).toBeGreaterThan(selectedEntryBox.width + 80);
+  expect(renameBox.x).toBeGreaterThanOrEqual(selectedEntryBox.x - 1);
+  expect(renameBox.x + renameBox.width).toBeLessThanOrEqual(selectedEntryBox.x + selectedEntryBox.width + 1);
   expect(renameBox.x).toBeGreaterThanOrEqual(desktopBounds.x + 7);
   expect(renameBox.x + renameBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width - 7);
   await boundedRename.press("Escape");

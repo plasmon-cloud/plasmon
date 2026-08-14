@@ -1,9 +1,7 @@
 import {
   memo,
-  useEffect,
   useLayoutEffect,
   useRef,
-  useState,
   type CSSProperties,
   type ChangeEvent as ReactChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -11,24 +9,24 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { AssociationRegistry, FsNode, FsService } from "../contracts/index.ts";
-import { ResourceIcon, type IconContext, type ResourceIconPresentation } from "../visual/index.ts";
+import { ResourceIcon, type IconContext } from "../visual/index.ts";
+import { fileVisualKind } from "./file-icons.ts";
 import {
-  fallbackFileResourcePresentation,
-  fileVisualKind,
-  resolveFileResourcePresentation,
-  type FileResourcePresentation,
-} from "./file-icons.ts";
+  deriveFileEntryRenderState,
+  type FileEntryPosition,
+  type FileEntryPresentation,
+} from "./file-entry-state.ts";
 import {
   RenameSelectionController,
   renameKeyAction,
   type InlineRenameState,
 } from "./rename.ts";
 import { shortcutTypeLabel } from "./shortcut.ts";
-import { canLoadImageThumbnail, loadImageThumbnail, type LoadedImageThumbnail } from "./thumbnail.ts";
+import { useFileEntryResolvedPresentation } from "./use-file-entry-presentation.ts";
 import "./polish.scss";
 
-export type FileEntryPresentation = "desktop" | "grid" | "list" | "details";
-export interface FileEntryPosition { x: number; y: number }
+export type { FileEntryPosition, FileEntryPresentation } from "./file-entry-state.ts";
+export { fileEntryClassName } from "./file-entry-state.ts";
 
 export interface FileEntryProps {
   fs: FsService;
@@ -76,16 +74,6 @@ function iconContext(presentation: FileEntryPresentation): IconContext {
   return "file-list";
 }
 
-export function fileEntryClassName(
-  presentation: FileEntryPresentation,
-  selected: boolean,
-  focused: boolean,
-  renaming: boolean,
-  dropTarget: boolean,
-): string {
-  return `fm-entry fm-entry--${presentation}${selected ? " is-selected" : ""}${focused ? " is-focused" : ""}${renaming ? " is-renaming" : ""}${dropTarget ? " is-drop-target" : ""}`;
-}
-
 export const FileEntry = memo(function FileEntry({
   fs,
   associations,
@@ -107,99 +95,35 @@ export const FileEntry = memo(function FileEntry({
   onRenameCommit,
   onRenameCancel,
 }: FileEntryProps) {
-  const isRenaming = rename?.nodeId === node.id;
-  const style: CSSProperties | undefined = presentation === "desktop" && position
-    ? ({
-        left: position.x,
-        top: position.y,
-        "--fm-desktop-entry-x": `${position.x}px`,
-      } as CSSProperties)
-    : undefined;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
   const suppressBlurCommitRef = useRef(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [resourcePresentation, setResourcePresentation] = useState<FileResourcePresentation>(
-    () => fallbackFileResourcePresentation(node, associations),
-  );
+  const renderState = deriveFileEntryRenderState({
+    nodeId: node.id,
+    selected,
+    focused,
+    dropTarget,
+    presentation,
+    position,
+    renameNodeId: rename?.nodeId ?? null,
+  });
+  const resolvedPresentation = useFileEntryResolvedPresentation(fs, node, associations, entryRef);
 
   useLayoutEffect(() => {
-    if (!isRenaming || !rename || !inputRef.current) {
+    if (!renderState.isRenaming || !rename || !inputRef.current) {
       renameSelectionRef.current.reset();
       suppressBlurCommitRef.current = false;
       return;
     }
     suppressBlurCommitRef.current = false;
-    renameSelectionRef.current.initialize(rename.session,
+    renameSelectionRef.current.initialize(
+      rename.session,
       inputRef.current,
       rename.initialName,
       node.kind === "directory",
     );
-  }, [isRenaming, rename?.initialName, rename?.session]);
-
-  useEffect(() => {
-    let active = true;
-    const fallback = fallbackFileResourcePresentation(node, associations);
-    setResourcePresentation(fallback);
-    void resolveFileResourcePresentation(fs, node, associations)
-      .then((resolved) => {
-        if (active) setResourcePresentation(resolved);
-      })
-      .catch(() => {
-        if (active) setResourcePresentation(fallback);
-      });
-    return () => { active = false; };
-  }, [associations, fs, node]);
-
-  useEffect(() => {
-    let active = true;
-    let observer: IntersectionObserver | null = null;
-    let loaded: LoadedImageThumbnail | null = null;
-    setThumbnailUrl(null);
-    if (!canLoadImageThumbnail(node)) return undefined;
-
-    const load = () => {
-      void loadImageThumbnail(fs, node)
-        .then((thumbnail) => {
-          if (!thumbnail) return;
-          if (!active) {
-            thumbnail.revoke();
-            return;
-          }
-          loaded?.revoke();
-          loaded = thumbnail;
-          setThumbnailUrl(thumbnail.url);
-        })
-        .catch(() => {
-          if (active) setThumbnailUrl(null);
-        });
-    };
-
-    const element = entryRef.current;
-    if (typeof IntersectionObserver === "undefined" || !element) {
-      load();
-    } else {
-      observer = new IntersectionObserver((entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer?.disconnect();
-        observer = null;
-        load();
-      }, { rootMargin: "96px" });
-      observer.observe(element);
-    }
-
-    return () => {
-      active = false;
-      observer?.disconnect();
-      loaded?.revoke();
-    };
-  }, [fs, node.contentHash, node.id, node.mime, node.modifiedAt, node.name, node.size]);
-
-  const visualKind = fileVisualKind(node);
-  const iconPresentation: ResourceIconPresentation = thumbnailUrl
-    ? { kind: "thumbnail", src: thumbnailUrl, mediaKind: "image" }
-    : resourcePresentation.presentation;
+  }, [renderState.isRenaming, rename?.initialName, rename?.session, node.kind]);
 
   return (
     <div
@@ -207,8 +131,8 @@ export const FileEntry = memo(function FileEntry({
         entryRef.current = element;
         setRef(element);
       }}
-      className={fileEntryClassName(presentation, selected, focused, isRenaming, dropTarget)}
-      style={style}
+      className={renderState.className}
+      style={renderState.style as CSSProperties | undefined}
       role="option"
       tabIndex={-1}
       aria-selected={selected}
@@ -221,16 +145,16 @@ export const FileEntry = memo(function FileEntry({
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <span className={`fm-entry__icon fm-entry__icon--${visualKind}`} aria-hidden="true">
+      <span className={`fm-entry__icon fm-entry__icon--${resolvedPresentation.visualKind}`} aria-hidden="true">
         <ResourceIcon
           context={iconContext(presentation)}
-          presentation={iconPresentation}
-          shortcut={!thumbnailUrl && resourcePresentation.shortcut}
+          presentation={resolvedPresentation.iconPresentation}
+          shortcut={resolvedPresentation.shortcut}
         />
       </span>
       <span className="fm-entry__selection-mark" aria-hidden="true">{selected ? "✓" : ""}</span>
-      <span className="fm-entry__name" title={!selected && !isRenaming ? node.name : undefined}>
-        {isRenaming && rename ? (
+      <span className="fm-entry__name" title={renderState.showCollapsedNameTitle ? node.name : undefined}>
+        {renderState.isRenaming && rename ? (
           <>
             <input
               ref={inputRef}
@@ -260,7 +184,7 @@ export const FileEntry = memo(function FileEntry({
           </>
         ) : node.name}
       </span>
-      {presentation === "desktop" && (selected || focused) && !isRenaming ? (
+      {renderState.showExpandedName ? (
         <span className="fm-entry__expanded-name" aria-hidden="true">{node.name}</span>
       ) : null}
       {presentation === "details" ? (

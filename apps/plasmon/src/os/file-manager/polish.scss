@@ -53,8 +53,7 @@
   visibility: hidden;
 }
 
-.fm-entry--desktop .fm-entry__expanded-name,
-.fm-entry--desktop.is-renaming .fm-entry__name {
+.fm-entry--desktop .fm-entry__expanded-name {
   --fm-desktop-label-width: min(260px, calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
@@ -66,6 +65,7 @@
   );
   width: var(--fm-desktop-label-width);
   max-width: none;
+  max-height: calc(6.25em + 4px);
   padding: 2px 6px;
   border: 1px solid rgba(117,167,255,.44);
   border-radius: 5px;
@@ -82,14 +82,29 @@
   z-index: 3;
 }
 
-.fm-entry--desktop .fm-entry__expanded-name {
-  max-height: calc(6.25em + 4px);
-}
-
 .fm-entry--desktop.is-renaming .fm-entry__name {
+  box-sizing: border-box;
+  position: absolute;
+  top: 55px;
+  left: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid rgba(117,167,255,.44);
+  border-radius: 5px;
+  background: rgba(18,27,43,.96);
+  box-shadow: 0 4px 14px rgba(0,0,0,.32);
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
   visibility: visible;
   overflow: visible;
+  overflow-wrap: anywhere;
   text-overflow: clip;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .fm-entry--desktop.is-renaming .fm-entry__name input {

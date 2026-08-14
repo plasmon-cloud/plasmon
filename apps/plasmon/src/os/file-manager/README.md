@@ -8,6 +8,7 @@ Deterministic behavior already lives in production helper modules such as:
 
 - `model.ts` — selection, marquee geometry, refresh gating, rename helpers, and clipboard state;
 - `operation-state.ts` — the small injectable FileManager operation lifecycle vocabulary for import/paste status, item counts, current import item, partial import failures, and duplicate-start protection;
+- `file-entry-state.ts` — deterministic NodeId-keyed per-entry render state, consuming caller-supplied Desktop coordinates without allocating placement or owning resource semantics;
 - `activation.ts` — the thin FileManager adapter to the canonical filesystem open authority, including caller-owned same-window directory navigation;
 - `clipboard.ts` — collision-aware copy/cut/paste behavior;
 - `create-import.ts`, `download.ts` — filesystem action helpers;
@@ -20,6 +21,8 @@ Deterministic behavior already lives in production helper modules such as:
 - `properties.tsx` — Properties/Open With presentation.
 
 `FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering. Import can truthfully expose per-item progress because FileManager already sequences those items. Paste exposes running/completed/failed lifecycle and the known total count, but does not invent byte or per-item progress that the existing filesystem paste boundary does not report.
+
+`FileEntry.tsx` remains a small React/browser adapter around the pure render-state policy and the narrow async presentation/thumbnail hook. It renders and adapts browser input; it does not classify resources, allocate Desktop placement, own filesystem mutation, or replace canonical open/shortcut/Trash authorities.
 
 FileManager is not a filesystem repository and must not grow private application-opening or Trash policy. All normal resource activation delegates to the filesystem core's canonical open dispatcher. FileManager may provide presentation-owned directory navigation so an existing Explorer window can navigate in place, but resource classification, shortcut dereference, system/Neutron application opening, and ordinary association dispatch remain filesystem/opening authority concerns.
 
@@ -43,16 +46,18 @@ FileManager consumes the integrated resource classifier and the shared Visual pr
 
 This means FileManager still owns presentation lifecycle that genuinely depends on its surface, such as image-thumbnail leases and resolving a shortcut target's metadata through `FsService`; it does **not** own MIME/type classification, native handler identity, application artwork fallback, shortcut execution, or shared icon sizing. Shortcut target artwork is composed with the shared shortcut overlay rather than replaced.
 
+Desktop selected/focused label expansion and inline-rename geometry are FileEntry presentation concerns only. The #192 Desktop controller remains the sole allocator/reconciler of NodeId-keyed positions, and the shared #190 Visual seam remains the source of resource/application presentation identity.
+
 ## Refactor direction
 
-`FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer.
+`FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer. Keep FileEntry's pure render-state plus narrow presentation-hook seam small rather than moving surrounding FileManager authorities into it.
 
 Do not split by historical feature wave or create separate Desktop/Explorer operation stacks. Preserve one set of filesystem actions and capability-aware commands, with React responsible mainly for rendering and translating browser events. Keep operation state bounded to demonstrated FileManager workflows rather than turning it into a generic job manager.
 
 ## Testing
 
-Use fast tests for selection/range/marquee math, clipboard/collision naming, operation-state transitions, refresh ordering, command eligibility, activation routing, rename/create/import/delete/shortcut helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, pure spatial navigation, and deterministic shared-presentation mapping. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
+Use fast tests for selection/range/marquee math, clipboard/collision naming, operation-state transitions, refresh ordering, command eligibility, activation routing, rename/create/import/delete/shortcut helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, pure spatial navigation, deterministic FileEntry render state, and deterministic shared-presentation mapping. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
 
-Use RTL/browser tests only where DOM mechanics are material, including the accessible running-status boundary for deliberately delayed import/paste operations, pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, rendered List/Details geometry, bounded command discoverability such as Send to Desktop, and packaged visible workflows. Installed Plasmon-owned artwork paths require packaged-browser coverage because standalone rendering cannot prove the Neutron application mount.
+Use RTL/browser tests only where DOM mechanics are material, including the accessible running-status boundary for deliberately delayed import/paste operations, pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, rendered List/Details geometry, bounded Desktop FileEntry rename geometry, bounded command discoverability such as Send to Desktop, and packaged visible workflows. Installed Plasmon-owned artwork paths require packaged-browser coverage because standalone rendering cannot prove the Neutron application mount.
 
 When a UI bug is fundamentally a shared command/model bug, add the regression below React first instead of relying only on click-path coverage.
