@@ -16,6 +16,7 @@ import type {
   OpenService,
   ProcessController,
 } from "../contracts/index.ts";
+import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
 import {
   FileOperationClipboard,
   emptySelection,
@@ -302,7 +303,7 @@ export function FileManager({
     node: FsNode,
     event: ReactMouseEvent<HTMLDivElement>,
   ) => {
-    event.preventDefault();
+    if (!claimFirstPartyContextMenu(event)) return;
     event.stopPropagation();
     if (!selection.ids.has(node.id)) {
       setSelection(selectNode(emptySelection(), renderState.orderedIds, node.id));
@@ -324,7 +325,7 @@ export function FileManager({
       onPointerUp={pointer.finishMarquee}
       onPointerCancel={pointer.finishMarquee}
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
-        event.preventDefault();
+        if (!claimFirstPartyContextMenu(event)) return;
         const element = (event.target as HTMLElement)
           .closest<HTMLElement>("[data-fm-node-id]");
         const id = element?.dataset.fmNodeId ?? null;
