@@ -365,6 +365,24 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(normalizedBounds.x + normalizedBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
 
   const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
+  const snapPreviewGeometry = async () => snapPreview.evaluate((element) => {
+    const layer = element.parentElement;
+    if (!(layer instanceof HTMLElement)) throw new Error("Snap preview has no WindowLayer parent");
+    const previewRect = element.getBoundingClientRect();
+    const layerRect = layer.getBoundingClientRect();
+    return {
+      preview: {
+        x: previewRect.left - layerRect.left,
+        y: previewRect.top - layerRect.top,
+        width: previewRect.width,
+        height: previewRect.height,
+      },
+      workspace: {
+        width: layer.clientWidth,
+        height: layer.clientHeight,
+      },
+    };
+  });
 
   const beginTitlebarDrag = async (): Promise<{ x: number; y: number; offsetX: number; offsetY: number }> => {
     const box = await titlebar.boundingBox();
@@ -380,16 +398,19 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   // Issue #43 reopened browser acceptance: edge intent is visible before
   // release, and the actual dragged window stays inside the usable workspace.
+  // Page mouse input uses top-level browser coordinates, while preview geometry
+  // is compared inside the sandboxed Plasmon frame against Windowing's actual
+  // clientWidth/clientHeight viewport authority.
   const leftDrag = await beginTitlebarDrag();
   await page.mouse.move(workspace.x + 1, leftDrag.y, { steps: 5 });
   await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
-  const leftPreviewBounds = await snapPreview.boundingBox();
+  const leftPreviewGeometry = await snapPreviewGeometry();
   const leftDragBounds = await dialog.boundingBox();
-  if (!leftPreviewBounds || !leftDragBounds) throw new Error("Snap preview/drag window has no browser bounds");
-  expect(Math.abs(leftPreviewBounds.x - workspace.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewBounds.y - workspace.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewBounds.width - Math.floor(workspace.width / 2))).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewBounds.height - workspace.height)).toBeLessThanOrEqual(1);
+  if (!leftDragBounds) throw new Error("Snap drag window has no browser bounds");
+  expect(Math.abs(leftPreviewGeometry.preview.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewGeometry.preview.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewGeometry.preview.width - Math.floor(leftPreviewGeometry.workspace.width / 2))).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewGeometry.preview.height - leftPreviewGeometry.workspace.height)).toBeLessThanOrEqual(1);
   expect(leftDragBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
   expect(leftDragBounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
   expect(leftDragBounds.x + leftDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
@@ -414,11 +435,12 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   await page.mouse.move(workspace.x + workspace.width - 1, rightDrag.y, { steps: 5 });
   await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "right");
-  const rightPreviewBounds = await snapPreview.boundingBox();
+  const rightPreviewGeometry = await snapPreviewGeometry();
   const rightDragBounds = await dialog.boundingBox();
-  if (!rightPreviewBounds || !rightDragBounds) throw new Error("Right snap preview/drag window has no browser bounds");
-  expect(Math.abs((rightPreviewBounds.x + rightPreviewBounds.width) - (workspace.x + workspace.width))).toBeLessThanOrEqual(1);
-  expect(Math.abs(rightPreviewBounds.y - workspace.y)).toBeLessThanOrEqual(1);
+  if (!rightDragBounds) throw new Error("Right snap drag window has no browser bounds");
+  expect(Math.abs((rightPreviewGeometry.preview.x + rightPreviewGeometry.preview.width) - rightPreviewGeometry.workspace.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rightPreviewGeometry.preview.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rightPreviewGeometry.preview.height - rightPreviewGeometry.workspace.height)).toBeLessThanOrEqual(1);
   expect(rightDragBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
   expect(rightDragBounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
   expect(rightDragBounds.x + rightDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
