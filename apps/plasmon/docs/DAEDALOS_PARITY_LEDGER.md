@@ -2,7 +2,7 @@
 
 Status: canonical acceptance index  
 Historical Plasmon evidence snapshot: `8ba35fbb265c6b86d483bd125165da03be7fc82c` (`version-0.1.0-os`, 2026-08-12)  
-Current Plasmon integration target at metadata refresh: `release/0.1.0-r2` @ `02a248e43342a7fc82a17ba19cab0ac471f9cbbb` (2026-08-14)  
+Current Plasmon integration target at metadata refresh: `release/0.1.0-r2` @ `aebb255bb0605f945258d581acab96d1f905b4b0` (2026-08-14)  
 daedalOS reference snapshot: `DustinBrett/daedalOS@0df82d75e6114727ad035f6fce93842a96682355`
 
 The current-r2 line records integration identity only. The evidence rows below remain grounded in the historical snapshot and subsequent evidence explicitly named in the ledger; this metadata refresh does not silently upgrade implementation, packaged/browser, or human/manual acceptance states.
