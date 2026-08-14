@@ -1,4 +1,7 @@
-import type { PointerEvent as ReactPointerEvent } from "react";
+import type {
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import type {
   AssociationRegistry,
   FsNode,
@@ -28,7 +31,7 @@ interface FileManagerEntriesProps {
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onOpen: (node: FsNode) => void;
-  onContextMenu: (node: FsNode, event: React.MouseEvent<HTMLDivElement>) => void;
+  onContextMenu: (node: FsNode, event: ReactMouseEvent<HTMLDivElement>) => void;
   onRenameChange: (value: string) => void;
   onRenameCommit: () => void;
   onRenameCancel: () => void;
