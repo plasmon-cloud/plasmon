@@ -18,6 +18,7 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-monaco-packaged.spec.ts',
     'test/e2e/plasmon-review-demo.spec.ts',
+    'test/e2e/plasmon-photos-workspace-expand.spec.ts',
     'test/e2e/plasmon-emulatorjs-proof.spec.ts',
     'test/e2e/plasmon-demo-game.spec.ts',
   ]),
