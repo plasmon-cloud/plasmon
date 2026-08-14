@@ -198,27 +198,6 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const workspace = await app.locator(".plasmon-window-layer").first().boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
 
-  // Issue #177 browser boundary: keep the durable Explorer primary alive so
-  // repeated sibling opens must use WindowManager default/session placement
-  // rather than being masked by #117 persistence restore. Deterministic wrap
-  // equality is proved below the browser in WindowManager tests; this layer
-  // protects only real rendered reachability while the old lifetime cascade
-  // is exercised repeatedly.
-  for (let index = 0; index < 60; index += 1) {
-    await rootShortcut.dblclick();
-    await expect(nativeWindows).toHaveCount(initialWindowCount + 2, { timeout: 20_000 });
-    const sibling = nativeWindows.last();
-    await expect(sibling).toBeVisible();
-    const bounds = await sibling.boundingBox();
-    if (!bounds) throw new Error("sibling native window has no bounds");
-    expect(bounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
-    expect(bounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
-    expect(bounds.y + Math.min(38, bounds.height)).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
-    await sibling.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
-    await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
-  }
-
   const dragTitlebarTo = async (clientX: number): Promise<void> => {
     const box = await titlebar.boundingBox();
     if (!box) throw new Error("Native window titlebar has no browser bounds");
@@ -277,6 +256,28 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(closePrompt).toBeVisible({ timeout: 5_000 });
   await closePrompt.getByRole("button", { name: "Discard" }).click();
   await expect(app.getByRole("dialog", { name: "New Text Document.txt" })).toHaveCount(0, { timeout: 10_000 });
+
+  // Issue #177 browser boundary: keep the durable Explorer primary alive so
+  // repeated sibling opens must use WindowManager default/session placement
+  // rather than being masked by #117 persistence restore. Deterministic wrap
+  // equality is proved below the browser in WindowManager tests; this layer
+  // protects only real rendered reachability while the old lifetime cascade
+  // is exercised repeatedly. This is intentionally last so it cannot perturb
+  // the pre-existing snap/editor golden-path contracts.
+  for (let index = 0; index < 60; index += 1) {
+    await rootShortcut.dblclick();
+    await expect(nativeWindows).toHaveCount(initialWindowCount + 2, { timeout: 20_000 });
+    const sibling = nativeWindows.last();
+    await expect(sibling).toBeVisible();
+    const bounds = await sibling.boundingBox();
+    if (!bounds) throw new Error("sibling native window has no bounds");
+    expect(bounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
+    expect(bounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
+    expect(bounds.y + Math.min(38, bounds.height)).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
+    await sibling.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
+    await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
+  }
 
   expect(pageErrors).toEqual([]);
 });
