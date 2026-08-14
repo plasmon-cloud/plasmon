@@ -29,16 +29,16 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
   };
 }
 
-function processRecord(state: ProcessRecord["state"] = "running"): ProcessRecord {
+function processRecord(state: ProcessRecord["state"] = "running", id = "native:text#1"): ProcessRecord {
   return {
-    id: "native:text#1",
+    id,
     appId: "native:text",
     handlerId: "native:text",
     target: {},
     title: "notes.txt — Text Editor",
     icon: "text",
     state,
-    windowId: "window:native:text#1",
+    windowId: `window:${id}`,
   };
 }
 
@@ -67,14 +67,14 @@ function element(id: string, running: ExternalElement["running"]): ExternalEleme
 }
 
 function onlyNative(input: {
-  process?: ProcessRecord;
+  processes?: readonly ProcessRecord[];
   windows?: readonly WindowState[];
   busyTaskId?: string | null;
 }) {
   const entries = deriveTaskbarEntries({
     preferences: preferences({ pinnedNative: ["native:text"] }),
     nativeApps: [nativeText],
-    processes: input.process ? [input.process] : [],
+    processes: input.processes ?? [],
     elements: [],
     windows: input.windows ?? [],
     busyTaskId: input.busyTaskId,
@@ -98,10 +98,10 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
   expect(busy.presentation).toMatchObject({ state: "launching", launching: true, running: false, badge: "…" });
 
   const starting = processRecord("starting");
-  expect(onlyNative({ process: starting }).presentation.state).toBe("launching");
+  expect(onlyNative({ processes: [starting] }).presentation.state).toBe("launching");
 
   const running = processRecord("running");
-  expect(onlyNative({ process: running, windows: [windowState(running, 2, true)] }).presentation).toMatchObject({
+  expect(onlyNative({ processes: [running], windows: [windowState(running, 2, true)] }).presentation).toMatchObject({
     state: "running",
     running: true,
     active: false,
@@ -118,9 +118,9 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
     minimized: false,
     maximized: false,
   };
-  expect(onlyNative({ process: running, windows: [windowState(running, 3), other] }).presentation.state).toBe("running");
+  expect(onlyNative({ processes: [running], windows: [windowState(running, 3), other] }).presentation.state).toBe("running");
 
-  const active = onlyNative({ process: running, windows: [windowState(running, 5), other] });
+  const active = onlyNative({ processes: [running], windows: [windowState(running, 5), other] });
   expect(active.presentation).toMatchObject({
     state: "active",
     statusLabel: "Active and focused",
@@ -128,6 +128,38 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
     active: true,
   });
   expect(active.presentation.accessibilityLabel).toContain("Active and focused");
+});
+
+test("native group presentation uses running members before starting siblings", () => {
+  const background = processRecord("running", "native:text#1");
+  const active = processRecord("running", "native:text#2");
+  const starting = processRecord("starting", "native:text#3");
+  const other: WindowState = {
+    id: "window:other",
+    processId: "native:other#1",
+    x: 0,
+    y: 0,
+    width: 600,
+    height: 400,
+    z: 4,
+    minimized: false,
+    maximized: false,
+  };
+
+  const runningGroup = onlyNative({
+    processes: [background, starting],
+    windows: [windowState(background, 3), other],
+    busyTaskId: "native:native:text",
+  });
+  expect(runningGroup.presentation).toMatchObject({ state: "running", running: true, active: false, launching: false });
+
+  const activeGroup = onlyNative({
+    processes: [background, active, starting],
+    windows: [windowState(background, 3), windowState(active, 6), other],
+    busyTaskId: "native:native:text",
+  });
+  expect(activeGroup.presentation).toMatchObject({ state: "active", running: true, active: true, launching: false });
+  expect(activeGroup.members.map((member) => member.id)).toEqual([background.id, active.id, starting.id]);
 });
 
 test("Element taskbar presentation preserves confirmed running, confirmed stopped pin, and genuine uncertainty", () => {
