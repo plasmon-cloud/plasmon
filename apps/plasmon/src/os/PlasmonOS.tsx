@@ -48,6 +48,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
       nativeApps={services.nativeApps}
       filesystemOpen={services.filesystem.open}
       openService={services.openService}
+      startMenu={services.startMenu}
     >
       <div className="plasmon-os-workspace">
         <div className="plasmon-os-desktop-layer">
