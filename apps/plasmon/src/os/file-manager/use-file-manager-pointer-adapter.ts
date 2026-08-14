@@ -18,6 +18,7 @@ import {
 } from "./model.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { finishEntryDragGesture } from "./drag.ts";
+import type { FileOperationState } from "./operation-state.ts";
 import type { FileManagerPresentation } from "./render-state.ts";
 
 export interface MarqueeVisual {
@@ -34,6 +35,7 @@ interface UseFileManagerPointerAdapterOptions {
   selection: SelectionState;
   presentation: FileManagerPresentation;
   renameNodeId: NodeId | null;
+  operationState: FileOperationState;
   refresh: () => Promise<void>;
   setSelection: Dispatch<SetStateAction<SelectionState>>;
   setError: Dispatch<SetStateAction<string | null>>;
@@ -80,6 +82,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     selection,
     presentation,
     renameNodeId,
+    operationState,
     refresh,
     setSelection,
     setError,
@@ -231,10 +234,32 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const source = nodes.filter((node) => ids.includes(node.id));
     try {
       if (target?.kind === "directory") {
-        // #92 remains separate: this preserves the existing direct drag-move path.
-        await moveNodesToDirectory(fs, source, target);
-        setError(null);
-        await refresh();
+        if (!operationState.begin("move", source.length)) {
+          setError("Another file operation is already running");
+          return;
+        }
+        try {
+          await moveNodesToDirectory(fs, source, target, {
+            onItemStart: (index, node) => operationState.startItem(index, node.name),
+            onItemSuccess: () => operationState.succeedItem(),
+            onItemFailure: (_index, node, cause) => operationState.failItem(node.name, errorMessage(cause)),
+          });
+          operationState.complete();
+          setError(null);
+          await refresh();
+        } catch (cause: unknown) {
+          const message = errorMessage(cause);
+          if (operationState.isRunning()) {
+            if (operationState.snapshot().failedItems > 0) operationState.complete();
+            else operationState.fail(message);
+          }
+          try {
+            await refresh();
+            setError(message);
+          } catch (refreshCause: unknown) {
+            setError(`${message} (refresh failed: ${errorMessage(refreshCause)})`);
+          }
+        }
         return;
       }
       if (presentation === "desktop" && onDesktopReposition && rootRef.current) {

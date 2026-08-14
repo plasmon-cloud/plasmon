@@ -176,6 +176,7 @@ export function FileManager({
     selection,
     presentation,
     renameNodeId: rename.rename?.nodeId ?? null,
+    operationState,
     refresh: directory.refresh,
     setSelection,
     setError: directory.setError,
