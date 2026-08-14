@@ -31,6 +31,7 @@ import {
 } from "../fs/index.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
+import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
   FsServiceWindowPlacementStore,
   NativeWindowManager,
@@ -85,6 +86,7 @@ export interface PlasmonServices {
   associations: AssociationRegistry;
   openService: OpenService;
   fileClipboard: FileOperationClipboard;
+  startMenu: StartMenuReconciliationController;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -228,6 +230,10 @@ function registerWave2Applications(
  * itself still mutates only through FsService primitives, so persistence remains
  * owned by the existing hosted/background boundary.
  *
+ * Runtime controllers are assembled here but started by the outer application
+ * bootstrap before React renders. This keeps service construction deterministic
+ * for headless callers while keeping production reconciliation below React.
+ *
  * Authenticated Neutron application surfaces remain Kernel-owned sibling
  * tiles. Plasmon only discovers and opens them through NeutronBridge.
  */
@@ -296,6 +302,7 @@ export function createPlasmonServices(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
   );
+  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
 
   return {
     fs,
@@ -310,5 +317,6 @@ export function createPlasmonServices(
     associations,
     openService,
     fileClipboard,
+    startMenu,
   };
 }
