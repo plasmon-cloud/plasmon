@@ -38,6 +38,7 @@ import {
   deriveTaskbarEntries,
   deriveTrayEntries,
   executeNativeTaskbarAction,
+  focusNativeTaskbarMember,
   focusedWindow,
   type TaskbarEntry,
 } from "./model.ts";
@@ -69,6 +70,7 @@ import {
   type StartShortcutTarget,
 } from "./startMenu.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
+import { TaskbarGroupChooser, taskbarGroupChooserId } from "./TaskbarGroupChooser.tsx";
 import "./shell.scss";
 
 export interface ShellProps {
@@ -124,7 +126,11 @@ function TrayMark() {
 function useNativeSnapshots(process: ProcessController, windows: WindowManager) {
   const [revision, setRevision] = useState(0);
   useEffect(() => subscribeToNativeShellState(process, windows, () => setRevision((value) => value + 1)), [process, windows]);
-  return useMemo(() => ({ processes: process.list(), windowStates: windows.list() }), [process, windows, revision]);
+  return useMemo(() => ({
+    processes: process.list(),
+    windowStates: windows.list(),
+    focusedWindowId: windows.focusSnapshot().focusedId,
+  }), [process, windows, revision]);
 }
 
 /** Keep one discovered Element snapshot in Shell; ordinary interactions never call loadElements directly. */
@@ -190,6 +196,7 @@ export function Shell({
   const [preferences, setPreferences] = useState<ShellPreferences | null>(null);
   const [flyout, setFlyout] = useState<Flyout>(null);
   const [contextMenu, setContextMenu] = useState<ShellContextMenuState>(null);
+  const [openTaskbarGroupHandlerId, setOpenTaskbarGroupHandlerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTab, setSearchTab] = useState<SearchTab>("all");
   const [searchBatch, setSearchBatch] = useState<SearchBatch>(EMPTY_SEARCH);
@@ -203,7 +210,7 @@ export function Shell({
   const [fsEpoch, setFsEpoch] = useState(0);
   const latestSearch = useRef(new LatestSearchController<SearchBatch>());
   const searchAbort = useRef<AbortController | null>(null);
-  const { processes, windowStates } = useNativeSnapshots(process, windows);
+  const { processes, windowStates, focusedWindowId } = useNativeSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElements(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const preferencesReady = preferences !== null;
@@ -231,14 +238,23 @@ export function Shell({
       processes,
       elements,
       windows: windowStates,
+      focusedWindowId,
       busyTaskId: busyId,
     }),
-    [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
+    [busyId, effectivePreferences, elements, focusedWindowId, nativeDefinitions, processes, windowStates],
   );
+  const openTaskbarGroup = useMemo(() => {
+    const entry = taskbarEntries.find((candidate) => candidate.kind === "native" && candidate.handlerId === openTaskbarGroupHandlerId);
+    return entry?.kind === "native" && entry.members.length > 1 ? entry : null;
+  }, [openTaskbarGroupHandlerId, taskbarEntries]);
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
   const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
   const calendar = useMemo(() => buildCalendarMonth(calendarAnchor, clock), [calendarAnchor, clock]);
-  const focused = useMemo(() => focusedWindow(windowStates), [windowStates]);
+  const focused = useMemo(() => focusedWindow(windowStates, focusedWindowId), [focusedWindowId, windowStates]);
+
+  useEffect(() => {
+    if (openTaskbarGroupHandlerId && !openTaskbarGroup) setOpenTaskbarGroupHandlerId(null);
+  }, [openTaskbarGroup, openTaskbarGroupHandlerId]);
 
   useEffect(() => subscribeSearchInvalidation(fsEvents, () => setFsEpoch((value) => value + 1)), [fsEvents]);
 
@@ -253,13 +269,16 @@ export function Shell({
       if (event.ctrlKey && event.key === "Escape") {
         event.preventDefault();
         setContextMenu(null);
+        setOpenTaskbarGroupHandlerId(null);
         setFlyout((current) => current === "start" ? null : "start");
       } else if (event.key === "Escape") {
         setContextMenu(null);
+        setOpenTaskbarGroupHandlerId(null);
         setFlyout(null);
       } else if (event.ctrlKey && event.code === "Space") {
         event.preventDefault();
         setContextMenu(null);
+        setOpenTaskbarGroupHandlerId(null);
         setFlyout("search");
       }
     };
@@ -278,10 +297,15 @@ export function Shell({
       };
       if (shouldDismissShellFlyout(flyout !== null, hit)) setFlyout(null);
       if (contextMenu && !hit.insideContextMenu) setContextMenu(null);
+      if (openTaskbarGroupHandlerId
+        && !target.closest("[data-shell-task-group-toggle]")
+        && !target.closest("[data-shell-task-group-chooser]")) {
+        setOpenTaskbarGroupHandlerId(null);
+      }
     };
     if (typeof document !== "undefined") document.addEventListener("pointerdown", onPointerDown, true);
     return () => { if (typeof document !== "undefined") document.removeEventListener("pointerdown", onPointerDown, true); };
-  }, [contextMenu, flyout]);
+  }, [contextMenu, flyout, openTaskbarGroupHandlerId]);
 
   useEffect(() => {
     latestSearch.current.cancel();
@@ -366,13 +390,21 @@ export function Shell({
   const activateTaskbar = useCallback(async (entry: TaskbarEntry) => {
     setActionError(null);
     if (entry.kind === "element") {
+      setOpenTaskbarGroupHandlerId(null);
       await openElement(entry.elementId);
       return;
     }
-    const launching = entry.process === null;
+    const launching = entry.members.length === 0;
     if (launching) setBusyId(entry.id);
     try {
-      await executeNativeTaskbarAction(entry, process, windows);
+      const action = await executeNativeTaskbarAction(entry, process, windows);
+      if (action === "choose") {
+        setFlyout(null);
+        setContextMenu(null);
+        setOpenTaskbarGroupHandlerId((current) => current === entry.handlerId ? null : entry.handlerId);
+      } else {
+        setOpenTaskbarGroupHandlerId(null);
+      }
     } catch (cause: unknown) {
       setActionError(`Taskbar action failed: ${formatError(cause)}`);
     } finally {
@@ -458,6 +490,7 @@ export function Shell({
 
   const toggleFlyout = (next: Exclude<Flyout, null>) => {
     setContextMenu(null);
+    setOpenTaskbarGroupHandlerId(null);
     setFlyout((current) => current === next ? null : next);
   };
 
@@ -475,6 +508,7 @@ export function Shell({
     if (policy === "none") return;
     event.preventDefault();
     event.stopPropagation();
+    setOpenTaskbarGroupHandlerId(null);
     setContextMenu({
       x: contextPosition(event.clientX, typeof window === "undefined" ? 1024 : window.innerWidth, 230),
       y: contextPosition(event.clientY, typeof window === "undefined" ? 768 : window.innerHeight, 180),
@@ -538,6 +572,19 @@ export function Shell({
 
     {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance persist through the Plasmon filesystem service. Taskbar pins are preferences, not Start shortcuts.</p></section> : null}
 
+    {openTaskbarGroup ? <TaskbarGroupChooser
+      entry={openTaskbarGroup}
+      windows={windowStates}
+      focusedWindowId={focusedWindowId}
+      onSelect={(member) => {
+        setActionError(null);
+        if (!focusNativeTaskbarMember(openTaskbarGroup, member.id, process)) {
+          setActionError(`${member.title} is not ready to focus.`);
+        }
+        setOpenTaskbarGroupHandlerId(null);
+      }}
+    /> : null}
+
     {contextMenu ? <section
       className="plasmon-shell__panel"
       data-shell-owned-surface
@@ -551,9 +598,26 @@ export function Shell({
       const task = entry.presentation;
       const className = `plasmon-shell__task-button${task.running ? " is-running" : ""}${task.active ? " is-focused" : ""}`;
       const badge = task.badge ? <small aria-hidden="true">{task.badge}</small> : null;
-      return entry.kind === "element"
-        ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon ?? SYSTEM_ICON_ASSETS.application} label={entry.name} context="taskbar" />{badge}</button>
-        : <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={className} aria-label={task.accessibilityLabel} aria-pressed={task.active} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} context="taskbar" />{badge}</button>;
+      if (entry.kind === "element") {
+        return <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon ?? SYSTEM_ICON_ASSETS.application} label={entry.name} context="taskbar" />{badge}</button>;
+      }
+      const grouped = entry.members.length > 1;
+      const groupOpen = grouped && openTaskbarGroupHandlerId === entry.handlerId;
+      return <button
+        key={entry.id}
+        type="button"
+        data-shell-context-native={entry.handlerId}
+        {...(grouped ? { "data-shell-task-group-toggle": "" } : {})}
+        className={className}
+        aria-label={`${task.accessibilityLabel}${grouped ? `; ${entry.members.length} windows` : ""}`}
+        aria-pressed={task.active}
+        aria-busy={task.launching || undefined}
+        aria-expanded={groupOpen || undefined}
+        aria-controls={grouped ? taskbarGroupChooserId(entry) : undefined}
+        data-task-state={task.state}
+        disabled={task.launching}
+        onClick={() => void activateTaskbar(entry)}
+      ><ShellIcon icon={entry.icon} label={entry.name} context="taskbar" />{badge}</button>;
     })}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
     <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
   </div>;
