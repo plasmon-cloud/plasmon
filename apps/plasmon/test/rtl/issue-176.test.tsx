@@ -63,11 +63,17 @@ test("#176 native app hosts claim first-party content while Browser edit and ifr
     const ownedEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
     await act(async () => { browser.dispatchEvent(ownedEvent); });
     expect(ownedEvent.defaultPrevented).toBe(true);
+    await waitFor(() => expect(app.getByRole("menu", { name: "Application context menu" })).toBeDefined());
+    expect(app.getByRole("menuitem", { name: "No actions available" }).getAttribute("aria-disabled")).toBe("true");
+
+    await app.user.keyboard("{Escape}");
+    await waitFor(() => expect(app.queryByRole("menu", { name: "Application context menu" })).toBeNull());
 
     const address = within(browser).getByRole("textbox", { name: "Web address" });
     const editableEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
     await act(async () => { address.dispatchEvent(editableEvent); });
     expect(editableEvent.defaultPrevented).toBe(false);
+    expect(app.queryByRole("menu", { name: "Application context menu" })).toBeNull();
 
     await waitFor(() => expect(browser.querySelector("iframe")).not.toBeNull());
     const frame = browser.querySelector("iframe");
@@ -75,6 +81,7 @@ test("#176 native app hosts claim first-party content while Browser edit and ifr
     const frameEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
     await act(async () => { frame.dispatchEvent(frameEvent); });
     expect(frameEvent.defaultPrevented).toBe(false);
+    expect(app.queryByRole("menu", { name: "Application context menu" })).toBeNull();
   } finally {
     app.dispose();
   }
