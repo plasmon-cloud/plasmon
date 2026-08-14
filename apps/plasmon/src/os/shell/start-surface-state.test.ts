@@ -34,7 +34,7 @@ test("#194 Start projection keeps canonical trail identity and filters only the 
   expect(view.canGoBack).toBe(true);
   expect(view.query).toBe(" calc ");
   expect(view.visibleItems.map((item) => item.id)).toEqual(["calculator"]);
-  expect(view.status).toEqual({ kind: "ready" });
+  expect(view.status).toEqual({ loading: false, empty: false, error: null });
 });
 
 test("#194 Start projection preserves the last filesystem snapshot while loading", () => {
@@ -48,28 +48,45 @@ test("#194 Start projection preserves the last filesystem snapshot while loading
   });
 
   expect(view.visibleItems).toEqual([stale]);
-  expect(view.status).toEqual({ kind: "loading" });
+  expect(view.status).toEqual({ loading: true, empty: false, error: null });
 });
 
-test("#194 Start projection keeps stale rows alongside a truthful error and derives empty from the filtered view", () => {
+test("#194 Start projection preserves independent error, loading, and empty presentation", () => {
   const stale = node("stale", "Existing shortcut.url");
-  const errored = projectStartSurfaceView({
+  const erroredLoading = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
     items: [stale],
     query: "",
     busy: true,
     error: "filesystem unavailable",
   });
-  expect(errored.visibleItems).toEqual([stale]);
-  expect(errored.status).toEqual({ kind: "error", message: "filesystem unavailable" });
+  expect(erroredLoading.visibleItems).toEqual([stale]);
+  expect(erroredLoading.status).toEqual({
+    loading: true,
+    empty: false,
+    error: "filesystem unavailable",
+  });
 
-  const empty = projectStartSurfaceView({
+  const erroredEmpty = projectStartSurfaceView({
+    trail: [{ id: "start-root", name: "Start Menu" }],
+    items: [],
+    query: "",
+    busy: false,
+    error: "filesystem unavailable",
+  });
+  expect(erroredEmpty.status).toEqual({
+    loading: false,
+    empty: true,
+    error: "filesystem unavailable",
+  });
+
+  const filteredEmpty = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
     items: [stale],
     query: "missing",
     busy: false,
     error: null,
   });
-  expect(empty.visibleItems).toEqual([]);
-  expect(empty.status).toEqual({ kind: "empty" });
+  expect(filteredEmpty.visibleItems).toEqual([]);
+  expect(filteredEmpty.status).toEqual({ loading: false, empty: true, error: null });
 });
