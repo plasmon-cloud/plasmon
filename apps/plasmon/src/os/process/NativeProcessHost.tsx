@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { FsService, ProcessController, ProcessId } from "../contracts/index.ts";
+import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
 import type { NativeApplicationRegistry } from "./registry.ts";
 
 export interface NativeProcessHostProps {
@@ -93,14 +94,20 @@ export function NativeProcessHost({
       fallback={errorFallback}
       {...(onError ? { onError } : {})}
     >
-      <Suspense fallback={fallback}>
-        <HostedApplication
-          processId={record.id}
-          target={record.target}
-          fs={fs}
-          process={process}
-        />
-      </Suspense>
+      <div
+        data-plasmon-owned-surface
+        style={{ display: "contents" }}
+        onContextMenu={(event) => { claimFirstPartyContextMenu(event); }}
+      >
+        <Suspense fallback={fallback}>
+          <HostedApplication
+            processId={record.id}
+            target={record.target}
+            fs={fs}
+            process={process}
+          />
+        </Suspense>
+      </div>
     </NativeHostErrorBoundary>
   );
 }
