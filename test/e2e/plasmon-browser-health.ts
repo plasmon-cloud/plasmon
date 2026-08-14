@@ -12,6 +12,8 @@ export interface BrowserHealthIssue {
   readonly message: string;
   readonly url?: string;
   readonly status?: number;
+  readonly resourceType?: string;
+  readonly responseStarted?: boolean;
 }
 
 export interface BrowserHealthAllowRule {
@@ -53,6 +55,8 @@ function allowRuleMatches(rule: BrowserHealthAllowRule, issue: BrowserHealthIssu
 function formatIssue(issue: BrowserHealthIssue): string {
   const details = [issue.kind, issue.message];
   if (issue.status !== undefined) details.push(`status=${issue.status}`);
+  if (issue.resourceType !== undefined) details.push(`resourceType=${issue.resourceType}`);
+  if (issue.responseStarted !== undefined) details.push(`responseStarted=${issue.responseStarted}`);
   if (issue.url) details.push(issue.url);
   return details.join(" | ");
 }
@@ -126,11 +130,13 @@ function consoleIssue(message: ConsoleMessage): BrowserHealthIssue | null {
   };
 }
 
-function failedRequestIssue(request: Request): BrowserHealthIssue {
+function failedRequestIssue(request: Request, responseStarted: boolean): BrowserHealthIssue {
   return {
     kind: "requestfailed",
     message: request.failure()?.errorText ?? "request failed",
     url: request.url(),
+    resourceType: request.resourceType(),
+    responseStarted,
   };
 }
 
@@ -159,6 +165,7 @@ export function installPlasmonBrowserHealth(
 ): InstalledBrowserHealth {
   const origins = normalizedOrigins(options.firstPartyOrigins);
   const ledger = new BrowserHealthLedger(options);
+  const responseStarted = new WeakSet<Request>();
 
   const onPageError = (error: Error): void => {
     ledger.record({ kind: "pageerror", message: error.message });
@@ -168,9 +175,12 @@ export function installPlasmonBrowserHealth(
     if (issue) ledger.record(issue);
   };
   const onRequestFailed = (request: Request): void => {
-    if (isFirstParty(request.url(), origins)) ledger.record(failedRequestIssue(request));
+    if (isFirstParty(request.url(), origins)) {
+      ledger.record(failedRequestIssue(request, responseStarted.has(request)));
+    }
   };
   const onResponse = (response: Response): void => {
+    responseStarted.add(response.request());
     if (response.status() >= 400 && isFirstParty(response.url(), origins)) {
       ledger.record(failedResponseIssue(response));
     }
@@ -192,5 +202,3 @@ export function installPlasmonBrowserHealth(
     },
   };
 }
-
-// #217 baseline trigger: test-only no-op; packaged product inputs remain identical to release.
