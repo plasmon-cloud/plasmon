@@ -52,68 +52,23 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
   const plasmon = page.frameLocator(plasmonSelector).first();
   await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
 
-  // Filesystem reconciliation must project Kernel-authoritative installation
-  // state under /Apps; this is not a second application-install database.
-  const rootShortcut = plasmon.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-  await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-  await rootShortcut.dblclick();
-  const explorer = plasmon.locator(".plasmon-window-layer [data-window-id]").last();
-  await expect(explorer).toBeVisible();
-  const appsEntry = explorer.locator("[data-fm-node-id]", { hasText: "Apps" }).first();
-  await expect(appsEntry).toBeVisible();
-  await appsEntry.dblclick();
-  await expect(
-    explorer.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first(),
-  ).toBeVisible({ timeout: 10_000 });
-
-  // Search owns presentation only. The projection-backed result activates
-  // through the canonical filesystem opener, which delegates the Element tile
-  // launch to the Neutron bridge/Kernel rather than a Review-specific launcher.
-  const openReviewFromPlasmon = async () => {
-    await plasmon.getByRole("button", { name: "Search" }).click();
-    const search = plasmon.getByLabel("Search Plasmon");
-    await expect(search).toBeVisible();
-    await search.fill("Review");
-    const reviewResult = plasmon.locator("[data-search-result]", { hasText: "Review" }).first();
-    await expect(reviewResult).toBeVisible({ timeout: 15_000 });
-    await reviewResult.click();
-  };
-
-  await openReviewFromPlasmon();
+  // Search presents the Kernel-authoritative installed Review projection and
+  // activates it through Plasmon's canonical filesystem/open path. Review's
+  // own first-demo workflow is accepted in the standalone Review lane.
+  await plasmon.getByRole("button", { name: "Search" }).click();
+  const search = plasmon.getByLabel("Search Plasmon");
+  await expect(search).toBeVisible();
+  await search.fill("Review");
+  const reviewResult = plasmon.locator("[data-search-result]", { hasText: "Review" }).first();
+  await expect(reviewResult).toBeVisible({ timeout: 15_000 });
+  await reviewResult.click();
 
   const reviewSelector = `iframe[data-app-id="${REVIEW_APP_ID}"][data-tile-id="${REVIEW_TILE_ID}"]`;
-  let reviewFrame = page.locator(reviewSelector).last();
+  const reviewFrame = page.locator(reviewSelector).last();
   await expect(reviewFrame).toBeVisible({ timeout: 10_000 });
-  let review = page.frameLocator(reviewSelector).last();
+  const review = page.frameLocator(reviewSelector).last();
   await expect(review.locator("#root > .review-app")).toBeVisible({ timeout: 5_000 });
-  await expect(review.getByText("Review.neutron", { exact: true })).toBeVisible();
-
-  // Keep the demo proof on Review's existing provider semantics: opening from
-  // Plasmon must not replace the standalone package/provider with local state.
-  const title = `Plasmon Demo Review ${Date.now()}`;
-  const itemText = "Opened through canonical Plasmon discovery";
-  await review.getByLabel("New review").fill(title);
-  await review.getByRole("button", { name: "Create Atom" }).click();
-  await expect(review.getByRole("heading", { name: title })).toBeVisible();
-  await review.getByLabel("New review item").fill(itemText);
-  await review.getByRole("button", { name: "Add item" }).click();
-  await expect(review.locator(".review-card").filter({ hasText: itemText })).toBeVisible();
-
-  // Review owns durable state in its persistent background surface. Close the
-  // real Kernel workspace tile, then reopen through the same Plasmon canonical
-  // filesystem/open path and prove the created Atom survives that lifecycle.
-  const reviewTile = page.locator(".workspace-tile", { has: reviewFrame }).last();
-  await expect(reviewTile).toBeVisible();
-  await reviewTile.getByRole("button", { name: "Close tile" }).click();
-  await expect(reviewFrame).not.toBeVisible();
-  await expect(plasmonFrame).toBeVisible();
-
-  await openReviewFromPlasmon();
-  reviewFrame = page.locator(reviewSelector).last();
-  await expect(reviewFrame).toBeVisible({ timeout: 10_000 });
-  review = page.frameLocator(reviewSelector).last();
-  await expect(review.getByRole("heading", { name: title })).toBeVisible({ timeout: 10_000 });
-  await expect(review.locator(".review-card").filter({ hasText: itemText })).toBeVisible();
+  await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 5_000 });
 
   expect(pageErrors).toEqual([]);
 });

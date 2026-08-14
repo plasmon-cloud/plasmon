@@ -88,6 +88,18 @@ jobs:
         run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npm --workspace neutron-review run attest:installed'
       - name: Exercise packaged Review in vanilla Neutron
         run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npx playwright test -c apps/review/playwright.config.ts'
+      - name: Upload Review browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-browser-evidence-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            playwright-report
+            test-results
+            apps/review/playwright-report
+            apps/review/test-results
       - name: Stop vanilla Neutron
         if: always()
         run: |

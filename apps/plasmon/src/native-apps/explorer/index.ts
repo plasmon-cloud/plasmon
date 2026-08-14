@@ -11,6 +11,7 @@ import type {
   FileManagerTrashAuthority,
   FileOperationClipboard,
 } from "../../os/file-manager/index.ts";
+import { SYSTEM_ICON_ASSETS } from "../../os/visual/assets.ts";
 
 export type { ExplorerAppProps } from "./ExplorerApp.tsx";
 export * from "./history.ts";
@@ -19,7 +20,7 @@ export const explorerAppDefinition: NativeAppDefinition = {
   id: "native:explorer",
   handlerId: "native:explorer",
   name: "Files",
-  icon: "system:folder",
+  icon: SYSTEM_ICON_ASSETS["file-manager"],
   singleton: false,
   defaultWindow: { width: 960, height: 650, minWidth: 640, minHeight: 420 },
   associations: [],
