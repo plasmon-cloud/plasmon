@@ -6,18 +6,69 @@ const gates = [
     context: "Packaged refactor smoke",
     scopeId: "packaged_smoke_scope",
     output: "run_packaged_smoke",
+    scopePatterns: [
+      "apps/plasmon/*",
+      "apps/review/*",
+      "apps/kernel/*",
+      "packages/neutron-provision/*",
+      "packages/neutron-tools/*",
+      "test/e2e/plasmon-demo-environment.ts",
+      "test/e2e/plasmon-browser-health.ts",
+      "test/e2e/plasmon-refactor-smoke.spec.ts",
+      "playwright.config.ts",
+      "plasmon-local.ndeploy.json",
+      "package.json",
+      "package-lock.json",
+      ".github/workflows/plasmon-browser-smoke-ci.yml",
+    ],
   },
   {
     path: ".github/workflows/plasmon-browser-ci.yml",
     context: "Packaged Playwright specialist acceptance",
     scopeId: "packaged_browser_scope",
     output: "run_packaged_browser",
+    scopePatterns: [
+      "apps/plasmon/*",
+      "apps/review/*",
+      "apps/kernel/*",
+      "packages/neutron-provision/*",
+      "packages/neutron-tools/*",
+      "test/e2e/plasmon-demo-environment.ts",
+      "test/e2e/plasmon-browser-health.ts",
+      "test/e2e/plasmon-refactor-smoke.spec.ts",
+      "test/e2e/plasmon-golden-path.spec.ts",
+      "test/e2e/plasmon-monaco-packaged.spec.ts",
+      "test/e2e/plasmon-review-demo.spec.ts",
+      "test/e2e/plasmon-emulatorjs-proof.spec.ts",
+      "test/e2e/plasmon-demo-game.spec.ts",
+      "playwright.config.ts",
+      "plasmon-local.ndeploy.json",
+      "package.json",
+      "package-lock.json",
+      ".github/workflows/plasmon-browser-ci.yml",
+    ],
   },
   {
     path: ".github/workflows/plasmon-browser-persistence-ci.yml",
     context: "Packaged browser persistence",
     scopeId: "persistence_scope",
     output: "run_persistence",
+    scopePatterns: [
+      "apps/plasmon/*",
+      "apps/kernel/src/workspace/AppBackgroundFrames.tsx",
+      "apps/kernel/src/capabilities/*",
+      "apps/kernel/src/runtime_deployment.ts",
+      "packages/neutron-compiler/*",
+      "packages/neutron-provision/*",
+      "packages/neutron-tools/*",
+      "test/e2e/local-playwright-identity.ts",
+      "test/e2e/plasmon-demo-environment.ts",
+      "test/e2e/plasmon-persistence.spec.ts",
+      "playwright.config.ts",
+      "plasmon-local.ndeploy.json",
+      "package-lock.json",
+      ".github/workflows/plasmon-browser-persistence-ci.yml",
+    ],
   },
 ];
 
@@ -55,6 +106,16 @@ for (const gate of gates) {
 
   if (!source.includes(`id: ${gate.scopeId}`)) {
     throw new Error(`${gate.context} is missing its cheap-skip scope detector`);
+  }
+
+  for (const pattern of gate.scopePatterns) {
+    if (!source.includes(pattern)) {
+      throw new Error(`${gate.context} cheap-skip scope lost required path pattern ${pattern}`);
+    }
+  }
+
+  if (!source.includes(`echo "${gate.output}=true" >> "$GITHUB_OUTPUT"`)) {
+    throw new Error(`${gate.context} must run its expensive path outside pull_request events`);
   }
 
   const guard = `if: steps.${gate.scopeId}.outputs.${gate.output} == 'true'`;
