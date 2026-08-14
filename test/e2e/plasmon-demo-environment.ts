@@ -1,5 +1,8 @@
 import { access, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { main as runProvisionCli } from "../../packages/neutron-provision/src/cli.ts";
+import { loadNdeployConfig } from "../../packages/neutron-provision/src/config.ts";
+import { packageArchiveFilename } from "../../packages/neutron-tools/src/package_archive.ts";
 
 export const DEFAULT_PLASMON_DEMO_MANIFEST = "plasmon-local.ndeploy.json";
 
@@ -18,6 +21,11 @@ interface PlasmonDemoDeploymentManifest {
 interface WorkspacePackageJson {
   name?: string;
   scripts?: Record<string, string>;
+}
+
+interface WorkspaceNeutronManifest {
+  id?: string;
+  version?: number;
 }
 
 export interface DemoArtifact {
@@ -72,17 +80,38 @@ export async function resolveDemoArtifacts(
 
   const artifacts: DemoArtifact[] = [];
   const seenWorkspaces = new Set<string>();
-  for (const archivePath of artifactPaths) {
-    const archiveFile = assertRepositoryPath(repoRoot, archivePath, "Deployment artifact");
-    const workspaceDirectory = dirname(archiveFile);
+  for (const configuredArchivePath of artifactPaths) {
+    const configuredArchiveFile = assertRepositoryPath(
+      repoRoot,
+      configuredArchivePath,
+      "Deployment artifact",
+    );
+    const workspaceDirectory = dirname(configuredArchiveFile);
     const packageJson = await readJson<WorkspacePackageJson>(resolve(workspaceDirectory, "package.json"));
     const workspace = packageJson.name?.trim();
     if (!workspace) {
-      throw new Error(`Deployment artifact workspace has no package name: ${archivePath}`);
+      throw new Error(`Deployment artifact workspace has no package name: ${configuredArchivePath}`);
     }
     if (!packageJson.scripts?.package) {
       throw new Error(`Deployment artifact workspace has no production package command: ${workspace}`);
     }
+
+    const neutronManifest = await readJson<WorkspaceNeutronManifest>(
+      resolve(workspaceDirectory, "neutron.json"),
+    );
+    if (typeof neutronManifest.id !== "string" || neutronManifest.id.length === 0) {
+      throw new Error(`Deployment artifact workspace has no Neutron package id: ${workspace}`);
+    }
+    if (typeof neutronManifest.version !== "number") {
+      throw new Error(`Deployment artifact workspace has no Neutron package version: ${workspace}`);
+    }
+    const archiveFile = resolve(
+      workspaceDirectory,
+      packageArchiveFilename(neutronManifest.id, neutronManifest.version),
+    );
+    assertRepositoryPath(repoRoot, archiveFile, "Derived deployment artifact");
+    const archivePath = relative(repoRoot, archiveFile);
+
     if (seenWorkspaces.has(workspace)) continue;
     seenWorkspaces.add(workspace);
     artifacts.push({
@@ -141,14 +170,28 @@ export async function provisionDemoEnvironment(
 ): Promise<void> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
   const manifestPath = options.manifestPath ?? DEFAULT_PLASMON_DEMO_MANIFEST;
-  assertRepositoryPath(repoRoot, manifestPath, "Deployment manifest");
+  const manifestFile = assertRepositoryPath(repoRoot, manifestPath, "Deployment manifest");
+  const artifacts = action === "status"
+    ? undefined
+    : await resolveDemoArtifacts({ ...options, repoRoot });
 
-  if (action !== "status") {
-    const artifacts = await resolveDemoArtifacts({ ...options, repoRoot });
+  if (artifacts !== undefined) {
     await verifyDemoArchives(artifacts, { ...options, repoRoot });
   }
 
-  await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
+  await runProvisionCli([manifestFile, action], console, {
+    loadConfig: async (filename) => {
+      const config = await loadNdeployConfig(filename);
+      if (artifacts === undefined) return config;
+      if (config.localPackagePaths === undefined) {
+        throw new Error("Plasmon demo provisioning requires a PocketIC inline deployment manifest");
+      }
+      return {
+        ...config,
+        localPackagePaths: artifacts.map(({ archivePath }) => archivePath),
+      };
+    },
+  });
 }
 
 async function main(): Promise<void> {
