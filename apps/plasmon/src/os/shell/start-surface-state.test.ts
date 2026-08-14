@@ -32,7 +32,7 @@ test("#194 Start projection keeps canonical trail identity and filters only the 
   expect(view.trail).toEqual([root, accessories]);
   expect(view.trailLabel).toBe("Start Menu / Accessories");
   expect(view.canGoBack).toBe(true);
-  expect(view.query).toBe("calc");
+  expect(view.query).toBe(" calc ");
   expect(view.visibleItems.map((item) => item.id)).toEqual(["calculator"]);
   expect(view.status).toEqual({ kind: "ready" });
 });
