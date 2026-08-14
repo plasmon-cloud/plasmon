@@ -59,14 +59,3 @@ export function claimFirstPartyContextMenu(
   event.preventDefault();
   return true;
 }
-
-/**
- * Use at an explicitly editable child boundary nested inside an older owner
- * that would otherwise claim the bubbled event. This preserves browser/editor
- * default behavior while preventing the ancestor from stealing ownership.
- */
-export function preserveEditableContextMenu(
-  event: Pick<Event, "stopPropagation">,
-): void {
-  event.stopPropagation();
-}
