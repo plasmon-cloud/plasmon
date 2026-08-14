@@ -17,6 +17,7 @@ import type {
   NeutronBridge,
   OpenService,
   ProcessController,
+  ProcessId,
   WindowManager,
 } from "../contracts/index.ts";
 import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
@@ -29,7 +30,11 @@ import {
 import { addCalendarMonths, buildCalendarMonth, startOfCalendarMonth } from "./calendar.ts";
 import { ShellIcon } from "./icon.tsx";
 import {
+  closeNativeTaskContextProcess,
+  nativeTaskContextProcessId,
+  placeShellContextMenu,
   resolveShellContextMenuPolicy,
+  shellContextMenuHeight,
   shouldDismissShellFlyout,
   taskbarPinAction,
   type ShellContextMenuPolicy,
@@ -46,10 +51,12 @@ import {
   cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
   saveShellPreferencesNonDestructive,
+  SHELL_TASKBAR_ALIGNMENTS,
   SHELL_THEME_IDS,
   ShellPreferenceStore,
   togglePinned,
   type ShellPreferences,
+  type ShellTaskbarAlignment,
   type ShellThemeId,
 } from "./preferences.ts";
 import {
@@ -94,6 +101,8 @@ type ShellContextMenuState = {
   policy: Exclude<ShellContextMenuPolicy, "none">;
   handlerId?: string;
   elementId?: string;
+  processId?: ProcessId;
+  taskbarBackground?: boolean;
 } | null;
 
 const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false };
@@ -178,10 +187,6 @@ function focusRelative(event: ReactKeyboardEvent<HTMLElement>, selector: string)
   else if (event.key === "ArrowDown") next = index < 0 || index >= items.length - 1 ? 0 : index + 1;
   event.preventDefault();
   items[next]?.focus();
-}
-
-function contextPosition(client: number, viewport: number, size: number): number {
-  return Math.max(8, Math.min(client, Math.max(8, viewport - size - 8)));
 }
 
 export function Shell({
@@ -355,6 +360,10 @@ export function Shell({
     pinnedElements: togglePinned(effectivePreferences.pinnedElements, elementId),
   }), [effectivePreferences, persistPreferences]);
   const selectTheme = useCallback((themeId: ShellThemeId) => persistPreferences({ ...effectivePreferences, themeId }), [effectivePreferences, persistPreferences]);
+  const selectTaskbarAlignment = useCallback((taskbarAlignment: ShellTaskbarAlignment) => persistPreferences({
+    ...effectivePreferences,
+    taskbarAlignment,
+  }), [effectivePreferences, persistPreferences]);
 
   const openElement = useCallback(async (elementId: string, options?: { tileId?: string; view?: string }) => {
     setActionError(null);
@@ -495,6 +504,8 @@ export function Shell({
     if (target.closest("input,textarea,[contenteditable='true']")) return;
     const nativeTask = target.closest<HTMLElement>("[data-shell-context-native]");
     const elementTask = target.closest<HTMLElement>("[data-shell-context-element]");
+    const taskbar = target.closest<HTMLElement>("[data-shell-taskbar]");
+    const taskbarBackground = !!taskbar && !nativeTask && !elementTask && !target.closest("button");
     const policy = resolveShellContextMenuPolicy({
       shellOwned: !!target.closest("[data-shell-owned-surface]"),
       nativeTask: !!nativeTask,
@@ -504,12 +515,35 @@ export function Shell({
     event.preventDefault();
     event.stopPropagation();
     setOpenTaskbarGroupHandlerId(null);
+
+    const contextProcessId = nativeTask?.dataset.shellContextProcess as ProcessId | undefined;
+    const itemCount = taskbarBackground
+      ? 2
+      : policy === "native-task"
+        ? (contextProcessId ? 2 : 1)
+        : policy === "element-task"
+          ? 1
+          : 3;
+    const source = nativeTask ?? elementTask;
+    const sourceRect = source?.getBoundingClientRect();
+    const position = placeShellContextMenu(
+      sourceRect
+        ? { left: sourceRect.left, top: sourceRect.top, width: sourceRect.width, height: sourceRect.height }
+        : { left: event.clientX, top: event.clientY, width: 0, height: 0 },
+      {
+        width: typeof window === "undefined" ? 1024 : window.innerWidth,
+        height: typeof window === "undefined" ? 768 : window.innerHeight,
+      },
+      { width: 230, height: shellContextMenuHeight(itemCount) },
+    );
+
     setContextMenu({
-      x: contextPosition(event.clientX, typeof window === "undefined" ? 1024 : window.innerWidth, 230),
-      y: contextPosition(event.clientY, typeof window === "undefined" ? 768 : window.innerHeight, 180),
+      ...position,
       policy,
       ...(nativeTask?.dataset.shellContextNative ? { handlerId: nativeTask.dataset.shellContextNative } : {}),
+      ...(contextProcessId ? { processId: contextProcessId } : {}),
       ...(elementTask?.dataset.shellContextElement ? { elementId: elementTask.dataset.shellContextElement } : {}),
+      ...(taskbarBackground ? { taskbarBackground: true } : {}),
     });
   };
 
@@ -565,7 +599,7 @@ export function Shell({
 
     {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" data-shell-owned-surface data-shell-flyout aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => { const owner = elementsById.get(entry.elementId); return <button key={entry.elementId} type="button" data-shell-context-element={entry.elementId} onClick={() => void openElement(entry.elementId)}><ShellIcon icon={owner?.icon ?? SYSTEM_ICON_ASSETS.application} label={owner?.name ?? entry.title} context="start" /><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>; })}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
 
-    {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance persist through the Plasmon filesystem service. Taskbar pins are preferences, not Start shortcuts.</p></section> : null}
+    {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><h3>Taskbar alignment</h3><div className="plasmon-shell__grid">{SHELL_TASKBAR_ALIGNMENTS.map((alignment) => <button key={alignment} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.taskbarAlignment === alignment} onClick={() => selectTaskbarAlignment(alignment)}>{alignment === "center" ? "Center" : "Left"}</button>)}</div><p>Pins and appearance persist through the Plasmon filesystem service. Taskbar pins and alignment are preferences, not Start shortcuts.</p></section> : null}
 
     {openTaskbarGroup ? <TaskbarGroupChooser
       entry={openTaskbarGroup}
@@ -581,15 +615,20 @@ export function Shell({
     /> : null}
 
     {contextMenu ? <section
-      className="plasmon-shell__panel"
+      className="plasmon-shell__panel plasmon-shell__context-menu"
       data-shell-owned-surface
       data-shell-context-menu
       role="menu"
-      aria-label="Shell context menu"
+      aria-label={contextMenu.taskbarBackground || contextPin ? "Taskbar context menu" : "Shell context menu"}
       style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, bottom: "auto", transform: "none", width: 230, padding: 8 }}
-    ><div className="plasmon-shell__list">{contextPin ? <button type="button" role="menuitem" title={contextPin.action.label} aria-label={contextPin.action.label} onClick={() => { if (contextPin.kind === "native") toggleNativePin(contextPin.id); else toggleElementPin(contextPin.id); setContextMenu(null); }}><PinIcon pinned={contextPin.action.pinned} /><span><strong>{contextPin.action.label}</strong></span></button> : <><button type="button" role="menuitem" onClick={() => { setFlyout("start"); setContextMenu(null); }}>Start</button><button type="button" role="menuitem" onClick={() => { setFlyout("search"); setContextMenu(null); }}>Search</button><button type="button" role="menuitem" onClick={() => { setFlyout("settings"); setContextMenu(null); }}>Settings</button></>}</div></section> : null}
+    ><div className="plasmon-shell__list">{contextMenu.taskbarBackground ? <>
+      {SHELL_TASKBAR_ALIGNMENTS.map((alignment) => <button key={alignment} type="button" role="menuitemradio" aria-checked={effectivePreferences.taskbarAlignment === alignment} onClick={() => { selectTaskbarAlignment(alignment); setContextMenu(null); }}>{alignment === "center" ? "Center taskbar icons" : "Left-align taskbar icons"}</button>)}
+    </> : contextPin ? <>
+      <button type="button" role="menuitem" title={contextPin.action.label} aria-label={contextPin.action.label} onClick={() => { if (contextPin.kind === "native") toggleNativePin(contextPin.id); else toggleElementPin(contextPin.id); setContextMenu(null); }}><PinIcon pinned={contextPin.action.pinned} /><span><strong>{contextPin.action.label}</strong></span></button>
+      {contextMenu.processId ? <button type="button" role="menuitem" onClick={() => { closeNativeTaskContextProcess(process, contextMenu.processId); setContextMenu(null); }}>Close</button> : null}
+    </> : <><button type="button" role="menuitem" onClick={() => { setFlyout("start"); setContextMenu(null); }}>Start</button><button type="button" role="menuitem" onClick={() => { setFlyout("search"); setContextMenu(null); }}>Search</button><button type="button" role="menuitem" onClick={() => { setFlyout("settings"); setContextMenu(null); }}>Settings</button></>}</div></section> : null}
 
-    <nav className="plasmon-shell__taskbar" data-shell-owned-surface aria-label="Taskbar"><div className="plasmon-shell__taskbar-main"><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => {
+    <nav className="plasmon-shell__taskbar" data-shell-owned-surface data-shell-taskbar data-taskbar-alignment={effectivePreferences.taskbarAlignment} aria-label="Taskbar"><div className="plasmon-shell__taskbar-main" data-shell-taskbar-main><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => {
       const task = entry.presentation;
       const className = `plasmon-shell__task-button${task.running ? " is-running" : ""}${task.active ? " is-focused" : ""}`;
       const badge = task.badge ? <small aria-hidden="true">{task.badge}</small> : null;
@@ -598,10 +637,12 @@ export function Shell({
       }
       const grouped = entry.members.length > 1;
       const groupOpen = grouped && openTaskbarGroupHandlerId === entry.handlerId;
+      const contextProcessId = nativeTaskContextProcessId(entry.members);
       return <button
         key={entry.id}
         type="button"
         data-shell-context-native={entry.handlerId}
+        {...(contextProcessId ? { "data-shell-context-process": contextProcessId } : {})}
         {...(grouped ? { "data-shell-task-group-toggle": "" } : {})}
         className={className}
         aria-label={`${task.accessibilityLabel}${grouped ? `; ${entry.members.length} windows` : ""}`}
@@ -613,7 +654,7 @@ export function Shell({
         disabled={task.launching}
         onClick={() => void activateTaskbar(entry)}
       ><ShellIcon icon={entry.icon} label={entry.name} context="taskbar" />{badge}</button>;
-    })}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
+    })}</div></div><div className="plasmon-shell__taskbar-status" data-shell-taskbar-status>{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
     <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
   </div>;
 }
