@@ -1,14 +1,17 @@
 # #100 release dependency metadata audit
 
-Snapshot: live GraphQL query 2026-08-13 against `plasmon-cloud/plasmon`; no GitHub metadata was mutated by Luna-D.
+Snapshot: live GraphQL query 2026-08-13 21:07 -0400 against `plasmon-cloud/plasmon`; no GitHub metadata was mutated by Luna-D. The executable gate is `.red/issue-100.red.test.ts`.
 
 ## Mechanical query result
 
-GraphQL `Issue.blockedBy` / `Issue.blocking` over all open repository Issues returned exactly one native relationship:
+GraphQL pagination over all repository Issues currently returned these native relationships:
 
 | dependent | blocked by | state | interpretation |
 |---|---|---|---|
+| #32 | #30 | both closed | stale native relationship; remove rather than preserve historical blockage |
 | #90 | #49 | #90 open, #49 closed | stale native dependency; #90 should be re-evaluated, not treated as blocked |
+
+The live semantic RED also finds missing native edges for open blocked-label Issues: #78 is missing open prerequisites #44/#51 (closed #31 is correctly not required), #81 is missing #72, and #83 is missing #48. Exceptional blocked labels remain #38, #56, #124, #125, and #127.
 
 The REST `/issues/<n>/dependencies` route is unavailable (404), but the GraphQL schema exposes `addBlockedBy` and `removeBlockedBy` mutations. Therefore this is not a missing API capability; it is an unperformed metadata migration and a Coordinator-authority task.
 
@@ -21,7 +24,7 @@ Live label query found: #38, #78, #81, #83, #124, #125, #127, and unrelated Kern
 - #125/#127: deliberate MTN/live-sharing release boundary;
 - #56: unrelated Kernel CI issue.
 
-For #78/#81/#83 the only stated prerequisites are canonical Issues (#31/#44/#51, #72, #48), so the generic label should become native dependencies once the Coordinator confirms direction. #78 additionally waits on active #51; #81 waits on #72 (already implemented); #83 waits on #48 (still open). #100 itself is not an implementation dependency.
+For #78/#81/#83 the only stated prerequisites are canonical Issues (#31/#44/#51, #72, #48). Closed #31 must not remain a dependency; the generic label should become native dependencies for open #44/#51, #72, and #48 once the Coordinator confirms direction. #78 additionally waits on active #51; #81 waits on #72; #83 waits on #48. #100 itself is not an implementation dependency.
 
 ## Stale prose relationships
 
@@ -36,4 +39,4 @@ The Issue #100 body lists #42<-#41, #61<-#32, #63<-#62, #67<-#33, #70<-#31/#32, 
 
 ## Corrective action / disposition
 
-**CHARACTERIZATION READY — METADATA AUDIT COMPLETE; COORDINATOR MUTATION REQUIRED.** The audit has a deterministic evidence destination (this document plus a repeatable GraphQL query), but cannot claim the Issue complete until native relationships/labels/prose are actually reconciled by the authorized Coordinator. No production or Issue state was changed. Queue #100 remains claimed by Luna-D until Coordinator applies and verifies metadata changes.
+**HEADLESS RED — semantic metadata gate staged; Coordinator mutation required.** `.red/issue-100.red.test.ts` validates dependency direction, closed-prerequisite cleanup, exceptional blockers, and required native edges without asserting prose formatting or source layout. The live gate fails with the exact stale/missing relationships listed above. No production or Issue state was changed. Queue #100 remains claimed by Luna-D until Coordinator applies and verifies metadata changes.

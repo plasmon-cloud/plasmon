@@ -41,7 +41,7 @@ Fields are abbreviated in the table: **target** = canonical acceptance authority
 | #94 video thumbnails | Visual/media; open; A | none | CHARACTERIZATION READY | `.red/issue-94.red.md` / media tests | no focused executable gate |
 | #95 selected long labels | FileEntry geometry; open; A | PR159 merged; #191 distinction | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | `.red/issue-95.red.md` / label tests | must not be conflated with #191 bounds |
 | #96 native identity assets | packaging/Visual; open; C | none | CHARACTERIZATION READY | no packet / packaging tests | asset acceptance not staged |
-| #100 dependency metadata | repository CI; open; D | none | RED PROMOTION GAP | no packet / GitHub dependency audit | native dependency evidence not recorded |
+| #100 dependency metadata | repository/GraphQL metadata; open; D | Coordinator migration | HEADLESS RED — semantic gate | `.red/issue-100.red.test.ts` + `r2-dependency-metadata-audit.md` | live gate fails stale #32→#30/#90→#49 and missing #78/#81/#83 native edges; no prose/source-shape assertions |
 | #107 packaged baseline | Testing/Integration; open; D | PR152 merged; #167/#187 | CLOSURE AUDIT COMPLETE | baseline docs / smoke and fast tests / B | issue says needs verification; packaged result is not re-executed here |
 | #109 shared pin icon | Shell/Visual; open; A/B | PR150 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / visual + taskbar tests | closure state mismatch |
 | #110 hidden-file preference | FileManager/FsService; open; A | PR151 merged | ALREADY GREEN — COMPLETE ACCEPTANCE PROVEN | historical / `preferences.test.ts` | closure state mismatch |
