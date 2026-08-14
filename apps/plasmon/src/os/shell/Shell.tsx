@@ -19,6 +19,7 @@ import type {
   ProcessController,
   WindowManager,
 } from "../contracts/index.ts";
+import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import { PinIcon } from "../visual/primitives.tsx";
 import {
   activateSearchFilesystemResult,
@@ -455,7 +456,7 @@ export function Shell({
     if (target.kind === "native") {
       const app = nativeByHandler.get(target.handlerId);
       return {
-        ...(app?.icon ? { icon: app.icon } : {}),
+        icon: app?.icon ?? SYSTEM_ICON_ASSETS.application,
         pinned: effectivePreferences.pinnedNative.includes(target.handlerId),
         pinId: target.handlerId,
         pinKind: "native",
@@ -464,13 +465,13 @@ export function Shell({
     if (target.kind === "element") {
       const element = elementsById.get(target.elementId);
       return {
-        ...(element?.icon ? { icon: element.icon } : {}),
+        icon: element?.icon ?? SYSTEM_ICON_ASSETS.application,
         pinned: effectivePreferences.pinnedElements.includes(target.elementId),
         pinId: target.elementId,
         pinKind: "element",
       };
     }
-    return { icon: target.kind === "url" ? "↗" : "□" };
+    return { icon: FILE_TYPE_ICON_ASSETS.file };
   }, [effectivePreferences.pinnedElements, effectivePreferences.pinnedNative, elementsById, nativeByHandler]);
 
   const toggleFlyout = (next: Exclude<Flyout, null>) => {
@@ -537,7 +538,7 @@ export function Shell({
         {startBusy ? <p role="status">Loading Start Menu…</p> : null}
         <div className="plasmon-shell__list" onKeyDown={(event) => focusRelative(event, "[data-start-item]")}>{filteredStartItems.map((node) => {
           const shortcut = parseStartShortcut(node);
-          const presentation = shortcut ? shortcutPresentation(shortcut.target) : { icon: node.kind === "directory" ? "▰" : "□" };
+          const presentation = shortcut ? shortcutPresentation(shortcut.target) : { icon: node.kind === "directory" ? FILE_TYPE_ICON_ASSETS.folder : FILE_TYPE_ICON_ASSETS.file };
           const pinAction = presentation.pinned === undefined ? null : taskbarPinAction(presentation.pinned);
           return <div className="plasmon-shell__row" key={node.id}>
             <button
@@ -547,7 +548,7 @@ export function Shell({
               {...(presentation.pinKind === "element" ? { "data-shell-context-element": presentation.pinId } : {})}
               onClick={() => void openStartNode(node)}
               disabled={busyId === `start:${node.id}`}
-            ><ShellIcon icon={presentation.icon} label={node.name} /><span><strong>{node.name}</strong><small>{node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind}</small></span></button>
+            ><ShellIcon icon={presentation.icon} label={node.name} shortcut={shortcut !== null} context="start" /><span><strong>{node.name}</strong><small>{node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind}</small></span></button>
             {pinAction && presentation.pinId && presentation.pinKind ? <button
               type="button"
               disabled={!preferencesReady}
@@ -568,13 +569,13 @@ export function Shell({
       <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety/result limit; refine the query for more matches.</p> : null}{filteredSearch.map((result) => {
         const presentation = result.kind === "start-shortcut" ? shortcutPresentation(result.target) : null;
         const icon = searchApplicationIcon(result) ?? presentation?.icon;
-        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}>{icon ? <ShellIcon icon={icon} label={result.title} /> : null}<span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
+        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}><ShellIcon icon={icon} label={result.title} shortcut={presentation !== null} context="search" /><span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
       })}{!searchBusy && filteredSearch.length === 0 ? <p>No results in this category.</p> : null}</div>
     </section> : null}
 
     {flyout === "calendar" ? <section className="plasmon-shell__panel plasmon-shell__calendar-panel" data-shell-owned-surface data-shell-flyout aria-label="Clock and calendar"><div className="plasmon-shell__calendar-time"><strong>{clockText}</strong><span>{fullDateTime}</span></div><div className="plasmon-shell__calendar-header"><button type="button" aria-label="Previous month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, -1))}>‹</button><h2>{calendar.label}</h2><button type="button" aria-label="Next month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, 1))}>›</button></div><div className="plasmon-shell__calendar-grid">{calendar.weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}{calendar.days.map((day) => <span key={day.key} className={`${day.inMonth ? "" : "is-outside"}${day.isToday ? " is-today" : ""}`} aria-current={day.isToday ? "date" : undefined}>{day.day}</span>)}</div><button type="button" onClick={() => setCalendarAnchor(startOfCalendarMonth(clock))}>Today</button></section> : null}
 
-    {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" data-shell-owned-surface data-shell-flyout aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => { const owner = elementsById.get(entry.elementId); return <button key={entry.elementId} type="button" data-shell-context-element={entry.elementId} onClick={() => void openElement(entry.elementId)}><ShellIcon icon={owner?.icon} label={owner?.name ?? entry.title} /><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>; })}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
+    {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" data-shell-owned-surface data-shell-flyout aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => { const owner = elementsById.get(entry.elementId); return <button key={entry.elementId} type="button" data-shell-context-element={entry.elementId} onClick={() => void openElement(entry.elementId)}><ShellIcon icon={owner?.icon ?? SYSTEM_ICON_ASSETS.application} label={owner?.name ?? entry.title} context="start" /><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>; })}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
 
     {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance persist through the Plasmon filesystem service. Taskbar pins are preferences, not Start shortcuts.</p></section> : null}
 
@@ -592,8 +593,8 @@ export function Shell({
       const className = `plasmon-shell__task-button${task.running ? " is-running" : ""}${task.active ? " is-focused" : ""}`;
       const badge = task.badge ? <small aria-hidden="true">{task.badge}</small> : null;
       return entry.kind === "element"
-        ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>
-        : <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={className} aria-label={task.accessibilityLabel} aria-pressed={task.active} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>;
+        ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon ?? SYSTEM_ICON_ASSETS.application} label={entry.name} context="taskbar" />{badge}</button>
+        : <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={className} aria-label={task.accessibilityLabel} aria-pressed={task.active} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} context="taskbar" />{badge}</button>;
     })}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
     <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
   </div>;

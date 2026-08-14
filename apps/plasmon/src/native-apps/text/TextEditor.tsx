@@ -8,7 +8,7 @@ import {
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
 import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
 import { controlButtonStyle, controlInputStyle, editorChrome, editorErrorStyle, editorStatusStyle } from "./editorChrome.ts";
-import { editorLanguageForName } from "./editorModel.ts";
+import { editorLanguageForResource } from "./editorModel.ts";
 import { MonacoEditorSurface, monacoEngineStatus, type MonacoCursorState } from "./MonacoEditorSurface.tsx";
 import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
@@ -108,7 +108,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
           <MonacoEditorSurface
             modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}`}
             value={snapshot.text}
-            language={editorLanguageForName(snapshot.name)}
+            language={editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined)}
             readOnly={readOnly}
             ariaLabel="Text content"
             onChange={(value) => sessionRef.current?.edit(value)}

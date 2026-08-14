@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { act, waitFor, within } from "@testing-library/react";
 import type { ExternalElement, FsNode } from "../../src/os/contracts/index.ts";
+import { SYSTEM_ICON_ASSETS } from "../../src/os/visual/assets.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 const reviewElement: ExternalElement = {
@@ -120,6 +121,26 @@ describe("renderPlasmon", () => {
       expect(app.environment.processes()).toHaveLength(0);
       expect(app.environment.windows()).toHaveLength(0);
       await waitFor(() => expect(app.queryByRole("region", { name: "Search" })).toBeNull());
+    } finally {
+      app.dispose();
+    }
+  });
+
+  test("renders shared application fallback for Search results with absent artwork", async () => {
+    const iconlessReview: ExternalElement = { ...reviewElement, icon: undefined };
+    const app = await renderPlasmon({ elements: [iconlessReview] });
+
+    try {
+      await app.user.click(app.getByRole("button", { name: "Search" }));
+      const searchRegion = app.getByRole("region", { name: "Search" });
+      const searchInput = within(searchRegion).getByRole("textbox", { name: "Search Plasmon" });
+      await app.user.type(searchInput, "Review");
+
+      const description = await within(searchRegion).findByText(/Collaborative review workspace\./);
+      const result = description.closest("button");
+      if (!result) throw new Error("Iconless Review Search result did not render as a result button");
+
+      expect(result.querySelector("img")?.getAttribute("src")).toBe(SYSTEM_ICON_ASSETS.application);
     } finally {
       app.dispose();
     }
