@@ -41,6 +41,12 @@ async function contextMenuDefaultPrevented(locator: Locator): Promise<boolean> {
   });
 }
 
+async function dispatchEscape(locator: Locator): Promise<void> {
+  await locator.evaluate((element) => {
+    element.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  });
+}
+
 test("#176 first-party context ownership preserves editable and Browser iframe boundaries", async ({ page }) => {
   const { app, kernelUrl } = await launchPlasmon(page);
 
@@ -48,9 +54,7 @@ test("#176 first-party context ownership preserves editable and Browser iframe b
   await taskbar.click({ button: "right" });
   const shellMenu = app.getByRole("menu", { name: "Shell context menu" });
   await expect(shellMenu).toBeVisible();
-  await taskbar.evaluate((element) => {
-    element.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  });
+  await dispatchEscape(taskbar);
   await expect(shellMenu).toHaveCount(0);
 
   const desktop = app.locator(".fm-root--desktop").first();
@@ -82,13 +86,20 @@ test("#176 first-party context ownership preserves editable and Browser iframe b
   const browser = app.getByRole("region", { name: "Web browser" });
   await expect(browser).toBeVisible();
   expect(await contextMenuDefaultPrevented(browser)).toBe(true);
+  const appMenu = app.getByRole("menu", { name: "Application context menu" });
+  await expect(appMenu).toBeVisible();
+  await expect(appMenu.getByRole("menuitem", { name: "No actions available" })).toHaveAttribute("aria-disabled", "true");
+  await dispatchEscape(browser);
+  await expect(appMenu).toHaveCount(0);
 
   const address = browser.getByRole("textbox", { name: "Web address" });
   expect(await contextMenuDefaultPrevented(address)).toBe(false);
+  await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
   await address.fill(kernelUrl);
   await browser.getByRole("button", { name: "Go" }).click();
 
   const foreignFrame = browser.locator("iframe").first();
   await expect(foreignFrame).toBeVisible();
   expect(await contextMenuDefaultPrevented(foreignFrame)).toBe(false);
+  await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
 });
