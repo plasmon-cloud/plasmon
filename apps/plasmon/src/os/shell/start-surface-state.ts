@@ -30,8 +30,7 @@ export interface StartSurfaceViewInput {
 }
 
 export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurfaceViewState {
-  const query = input.query.trim();
-  const needle = query.toLocaleLowerCase();
+  const needle = input.query.trim().toLocaleLowerCase();
   const visibleItems = needle
     ? input.items.filter((node) => node.name.toLocaleLowerCase().includes(needle))
     : [...input.items];
@@ -48,7 +47,7 @@ export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurf
     trail: [...input.trail],
     trailLabel: input.trail.map((item) => item.name).join(" / ") || "Start Menu",
     canGoBack: input.trail.length > 1,
-    query,
+    query: input.query,
     visibleItems,
     status,
   };
