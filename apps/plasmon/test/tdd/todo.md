@@ -68,7 +68,7 @@ Lane D does not duplicate feature implementation. It prepares composed red gates
 - [~] #78 — Shortcut lifecycle across creation/open surfaces — WAIT FOR #51 integration
 - [ ] #79 — Native document close lifecycle across Process/Windowing
 - [ ] #81 — Taskbar lifecycle across Shell/Process/Windowing
-- [ ] #82 — Filesystem bootstrap across managed roots
+- [x] #82 — Filesystem bootstrap across managed roots — TDD:ALREADY GREEN
 - [ ] #83 — Runtime selection across js-dos and EmulatorJS
 - [ ] #107 — Integrated packaged baseline: identify deterministic journeys that should move below Playwright
 - [ ] #25 — Prove active OS no longer depends on legacy gui2 before removal

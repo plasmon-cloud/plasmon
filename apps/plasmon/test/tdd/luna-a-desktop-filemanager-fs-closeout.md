@@ -55,8 +55,10 @@ creating competing Luna-A packets. Its dispositions are:
   status.
 - **Dependency wait:** #78's integrated #31/#44 lifecycle evidence is green,
   but complete acceptance waits for active #51/PR #210 Send to Desktop.
-  #195 characterization waits for #191; #196 waits for #195/#173; #201 is late
-  cleanup only.
+- **Already green:** #82's complete managed-root/bootstrap contract is protected
+  by the integrated production-graph suite; no RED is manufactured. #195
+  characterization waits for #191; #196 waits for #195/#173; #201 is late cleanup
+  only.
 - **Completed integrated-head closure:** #172's composed gate passed against
   current integrated #192 in a clean detached worktree; the stale lane failure
   is retained only as historical staging evidence.
@@ -69,6 +71,7 @@ creating competing Luna-A packets. Its dispositions are:
 - `issue-44-closure-audit.md`
 - `issue-45-closure-audit.md`
 - `issue-78-closure-audit.md`
+- `issue-82-closure-audit.md`
 - `issue-92.red.md`
 - `issue-92.red.ui.test.tsx`
 - `issue-92-operation-model-consumption.md`
