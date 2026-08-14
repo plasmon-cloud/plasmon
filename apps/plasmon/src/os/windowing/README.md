@@ -6,7 +6,7 @@ It does not own process records, application registration, filesystem state, She
 
 ## Main pieces
 
-- `NativeWindowManager.ts` — deterministic window-state manager, explicit focus/MRU ledger, geometry commits, and left/right snap transitions.
+- `NativeWindowManager.ts` — deterministic window-state manager, explicit focus/MRU ledger, geometry commits, bounded default placement, and left/right snap transitions.
 - `geometry.ts` — pure viewport/window constraint and half-screen snap calculations.
 - `placement.ts` — filesystem-backed durable placement adapter plus the coordinator that restores/persists accepted manager geometry without becoming a second geometry authority.
 - `NativeWindow.tsx` — rendered window chrome and thin pointer interaction/edge-detection adapter.
@@ -28,6 +28,8 @@ Shell may consume this seam for presentation such as a future keyboard switcher,
 
 ## Placement and restore semantics
 
+Manager-created default windows use a deterministic diagonal cascade constrained to the current usable viewport. The cascade is derived from currently live windows rather than a lifetime launch counter, so closing a default window frees its progression and repeated open/close does not drift permanently toward an edge. When the bounded cascade slots are exhausted, placement wraps to the first slot deterministically. Explicit coordinates continue to enter through the normal manager constraint path and are not replaced by default-placement policy.
+
 A snapped window occupies the deterministic left or right half of the manager's current available viewport. The native manager keeps snap identity below React and stores a pre-snap floating `restoreGeometry`; the browser adapter only detects pointer release at the workspace edge and commits the requested side plus the final floating drag geometry to the manager.
 
 Minimize/focus preserve snap placement. Maximizing a snapped window temporarily presents the maximized viewport while retaining the underlying snap placement; restoring returns to that snap first, and restoring the snapped window again returns to its pre-snap floating geometry. Dragging a snapped window restores its floating geometry before continuing the drag. Viewport changes recompute snapped geometry without replacing the saved floating restore geometry.
@@ -35,6 +37,8 @@ Minimize/focus preserve snap placement. Maximizing a snapped window temporarily 
 Durable placement uses the same filesystem-backed `FsService` persistence boundary as other Plasmon preferences. `NativeWindowPlacementController` observes only authoritative manager snapshots after a manager state change; pointer-move animation frames remain DOM previews and are never persisted. For snap/maximize/minimize presentation, the durable record is the normal/restorable rectangle (`restoreGeometry` when present), not the transient presented rectangle or visibility state.
 
 The stable durable key is the native application's `NativeAppDefinition.id`, not a `ProcessId` or `WindowId`. Only the first live window for a given app id owns that durable primary slot; concurrent sibling windows retain normal WindowManager cascade behavior and are not serialized as a session layout. On reopen, the saved rectangle is reapplied through WindowManager mutation methods, so current viewport and minimum-size constraints clamp stale/out-of-range records. Missing or corrupt records leave the manager-created default placement unchanged.
+
+Default/session placement and durable application placement are intentionally separate authorities within Windowing: #177 chooses a bounded manager default for a newly created window, while the #117 persistence controller may subsequently reapply an accepted durable normal rectangle through the same manager. Neither Shell nor React stores a competing placement model.
 
 This slice remains intentionally bounded to one normal/restorable rectangle per native app plus existing left/right snap behavior. Quarter snapping, tiling policy, multi-monitor/workspace placement, persisted snap/maximize/minimize/focus state, and Shell-owned geometry are outside this subsystem behavior.
 
@@ -48,4 +52,4 @@ Upstream behavioral adaptations/attribution belong in `THIRD_PARTY.md` and shoul
 
 ## Testing
 
-Use pure geometry/manager tests for creation, explicit focus/MRU transitions and fallback, z-order independence/compaction, viewport constraints, snap placement/state transitions, durable normal-placement restoration/clamping, snapshot isolation, subscriptions, and cleanup. Use headless production composition for filesystem-backed close/recomposition persistence. Use real-browser coverage only where pointer drag/resize, pointer-edge activation, keyboard/focus routing, close-animation presentation, inert/accessibility, iframe interaction, ResizeObserver, or another DOM-owned behavior is material. Manual review remains appropriate for animation/interaction feel.
+Use pure geometry/manager tests for creation, bounded default cascade/wrap, explicit focus/MRU transitions and fallback, z-order independence/compaction, viewport constraints, snap placement/state transitions, durable normal-placement restoration/clamping, snapshot isolation, subscriptions, and cleanup. Use headless production composition for filesystem-backed close/recomposition persistence. Use real-browser coverage only where pointer drag/resize, pointer-edge activation, default-window reachability in actual layout, keyboard/focus routing, close-animation presentation, inert/accessibility, iframe interaction, ResizeObserver, or another DOM-owned behavior is material. Manual review remains appropriate for animation/interaction feel.
