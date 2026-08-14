@@ -122,6 +122,10 @@ function stepSection(lines, stepId) {
   return lines.slice(start, end).join("\n");
 }
 
+function stepCount(source, stepName) {
+  return source.split(`      - name: ${stepName}`).length - 1;
+}
+
 for (const gate of selectedGates) {
   const source = readFileSync(gate.path, "utf8");
   const lines = source.split(/\r?\n/);
@@ -154,6 +158,13 @@ for (const gate of selectedGates) {
   const guardCount = source.split(guard).length - 1;
   if (guardCount < 2) {
     throw new Error(`${gate.context} must guard both Nix setup and the expensive browser step`);
+  }
+
+  if (gate.id !== "browser") {
+    const verifierCommand = `node test/ci/verify-required-browser-gates.mjs ${gate.id}`;
+    if (!source.includes(verifierCommand) || stepCount(source, "Verify required-gate workflow contract") !== 1) {
+      throw new Error(`${gate.context} must execute its required-gate verifier exactly once`);
+    }
   }
 }
 
