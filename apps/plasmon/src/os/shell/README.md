@@ -17,13 +17,18 @@ The directory already separates a number of deterministic concerns:
 - `activation.ts` — thin Start/Search adapters into canonical filesystem opening;
 - `model.ts` — taskbar/tray derivation, user-facing taskbar presentation state, and native task actions;
 - `preferences.ts` — persisted shell preferences;
-- `search.ts` — search/query inventory, classification, limits, and invalidation;
+- `search.ts` — canonical Search inventory/query, projection/classification consumption, limits, filtering, cancellation helper, and invalidation adapter;
+- `search-surface-state.ts` — deterministic projection of canonical Search batches into explicit loading/error/warning/empty/result presentation state;
+- `use-search-surface-controller.ts` — transient Search query/category/request lifecycle over `searchShell`; it does not discover applications, classify resources, or launch results;
+- `SearchSurface.tsx` — rendered Search presentation and semantic result-list keyboard/focus translation;
 - `startMenu.ts` — Start inventory, reconciliation, and shortcut presentation metadata;
 - `interactions.ts` — click-away/context/pin decisions;
 - `subscriptions.ts` — derived-state invalidation;
 - `calendar.ts` — date/calendar calculations.
 
-`Shell.tsx` composes those models with DOM/browser lifecycle, flyouts, keyboard/pointer events, and rendering.
+`Shell.tsx` composes those models with Shell-global flyout exclusivity, Escape/outside dismissal, canonical activation callbacks, and the remaining workspace/taskbar/browser lifecycle. Search query/category/request state and Search result JSX are not duplicated in `Shell.tsx` after the Search surface cutover.
+
+Search frame geometry remains a browser/CSS acceptance concern rather than deterministic Search authority. Measured popup containment and internal scrolling are validated at the real-browser layer; deterministic and RTL Search tests must not invent layout behavior that Happy DOM cannot truthfully measure.
 
 ### Resource presentation
 
@@ -39,7 +44,7 @@ The native registry is also allowed to contain `runtimeOnly` process-host defini
 
 ## Refactor direction
 
-`Shell.tsx` still coordinates many independent state machines. Continue moving Start/Search/taskbar/flyout action logic into production controllers/models where it can be tested without rendering the entire shell. Keep React focused on composition and browser events.
+`Shell.tsx` still coordinates many independent state machines. Continue moving Start/taskbar/flyout action logic into production controllers/models where it can be tested without rendering the entire shell. Keep React focused on composition and browser events.
 
 Start/Search/taskbar inventories should continue to derive from shared authorities rather than introducing shell-owned application truth. Preference persistence remains behind the approved filesystem-backed store. Treat unavailable/uncertain external runtime information as uncertainty rather than inventing stronger Kernel knowledge.
 
@@ -47,4 +52,4 @@ Feature-completeness work should use mature desktop conventions for discoverabil
 
 ## Testing
 
-Use fast tests for task derivation/actions, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
+Use fast tests for task derivation/actions, pin/preferences semantics, canonical Search classification/query ordering plus deterministic Search surface state, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use RTL for Search query/category/result semantics and keyboard/focus behavior that does not depend on browser layout. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for measured Search popup geometry/containment/internal scrolling, global keyboard shortcuts, focus behavior that Happy DOM cannot model, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
