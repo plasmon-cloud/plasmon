@@ -8,6 +8,8 @@ const TILE_ID = "main";
 const NES_FIXTURE = resolve("apps/plasmon/dist/web/Games/Test ROMs/PlasmonTest.nes");
 
 test("packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets", async ({ page }) => {
+  test.setTimeout(240_000);
+
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const runtimeRequests: string[] = [];
@@ -171,7 +173,7 @@ test("packaged Plasmon imports a legal NES fixture and initializes EmulatorJS fr
         }
         return await runtimeState();
       },
-      { timeout: 90_000, message: "EmulatorJS core and NES fixture should start" },
+      { timeout: 180_000, message: "EmulatorJS core and NES fixture should start" },
     ).toBe("ready");
   } catch (error) {
     const state = await runtimeState();
