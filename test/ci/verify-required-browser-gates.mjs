@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 const gates = [
   {
+    id: "smoke",
     path: ".github/workflows/plasmon-browser-smoke-ci.yml",
     context: "Packaged refactor smoke",
     scopeId: "packaged_smoke_scope",
@@ -23,6 +24,7 @@ const gates = [
     ],
   },
   {
+    id: "browser",
     path: ".github/workflows/plasmon-browser-ci.yml",
     context: "Packaged Playwright specialist acceptance",
     scopeId: "packaged_browser_scope",
@@ -49,6 +51,7 @@ const gates = [
     ],
   },
   {
+    id: "persistence",
     path: ".github/workflows/plasmon-browser-persistence-ci.yml",
     context: "Packaged browser persistence",
     scopeId: "persistence_scope",
@@ -71,6 +74,17 @@ const gates = [
     ],
   },
 ];
+
+const requestedGateIds = process.argv.slice(2);
+const knownGateIds = new Set(gates.map((gate) => gate.id));
+for (const gateId of requestedGateIds) {
+  if (!knownGateIds.has(gateId)) {
+    throw new Error(`Unknown required browser gate ${gateId}`);
+  }
+}
+const selectedGates = requestedGateIds.length > 0
+  ? gates.filter((gate) => requestedGateIds.includes(gate.id))
+  : gates;
 
 function eventSection(lines, eventName) {
   const marker = `  ${eventName}:`;
@@ -108,7 +122,7 @@ function stepSection(lines, stepId) {
   return lines.slice(start, end).join("\n");
 }
 
-for (const gate of gates) {
+for (const gate of selectedGates) {
   const source = readFileSync(gate.path, "utf8");
   const lines = source.split(/\r?\n/);
   const pullRequest = eventSection(lines, "pull_request");
@@ -143,4 +157,4 @@ for (const gate of gates) {
   }
 }
 
-console.log("Required r2 browser gate workflow contract verified");
+console.log(`Required r2 browser gate workflow contract verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
