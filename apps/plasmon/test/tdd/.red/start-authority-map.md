@@ -1,13 +1,13 @@
 # Start authority map
 
-Refresh: integrated release `f4ac3b4`. #169 is today's unattended implementation
-ownership; this map does not edit or prescribe its reconciliation algorithm.
-#194 has no active PR and is future work.
+Refresh: integrated release `82f176a6`. #169 has the Luna-A headless RED and
+final packet; this map does not prescribe its corrective algorithm. #194 has no
+active PR and is blocked by #169.
 
 | Concern | Actual authority | Current consumer | Classification |
 |---|---|---|---|
 | durable root | FsService path `/System/Start Menu` | `ensureStartRoot`, Shell navigation | canonical |
-| managed defaults | `reconcileStartMenu` in `startMenu.ts` | Shell reconciliation effect; deterministic tests | canonical controller candidate; final #169 boundary |
+| managed defaults | `reconcileStartMenu` in `startMenu.ts` | Shell reconciliation effect; deterministic tests | canonical controller with current #169 malformed-sibling RED |
 | seed ledger | root metadata `plasmon.shell.start.seeded.v1` | reconciliation | canonical durable migration evidence |
 | target identity | parsed shared shortcut target / `startShortcutTargetIdentity` | scan/reconcile/Search/activation | canonical |
 | root listing | `listStartMenuFolder(fs, root.id)` | Shell `startItems` | derived read |
@@ -20,7 +20,7 @@ ownership; this map does not edit or prescribe its reconciliation algorithm.
 | flyout/dismissal | Shell `flyout`, document/window listeners | Start open/close | Shell-global transient coordination |
 | user rename/move/delete | FsService mutations | reconciliation scan/preserve semantics | canonical user data; never overwritten absent proof |
 | upgrade retirement | conservative functions in `startMenu.ts` | reconciliation | canonical migration policy; #169 owns changes |
-| presentation | `shortcutPresentation`, ShellIcon, PinIcon, eventual Visual | Shell JSX | presentation-only |
+| presentation | `shortcutPresentation`, ShellIcon, PinIcon, shared #190 Visual | Shell JSX | presentation-only; #194 consumes, no local catalog |
 
 ## Start-like arrays/catalogs found
 

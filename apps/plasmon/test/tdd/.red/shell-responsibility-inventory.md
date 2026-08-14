@@ -1,8 +1,9 @@
 # Shell responsibility inventory for #197
 
-Refresh: release `f4ac3b4`; #197 has no active implementation PR. #176 is
+Refresh: release `82f176a6`; #197 has no active implementation PR. #176 is
 listed as today's unattended implementation ownership and is not modified here.
-This is code inspection of `os/shell/Shell.tsx`, not a source-shape RED.
+This is code inspection of `os/shell/Shell.tsx`, not a source-shape RED. The
+Luna-A consumer handoff is in `issue-197-luna-a-shell-input-packet.md`.
 
 | Responsibility/state/effect | Current location | Inputs | Outputs | Owning authority | Current tests | Future #197 owner |
 |---|---|---|---|---|---|---|

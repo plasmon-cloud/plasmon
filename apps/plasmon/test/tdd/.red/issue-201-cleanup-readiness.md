@@ -1,9 +1,10 @@
 # Issue #201 cleanup / retirement readiness
 
-Final inspected release: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
-This is an audit only. No production code is deleted or changed. Active PRs
-#190, #191, #51, and #65 remain implementation ownership and are not consumed
-as integrated replacements.
+Final inspected release: `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+This is an audit only. No production code is deleted or changed. #190/#191/#51/
+#65 are integrated; #195 remains active PR #213 and is not consumed as an
+implementation branch. See `issue-201-final-cleanup-contract.md` for the final
+contract.
 
 ## Candidate inventory
 
@@ -56,7 +57,8 @@ support, package paths, and compatibility probes legitimately use them.
 
 Conclusion: **reject decorative dead-code dependency now**. Use import search,
 `tsc`, targeted ESLint restrictions, and composed tests only after each migration
-proves replacement behavior and package reachability.
+proves replacement behavior and package reachability. #201 remains blocked until
+the accepted migration prerequisites in the final contract land.
 
 ## Retirement protocol
 

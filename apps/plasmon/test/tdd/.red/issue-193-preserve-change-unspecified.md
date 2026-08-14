@@ -1,10 +1,9 @@
 # Issue #193 — preserve/change/unspecified
 
-Status: **WAIT FOR DEPENDENCY** for final packet. #193 has no active PR. The
-release at refresh is `f4ac3b4`; #174 and #190 are active today's ownership,
-while #189 is integrated in the observed release. This document is
-architecture-independent preparation and must not make today's implementations
-conform to an unintegrated assumption.
+Status: **FINAL IMPLEMENTOR PACKET READY**. #193 has no active PR. The
+release at refresh is `82f176a6`; #174/#189/#190 are integrated. This document
+is architecture-independent preparation and must not create a second Search
+authority.
 
 ## PRESERVE
 
@@ -22,7 +21,7 @@ conform to an unintegrated assumption.
 - Focus and keyboard result activation, after characterization records the
   accepted focus destination.
 - #175 stable frame and internal scrolling once geometry is accepted.
-- #189 canonical classification, eventual #174 `.sys` projection and #190
+- #189 canonical classification, integrated #174 `.sys` projection and #190
   Visual presentation; no local replacements.
 
 ## CHANGE
@@ -45,9 +44,9 @@ conform to an unintegrated assumption.
 - A new classifier, presentation registry, activation service, or running-app
   registry.
 
-## Stop conditions
+## Final dependency condition
 
-Do not finalize until #174/#190 implementation status and #189 accepted result
-vocabulary are inspected on the integrated release. If the canonical harness
-cannot render the real composed surface, retain characterization and report a
-harness gap rather than mount a fake Search component.
+The packet is ready after integrated #174/#189/#190 inspection. #175 stable
+geometry remains a separate browser acceptance prerequisite. If the canonical
+harness cannot render the real composed surface, retain characterization and
+report a harness gap rather than mount a fake Search component.

@@ -53,8 +53,8 @@ creating competing Luna-A packets. Its dispositions are:
 - **RED gate:** #92 now has an exact integrated-head RTL RED: #65's accepted
   operation state covers import/paste, while drag still exposes no running
   status.
-- **Dependency wait:** #78's integrated #31/#44 lifecycle evidence is green,
-  but complete acceptance waits for active #51/PR #210 Send to Desktop.
+- **Already green:** #78's complete #31/#44/#51 shortcut lifecycle is protected
+  by the integrated/core and composed headless tests.
 - **Already green:** #82's complete managed-root/bootstrap contract is protected
   by the integrated production-graph suite; no RED is manufactured. #195
   characterization waits for #191; #196 waits for #195/#173; #201 is late cleanup
@@ -70,9 +70,16 @@ creating competing Luna-A packets. Its dispositions are:
 
 - `issue-44-closure-audit.md`
 - `issue-45-closure-audit.md`
-- `issue-78-closure-audit.md`
+- `issue-78-closure-audit.md` and `issue-78.lifecycle.test.ts`
 - `issue-82-closure-audit.md`
-- `issue-92.red.md`
+- `issue-92.red.md` and `issue-92.red.ui.test.tsx`
+- `issue-169-final-packet.md` and `issue-169.red.test.ts`
+- `issue-174-closure-audit.md`
+- `issue-193-final-packet.md`, `issue-194-final-packet.md`,
+  `issue-196-final-packet.md`
+- `issue-197-luna-a-shell-input-packet.md`
+- `issue-201-final-cleanup-contract.md`
+- `luna-a-r2-runway-complete.md`
 - `issue-92.red.ui.test.tsx`
 - `issue-92-operation-model-consumption.md`
 - `issue-93-browser-geometry-spec.md`

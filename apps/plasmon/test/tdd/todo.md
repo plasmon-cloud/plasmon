@@ -66,7 +66,7 @@ This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `rele
 
 Lane D does not duplicate feature implementation. It prepares composed red gates and audits whether the headless interaction vocabulary is sufficient.
 
-- [~] #78 — Shortcut lifecycle across creation/open surfaces — WAIT FOR #51 integration
+- [x] #78 — Shortcut lifecycle across creation/open surfaces — TDD:ALREADY GREEN
 - [ ] #79 — Native document close lifecycle across Process/Windowing
 - [ ] #81 — Taskbar lifecycle across Shell/Process/Windowing
 - [x] #82 — Filesystem bootstrap across managed roots — TDD:ALREADY GREEN

@@ -1,15 +1,12 @@
 # Issue #78 — shortcut lifecycle audit
 
 Refresh: `origin/release/0.1.0-r2` at
-`3399a87372973b732f57fc89b0e7fcfd922f64ab`.
+`82f176a6f11a163197a270a6c2275dde0f95a2e9`.
 
-Disposition: **WAIT FOR DEPENDENCY — #51 active implementation ownership**.
+Disposition: **COMPLETE / NO IMPLEMENTATION REQUIRED**.
 
-No open PR owns #78. PR #210/#51 (`work/file-manager/51-send-to-desktop`) is
-still open and must not be consumed as integrated source or modified by Luna-A.
-Issue #78 explicitly relates the complete lifecycle to #31, #44, and #51; the
-integrated release contains #31/#44 but not the accepted Send to Desktop
-consumer from #51.
+No open PR owns #78. #31/#44/#51 are integrated and their accepted production
+seams are consumed by the lifecycle characterization.
 
 ## Integrated authorities
 
@@ -42,17 +39,21 @@ rename/move target stability, FileManager activation, and matching FileManager/
 Start/Search opening outcomes. Existing dispatcher tests also prove loop and
 Recycle Bin-target rejection.
 
-## Missing/deferred evidence
+## Final lifecycle evidence
 
-The release does not yet contain the #51 Send to Desktop production command.
-Therefore the complete #78 lifecycle acceptance cannot be called ALREADY GREEN
-and no replacement test should invent that consumer's future API. Once #51 is
-integrated and ownership is free, add one real headless composition extending
-existing evidence to create through Send to Desktop, rename/move the target,
-activate through the legitimate FileManager and Shell-backed surfaces, and
-assert deterministic missing-target failure. Do not duplicate shortcut policy
-or create a second lifecycle store.
+`issue-78.lifecycle.test.ts` adds one production-graph composition: Create
+Shortcut and Send to Desktop create canonical NodeId targets; the target is
+renamed/moved; FileManager, Start, and Search-backed activation all reach the
+same target; and a removed target fails deterministically.
 
-This is a dependency wait, not a browser boundary and not a product RED against
-integrated release. The existing green tests must remain the permanent core
-destination; the future gate should cover only the unproven #51 consumer link.
+Executed against the exact integrated release:
+
+```text
+bun test /tmp/plasmon-runway/apps/plasmon/test/tdd/.red/issue-78.lifecycle.test.ts
+```
+
+Result: **1 passed, 0 failed, 8 expect() calls**.
+
+The existing 11-test core evidence remains permanent. No browser dependency,
+second shortcut format, path-based dereference, or duplicate lifecycle store is
+introduced.

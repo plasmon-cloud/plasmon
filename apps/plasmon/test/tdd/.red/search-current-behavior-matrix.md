@@ -1,8 +1,8 @@
 # Search current-behavior matrix
 
-Refresh: integrated `origin/release/0.1.0-r2` at `f4ac3b4`. No open PR owns
-#193 or #175. #174 and #190 are today's active implementation ownership and
-are treated only as external dependencies; this document does not alter them.
+Refresh: integrated `origin/release/0.1.0-r2` at `82f176a6`. No open PR owns
+#193 or #175. #174 and #190 are integrated dependencies; this document does
+not alter their authorities.
 
 | Journey/behavior | Canonical source | Shell transient state | Search projection state | Classification dependency | Presentation dependency | Activation authority | Existing evidence | Missing evidence |
 |---|---|---|---|---|---|---|---|---|
@@ -25,15 +25,14 @@ are treated only as external dependencies; this document does not alter them.
 | category switch | tab click | `searchTab` | filters existing batch only | result category | geometry currently content-dependent | none | filter function | #175 measured browser geometry |
 | query preservation/reset | `searchQuery` dependency and flyout close | React state remains after close; query not explicitly cleared | request canceled/restarted | none | input value | none | source inspection | accepted policy characterization |
 | running app | Element `running` / Process state | snapshots in Shell | Element runtime label; native process records | no classifier for runtime | taskbar/Search label | canonical Process/Neutron bridge | taskbar/search tests | Search-specific running representation |
-| native `.sys` | managed system app or direct FS result | none | current search can expose app definition and raw FS result unless #174 converges | `classifyResource` metadata | local Search icon | activation dispatcher | #174 RED exists; do not modify | future #193 uniqueness proof |
+| native `.sys` | managed system app or direct FS result | none | current integrated Search de-duplicates direct native and canonical `.sys` identity | `classifyResource` metadata | shared #190 presentation | activation dispatcher | #174 closure + projection tests | #193 focused surface consumption |
 | `.neutron` | validated `NEUTRON_APP_MIME` metadata | Elements snapshot + FS projection | projection merged by `elementId` when Element exists | #189 classifier | Element icon/name overlay | Neutron bridge/filesystem activation | projection tests | one-result identity after dependencies |
 | ordinary file | FsService traversal | none | `node:<id>` FileSearchResult | currently MIME/suffix category | `fileSubtitle`, ShellIcon fallback | filesystem opener/association | search tests | cross-surface type fact |
 | shortcut | `parseStartShortcut` metadata | none | `shortcut:<node.id>` app result | target semantics | `shortcutPresentation` | `activateSearchFilesystemResult` | activation tests | duplicate target alias rules |
 
 ## Conclusion
 
-The Search projection model is already deterministic below React for cancellation,
-limits, invalidation and activation routing. The future #193 packet can safely
-characterize these semantics without asserting a component shape. Final
-source-uniqueness tests must wait for today's #174/#190 outcomes and the real
-#189 metadata seam.
+The Search projection model is deterministic below React for cancellation,
+limits, invalidation, activation, and integrated #174/#189/#190 source semantics.
+The #193 packet can characterize these semantics without asserting a component
+shape; only #175 geometry remains a separate browser acceptance dependency.

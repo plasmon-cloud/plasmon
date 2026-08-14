@@ -1,6 +1,9 @@
-# Issue #174 — repaired packet
+# Issue #174 — integrated closure disposition
 
-Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
+Disposition: **COMPLETE / NO IMPLEMENTATION REQUIRED**.
+
+See `issue-174-closure-audit.md`; the former RED test passes against integrated
+release `82f176a`.
 
 ## Executable evidence
 
@@ -13,14 +16,13 @@ Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
 - display-title versus unchanged filesystem name/NodeId characterization;
 - canonical filesystem-result activation through `activateSearchFilesystemResult`.
 
-The core deterministic RED reaches `searchShell` and fails only at the intended
-one-result assertion. The other tests are lower-layer characterization, not
-replacements for the RED.
+The former core deterministic RED now reaches `searchShell` and passes the
+one-result assertion. The remaining tests prove hidden policy, identity, and
+canonical activation.
 
 ## Remaining acceptance
 
-The packet still needs the accepted implementation's final Search projection
-vocabulary to prove Start/Search user-facing type/name consistency and the exact
-hidden native-resource policy for resources such as Properties. Those are
-explicitly marked incomplete until #189/#174 consumer integration exposes the
-production result. No Search UI redesign or second app catalog is introduced.
+The accepted integrated Search projection vocabulary now proves the native
+`.sys` uniqueness/category/identity policy. Search UI reconstruction and stable
+geometry remain #193/#175 responsibilities; they must consume this result rather
+than reopen #174 or create a second app catalog.
