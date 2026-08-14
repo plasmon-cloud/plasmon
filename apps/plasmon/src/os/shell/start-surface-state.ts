@@ -5,11 +5,11 @@ export interface StartTrailItem {
   name: string;
 }
 
-export type StartSurfaceStatus =
-  | { kind: "ready" }
-  | { kind: "loading" }
-  | { kind: "empty" }
-  | { kind: "error"; message: string };
+export interface StartSurfaceStatus {
+  loading: boolean;
+  empty: boolean;
+  error: string | null;
+}
 
 export interface StartSurfaceViewState {
   folderId: NodeId | null;
@@ -36,12 +36,6 @@ export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurf
     : [...input.items];
   const currentFolder = input.trail.at(-1) ?? null;
 
-  let status: StartSurfaceStatus;
-  if (input.error) status = { kind: "error", message: input.error };
-  else if (input.busy) status = { kind: "loading" };
-  else if (visibleItems.length === 0) status = { kind: "empty" };
-  else status = { kind: "ready" };
-
   return {
     folderId: currentFolder?.id ?? null,
     trail: [...input.trail],
@@ -49,6 +43,10 @@ export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurf
     canGoBack: input.trail.length > 1,
     query: input.query,
     visibleItems,
-    status,
+    status: {
+      loading: input.busy,
+      empty: !input.busy && visibleItems.length === 0,
+      error: input.error,
+    },
   };
 }
