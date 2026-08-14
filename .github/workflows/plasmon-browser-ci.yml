@@ -49,45 +49,12 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs browser
 
-      - name: Detect specialist-browser-relevant changes
-        id: packaged_browser_scope
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "run_packaged_browser=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          head_sha="${{ github.event.pull_request.head.sha }}"
-          git diff --name-only "$base_sha" "$head_sha" > /tmp/plasmon-specialist-browser-changed-files.txt
-          cat /tmp/plasmon-specialist-browser-changed-files.txt
-
-          run_packaged_browser=false
-          while IFS= read -r path; do
-            case "$path" in
-              apps/plasmon/*|apps/review/*|apps/kernel/*|packages/neutron-provision/*|packages/neutron-tools/*|test/e2e/plasmon-demo-environment.ts|test/e2e/plasmon-browser-health.ts|test/e2e/plasmon-refactor-smoke.spec.ts|test/e2e/plasmon-golden-path.spec.ts|test/e2e/plasmon-monaco-packaged.spec.ts|test/e2e/plasmon-review-demo.spec.ts|test/e2e/plasmon-emulatorjs-proof.spec.ts|test/e2e/plasmon-demo-game.spec.ts|playwright.config.ts|plasmon-local.ndeploy.json|package.json|package-lock.json|.github/workflows/plasmon-browser-ci.yml)
-                run_packaged_browser=true
-                break
-                ;;
-            esac
-          done < /tmp/plasmon-specialist-browser-changed-files.txt
-
-          echo "run_packaged_browser=$run_packaged_browser" >> "$GITHUB_OUTPUT"
-          if [ "$run_packaged_browser" != "true" ]; then
-            echo "No specialist-browser-relevant changes; satisfying required Packaged Playwright specialist acceptance without packaging."
-          fi
-
       - name: Install Nix
-        if: steps.packaged_browser_scope.outputs.run_packaged_browser == 'true'
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon specialist browser acceptance
-        if: steps.packaged_browser_scope.outputs.run_packaged_browser == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail

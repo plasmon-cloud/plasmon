@@ -14,12 +14,14 @@ CI may retain Playwright retries for traces, diagnostics, and classification, bu
 
 ## r2 packaged browser required-status contract
 
-The repository ruleset `Require checks` (ruleset ID `20729255`) is the merge-enforcement source for `refs/heads/release/*`, including `release/0.1.0-r2`. Its required-status contract must preserve the existing `kernel` and `Fast Bun tests` checks and add these exact packaged browser job contexts:
+The repository ruleset `Require checks` (ruleset ID `20729255`) is the merge-enforcement source for `refs/heads/release/*`, including `release/0.1.0-r2`. Its required-status contract preserves `kernel` and `Fast Bun tests` and requires these exact packaged browser job contexts:
 
 - `Packaged refactor smoke`
 - `Packaged Playwright specialist acceptance`
 - `Packaged browser persistence`
 
-A browser context cannot safely be required if its workflow can disappear because a pull request is outside a top-level `pull_request.paths` filter. Required browser workflows therefore schedule for every pull request and perform path relevance inside the stable job: irrelevant changes terminate green without installing Nix or packaging, while relevant changes run the full installed package/browser gate. The relevance decision must use the pull request base SHA through head SHA, not only the latest commit.
+For r2 pull requests, each required Plasmon browser workflow schedules on every PR and **always runs its real package/browser workload**. Do not add `pull_request.paths`, PR base/head changed-file detectors, relevance outputs, or step/job guards that can turn a required browser context green without executing its real workload. This is required for stacked-PR safety: every exact PR head must exercise the complete required browser safety net inherited from its ancestors.
 
-`test/ci/verify-required-browser-gates.mjs` protects the repository-side always-report contract. Keep the exact job names stable, preserve the expensive-path scopes, do not mask failures with `continue-on-error`, and do not add a ruleset bypass as a substitute for a terminal required status.
+Direct-push applicability is separate from PR validation. Existing explicit push branches/path filters may remain where they are part of the maintained release contract; in particular, the specialist workflow preserves direct-push coverage for `version-0.1.0-os` and `release/0.1.0-r2` with its existing path filter.
+
+`test/ci/verify-required-browser-gates.mjs` protects this PR-always-run contract, the stable context names, the real gate commands, #225 direct-push behavior, and #226 fail-on-flaky proof. Do not mask failures with `continue-on-error` and do not add a ruleset bypass as a substitute for a passing real gate.
