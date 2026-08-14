@@ -18,13 +18,17 @@ test("#217 keeps resolved shortcut artwork stable across authoritative Desktop r
     await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
 
     const observedSources: string[] = [];
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === "attributes" && record.oldValue) observedSources.push(record.oldValue);
+      }
       const src = renderedIconSource();
       if (src) observedSources.push(src);
     });
     observer.observe(appsEntry, {
       attributes: true,
       attributeFilter: ["src"],
+      attributeOldValue: true,
       childList: true,
       subtree: true,
     });
