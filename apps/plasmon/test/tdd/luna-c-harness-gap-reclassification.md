@@ -1,6 +1,6 @@
 # Luna-C HARNESS GAP reclassification
 
-Audit base: integrated `origin/release/0.1.0-r2` at `3399a8737297` and the
+Audit base: integrated `origin/release/0.1.0-r2` at `82f176a6f11a` and the
 current Luna-C branch. A `HARNESS GAP` queue marker is not itself a product
 classification. The unresolved blocker for each claimed Issue is:
 
