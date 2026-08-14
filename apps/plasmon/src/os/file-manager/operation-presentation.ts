@@ -17,6 +17,19 @@ export function presentFileOperation(operation: FileOperationSnapshot): FileOper
     };
   }
 
+  if (operation.kind === "move") {
+    if (operation.currentIndex !== null) {
+      return {
+        running: true,
+        message: `Moving ${operation.currentIndex} of ${operation.totalItems}${operation.currentItem ? `: ${operation.currentItem}` : ""}`,
+      };
+    }
+    return {
+      running: true,
+      message: `Moving ${operation.totalItems} ${operation.totalItems === 1 ? "item" : "items"}…`,
+    };
+  }
+
   if (operation.currentIndex !== null) {
     return {
       running: true,
