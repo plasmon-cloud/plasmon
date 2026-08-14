@@ -22,7 +22,7 @@ export interface NativeTaskbarEntry {
   name: string;
   icon: IconRef;
   pinned: boolean;
-  process: ProcessRecord | null;
+  members: readonly ProcessRecord[];
 }
 
 export interface ElementTaskbarEntry {
@@ -101,38 +101,40 @@ export function deriveTaskbarPresentation(
   const busy = busyTaskId === entry.id;
 
   if (entry.kind === "native") {
-    const processStarting = entry.process?.state === "starting";
-    if (busy || processStarting) {
-      return presentation(entry, "launching", "Launching", {
-        running: entry.process?.state === "running",
-        active: false,
-        launching: true,
-        uncertain: false,
-      }, "…");
-    }
-    if (!entry.process) {
-      return presentation(entry, "pinned-only", "Pinned to taskbar", {
-        running: false,
+    const runningMembers = entry.members.filter((member) => member.state === "running");
+    if (runningMembers.length > 0) {
+      const focusedId = focusedWindow(windows)?.id;
+      const active = runningMembers.some((member) => {
+        const targetWindow = windowForProcess(member, windows);
+        return !!targetWindow && !targetWindow.minimized && focusedId === targetWindow.id;
+      });
+      if (active) {
+        return presentation(entry, "active", "Active and focused", {
+          running: true,
+          active: true,
+          launching: false,
+          uncertain: false,
+        });
+      }
+      return presentation(entry, "running", "Running", {
+        running: true,
         active: false,
         launching: false,
         uncertain: false,
       });
     }
 
-    const targetWindow = windowForProcess(entry.process, windows);
-    const active = !!targetWindow
-      && !targetWindow.minimized
-      && focusedWindow(windows)?.id === targetWindow.id;
-    if (active) {
-      return presentation(entry, "active", "Active and focused", {
-        running: true,
-        active: true,
-        launching: false,
+    const processStarting = entry.members.some((member) => member.state === "starting");
+    if (busy || processStarting) {
+      return presentation(entry, "launching", "Launching", {
+        running: false,
+        active: false,
+        launching: true,
         uncertain: false,
-      });
+      }, "…");
     }
-    return presentation(entry, "running", "Running", {
-      running: true,
+    return presentation(entry, "pinned-only", "Pinned to taskbar", {
+      running: false,
       active: false,
       launching: false,
       uncertain: false,
@@ -201,39 +203,23 @@ export function deriveTaskbarEntries(input: TaskbarModelInput): PresentedTaskbar
 
   const entries: TaskbarEntry[] = [];
   for (const handlerId of nativeHandlerOrder) {
-    const running = processesByHandler.get(handlerId) ?? [];
+    const members = processesByHandler.get(handlerId) ?? [];
     const pinned = input.preferences.pinnedNative.includes(handlerId);
     const app = appsByHandler.get(handlerId);
+    const firstMember = members[0];
+    if (!app && !firstMember) continue;
+    const metadata = app
+      ? { appId: app.id, name: app.name, icon: app.icon }
+      : nativeMetadataForProcess(firstMember!, appsByHandler);
 
-    if (running.length === 0) {
-      if (!pinned || !app) continue;
-      entries.push({
-        kind: "native",
-        id: `native:${handlerId}`,
-        handlerId,
-        appId: app.id,
-        name: app.name,
-        icon: app.icon,
-        pinned: true,
-        process: null,
-      });
-      continue;
-    }
-
-    // A single open instance merges with its pinned handler entry. Multiple
-    // instances receive process-specific entries so distinct records are never
-    // silently collapsed into one task.
-    for (const process of running) {
-      const metadata = nativeMetadataForProcess(process, appsByHandler);
-      entries.push({
-        kind: "native",
-        id: running.length === 1 ? `native:${handlerId}` : `process:${process.id}`,
-        handlerId,
-        ...metadata,
-        pinned,
-        process,
-      });
-    }
+    entries.push({
+      kind: "native",
+      id: `native:${handlerId}`,
+      handlerId,
+      ...metadata,
+      pinned,
+      members,
+    });
   }
 
   const elementsById = new Map(input.elements.map((element) => [element.id, element] as const));
@@ -273,7 +259,7 @@ export function deriveTaskbarEntries(input: TaskbarModelInput): PresentedTaskbar
   }));
 }
 
-export type NativeTaskbarAction = "launch" | "focus" | "minimize";
+export type NativeTaskbarAction = "launch" | "focus" | "minimize" | "choose";
 
 export function windowForProcess(
   process: ProcessRecord,
@@ -299,8 +285,10 @@ export function decideNativeTaskbarAction(
   entry: NativeTaskbarEntry,
   windows: readonly WindowState[],
 ): NativeTaskbarAction {
-  if (!entry.process) return "launch";
-  const targetWindow = windowForProcess(entry.process, windows);
+  if (entry.members.length === 0) return "launch";
+  if (entry.members.length > 1) return "choose";
+  const member = entry.members[0]!;
+  const targetWindow = windowForProcess(member, windows);
   if (!targetWindow || targetWindow.minimized) return "focus";
   return focusedWindow(windows)?.id === targetWindow.id ? "minimize" : "focus";
 }
@@ -314,14 +302,32 @@ export async function executeNativeTaskbarAction(
   const action = decideNativeTaskbarAction(entry, windows.list());
   if (action === "launch") {
     await process.open(entry.handlerId, target);
-  } else if (entry.process) {
-    if (action === "focus") process.focus(entry.process.id);
-    else {
-      const targetWindow = windowForProcess(entry.process, windows.list());
+  } else if (action === "focus") {
+    const member = entry.members[0];
+    if (member) process.focus(member.id);
+  } else if (action === "minimize") {
+    const member = entry.members[0];
+    if (member) {
+      const targetWindow = windowForProcess(member, windows.list());
       if (targetWindow) windows.minimize(targetWindow.id);
     }
   }
   return action;
+}
+
+/**
+ * A chooser selection is not the taskbar toggle action. It always delegates a
+ * running member selection through Process authority, even when already active.
+ */
+export function focusNativeTaskbarMember(
+  entry: NativeTaskbarEntry,
+  memberId: ProcessRecord["id"],
+  process: ProcessController,
+): boolean {
+  const member = entry.members.find((candidate) => candidate.id === memberId);
+  if (!member || member.state !== "running") return false;
+  process.focus(member.id);
+  return true;
 }
 
 export interface ExternalOpenResult {
