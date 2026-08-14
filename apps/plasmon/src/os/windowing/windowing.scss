@@ -53,6 +53,7 @@
 
 .plasmon-window__snap-preview {
   position: absolute;
+  box-sizing: border-box;
   pointer-events: none;
   background: color-mix(in srgb, var(--plasmon-accent, #4cc2ff) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--plasmon-accent, #4cc2ff) 64%, transparent);
