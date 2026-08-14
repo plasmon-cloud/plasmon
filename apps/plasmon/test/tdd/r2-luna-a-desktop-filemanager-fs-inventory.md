@@ -3,7 +3,7 @@
 Refresh date: 2026-08-13
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`3399a87372973b732f57fc89b0e7fcfd922f64ab`.
+`82f176a6f11a163197a270a6c2275dde0f95a2e9`.
 
 Ownership refresh: active PRs observed for #51/PR #210, #65/PR #208,
 #190/PR #211, and #191/PR #204. Luna-B owns concrete Shell/taskbar/Windowing
