@@ -173,6 +173,23 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
   const dialog = nativeWindows.last();
   await expect(dialog).toBeVisible();
+  const titlebar = dialog.locator(".plasmon-window__titlebar");
+
+  // Issue #199 packaged browser boundary: explicit focus remains WindowManager
+  // state while chrome renders a real active/inactive distinction and shared
+  // titlebar Visual identity.
+  await expect(dialog).toHaveClass(/plasmon-window--active/);
+  await expect(dialog.locator('.plasmon-window__icon [data-icon-context="titlebar"]')).toBeVisible();
+  const activeBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
+  const recycleTitlebar = recycleBin.locator(".plasmon-window__titlebar");
+  await recycleTitlebar.click({ position: { x: 80, y: 16 } });
+  await expect(recycleBin).toHaveClass(/plasmon-window--active/);
+  await expect(dialog).not.toHaveClass(/plasmon-window--active/);
+  const inactiveBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
+  expect(inactiveBorderColor).not.toBe(activeBorderColor);
+  await titlebar.click({ position: { x: 80, y: 16 } });
+  await expect(dialog).toHaveClass(/plasmon-window--active/);
+  await expect(recycleBin).not.toHaveClass(/plasmon-window--active/);
 
   // Issue #108 visible boundary: folder activation and toolbar Back/Forward must
   // reach the same production navigation model in the real packaged Explorer.
@@ -194,8 +211,65 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await back.click();
   await expect(explorerAddress).toHaveValue("/");
 
-  const titlebar = dialog.locator(".plasmon-window__titlebar");
-  const workspace = await app.locator(".plasmon-window-layer").first().boundingBox();
+  // Issue #199 real resize boundary: use the rendered southeast handle, not a
+  // test-only manager call, and prove the final authoritative rectangle shrinks
+  // while respecting Explorer's production minimum dimensions.
+  const resizeHandle = dialog.locator(".plasmon-window__resize--se");
+  await expect(resizeHandle).toBeVisible();
+  const beforeResize = await dialog.boundingBox();
+  const resizeHandleBox = await resizeHandle.boundingBox();
+  if (!beforeResize || !resizeHandleBox) throw new Error("Explorer resize geometry has no browser bounds");
+  await page.mouse.move(
+    resizeHandleBox.x + resizeHandleBox.width / 2,
+    resizeHandleBox.y + resizeHandleBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    resizeHandleBox.x + resizeHandleBox.width / 2 - 100,
+    resizeHandleBox.y + resizeHandleBox.height / 2 - 80,
+    { steps: 6 },
+  );
+  await page.mouse.up();
+  await expect.poll(async () => (await dialog.boundingBox())?.width ?? beforeResize.width).toBeLessThan(beforeResize.width - 40);
+  const afterResize = await dialog.boundingBox();
+  if (!afterResize) throw new Error("Resized Explorer has no browser bounds");
+  expect(afterResize.width).toBeGreaterThanOrEqual(640);
+  expect(afterResize.height).toBeGreaterThanOrEqual(420);
+  expect(afterResize.height).toBeLessThan(beforeResize.height - 30);
+
+  // Issue #199 small-workspace boundary: when Explorer cannot fit horizontally,
+  // active drag may pan through manager-compatible reachability bounds so the
+  // right-side controls can be brought on-screen and remain genuinely clickable.
+  const normalViewport = page.viewportSize();
+  if (!normalViewport) throw new Error("Playwright project has no viewport size");
+  await page.setViewportSize({ width: 520, height: 720 });
+  const windowLayer = app.locator(".plasmon-window-layer").first();
+  await expect.poll(async () => (await windowLayer.boundingBox())?.width ?? 1000).toBeLessThan(640);
+  const smallWorkspace = await windowLayer.boundingBox();
+  const smallTitlebar = await titlebar.boundingBox();
+  if (!smallWorkspace || !smallTitlebar) throw new Error("Small-workspace native window has no browser bounds");
+  const smallDragStartX = smallWorkspace.x + Math.min(180, smallWorkspace.width / 2);
+  const smallDragY = smallTitlebar.y + Math.min(16, smallTitlebar.height / 2);
+  await page.mouse.move(smallDragStartX, smallDragY);
+  await page.mouse.down();
+  await page.mouse.move(smallWorkspace.x + 8, smallDragY, { steps: 8 });
+  await page.mouse.up();
+
+  const maximizeControl = dialog.getByRole("button", { name: "Maximize" });
+  const maximizeBounds = await maximizeControl.boundingBox();
+  if (!maximizeBounds) throw new Error("Reachable Maximize control has no browser bounds");
+  expect(maximizeBounds.x).toBeGreaterThanOrEqual(smallWorkspace.x - 1);
+  expect(maximizeBounds.x + maximizeBounds.width).toBeLessThanOrEqual(smallWorkspace.x + smallWorkspace.width + 1);
+  await maximizeControl.click();
+  const restoreControl = dialog.getByRole("button", { name: "Restore" });
+  await expect(restoreControl).toBeVisible();
+  await restoreControl.click();
+  await expect(dialog.getByRole("button", { name: "Maximize" })).toBeVisible();
+
+  await page.setViewportSize(normalViewport);
+  await expect.poll(async () => (await windowLayer.boundingBox())?.width ?? 0).toBeGreaterThan(640);
+
+  const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
   const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
 
