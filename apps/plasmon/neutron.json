@@ -2,7 +2,7 @@
   "format": 3,
   "name": "Plasmon",
   "id": "plasmon",
-  "version": 100,
+  "version": 101,
   "src": "main.mo",
   "background": {
     "path": "service.html",
