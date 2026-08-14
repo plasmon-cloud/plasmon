@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { act, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
+const strategySeamName = /^Issue 196 Strategy Seam\.txt/;
+
 test("#196 Grid, List and Details render one shared NodeId selection through explicit view strategies", async () => {
   const app = await renderPlasmon();
   try {
@@ -18,7 +20,7 @@ test("#196 Grid, List and Details render one shared NodeId selection through exp
 
     let explorer = await app.findByRole("region", { name: "File Explorer" });
     let explorerView = within(explorer);
-    let entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
+    let entry = await explorerView.findByRole("option", { name: strategySeamName });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     await app.user.click(entry);
     expect(entry.getAttribute("aria-selected")).toBe("true");
@@ -27,7 +29,7 @@ test("#196 Grid, List and Details render one shared NodeId selection through exp
     await app.user.selectOptions(explorerView.getByLabelText("View"), "list");
     explorer = await app.findByRole("region", { name: "File Explorer" });
     explorerView = within(explorer);
-    entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
+    entry = await explorerView.findByRole("option", { name: strategySeamName });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     expect(entry.getAttribute("aria-selected")).toBe("true");
     expect(explorerView.queryByText("text/plain")).toBeNull();
@@ -35,10 +37,10 @@ test("#196 Grid, List and Details render one shared NodeId selection through exp
     await app.user.selectOptions(explorerView.getByLabelText("View"), "details");
     explorer = await app.findByRole("region", { name: "File Explorer" });
     explorerView = within(explorer);
-    entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
+    entry = await explorerView.findByRole("option", { name: strategySeamName });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     expect(entry.getAttribute("aria-selected")).toBe("true");
-    expect(explorerView.getByText("text/plain")).toBeDefined();
+    expect(within(entry).getByText("text/plain")).toBeDefined();
   } finally {
     app.dispose();
   }
