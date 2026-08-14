@@ -119,6 +119,60 @@ test(
   },
 );
 
+test("#244 characterization keeps snapped restore drag captured through opposite-edge preview", async ({ page }) => {
+  const runtime = resolveLocalNeutronRuntime();
+  const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
+
+  await page.goto(kernelUrl);
+  await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
+  await page.evaluate((seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed), runtime.developerIdentitySeed);
+  await page.locator('[data-tid="launcher-open"]').click();
+  await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
+
+  const appFrameSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
+  const app = page.frameLocator(appFrameSelector).first();
+  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+
+  const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
+  const initialWindowCount = await nativeWindows.count();
+  const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
+  await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+  await rootShortcut.dblclick();
+  await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
+
+  const dialog = nativeWindows.last();
+  const titlebar = dialog.locator(".plasmon-window__titlebar");
+  const windowLayer = app.locator(".plasmon-window-layer").first();
+  const workspace = await windowLayer.boundingBox();
+  if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
+  const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
+
+  const beginDrag = async () => {
+    const box = await titlebar.boundingBox();
+    if (!box) throw new Error("Native window titlebar has no browser bounds");
+    const x = box.x + Math.min(120, box.width / 2);
+    const y = box.y + Math.min(16, box.height / 2);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(dialog).toHaveAttribute("data-interacting", "drag");
+    return { x, y };
+  };
+
+  const left = await beginDrag();
+  await page.mouse.move(workspace.x + 1, left.y, { steps: 5 });
+  await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
+  await page.mouse.up();
+  await expect(dialog).toHaveAttribute("data-window-snap", "left");
+
+  const restored = await beginDrag();
+  await expect(dialog).not.toHaveAttribute("data-window-snap", "left");
+  await page.mouse.move(workspace.x + workspace.width - 1, restored.y, { steps: 5 });
+  await expect(dialog).toHaveAttribute("data-interacting", "drag");
+  await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "right");
+  await page.mouse.up();
+  await expect(dialog).toHaveAttribute("data-window-snap", "right");
+});
+
 declare global {
   interface Window {
     __NEUTRON_PLAYWRIGHT_LOGIN_AS__?: (seed: number) => Promise<string>;
