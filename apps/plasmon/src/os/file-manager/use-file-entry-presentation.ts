@@ -34,7 +34,9 @@ export function useFileEntryResolvedPresentation(
   useEffect(() => {
     let active = true;
     const fallback = fallbackFileResourcePresentation(node, associations);
-    setResourcePresentation(fallback);
+    // FileEntry is NodeId-keyed. Preserve its last resolved presentation while
+    // authoritative FsNode snapshots re-resolve instead of flashing back to the
+    // generic shortcut fallback and cancelling an in-flight packaged icon load.
     void resolveFileResourcePresentation(fs, node, associations)
       .then((resolved) => {
         if (active) setResourcePresentation(resolved);
