@@ -4,10 +4,12 @@
 
 ## Architecture
 
-Deterministic behavior already lives in production helper modules such as:
+Deterministic behavior lives in production helper modules such as:
 
 - `model.ts` — selection, marquee geometry, refresh gating, rename helpers, and clipboard state;
 - `operation-state.ts` — the small injectable FileManager operation lifecycle vocabulary for import/paste status, item counts, current import item, partial import failures, and duplicate-start protection;
+- `operation-presentation.ts` — pure mapping from the accepted operation snapshot to truthful running/status presentation;
+- `render-state.ts` — deterministic filtering, stable NodeId render order, snapshot derivation, and pass-through of caller-owned Desktop coordinates;
 - `file-entry-state.ts` — deterministic NodeId-keyed per-entry render state, consuming caller-supplied Desktop coordinates without allocating placement or owning resource semantics;
 - `activation.ts` — the thin FileManager adapter to the canonical filesystem open authority, including caller-owned same-window directory navigation;
 - `clipboard.ts` — collision-aware copy/cut/paste behavior;
@@ -17,10 +19,21 @@ Deterministic behavior already lives in production helper modules such as:
 - `preferences.ts` — the small filesystem-backed FileManager presentation preference store;
 - `visibility.ts` — the presentation-only filesystem view that selects the canonical `includeHidden` list mode without classifying resources itself;
 - `keyboard.ts`, `drag.ts`, `drop-target.ts`, `rename.ts` — interaction decisions;
-- `spatial-navigation.ts` — deterministic NodeId-preserving neighbor selection from browser-supplied entry rectangles for compact spatial views;
+- `spatial-navigation.ts` / `list-layout.ts` — deterministic NodeId-preserving neighbor selection from browser-supplied entry rectangles for compact spatial views;
 - `properties.tsx` — Properties/Open With presentation.
 
-`FileManager.tsx` connects those models/actions to React state, DOM pointer/keyboard events, dialogs, and rendering. Import can truthfully expose per-item progress because FileManager already sequences those items. Paste exposes running/completed/failed lifecycle and the known total count, but does not invent byte or per-item progress that the existing filesystem paste boundary does not report.
+`FileManager.tsx` is the composition root and humble React adapter. It retains legitimate transient React state such as selection and currently-open menus/dialogs, subscribes to operation snapshots, and translates rendered events into focused adapters. It no longer contains independent refresh, rename, command, keyboard, drag, marquee, resource-surface, command-bar, context-menu, or dialog implementations.
+
+The main #195 adapter seams are:
+
+- `use-file-manager-directory-state.ts` — React lifecycle around canonical `RefreshGate`, filesystem-event relevance, authoritative listing, and NodeId selection reconciliation;
+- `use-file-manager-commands.ts` — UI invocation wiring that delegates to activation/open, clipboard/paste, create/import, shortcut, Trash/delete, download, `FsService`, and #65 operation authorities;
+- `use-file-manager-rename.ts` — inline editor lifecycle around canonical `renameNode`/`FsService` mutation;
+- `use-file-manager-keyboard-adapter.ts` — DOM keyboard translation into existing command/selection/spatial-navigation policy;
+- `use-file-manager-pointer-adapter.ts` — pointer capture, `elementFromPoint`, RAF transforms, drag visual cleanup, and marquee DOM adaptation around existing drag/drop/selection policy. Drag-originated directory moves intentionally remain outside #65 operation state because #92 owns that separate product RED;
+- `FileManagerEntries.tsx`, `FileManagerCommandBar.tsx`, `FileManagerContextMenu.tsx`, and `FileManagerDialogs.tsx` — render-only typed adapters that receive state/callbacks and own no filesystem, open, Trash, classification, presentation, placement, or operation authority.
+
+Import can truthfully expose per-item progress because FileManager already sequences those items. Paste exposes running/completed/failed lifecycle and the known total count, but does not invent byte or per-item progress that the existing filesystem paste boundary does not report.
 
 `FileEntry.tsx` remains a small React/browser adapter around the pure render-state policy and the narrow async presentation/thumbnail hook. It renders and adapts browser input; it does not classify resources, allocate Desktop placement, own filesystem mutation, or replace canonical open/shortcut/Trash authorities.
 
@@ -36,7 +49,7 @@ Hidden-resource classification also remains filesystem-owned. FileManager's `Sho
 
 List is deliberately distinct from Grid and Details. At normal Explorer widths it uses compact resource cells that make horizontal use of the viewport across multiple rendered columns. Details remains the full metadata-row presentation for Name/Type/Size/Modified-style columns; List must not grow a second metadata table or a separate selection/command implementation.
 
-List arrow navigation follows the geometry that the browser actually rendered. `FileManager.tsx` supplies current entry rectangles to the pure `spatialNeighborId()` helper, which returns another stable `NodeId`; the existing `selectNode()` path then remains selection authority. If there is no resource in the requested spatial direction, focus remains on the current resource. Open, rename, context menu, drag/drop, shortcut/resource presentation, operation progress, and filesystem operations remain the same shared FileEntry/FileManager paths used by the other views.
+List arrow navigation follows the geometry that the browser actually rendered. The FileManager pointer/browser adapter supplies current entry rectangles to the pure `spatialNeighborId()` helper, which returns another stable `NodeId`; the existing `selectNode()` path then remains selection authority. If there is no resource in the requested spatial direction, focus remains on the current resource. Open, rename, context menu, drag/drop, shortcut/resource presentation, operation progress, and filesystem operations remain the same shared FileEntry/FileManager paths used by the other views.
 
 Reference investigation for #173 found that daedalOS also models List as a dedicated compact FileManager view with compact rows while reusing shared focus/keyboard infrastructure. Plasmon's accepted #173 contract is more specific: normal-width List must visibly form multiple compact columns and horizontal arrow navigation must follow the resulting geometry. This note does not freeze an exact column count, breakpoint, CSS mechanism, or the future #196 architecture.
 
@@ -50,14 +63,16 @@ Desktop selected/focused label expansion and inline-rename geometry are FileEntr
 
 ## Refactor direction
 
-`FileManager.tsx` is a broad orchestration component. Continue extracting action availability/execution, async refresh coordination, context command models, and reusable interaction state into production modules where doing so makes behavior cheaper to test and shared by Desktop/Explorer. Keep FileEntry's pure render-state plus narrow presentation-hook seam small rather than moving surrounding FileManager authorities into it.
+Keep the #195 decomposition boundary: deterministic policy and canonical commands remain below React; browser-owned mechanisms stay in narrow adapters; typed render components receive state and callbacks without acquiring domain authority. Do not collapse these seams back into `FileManager.tsx`, and do not create a second Desktop/Explorer command stack merely to support future view work.
 
-Do not split by historical feature wave or create separate Desktop/Explorer operation stacks. Preserve one set of filesystem actions and capability-aware commands, with React responsible mainly for rendering and translating browser events. Keep operation state bounded to demonstrated FileManager workflows rather than turning it into a generic job manager.
+#196 owns future Icons/List/Details strategy reconstruction. It may consume the #195 resource-surface and browser-adapter seams, but must preserve one selection/command/open/Trash/clipboard path. Keep FileEntry's pure render-state plus narrow presentation-hook seam small rather than moving surrounding FileManager authorities into it. Keep operation state bounded to demonstrated FileManager workflows rather than turning it into a generic job manager.
 
 ## Testing
 
-Use fast tests for selection/range/marquee math, clipboard/collision naming, operation-state transitions, refresh ordering, command eligibility, activation routing, rename/create/import/delete/shortcut helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, pure spatial navigation, deterministic FileEntry render state, and deterministic shared-presentation mapping. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
+Use fast tests for selection/range/marquee math, clipboard/collision naming, operation-state transitions and presentation, refresh ordering, command eligibility, activation routing, rename/create/import/delete/shortcut helpers, drag/drop decisions, filesystem action outcomes, persisted view preferences, pure spatial navigation, deterministic FileManager render state, deterministic FileEntry render state, and deterministic shared-presentation mapping. Hidden-file presentation tests must exercise the filesystem list contract rather than duplicating hidden-name classification in FileManager tests. Cross-surface activation and ordinary-Delete tests should use the shared headless Plasmon environment so FileManager's production adapters exercise the real filesystem dispatcher/Trash authority, associations, process/window state, protection policy, and Neutron boundary.
 
 Use RTL/browser tests only where DOM mechanics are material, including the accessible running-status boundary for deliberately delayed import/paste operations, pointer capture/drag, keyboard routing/editable targets, file chooser/import, object-URL download behavior, focus/dialog/context-menu interaction, rendered List/Details geometry, bounded Desktop FileEntry rename geometry, bounded command discoverability such as Send to Desktop, and packaged visible workflows. Installed Plasmon-owned artwork paths require packaged-browser coverage because standalone rendering cannot prove the Neutron application mount.
+
+Do not add source-shape assertions for FileManager component names, hook counts, extracted filenames, import topology, CSS class structure, callback names, or line count. Protect observable behavior and canonical authority seams instead.
 
 When a UI bug is fundamentally a shared command/model bug, add the regression below React first instead of relying only on click-path coverage.
