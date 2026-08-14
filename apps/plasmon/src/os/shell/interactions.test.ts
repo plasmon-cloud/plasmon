@@ -4,35 +4,42 @@ import {
   closeNativeTaskContextProcess,
   nativeTaskContextProcessId,
   placeShellContextMenu,
+  shellContextMenuHeight,
 } from "./interactions.ts";
+
+test("taskbar context menu height follows rendered row count", () => {
+  expect(shellContextMenuHeight(1)).toBe(66);
+  expect(shellContextMenuHeight(2)).toBe(119);
+  expect(shellContextMenuHeight(3)).toBe(172);
+});
 
 test("taskbar context placement prefers above its invoking item and centers on the source", () => {
   expect(placeShellContextMenu(
     { left: 450, top: 640, width: 44, height: 44 },
     { width: 1000, height: 700 },
-    { width: 230, height: 180 },
-  )).toEqual({ x: 357, y: 454 });
+    { width: 230, height: shellContextMenuHeight(2) },
+  )).toEqual({ x: 357, y: 515 });
 });
 
 test("taskbar context placement remains viewport-bounded at horizontal edges", () => {
   expect(placeShellContextMenu(
     { left: 2, top: 640, width: 44, height: 44 },
     { width: 1000, height: 700 },
-    { width: 230, height: 180 },
-  )).toEqual({ x: 8, y: 454 });
+    { width: 230, height: shellContextMenuHeight(2) },
+  )).toEqual({ x: 8, y: 515 });
 
   expect(placeShellContextMenu(
     { left: 970, top: 640, width: 44, height: 44 },
     { width: 1000, height: 700 },
-    { width: 230, height: 180 },
-  )).toEqual({ x: 762, y: 454 });
+    { width: 230, height: shellContextMenuHeight(2) },
+  )).toEqual({ x: 762, y: 515 });
 });
 
 test("context placement falls below a source when there is no usable space above", () => {
   expect(placeShellContextMenu(
     { left: 300, top: 10, width: 60, height: 40 },
     { width: 900, height: 700 },
-    { width: 230, height: 180 },
+    { width: 230, height: shellContextMenuHeight(3) },
   )).toEqual({ x: 215, y: 56 });
 });
 
@@ -40,8 +47,8 @@ test("taskbar background pointer can use a zero-size source anchor", () => {
   expect(placeShellContextMenu(
     { left: 520, top: 690, width: 0, height: 0 },
     { width: 1000, height: 700 },
-    { width: 230, height: 180 },
-  )).toEqual({ x: 405, y: 504 });
+    { width: 230, height: shellContextMenuHeight(2) },
+  )).toEqual({ x: 405, y: 565 });
 });
 
 test("native group context resolves Close only when exactly one canonical member is targeted", () => {
