@@ -130,7 +130,19 @@ test("#118 groups canonical Explorer processes and focuses individual members", 
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);
+
+  // A multi-member task remains app-scoped for Pin/Unpin and must not guess
+  // which concrete Process should receive Close.
+  await filesGroup.click({ button: "right" });
+  const groupedContextMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
+  await expect(groupedContextMenu).toBeVisible();
+  await expect(groupedContextMenu.getByRole("menuitem", { name: /Pin to taskbar|Unpin from taskbar/ })).toBeVisible();
+  await expect(groupedContextMenu.getByRole("menuitem", { name: "Close" })).toHaveCount(0);
+
+  // Ordinary activation dismisses the group context menu and exposes the
+  // canonical Process members instead of inventing group-level lifecycle.
   await filesGroup.click();
+  await expect(groupedContextMenu).toHaveCount(0);
 
   const chooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(chooser).toBeVisible();
@@ -148,7 +160,23 @@ test("#118 groups canonical Explorer processes and focuses individual members", 
   await reopenedChooser.getByRole("button", { name: "Documents; Running" }).click();
   await expect(siblingWindow).toHaveClass(/plasmon-window--active/);
 
-  await siblingWindow.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
+  // A chooser member carries its canonical Process identity, so its context
+  // menu exposes Close and delegates only that member to ProcessController.
+  await filesGroup.click();
+  const closeChooser = plasmon.getByRole("region", { name: "Files windows" });
+  await expect(closeChooser).toBeVisible();
+  const siblingMember = closeChooser.getByRole("button", { name: "Documents; Active" });
+  await siblingMember.click({ button: "right" });
+  await expect(closeChooser).toHaveCount(0);
+
+  const memberContextMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
+  await expect(memberContextMenu).toBeVisible();
+  await expect(memberContextMenu.getByRole("menuitem", { name: /Pin to taskbar|Unpin from taskbar/ })).toBeVisible();
+  await expect(memberContextMenu.getByRole("menuitem", { name: "Close" })).toBeVisible();
+  await memberContextMenu.getByRole("menuitem", { name: "Close" }).click();
+
+  await expect(siblingWindow).toHaveCount(0);
+  await expect(primaryWindow).toHaveCount(1);
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
   await expect(taskbar.getByRole("button", { name: /^Files;/ })).toHaveCount(1);
   await expect(taskbar.getByRole("button", { name: /^Files;.*2 windows$/ })).toHaveCount(0);
