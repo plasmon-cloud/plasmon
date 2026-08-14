@@ -14,6 +14,7 @@ if (!container) throw new Error("Root element not found");
 async function start(): Promise<void> {
   const demoSeeds = await loadPackagedDemoGameSeeds(window.location.href);
   const services = createPlasmonServices({ ...(demoSeeds.length > 0 ? { demoSeeds } : {}) });
+  services.startMenu.start();
   createRoot(container).render(<PlasmonOS services={services} />);
 }
 

@@ -1,22 +1,13 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Desktop } from "./desktop/index.ts";
 import { NativeProcessHost } from "./process/index.ts";
 import { Shell } from "./shell/index.ts";
 import { NativeWindow, WindowLayer } from "./windowing/index.ts";
+import { ResourceIcon, nativeHandlerResourcePresentation } from "./visual/index.ts";
 import { createPlasmonServices, type PlasmonServices } from "./integration/services.ts";
 
 export interface PlasmonOSProps {
   services?: PlasmonServices;
-}
-
-function isImageRef(value: string): boolean {
-  return /^(?:https?:|data:image\/|\/|\.\.?\/)/u.test(value);
-}
-
-function windowIcon(icon: string, title: string): ReactNode {
-  if (!icon) return null;
-  if (isImageRef(icon)) return <img src={icon} alt="" draggable={false} />;
-  return <span aria-label={title}>{icon}</span>;
 }
 
 /**
@@ -48,6 +39,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
       nativeApps={services.nativeApps}
       filesystemOpen={services.filesystem.open}
       openService={services.openService}
+      startMenu={services.startMenu}
     >
       <div className="plasmon-os-workspace">
         <div className="plasmon-os-desktop-layer">
@@ -75,7 +67,13 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                   state={state}
                   manager={services.windows}
                   title={title}
-                  icon={record ? windowIcon(record.icon, title) : null}
+                  icon={record ? (
+                    <ResourceIcon
+                      context="titlebar"
+                      frameVariant="bare"
+                      presentation={nativeHandlerResourcePresentation(record.handlerId, record.icon)}
+                    />
+                  ) : null}
                   active={active}
                   onRequestClose={(_windowId, processId) => services.process.close(processId)}
                 >
