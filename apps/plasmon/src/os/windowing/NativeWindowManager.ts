@@ -108,7 +108,6 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
   private readonly reachableTitlebarHeight: number;
   private viewportOverride: WindowViewport | undefined;
   private nextZ: number;
-  private createdCount = 0;
   private focusedId: WindowId | null = null;
   private focusMru: WindowId[] = [];
   private disposed = false;
@@ -153,14 +152,15 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
     const id = this.uniqueId();
     const minWidth = Math.max(1, initial.minWidth ?? this.defaultMinWidth);
     const minHeight = Math.max(1, initial.minHeight ?? this.defaultMinHeight);
-    const cascade = this.createdCount * this.cascadeOffset;
-    this.createdCount += 1;
+    const width = initial.width ?? this.defaultWidth;
+    const height = initial.height ?? this.defaultHeight;
+    const cascade = this.defaultCascade(width, height, minWidth, minHeight);
     const geometry = this.constrain(
       {
         x: initial.x ?? this.initialX + cascade,
         y: initial.y ?? this.initialY + cascade,
-        width: initial.width ?? this.defaultWidth,
-        height: initial.height ?? this.defaultHeight,
+        width,
+        height,
       },
       minWidth,
       minHeight,
@@ -436,6 +436,27 @@ export class NativeWindowManager implements WindowManager, WindowGeometryCommitt
 
   private getViewport(): WindowViewport {
     return normalizeViewport(this.viewportOverride ?? this.viewportProvider());
+  }
+
+  private defaultCascade(width: number, height: number, minWidth: number, minHeight: number): number {
+    if (this.cascadeOffset === 0) return 0;
+    const viewport = this.getViewport();
+    const first = constrainGeometry(
+      { x: this.initialX, y: this.initialY, width, height },
+      viewport,
+      {
+        minWidth,
+        minHeight,
+        reachableTitlebarWidth: this.reachableTitlebarWidth,
+        reachableTitlebarHeight: this.reachableTitlebarHeight,
+      },
+    );
+    const maxX = viewport.x + Math.max(0, viewport.width - first.width);
+    const maxY = viewport.y + Math.max(0, viewport.height - first.height);
+    const xSteps = Math.max(0, Math.floor((maxX - first.x) / this.cascadeOffset));
+    const ySteps = Math.max(0, Math.floor((maxY - first.y) / this.cascadeOffset));
+    const slotCount = Math.max(1, Math.min(xSteps, ySteps) + 1);
+    return (this.windows.size % slotCount) * this.cascadeOffset;
   }
 
   private constrain(geometry: WindowGeometry, minWidth: number, minHeight: number): WindowGeometry {
