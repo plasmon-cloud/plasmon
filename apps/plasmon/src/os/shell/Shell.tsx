@@ -126,7 +126,11 @@ function TrayMark() {
 function useNativeSnapshots(process: ProcessController, windows: WindowManager) {
   const [revision, setRevision] = useState(0);
   useEffect(() => subscribeToNativeShellState(process, windows, () => setRevision((value) => value + 1)), [process, windows]);
-  return useMemo(() => ({ processes: process.list(), windowStates: windows.list() }), [process, windows, revision]);
+  return useMemo(() => ({
+    processes: process.list(),
+    windowStates: windows.list(),
+    focusedWindowId: windows.focusSnapshot().focusedId,
+  }), [process, windows, revision]);
 }
 
 /** Keep one discovered Element snapshot in Shell; ordinary interactions never call loadElements directly. */
@@ -206,7 +210,7 @@ export function Shell({
   const [fsEpoch, setFsEpoch] = useState(0);
   const latestSearch = useRef(new LatestSearchController<SearchBatch>());
   const searchAbort = useRef<AbortController | null>(null);
-  const { processes, windowStates } = useNativeSnapshots(process, windows);
+  const { processes, windowStates, focusedWindowId } = useNativeSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElements(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const preferencesReady = preferences !== null;
@@ -234,9 +238,10 @@ export function Shell({
       processes,
       elements,
       windows: windowStates,
+      focusedWindowId,
       busyTaskId: busyId,
     }),
-    [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
+    [busyId, effectivePreferences, elements, focusedWindowId, nativeDefinitions, processes, windowStates],
   );
   const openTaskbarGroup = useMemo(() => {
     const entry = taskbarEntries.find((candidate) => candidate.kind === "native" && candidate.handlerId === openTaskbarGroupHandlerId);
@@ -245,7 +250,7 @@ export function Shell({
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
   const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
   const calendar = useMemo(() => buildCalendarMonth(calendarAnchor, clock), [calendarAnchor, clock]);
-  const focused = useMemo(() => focusedWindow(windowStates), [windowStates]);
+  const focused = useMemo(() => focusedWindow(windowStates, focusedWindowId), [focusedWindowId, windowStates]);
 
   useEffect(() => {
     if (openTaskbarGroupHandlerId && !openTaskbarGroup) setOpenTaskbarGroupHandlerId(null);
@@ -570,7 +575,7 @@ export function Shell({
     {openTaskbarGroup ? <TaskbarGroupChooser
       entry={openTaskbarGroup}
       windows={windowStates}
-      focusedWindowId={focused?.id ?? null}
+      focusedWindowId={focusedWindowId}
       onSelect={(member) => {
         setActionError(null);
         if (!focusNativeTaskbarMember(openTaskbarGroup, member.id, process)) {
