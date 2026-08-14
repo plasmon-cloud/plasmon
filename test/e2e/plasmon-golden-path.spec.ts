@@ -198,6 +198,28 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const workspace = await app.locator(".plasmon-window-layer").first().boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
 
+  // Issue #177 browser boundary: repeated default open/close must not retain a
+  // lifetime cascade that progressively strands new windows at the edge.
+  const firstPlacement = await dialog.boundingBox();
+  if (!firstPlacement) throw new Error("first native window has no bounds");
+  for (let index = 0; index < 60; index += 1) {
+    await dialog.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
+    await expect(nativeWindows).toHaveCount(initialWindowCount, { timeout: 10_000 });
+    await rootShortcut.dblclick();
+    await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
+    await expect(dialog).toBeVisible();
+    const reopened = await dialog.boundingBox();
+    if (!reopened) throw new Error("reopened native window has no bounds");
+    expect(reopened.x).toBeGreaterThanOrEqual(workspace.x - 1);
+    expect(reopened.y).toBeGreaterThanOrEqual(workspace.y - 1);
+    expect(reopened.x + reopened.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
+    expect(reopened.y + Math.min(38, reopened.height)).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
+  }
+  const wrappedPlacement = await dialog.boundingBox();
+  if (!wrappedPlacement) throw new Error("wrapped native window has no bounds");
+  expect(wrappedPlacement.x).toBeCloseTo(firstPlacement.x, 0);
+  expect(wrappedPlacement.y).toBeCloseTo(firstPlacement.y, 0);
+
   const dragTitlebarTo = async (clientX: number): Promise<void> => {
     const box = await titlebar.boundingBox();
     if (!box) throw new Error("Native window titlebar has no browser bounds");
