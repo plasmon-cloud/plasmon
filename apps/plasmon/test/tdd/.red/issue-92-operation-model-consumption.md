@@ -1,8 +1,8 @@
 # Issue #92 — accepted operation-model consumption plan
 
-Status: **RTL RED** against integrated release
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`. PR #208/#65 is merged; #92 has no
-active implementation owner.
+Status: **RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH** against
+integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`. PR #208/#65 and
+#195/#196 are merged; PR #223 owns #92 implementation.
 
 ## Integrated #65 inspection
 
@@ -12,11 +12,12 @@ active implementation owner.
   `idle | running | completed | failed`.
 - It records total/processed/succeeded/failed item counts, current index/item,
   failure records, subscriptions, and rejects a second `begin` while running.
-- `FileManager.tsx` wires this state to import and paste only.
+- The merged #195 pointer adapter wires this state to import and paste only.
 - The drag-drop path still calls `moveNodesToDirectory(fs, source, target)`
   directly after pointer release, with no operation-state begin/current/final
   lifecycle.
-- No open PR owns #92 (`gh pr list --search 92` returned none).
+- PR #223 (`agent/feature-92-drag-move-progress`) is open; Luna-A does not
+  inspect or modify its implementation branch.
 
 ## Consumption mapping
 

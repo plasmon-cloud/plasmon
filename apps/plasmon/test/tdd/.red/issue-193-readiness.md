@@ -1,8 +1,8 @@
 # Issue #193 readiness — refreshed after r2 integration
 
-Integrated release at final refresh: `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
-
-This is a readiness audit, not Luna-B's Search implementation packet.
+Integrated release at final refresh: `4024addc4902cd019b64df548e4fb2dbf84cd053`.
+PR #219 is the active Luna-B implementation owner; this is a readiness audit,
+not an implementation branch or a competing Search packet.
 
 | Prerequisite / criterion | Status | Evidence and remaining work |
 |---|---|---|
@@ -14,7 +14,7 @@ This is a readiness audit, not Luna-B's Search implementation packet.
 | typed query/category/loading/empty/error/result state | READY CHARACTERIZATION | `search.ts` typed result/state helpers and existing Shell/RTL tests cover behavior. |
 | canonical activation | READY | activation and cross-surface tests delegate to filesystem/open authorities. |
 | no parallel installation catalog | READY AUTHORITY FENCE | registry, filesystem projections and Neutron discovery remain separate authorities. |
-| React isolation | IMPLEMENTATION MISSING | Search state/render remains in `Shell.tsx`; #193 owns extraction after source convergence. |
+| React isolation | IMPLEMENTATION ACTIVE / PR #219 | Search state/render remains in `Shell.tsx`; PR #219 owns extraction. Do not modify its branch. |
 | keyboard/focus/dismissal | CHARACTERIZATION READY | existing RTL/refactor smoke covers semantic behavior; geometry remains separate. |
 | packaged health | BROWSER BLOCKED | strict #187 baseline is available; local session JSON is absent in this worktree. |
 

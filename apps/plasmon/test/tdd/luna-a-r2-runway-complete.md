@@ -1,21 +1,20 @@
 # Luna-A r2 runway disposition
 
-Refresh: integrated release `3d7042b2102a5df51145a1965cf347430fde91b1`.
+Refresh: integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`.
 
 This is a staging/acceptance inventory only. No production source, active
 implementation packet, branch, or PR was modified.
 
 ## READY PACKETS
 
-- **#92:** RTL RED; `issue-92.red.md` and `issue-92.red.ui.test.tsx`.
+- **#92:** RTL RED; `issue-92.red.md` and `issue-92.red.ui.test.tsx`;
+  active implementation PR #223 owns the Issue.
 - **#169:** Headless RED; `issue-169-final-packet.md` and
-  `issue-169.red.test.ts`.
+  `issue-169.red.test.ts`; active implementation PR #221 owns the Issue.
 - **#193:** final Search reconstruction packet;
-  `issue-193-final-packet.md`.
-- **#195:** final FileManager decomposition packet;
-  `issue-195-final-packet.md` and `issue-195.red.test.ts`.
-- **#196:** final view-strategy packet;
-  `issue-196-final-packet.md` and `issue-196.recon.md` — ready for Sol.
+  `issue-193-final-packet.md`; active implementation PR #219 owns the Issue.
+- **#195/#196:** integrated and green; retained packets are preservation
+  fences, not pending implementation work.
 - **#197:** Luna-A Shell/FileManager authority-input packet;
   `issue-197-luna-a-shell-input-packet.md` (Shell implementation remains
   Luna-B-owned).
@@ -24,18 +23,18 @@ implementation packet, branch, or PR was modified.
 
 ## BLOCKED
 
-- **#194:** blocked by the exact #169 malformed-`Accessories` reconciliation
-  RED and the separate #175 Start geometry boundary.
+- **#194:** blocked by #169's current RED and active PR #221, plus the
+  separate #175 Start geometry boundary.
 - **#175 browser geometry:** packaged/browser acceptance remains operationally
   blocked by the missing local session journal; this is not a product RED.
 - **#197 implementation:** blocked by Luna-B ownership and surface boundaries
   #176/#193/#194/#198; Luna-A supplied only the consumer authority packet.
-- **#201 cleanup:** blocked until #195/#193/#194/#196/#197/#199/#200 migrations
-  and #169 are accepted, with consumer/reachability proof.
+- **#201 cleanup:** blocked until #193/#194/#197/#199/#200 migrations and
+  #169 are accepted, with consumer/reachability proof.
 ## COMPLETE / NO IMPLEMENTATION REQUIRED
 
 - **#44, #78, #82, #93, #108, #110, #115, #172, #174, #178, #189, #192,
-  #191/#190/#51/#65/#173/#195 integrated dependencies.**
+  #191/#190/#51/#65/#173/#195/#196 integrated dependencies.**
 - #78 now has composed current-head lifecycle evidence after #51 integration:
   Create Shortcut and Send to Desktop, rename/move, FileManager/Start/Search
   activation, and deterministic missing-target failure.

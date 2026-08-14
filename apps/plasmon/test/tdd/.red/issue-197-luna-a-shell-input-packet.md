@@ -3,7 +3,7 @@
 Disposition: **BLOCKED — Shell decomposition implementation belongs to Luna-B**;
 this is a bounded consumer/authority handoff, not a competing Shell packet.
 
-Integrated release: `82f176a6`. No active #197 PR observed.
+Integrated release: `4024addc4902cd019b64df548e4fb2dbf84cd053`. No active #197 PR observed; #193/#169 implementation PRs are separate active ownership and must not be modified.
 
 ## PRESERVE
 

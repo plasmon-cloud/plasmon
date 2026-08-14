@@ -1,7 +1,9 @@
 # Luna-A RED promotion ledger
 
 This lane-local ledger complements Luna-D's master ledger. Refresh:
-integrated `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+integrated `4024addc4902cd019b64df548e4fb2dbf84cd053`. Active implementation
+ownership: #92/PR #223, #169/PR #221, and #193/PR #219; do not modify those
+branches or implementation packets.
 
 | Issue | Validated packet commit/file | RED/spec files | Behavioral contract | Implementation PR | Permanent test expected | Permanent test observed | Promotion status |
 |---|---|---|---|---|---|---|---|
@@ -31,10 +33,10 @@ integrated `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
 | #169 | final packet | `issue-169-final-packet.md`, `issue-169.red.test.ts` | Start reconciliation collision safety | none | headless reconciliation tests | malformed Accessories sibling rejects current path | HEADLESS RED / #194 BLOCKER |
 | #193 | final packet | `issue-193-final-packet.md` | focused Search surface over canonical results | none | Search model/RTL + #175 browser | no structural RED; #174 complete | FINAL PACKET READY / #175 BOUNDARY |
 | #194 | final packet | `issue-194-final-packet.md` | focused Start surface over `/System/Start Menu` | none | Start migration/RTL + #169/#175 | blocked by #169 | BLOCKED — #169 |
-| #196 | final packet | `issue-196-final-packet.md`, `issue-196.recon.md` | Icons/List/Details strategies over #195 adapters | none | 11 focused characterization tests; future strategy Bun/RTL/browser promotion | #195 integrated at `3d7042b`; no truthful structural RED | FINAL PACKET READY |
+| #196 | merged #215 at `4024add` | `issue-196-final-packet.md`, `issue-196.recon.md`, integrated strategy guards | Icons/List/Details strategies over #195 adapters | merged #215 | 17 focused tests + 1 RTL strategy test; geometry remains browser-owned | current release guards pass; no truthful structural RED | ALREADY GREEN / INTEGRATED |
 | #197 | Luna-A input packet | `issue-197-luna-a-shell-input-packet.md` | Shell composition/authority boundaries | Luna-B-owned | cross-surface guards | no competing Shell packet | BLOCKED — Luna-B |
 | #192 | integrated dependency | #172 composed closure | Desktop placement controller | merged #205 | release #192 tests + #172 composed gate | integrated source and clean-worktree execution observed | INTEGRATED / #172 GREEN |
-| #195 | merged #213 at `3d7042b` | #195 characterization and final packet | humble FileManager adapter boundaries | merged #213 | 11 focused integrated characterization tests | release source inspected and guards passed | INTEGRATED / #196 UNBLOCKED |
+| #195 | merged #213 at `3d7042b`; current release `4024add` | #195 characterization and final packet | humble FileManager adapter boundaries | merged #213 | current focused FileManager guards: 17 passed | current release source/tests inspected | ALREADY GREEN / INTEGRATED / #196 CONSUMED |
 | #201 | final cleanup contract | `issue-201-final-cleanup-contract.md` | migration-gated deletion/import boundaries | none | owning migration suites and package/health evidence | prerequisites not complete | BLOCKED — accepted migrations |
 
 ## Promotion rules

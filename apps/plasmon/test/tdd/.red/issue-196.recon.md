@@ -1,12 +1,13 @@
 # Issue #196 readiness disposition
 
-Checkpoint: `luna-a-196-3d7042b`
+Checkpoint: `4024addc4902cd019b64df548e4fb2dbf84cd053`
 
-Integrated release: `3d7042b2102a5df51145a1965cf347430fde91b1`.
-PR #213 / Issue #195 is merged. The actual #195 adapter seams were inspected
-from the release worktree; #196 is no longer dependency-blocked.
+Integrated release: `4024addc4902cd019b64df548e4fb2dbf84cd053`.
+PR #213 / Issue #195 and PR #215 / Issue #196 are merged. The actual #195
+adapter seams and #196 strategy implementation were inspected from the release
+worktree; #196 is integrated and no longer pending.
 
-Disposition: **FINAL IMPLEMENTOR PACKET READY**.
+Disposition: **ALREADY GREEN / INTEGRATED — NO IMPLEMENTATION REQUIRED**.
 
 The packet consumes `render-state.ts`, `FileManagerEntries.tsx`, the extracted
 #195 command/directory/rename/keyboard/pointer adapters, and the integrated
@@ -15,10 +16,9 @@ Icons strategy, preserves the accepted #173 List geometry, and keeps Details'
 metadata presentation distinct. No source-shape RED is created.
 
 The lowest truthful current evidence is characterization, not a failing test:
-11 focused integrated tests passed (31 expects) for #173 spatial navigation,
-#191 FileEntry authority, and #195 render/selection boundaries. Real responsive
-geometry, browser hit testing, focus, and packaged rendering remain bounded
-browser acceptance. The missing packaged session journal is an operational
+17 focused integrated tests passed (48 expects), plus the canonical #196 RTL
+strategy guard (1 test, 9 expects). Real responsive geometry, browser hit
+testing, focus, and packaged rendering remain bounded browser acceptance. The missing packaged session journal is an operational
 browser block, not a HARNESS GAP.
 
 See `issue-196-final-packet.md` for the complete PRESERVE/CHANGE/UNSPECIFIED

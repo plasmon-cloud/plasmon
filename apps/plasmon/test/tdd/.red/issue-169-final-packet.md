@@ -1,9 +1,10 @@
 # Issue #169 — final Start reconciliation packet
 
-Disposition: **FINAL IMPLEMENTOR PACKET READY** with a truthful **HEADLESS RED**.
+Disposition: **HEADLESS RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
 
 Integrated release: `origin/release/0.1.0-r2` at
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`. No active PR owns #169.
+`4024addc4902cd019b64df548e4fb2dbf84cd053`. PR #221 (`agent/fix-169-start-reconciliation`)
+is open and owns implementation; this packet remains the accepted RED fence.
 
 ## PRESERVE
 
@@ -47,15 +48,16 @@ filename-only ownership guess, or test-local reconciliation.
 `Accessories` file through the headless production graph, then calls the real
 `reconcileStartMenu` with a native seed requiring Accessories.
 
-Executed against current release:
+Executed against current release `4024add` in a detached release worktree:
 
 ```text
-bun test /tmp/plasmon-runway/apps/plasmon/test/tdd/.red/issue-169.red.test.ts
+bun test ./apps/plasmon/test/tdd/.red/issue-169.red.test.ts
 ```
 
 Result: **intentional failure** because reconciliation rejects when the sibling
-exists but is not a directory. This is a production RED for the canonical
-ambiguous-entry criterion, not a source-shape assertion.
+exists but is not a directory. The RED remains unchanged under active PR #221;
+this is a production RED for the canonical ambiguous-entry criterion, not a
+source-shape assertion.
 
 ## Browser boundary / HARNESS GAP
 

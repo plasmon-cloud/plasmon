@@ -1,20 +1,25 @@
 # Issue #195 — final Luna-A implementor packet
 
-Disposition: **LUNA-A #195 FINAL PACKET READY**
+Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
+This packet is retained as the merged #195 preservation and authority fence.
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+`4024addc4902cd019b64df548e4fb2dbf84cd053`.
 
-No open PR owns #195. Integrated dependencies inspected: #51, #65, #173,
-#189, #190, #191, and #192. This packet contains no production implementation
-and no structural RED based only on `FileManager.tsx` size or shape.
+PR #213 is merged; no active PR owns #195. Integrated dependencies and the
+follow-up #196 strategy migration are present. This packet contains no
+production implementation and no structural RED based only on `FileManager.tsx`
+size or shape.
 
 ## Current production authority
 
-`FileManager.tsx` remains the broad React/browser adapter. It already consumes
-focused production seams for activation, clipboard, creation/import, shortcut,
-delete/Trash, drag decisions, drop validation, keyboard policy, operation state,
-rename, preferences, properties, thumbnails, and shared presentation.
+The merged #195 implementation makes `FileManager.tsx` the composition root for
+focused React/browser adapters. Directory refresh, commands, rename, keyboard,
+pointer, render-state, operation presentation, and typed child render seams are
+now explicit production modules. It consumes focused production seams for
+activation, clipboard, creation/import, shortcut, delete/Trash, drag decisions,
+drop validation, keyboard policy, operation state, rename, preferences,
+properties, thumbnails, and shared presentation.
 
 The accepted decomposition boundary is:
 
@@ -84,8 +89,9 @@ turning FileEntry into a command or placement authority.
   shortcut-overlay, sizing, and package-asset authority. FileEntry and future
   render adapters must not grow MIME/type/icon tables.
 - #173 compact List behavior and `spatialNeighborId` remain the accepted view
-  strategy behavior. #196 owns future Icons/List/Details strategy reconstruction;
-  #195 must not redesign view geometry or keyboard policy.
+  strategy behavior. #196 is now integrated through `view-strategy.ts` and its
+  focused Bun/RTL guards; #195's adapter boundary remains below those strategies
+  and does not own view geometry or keyboard policy.
 - #192 `reconcileDesktopPositions` remains Desktop placement authority. FileEntry
   receives resolved coordinates; it does not allocate, persist, or reconcile
   placement.
@@ -168,6 +174,25 @@ selection-reconciliation seam and passes against the integrated release.
 Run it together with the focused FileManager guard set. Do not add a second
 copy of existing selection, command, Trash, shortcut, operation, presentation,
 List, FileEntry, or placement tests merely to make decomposition visible.
+
+## Current integrated verification
+
+Against release `4024add`:
+
+```text
+bun test apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \
+  apps/plasmon/src/os/file-manager/view-strategy.test.ts \
+  apps/plasmon/src/os/file-manager/spatial-navigation.test.ts \
+  apps/plasmon/src/os/file-manager/render-state.test.ts \
+  apps/plasmon/src/os/file-manager/file-entry-state.test.ts \
+  apps/plasmon/src/os/file-manager/operation-state.test.ts \
+  apps/plasmon/src/os/file-manager/operation-presentation.test.ts
+```
+
+Result: **17 tests, 0 failures, 48 expects**. The integrated #196 RTL strategy
+ guard also passed: **1 test, 0 failures, 9 expects** with the canonical Happy
+ DOM preload. The historical 47-test characterization result below remains
+ archived release evidence.
 
 ## Corrective REDs
 

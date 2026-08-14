@@ -1,8 +1,9 @@
 # Issue #92 — drag-move operation preservation contract
 
 Refresh: `origin/release/0.1.0-r2` =
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`. PR #208/#65 is integrated; #92
-has no active implementation owner. Status: **RTL RED**.
+`4024addc4902cd019b64df548e4fb2dbf84cd053`. PR #208/#65 and #195/#196 are
+integrated; PR #223 owns #92 implementation and must not be modified. Status:
+**RTL RED**.
 
 ## PRESERVE
 
@@ -34,8 +35,9 @@ has no active implementation owner. Status: **RTL RED**.
 Integrated #65 exports `FileOperationState` with kinds `import | paste`, status
 `idle | running | completed | failed`, item counters, current item, failures,
 and duplicate `begin` protection. FileManager wires it to import and paste, but
-`handleEntryPointerUp` still calls `moveNodesToDirectory()` directly and starts
-no operation state for directory drops.
+The merged #195 `use-file-manager-pointer-adapter.ts` still calls
+`moveNodesToDirectory()` directly and starts no operation state for directory
+drops.
 
 The executable RTL RED therefore asserts only the truthful visible contract:
 a delayed real `FsService.move` after a multi-item directory drop must expose an

@@ -3,16 +3,17 @@
 **Final implementor packet:** `issue-195-final-packet.md`.
 
 Refresh: integrated `origin/release/0.1.0-r2` at
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`; #51/#65/#173/#189/#190/#191/#192
-are integrated and no active PR owns #195.
+`4024addc4902cd019b64df548e4fb2dbf84cd053`; #51/#65/#173/#189/#190/#191/#192,
+#195, and #196 are integrated. No active PR owns #195.
 
-This packet is a decomposition fence, not a source-shape test. It records the
-responsibility/authority map for the current active FileManager adapter,
-indexes existing guards, and adds only the uncovered deterministic refresh
-boundary characterization. No product behavior is changed on this Luna
-branch.
+This packet is a decomposition fence, not a source-shape test. Its broad
+responsibility map below records the **pre-#195 baseline** that motivated the
+merged implementation; the current production authority is the post-merge
+adapter architecture documented in `issue-195-final-packet.md`. The refresh
+boundary characterization remains a permanent guard. No product behavior is
+changed on this Luna branch.
 
-## Starting state
+## Starting state (historical pre-merge baseline)
 
 The active path is:
 
@@ -29,7 +30,7 @@ consumes substantial extracted helpers (`model.ts`, `activation.ts`,
 composition, local UI state, browser event translation, command dispatch, and
 rendering in one function.
 
-## Current FileManager responsibility map
+## Pre-#195 FileManager responsibility map (historical evidence)
 
 | Responsibility | Current production location | Classification | Authority/boundary to preserve |
 |---|---|---|---|

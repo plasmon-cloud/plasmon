@@ -1,11 +1,12 @@
 # Issue #196 — final FileManager view-strategy implementation packet
 
-Disposition: **FINAL PACKET READY — #195 INTEGRATED**.
+Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
+This packet is retained as the #196 strategy preservation and authority fence.
 
-Checkpoint: `14e7607603f538be387ea253f47f4d3f8dafdda1`
-Release base: `3d7042b2102a5df51145a1965cf347430fde91b1`
-Merged dependency: PR #213 / Issue #195, merge commit
-`3d7042b2102a5df51145a1965cf347430fde91b1`.
+Checkpoint: `4024addc4902cd019b64df548e4fb2dbf84cd053`
+Release base: `4024addc4902cd019b64df548e4fb2dbf84cd053`
+Merged dependencies: PR #213 / Issue #195 and PR #215 / Issue #196 are
+integrated at this release head.
 
 This packet consumes the actual merged #195 architecture. It does not reason
 from the former monolithic `FileManager.tsx` shape and does not authorize a
@@ -13,7 +14,8 @@ second FileManager, presentation, filesystem, or operation authority.
 
 ## Reconciled current architecture
 
-#195 now provides the humble adapter composition root and these accepted seams:
+#195 provides the humble adapter composition root and #196 now provides the
+explicit view strategy seam. The accepted architecture is:
 
 - `use-file-manager-directory-state.ts` owns React lifecycle around
   authoritative listing, `RefreshGate`, filesystem-event relevance, and
@@ -32,9 +34,10 @@ second FileManager, presentation, filesystem, or operation authority.
 - `FileManagerEntries.tsx` is a typed render adapter; `FileEntry.tsx` remains
   the shared per-resource render/presentation authority.
 
-The existing `presentation` value `"grid"` is the current Icons strategy. Do
-not introduce a parallel `"icons"` mode merely to satisfy the issue wording.
-`"desktop"` remains a Desktop placement consumer and is outside #196's new
+The existing `presentation` value `"grid"` is the integrated Icons strategy;
+`view-strategy.ts` now defines Grid/List/Details strategy policy. Do not
+introduce a parallel `"icons"` mode merely to satisfy the issue wording.
+`"desktop"` remains a Desktop placement consumer and is outside #196's
 view-strategy scope.
 
 ## PRESERVE:
@@ -123,25 +126,35 @@ line-count, or import-topology REDs.
 
 ## Executable RED:
 
-**No truthful #196 RED exists at the current integrated source.** The issue is
-an architecture/refactor acceptance, not a missing observable behavior that
-can be asserted without manufacturing a source-shape failure. The permanent
-characterization destination is the existing production graph:
+**No current #196 RED exists.** The strategy implementation is integrated and
+its behavior is green; the packet remains a preservation record rather than a
+new failing gate. The permanent characterization destination is the existing
+production graph:
 
 ```text
-cd /tmp/plasmon-196
-bun test apps/plasmon/src/os/file-manager/spatial-navigation.test.ts \
+bun test apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \
+  apps/plasmon/src/os/file-manager/view-strategy.test.ts \
+  apps/plasmon/src/os/file-manager/spatial-navigation.test.ts \
   apps/plasmon/src/os/file-manager/render-state.test.ts \
   apps/plasmon/src/os/file-manager/file-entry-state.test.ts \
-  apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \
-  apps/plasmon/src/os/file-manager/issue-191.characterization.test.ts
+  apps/plasmon/src/os/file-manager/operation-state.test.ts \
+  apps/plasmon/src/os/file-manager/operation-presentation.test.ts
 ```
 
-Executed against release base `3d7042b`:
+Executed against release base `4024add`:
 
 ```text
-11 passed, 0 failed, 31 expect() calls
+17 passed, 0 failed, 48 expect() calls
 ```
+
+Canonical RTL strategy guard:
+
+```text
+bun test --preload ./apps/plasmon/test/setupHappyDom.ts \
+  ./apps/plasmon/test/rtl/issue-196.test.tsx
+```
+
+Result: **1 passed, 0 failed, 9 expect() calls**.
 
 These guards prove the common #195 render/selection boundary, #191 FileEntry
 authority, and #173 spatial helper. Sol should add behavior-level strategy
@@ -168,8 +181,9 @@ browser block, not a product RED and not a HARNESS GAP.
 
 ## Files/authorities Sol may modify:
 
-- new or existing Icons/Grid, List, and Details strategy modules and their pure
-  layout/navigation helpers under `apps/plasmon/src/os/file-manager/`;
+- integrated or future corrective changes to Icons/Grid, List, and Details
+  strategy modules and their pure layout/navigation helpers under
+  `apps/plasmon/src/os/file-manager/`;
 - thin strategy composition in `FileManagerEntries.tsx` and, if required,
   `FileManager.tsx`, without moving domain authority into either file;
 - view-specific styles such as `file-manager.scss` and `list-layout.scss`, only

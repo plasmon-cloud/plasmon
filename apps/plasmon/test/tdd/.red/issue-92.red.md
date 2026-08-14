@@ -1,12 +1,14 @@
 # Issue #92 — multi-item drag-move progress
 
-Disposition: **TDD:RTL RED** against integrated release
-`82f176a6f11a163197a270a6c2275dde0f95a2e9` (now including #51, #65, #173,
-#189, #190, #191, and #192 integration).
+Disposition: **TDD:RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
+PR #223 (`agent/feature-92-drag-move-progress`) owns implementation. The RED
+remains against integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`
+(now including merged #195 and #196).
 
 ## Authority inspection
 
-- Drag orchestration: `apps/plasmon/src/os/file-manager/FileManager.tsx`
+- Drag orchestration: merged #195
+  `apps/plasmon/src/os/file-manager/use-file-manager-pointer-adapter.ts`
   `handleEntryPointerUp`.
 - Drop validation and mutation: `model.ts::validateDirectoryDrop` and
   `moveNodesToDirectory`, delegating each mutation to `FsService.move`.

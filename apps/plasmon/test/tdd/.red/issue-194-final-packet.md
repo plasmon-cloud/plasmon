@@ -1,11 +1,12 @@
 # Issue #194 — final Start surface reconstruction packet
 
-Disposition: **BLOCKED — #169 Start reconciliation RED must be resolved/accepted
-before final Start cutover**. The characterization and implementation boundary
-are ready; no production implementation is made here.
+Disposition: **BLOCKED — #169 RED / PR #221 active implementation ownership**.
+The characterization and implementation boundary are ready; no production
+implementation is made here. Do not modify PR #221 or derive a future Start
+contract from its unmerged branch.
 
 Integrated release: `origin/release/0.1.0-r2` at
-`82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+`4024addc4902cd019b64df548e4fb2dbf84cd053`.
 
 ## Prerequisite
 
