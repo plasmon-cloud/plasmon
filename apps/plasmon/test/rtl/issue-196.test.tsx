@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { act, waitFor, within } from "@testing-library/react";
+import { act, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 test("#196 Grid, List and Details render one shared NodeId selection through explicit view strategies", async () => {
@@ -15,27 +15,30 @@ test("#196 Grid, List and Details render one shared NodeId selection through exp
     ));
 
     await act(async () => app.environment.open("/Documents"));
-    const explorer = await app.findByRole("region", { name: "File Explorer" });
-    const explorerView = within(explorer);
-    const viewSelect = explorerView.getByLabelText("View");
 
+    let explorer = await app.findByRole("region", { name: "File Explorer" });
+    let explorerView = within(explorer);
     let entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     await app.user.click(entry);
     expect(entry.getAttribute("aria-selected")).toBe("true");
     expect(explorerView.queryByText("text/plain")).toBeNull();
 
-    await app.user.selectOptions(viewSelect, "list");
+    await app.user.selectOptions(explorerView.getByLabelText("View"), "list");
+    explorer = await app.findByRole("region", { name: "File Explorer" });
+    explorerView = within(explorer);
     entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     expect(entry.getAttribute("aria-selected")).toBe("true");
     expect(explorerView.queryByText("text/plain")).toBeNull();
 
-    await app.user.selectOptions(viewSelect, "details");
+    await app.user.selectOptions(explorerView.getByLabelText("View"), "details");
+    explorer = await app.findByRole("region", { name: "File Explorer" });
+    explorerView = within(explorer);
     entry = await explorerView.findByRole("option", { name: "Issue 196 Strategy Seam.txt" });
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
     expect(entry.getAttribute("aria-selected")).toBe("true");
-    await waitFor(() => expect(explorerView.getByText("text/plain")).toBeDefined());
+    expect(explorerView.getByText("text/plain")).toBeDefined();
   } finally {
     app.dispose();
   }
