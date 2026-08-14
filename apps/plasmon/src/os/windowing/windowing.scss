@@ -31,12 +31,18 @@
     height var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
     opacity var(--plasmon-motion-fast, 120ms) ease,
     transform var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1),
+    border-color var(--plasmon-motion-fast, 120ms) ease,
     box-shadow var(--plasmon-motion-fast, 120ms) ease;
   animation: plasmon-window-open var(--plasmon-motion-window, 160ms) cubic-bezier(.2, .8, .2, 1);
   will-change: left, top, width, height;
 }
 
 .plasmon-window--active {
+  border-color: color-mix(
+    in srgb,
+    var(--plasmon-accent, #4cc2ff) 58%,
+    var(--plasmon-border-strong, rgba(255, 255, 255, 0.18))
+  );
   box-shadow: var(--plasmon-shadow-window, 0 20px 54px rgb(0 0 0 / 42%));
 }
 
@@ -97,9 +103,9 @@
 
 .plasmon-window__icon {
   display: inline-grid;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
+  width: var(--plasmon-icon-titlebar-frame, 18px);
+  height: var(--plasmon-icon-titlebar-frame, 18px);
+  flex: 0 0 var(--plasmon-icon-titlebar-frame, 18px);
   place-items: center;
 }
 
