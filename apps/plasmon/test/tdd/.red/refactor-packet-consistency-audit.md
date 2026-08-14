@@ -31,7 +31,7 @@ said so.
 | #191 | existing geometry packet targets bounded rename editor, not selected labels | WAIT FOR DEPENDENCY | PR #204 integration and rerun |
 | #192 | integrated controller and tests inspect actual release implementation | VERIFIED INTEGRATED | #172 composed closure evidence |
 | #195 | characterization only, no source-shape gate | CHARACTERIZATION ONLY | inspect after #191 |
-| #196 | reconnaissance intentionally architecture-deferred | WAIT FOR DEPENDENCY | #195 implementation seam |
+| #196 | final strategy packet consumes merged #195 architecture | FINAL PACKET READY | #173/#189/#190/#191/#192/#195 integrated |
 | #186 | matrix handed to Testing Lead PR #209, now merged | RECONNAISSANCE | no Luna ownership |
 | #193/#194 | readiness docs separate source authority, visible uniqueness and React extraction | RECONNAISSANCE/READINESS | owning implementation packets |
 | #201 | current release inspected; #192 no longer a wait condition | RECONNAISSANCE/READINESS | accepted migration consumer proof |

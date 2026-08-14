@@ -34,7 +34,7 @@ Open implementation ownership observed: #51 PR #210, #65 PR #208, #189 PR #207,
 | #193 | Search remains inline; source convergence incomplete | RECONNAISSANCE / readiness |
 | #194 | Start remains inline; #169 prerequisite incomplete | RECONNAISSANCE / readiness |
 | #195 | broad adapter still active after #191; final behavioral fence and refresh characterization ready | LUNA-A FINAL PACKET READY; no structural RED |
-| #196 | final view seam architecture-dependent | WAIT FOR DEPENDENCY on #195 |
+| #196 | final view seam consumes merged #195 adapter architecture | FINAL IMPLEMENTOR PACKET READY; no truthful structural RED |
 | #201 | cleanup candidates remain active until migrations integrate | RECONNAISSANCE / readiness |
 
 ## Browser-claim replacement audit

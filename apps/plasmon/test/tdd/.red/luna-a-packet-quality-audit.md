@@ -32,7 +32,7 @@ verification.
 | #191 | bounded rename editor -> existing geometry packet/PR #204 -> WAIT FOR DEPENDENCY -> integration/rerun |
 | #192 | placement controller -> integrated #192 tests and browser adapter packet -> CHARACTERIZATION ONLY -> independent packaged geometry execution remains blocked |
 | #195 | decomposition behavior -> existing lower-layer guards, no source-shape test -> CHARACTERIZATION ONLY -> inspect post-#191 |
-| #196 | explicit strategies -> reconnaissance -> WAIT FOR DEPENDENCY -> #195 seam |
+| #196 | explicit strategies -> final packet consumes merged #195 seams -> FINAL PACKET READY |
 | #186 | persistence matrix -> Testing Lead PR #209 merged in final release -> RECONNAISSANCE -> explicit Testing Lead handoff, no Luna ownership |
 | #193/#194 | source/consumer readiness -> refreshed readiness audits -> RECONNAISSANCE -> owning implementation |
 | #201 | cleanup candidates -> release inspection after #192 -> RECONNAISSANCE -> accepted migration evidence |
