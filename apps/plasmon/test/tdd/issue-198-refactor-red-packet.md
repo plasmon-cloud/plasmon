@@ -64,6 +64,18 @@ Observed current failures are the missing single application group, missing `Clo
 - Show Desktop and TaskManager behavior (#184/#185);
 - CSS class names, React component boundaries, and internal controller names.
 
+## File / authority conflict map for parallel Sol implementation
+
+| path / owner | may change in #198 | must not change in #198 | serialize / coordinate with |
+|---|---|---|---|
+| `apps/plasmon/src/os/shell/model.ts` and future taskbar projection/grouping model | taskbar projection/group/member/menu policy | Process or WindowManager lifecycle state | #197 Shell composition contract; #118/#183 acceptance |
+| `apps/plasmon/src/os/shell/Shell.tsx` and future rendered taskbar surface | adapter wiring, semantic menu rendering, taskbar surface composition | process lists, focus ledger, close implementation | #197, #193 Search, #194 Start; keep surface ownership explicit |
+| `apps/plasmon/src/os/process/**`, `apps/plasmon/src/os/windowing/**` | none | all lifecycle, window, focus, minimize, restore, close authority | #199 only through public contracts |
+| `apps/plasmon/src/os/visual/**` | consume existing shared presentation | new taskbar-specific icon/token system | merged #190; #112 native-app content chrome; #201 cleanup |
+| `apps/plasmon/test/tdd/.red/issue-118*`, `.red/issue-183*`, `test/taskbarLifecycle.test.ts` | adoption/permanent assertions only | weakening accepted guards or adding a fake authority | #187 guard suite |
+
+**Parallel-safe:** test/spec/ledger work; pure taskbar projection tests that consume public Process/WindowManager snapshots; Visual consumption that does not edit the shared resolver. **Serialize:** Shell root edits with #197 and any shared Shell JSX edits from #193/#194. #112 and #200 are content/runtime concerns and may proceed separately when they do not touch outer taskbar or WindowManager files.
+
 ## Promotion / completion gates
 
 1. Keep #72 and `test/taskbarLifecycle.test.ts` green.

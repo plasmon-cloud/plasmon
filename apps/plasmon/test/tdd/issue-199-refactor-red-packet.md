@@ -64,6 +64,19 @@ Current failures are exact: placement persistence is absent and repeated placeme
 - quarter snapping, multi-monitor/workspace policy;
 - browser behavior that Happy DOM cannot faithfully model.
 
+## File / authority conflict map for parallel Sol implementation
+
+| path / owner | may change in #199 | must not change in #199 | serialize / coordinate with |
+|---|---|---|---|
+| `apps/plasmon/src/os/windowing/NativeWindow.tsx` | focused chrome/render adapter and DOM event forwarding | geometry policy, Process lifecycle, durable placement | #112 only for content chrome boundary; #197 only if Shell embeds window layer |
+| `apps/plasmon/src/os/windowing/interaction.ts` | pointer capture/drag/resize/cancel adapter plumbing | snap policy, placement database, Process state | #43 browser contract; #187 browser health |
+| `apps/plasmon/src/os/windowing/NativeWindowManager.ts`, `geometry.ts` | only deterministic policy required by accepted #177/#43 guards | React event state, Shell layout, Process records | #117 persistence remains separate; public contract is the seam |
+| `apps/plasmon/src/os/visual/**` | consume existing chrome/icon/sizing primitives | app semantics or a second chrome system | #190/#111 shared presentation; #112 owns inner native-app content chrome |
+| `test/e2e/**`, `apps/plasmon/test/tdd/issue-43*`, `issue-177*` | browser adoption evidence and strict health assertions | fake `DOMRect`, fake pointer capture, duplicate browser harness | #187 packaged guardrails |
+| `apps/plasmon/src/native-apps/text/**` and Monaco runtime | none | document/session/model/worker authority | #200 owns Monaco host; #112 owns inner app chrome |
+
+**Parallel-safe:** manager/geometry characterization, packet docs, and browser adoption review can proceed independently of #193/#194 Search/Start. **Serialize:** edits to `NativeWindow.tsx`/`interaction.ts` with any #112 outer-chrome work; coordinate with #200 only through the existing Windowing/Process public contracts. #117 must remain a separate persistence implementation and guard.
+
 ## Browser adoption contract
 
 Adopt the existing #43 and #177 blocks into the packaged Explorer flow rather than creating a second browser harness. The final #199 browser gate must:
