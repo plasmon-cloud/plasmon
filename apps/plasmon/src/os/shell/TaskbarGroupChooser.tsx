@@ -1,7 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import type { ProcessRecord, WindowState } from "../contracts/index.ts";
 import { ShellIcon } from "./icon.tsx";
-import { windowForProcess, type NativeTaskbarEntry } from "./model.ts";
+import { windowForProcess, type NativeTaskbarEntry } from "./taskbar.ts";
 import "./taskbarGroups.scss";
 import "./taskbarContext.scss";
 
