@@ -81,13 +81,16 @@ test(
     };
 
     const leftDrag = await beginTitlebarDrag();
+    await expect(dialog).toHaveAttribute("data-interacting", "drag");
     await page.mouse.move(workspace.x + 1, leftDrag.y, { steps: 5 });
     await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
     await page.mouse.up();
+    await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
     await expect(snapPreview).toHaveCount(0);
     await expect(dialog).toHaveAttribute("data-window-snap", "left");
 
     const rightDrag = await beginTitlebarDrag();
+    await expect(dialog).toHaveAttribute("data-interacting", "drag");
     await expect(dialog).not.toHaveAttribute("data-window-snap", "left");
     const restoredTitlebarBounds = await titlebar.boundingBox();
     if (!restoredTitlebarBounds) throw new Error("Restored native titlebar has no browser bounds");
@@ -97,6 +100,7 @@ test(
     expect(rightDrag.x).toBeLessThanOrEqual(restoredTitlebarBounds.x + restoredTitlebarBounds.width + 1);
 
     await page.mouse.move(workspace.x + workspace.width - 1, rightDrag.y, { steps: 5 });
+    await expect(dialog).toHaveAttribute("data-interacting", "drag");
     await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "right");
     const rightPreviewGeometry = await snapPreviewGeometry();
     const rightDragBounds = await dialog.boundingBox();
@@ -109,6 +113,7 @@ test(
     expect(rightDragBounds.x + rightDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
     expect(rightDragBounds.y + rightDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
     await page.mouse.up();
+    await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
     await expect(snapPreview).toHaveCount(0);
     await expect(dialog).toHaveAttribute("data-window-snap", "right");
   },
