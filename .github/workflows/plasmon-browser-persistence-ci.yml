@@ -23,6 +23,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify required-gate workflow contract
+        run: node test/ci/verify-required-browser-gates.mjs persistence
+
       - name: Detect persistence-relevant changes
         id: persistence_scope
         shell: bash
