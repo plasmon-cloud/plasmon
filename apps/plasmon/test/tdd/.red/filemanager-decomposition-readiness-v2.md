@@ -1,8 +1,8 @@
 # FileManager decomposition readiness v2
 
-Refresh: integrated release `f4ac3b4`. PR #204/#191 is active implementation
-ownership — **ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**. This audit
-excludes its unmerged branch and does not finalize #195.
+Refresh: integrated release `82f176a6`. PR #204/#191 is integrated; #195 has
+no active implementation PR. This audit consumes only the integrated #191
+FileEntry pilot and does not implement #195.
 
 | Responsibility | Current authority/seam | Deterministic? | React-only? | Browser-only? | Existing evidence | After #191 inspection |
 |---|---|---:|---:|---:|---|---|
@@ -13,7 +13,7 @@ excludes its unmerged branch and does not finalize #195.
 | rename command | `renameNode`/FsService | yes | inline editor state | editor geometry | rename tests | selected-label vs editor seam |
 | activation/navigation | `activateFileManagerNode`, open authority | yes | callback | no | activation tests | preserve |
 | clipboard | `FileOperationClipboard`, paste helper | yes | command buttons | no | clipboard tests | operation status dependency #65 |
-| operation state | imports/drag currently local opaque loops | incomplete | yes | visible status RTL | #65 packet active | inspect accepted #65 first |
+| operation state | integrated `FileOperationState` for import/paste; drag remains opaque and is #92 RTL RED | incomplete | yes | visible status RTL | #65 integrated; #92 separate | preserve accepted state and do not duplicate it |
 | Trash/delete | `deleteFilesystemNodes` + Trash authority | yes | confirmation/error adapter | no | delete tests | preserve |
 | shortcut | create/read shared shortcut helpers | yes | command adapter | no | shortcut tests | preserve |
 | Properties/Open With | panels + AssociationRegistry/OpenService | model yes | dialog adapter | focus/geometry | properties tests | preserve authority |
@@ -29,7 +29,8 @@ excludes its unmerged branch and does not finalize #195.
 
 ## Readiness disposition
 
-**CHARACTERIZATION READY; FINALIZE AFTER #191 INTEGRATES.** The current
-production graph has enough lower seams to preserve behavior, but #195's final
-RED must inspect the surviving #191 FileEntry state/presentation seam, async
-adapter, selected-label boundary, and retired tests before asserting extraction.
+**FINAL PACKET READY.** #191 is integrated and its FileEntry state,
+presentation hook, characterization tests, RTL Escape guard, and packaged
+geometry boundary have been inspected. The current production graph has enough
+lower seams to preserve behavior. #195 has no structural RED; adopt
+`issue-195-final-packet.md` and the refresh characterization before extraction.

@@ -11,9 +11,9 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 #171 and #190 ── NO DEPENDENCY / MAY RUN IN PARALLEL
 #190 ── no authority dependency ──> Monaco / js-dos / EmulatorJS
 
-#191 ── hard implementation ──> #195 decomposition follow-up
-#195 ── hard implementation ──> #196 final view-strategy packet
-#173 ── behavior packet / may run in parallel ──> #196 implementation
+#191 (INTEGRATED) ── accepted pilot evidence ──> #195 decomposition packet
+#195 ── implementation follow-up ──> #196 final view-strategy packet
+#173 (INTEGRATED) ── behavior evidence ──> #196 implementation
 #195/#196 ── soft product relationship ──> #173
 
 #65 ── hard implementation ──> #92
@@ -40,9 +40,9 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 | #189 -> #178 | CLOSURE EVIDENCE | #178 core acceptance is green on integrated release; local TDD staging is stale |
 | #189 -> #174 | TEST-PACKET DEPENDENCY | #174 remains active-owned; final consumer promotion waits on its owner |
 | #190 -> #52 | SOFT CONSUMER PREFERENCE | presentation convergence, not semantic authority |
-| #191 -> #195 | HARD IMPLEMENTATION DEPENDENCY | #191 PR open/not integrated |
-| #195 -> #196 | HARD IMPLEMENTATION DEPENDENCY | final #196 packet remains deferred |
-| #173 -> #196 | SOFT PRODUCT RELATIONSHIP | #173 behavior is independently specified and can proceed now |
+| #191 -> #195 | ACCEPTED PILOT DEPENDENCY | #191 integrated; #195 final packet consumes FileEntry seam |
+| #195 -> #196 | IMPLEMENTATION FOLLOW-UP | #195 packet ready; #196 remains view-strategy work |
+| #173 -> #196 | ACCEPTED BEHAVIOR DEPENDENCY | #173 integrated; preserve compact List/spatial behavior |
 | #65 -> #92 | ACCEPTED IMPLEMENTATION DEPENDENCY | #65 integrated; its operation state covers import/paste, #92 RTL RED isolates missing drag lifecycle |
 | #44 -> #51 | HARD CONSUMER DEPENDENCY | #51 core consumer RED plus primitive fence |
 | #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated in release; composed gate passed against exact release source in clean detached worktree |

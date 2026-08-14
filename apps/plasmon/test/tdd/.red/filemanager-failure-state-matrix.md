@@ -1,6 +1,6 @@
 # FileManager failure-state matrix
 
-Refresh: integrated `f4ac3b4`. Existing retry/error behavior is recorded, not
+Refresh: integrated `82f176a`. Existing retry/error behavior is recorded, not
 expanded. No retries are invented by this matrix.
 
 | Failure | Authority | Visible state | Action remains available? | Existing evidence | Canonical owner |
@@ -10,8 +10,8 @@ expanded. No retries are invented by this matrix.
 | open failure | OpenService/dispatcher | ErrorBanner/action error | FileManager remains usable | `fileManagerActivation.test.ts` | #31/#195 |
 | rename collision | FsService rename | inline rename error, editor remains | retry/cancel | rename tests | #195 |
 | rename missing resource | FsService | inline error/refresh path | retry only user action | rename/model tests | #195 |
-| paste partial failure | FsService/clipboard command | actionable partial error + successful nodes retained | explicit retry | #65 packet, clipboard tests | #65/#195 |
-| import partial failure | FsService/import helper | actionable failure list + successful imports | explicit retry | create-import tests/#65 packet | #65/#195 |
+| paste partial failure | FsService/clipboard command | actionable partial error + successful nodes retained | explicit retry | integrated #65 packet, clipboard tests | #195 preservation |
+| import partial failure | FsService/import helper | actionable failure list + successful imports | explicit retry | create-import tests/integrated #65 packet | #195 preservation |
 | shortcut failure | FsService/shared primitive | ErrorBanner; no partial visible selection | retry | #44 audit/gate3 | #44/#195 |
 | Trash failure | TrashService | delete error and refreshed source | explicit retry | delete/Trash tests | #40/#45/#195 |
 | Properties target disappeared | FsService/Properties loader | dialog error/close | refresh/reopen | properties tests | #195 |

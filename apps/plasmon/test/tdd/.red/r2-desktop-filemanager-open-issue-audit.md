@@ -20,7 +20,7 @@ Open implementation ownership observed: #51 PR #210, #65 PR #208, #189 PR #207,
 | #169 | Start reconciliation prerequisite for #194 | readiness dependency, no Luna-A full packet |
 | #171 | deterministic Neutron resolver green; installed no-storm unexecuted | BROWSER SPEC ONLY; distinct from #190 |
 | #172 | #192 integrated; composed Trash/placement gate passed at exact release head | ALREADY GREEN / deterministic headless closure |
-| #173 | current List remains vertical full-width | VERIFIED CORE RED / INCOMPLETE; repaired multi-column spatial gate |
+| #173 | integrated compact List and spatial navigation from #212 | INTEGRATED; preserve behavior under #195/#196 |
 | #174 | current Search emits native plus raw `.sys` result | VERIFIED CORE RED / INCOMPLETE; lower characterizations added |
 | #175 | Search frame geometry remains a separate browser acceptance defect | SPEC GAP; referenced by #193 readiness, no duplicate Luna-B full packet |
 | #176 | no production context ownership seam | RECONNAISSANCE |
@@ -29,11 +29,11 @@ Open implementation ownership observed: #51 PR #210, #65 PR #208, #189 PR #207,
 | #186 | Testing Lead persistence PR merged | HANDOFF INPUT FOR TESTING LEAD; no Luna ownership |
 | #189 | open implementation PR and prior RED evidence | WAIT FOR DEPENDENCY |
 | #190 | Plasmon asset constants still request root `/static` path | BROWSER SPEC ONLY / REAL DEFECT; strict-health gate repaired |
-| #191 | open implementation PR; current release not migrated | WAIT FOR DEPENDENCY |
+| #191 | integrated FileEntry pilot, state/presentation guards, and browser characterization | INTEGRATED DEPENDENCY for #195 |
 | #192 | integrated controller owns placement policy | CHARACTERIZATION ONLY; closure evidence tracked in #172 audit |
 | #193 | Search remains inline; source convergence incomplete | RECONNAISSANCE / readiness |
 | #194 | Start remains inline; #169 prerequisite incomplete | RECONNAISSANCE / readiness |
-| #195 | broad adapter still active; no truthful architecture RED | CHARACTERIZATION ONLY; refresh after #191 |
+| #195 | broad adapter still active after #191; final behavioral fence and refresh characterization ready | LUNA-A FINAL PACKET READY; no structural RED |
 | #196 | final view seam architecture-dependent | WAIT FOR DEPENDENCY on #195 |
 | #201 | cleanup candidates remain active until migrations integrate | RECONNAISSANCE / readiness |
 

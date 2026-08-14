@@ -1,5 +1,11 @@
 # Issue #195 packet — FileManager decomposition specification
 
+**Final implementor packet:** `issue-195-final-packet.md`.
+
+Refresh: integrated `origin/release/0.1.0-r2` at
+`82f176a6f11a163197a270a6c2275dde0f95a2e9`; #51/#65/#173/#189/#190/#191/#192
+are integrated and no active PR owns #195.
+
 This packet is a decomposition fence, not a source-shape test. It records the
 responsibility/authority map for the current active FileManager adapter,
 indexes existing guards, and adds only the uncovered deterministic refresh
@@ -54,10 +60,9 @@ rendering in one function.
 
 ### Duplicated or React-trapped policy found
 
-- Desktop position resolution is now delegated to the integrated #192
-  controller on the release head; this staging lane's pre-integration source
-  still shows the old adapter and must not be used to infer current release
-  cleanup.
+- Desktop position resolution is delegated to the integrated #192 controller
+  on the release head; the long-lived Luna staging lane is older and must not be
+  used to infer current release cleanup.
 - Context action mapping (`menuAction`) and keyboard-to-action dispatch are
   concentrated in the adapter, though the underlying commands are delegated.
 - Rename commit orchestration, create/import refresh/selection sequencing, and
@@ -220,8 +225,10 @@ policy are already green at their lowest truthful layers. A source-shape gate
 such as “FileManager.tsx is smaller” or “component X exists” would violate #195
 and #187's architecture rules and is intentionally not staged.
 
-The packet is therefore a **characterization/indexing packet awaiting the
-production decomposition**, not a fabricated failing test. The decomposition
+The packet is therefore a **final characterization/indexing packet awaiting the
+production decomposition**, not a fabricated failing test. The authoritative
+implementor details and current integrated evidence are in
+`issue-195-final-packet.md`. The decomposition
 itself must preserve the listed external contracts; any newly discovered
 behavioral defect should receive its own smallest canonical Issue rather than
 being hidden under #195.

@@ -34,6 +34,7 @@ This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `rele
 - [ ] #94 — Bounded video thumbnails
 - [ ] #110 — Filesystem-backed Show Hidden Files preference
 - [ ] #115 — Shared thin resource-command layer
+- [x] #195 — FileManager adapter decomposition — LUNA-A FINAL PACKET READY
 
 ## Lane B — Shell / Windowing / global desktop interaction
 

@@ -1,7 +1,8 @@
 # FileManager future implementor preservation checklist
 
-**ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH:** #191/PR #204 and today's
-#51/#65/#190 branches are excluded. This checklist targets future #195/#196.
+#191/PR #204, #51/#210, #65/#208, and #190/#211 are integrated in the
+current release. This checklist is the accepted behavior fence for #195/#196;
+no implementation packet is modified here.
 
 | Behavior | Canonical authority | Existing protection |
 |---|---|---|
@@ -12,12 +13,12 @@
 | Trash/delete/partial failure | Trash authority + delete helper | `fileManagerDelete.test.ts` |
 | shortcut | shared shortcut primitive + FsService | `create-shortcut`/shortcut tests |
 | context menu | FileManager command policy and OpenWith/Properties authority | `gate3.test.tsx`, property tests |
-| drag/drop move | `moveNodesToDirectory` + FsService | drag/model tests; #92 waits #65 |
+| drag/drop move | `moveNodesToDirectory` + FsService | drag/model tests; #92 RTL RED protects missing drag status |
 | marquee | rectangle capture + `marqueeSelection` | model tests; browser for real rects |
 | navigation/refresh | FsService + RefreshGate + FsEventSource | FileManager tests |
 | Properties | Properties loader + FsNode/AssociationRegistry | properties tests |
 | Open With | AssociationRegistry/OpenWith model/OpenService | associations/openWith tests |
-| thumbnails/presentation | Visual/FileEntry/thumbnail policy | icon/thumbnail tests; #190 active |
+| thumbnails/presentation | Visual/FileEntry/thumbnail policy | icon/thumbnail tests; #190/#191 integrated |
 
 Future extraction is green only when this list remains covered at the lowest
 truthful layer and common commands are invoked, not reimplemented by views.

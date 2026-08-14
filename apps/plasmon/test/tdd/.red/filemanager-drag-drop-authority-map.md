@@ -1,6 +1,6 @@
 # FileManager drag/drop authority map
 
-Refresh: integrated release `f4ac3b4`. #66 and #176 are active/unattended
+Refresh: integrated release `82f176a6`. #66 and #176 remain active/unattended
 ownership; this map does not create competing RED packets.
 
 | Concern | Deterministic authority | Browser mechanism | Visual layer | Mutation/result |
@@ -10,7 +10,7 @@ ownership; this map does not create competing RED packets.
 | move validation | `moveNodesToDirectory` | pointer release | status/fallback | FsService move sequence |
 | filesystem move | FsService | none | refresh | source NodeIds preserved, parent changes |
 | Desktop reposition | `onDesktopReposition` -> `repositionDesktopNodes` / #192 controller | pointer delta/bounds | desktop entry transform | persisted positions, no FS mutation |
-| multi-selection | ordered selected NodeIds | pointer gesture | preview represents set | one operation, #92 after #65 |
+| multi-selection | ordered selected NodeIds | pointer gesture | preview represents set | one operation; #92 currently RED for missing drag status |
 | invalid target | drop target helper | hit testing | no accepted target | selection/position remains |
 | cancellation | `finishEntryDragGesture(..., true)` | pointercancel/capture release | cleanup transform/classes | no mutation |
 | preview stacking | #66 concrete packet | real stacking/hit testing | separate top-level preview expected | no FileManager policy change |
@@ -23,5 +23,6 @@ ownership; this map does not create competing RED packets.
 - browser tests prove only pointer capture, `elementFromPoint`, transforms,
   stacking, cleanup and actual drop target behavior;
 - NodeId identity and Trash/association/open authority remain unchanged;
-- #92 reuses accepted #65 operation vocabulary when #65 integrates;
+- #92 reuses the accepted #65 operation authority; #65 is integrated, but
+  drag-specific lifecycle remains a separate RED.
 - no test-local drag policy or competing preview implementation is added.

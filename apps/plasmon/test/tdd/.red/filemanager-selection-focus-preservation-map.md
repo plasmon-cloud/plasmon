@@ -1,7 +1,7 @@
 # FileManager selection/focus preservation map
 
-Refresh: integrated release `f4ac3b4`. #191 active; #173 active unattended
-ownership. This is behavior protection for #195/#196, not a structural test.
+Refresh: integrated release `82f176a6`. #191 and #173 are integrated. This is
+behavior protection for #195/#196, not a structural test.
 
 | Behavior | Production seam | Existing guard | Browser/RTL gap | Future owner |
 |---|---|---|---|---|
