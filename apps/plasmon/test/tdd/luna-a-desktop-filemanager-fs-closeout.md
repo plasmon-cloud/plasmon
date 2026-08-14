@@ -3,7 +3,7 @@
 Date: 2026-08-13
 Branch: `tdd/r2/luna-a-desktop`
 Integrated source inspected: `origin/release/0.1.0-r2`
-`f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`
+`3399a87372973b732f57fc89b0e7fcfd922f64ab`
 Harness: `/home/bhare/plasmon/agents/control/HARNESS_READY` present
 
 ## Scope and evidence integrity

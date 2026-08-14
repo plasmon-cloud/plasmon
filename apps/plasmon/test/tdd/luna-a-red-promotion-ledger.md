@@ -1,7 +1,7 @@
 # Luna-A RED promotion ledger
 
 This lane-local ledger complements Luna-D's master ledger. Refresh:
-integrated `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
+integrated `3399a87372973b732f57fc89b0e7fcfd922f64ab`.
 
 | Issue | Validated packet commit/file | RED/spec files | Behavioral contract | Implementation PR | Permanent test expected | Permanent test observed | Promotion status |
 |---|---|---|---|---|---|---|---|

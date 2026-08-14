@@ -1,8 +1,8 @@
 # Issue #92 — accepted operation-model consumption plan
 
 Status: **RTL RED** against integrated release
-`2b6984e96647eae1f3abe5719d3a3782809ceeb9`. PR #208/#65 is merged as
-`2b6984e`; #92 has no active implementation owner.
+`3399a87372973b732f57fc89b0e7fcfd922f64ab`. PR #208/#65 is merged; #92 has no
+active implementation owner.
 
 ## Integrated #65 inspection
 

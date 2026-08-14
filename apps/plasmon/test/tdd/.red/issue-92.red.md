@@ -1,7 +1,7 @@
 # Issue #92 — multi-item drag-move progress
 
 Disposition: **TDD:RTL RED** against integrated release
-`2b6984e96647eae1f3abe5719d3a3782809ceeb9`.
+`3399a87372973b732f57fc89b0e7fcfd922f64ab`.
 
 ## Authority inspection
 
@@ -30,8 +30,8 @@ job management, and exact visual copy beyond truthful accessible status.
 ## Executed RED gate
 
 ```text
-bun test --preload /tmp/plasmon-r2-92/apps/plasmon/test/setupHappyDom.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/test/tdd/.red/issue-92.red.ui.test.tsx
+bun test --preload /tmp/plasmon-r2-current/apps/plasmon/test/setupHappyDom.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/test/tdd/.red/issue-92.red.ui.test.tsx
 ```
 
 Result: **intentional failure**: after a delayed real `FsService.move` starts,

@@ -1,7 +1,7 @@
 # Issue #78 — shortcut lifecycle audit
 
 Refresh: `origin/release/0.1.0-r2` at
-`2b6984e96647eae1f3abe5719d3a3782809ceeb9`.
+`3399a87372973b732f57fc89b0e7fcfd922f64ab`.
 
 Disposition: **WAIT FOR DEPENDENCY — #51 active implementation ownership**.
 
@@ -26,13 +26,13 @@ consumer from #51.
 ## Existing green evidence
 
 Executed against the exact integrated release in the clean detached worktree
-`/tmp/plasmon-r2-92`:
+`/tmp/plasmon-r2-current`:
 
 ```text
-bun test /tmp/plasmon-r2-92/apps/plasmon/src/os/file-manager/create-shortcut.test.tsx \
-  /tmp/plasmon-r2-92/apps/plasmon/test/fileManagerActivation.test.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/test/resourceOpenCrossSurface.test.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/test/refactorGuards.test.ts
+bun test /tmp/plasmon-r2-current/apps/plasmon/src/os/file-manager/create-shortcut.test.tsx \
+  /tmp/plasmon-r2-current/apps/plasmon/test/fileManagerActivation.test.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/test/resourceOpenCrossSurface.test.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/test/refactorGuards.test.ts
 ```
 
 Result: **11 passed, 0 failed, 165 expect() calls**.

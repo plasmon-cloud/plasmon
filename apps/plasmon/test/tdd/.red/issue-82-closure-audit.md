@@ -1,7 +1,7 @@
 # Issue #82 — managed-root bootstrap closure audit
 
 Refresh: `origin/release/0.1.0-r2` at
-`2b6984e96647eae1f3abe5719d3a3782809ceeb9`.
+`3399a87372973b732f57fc89b0e7fcfd922f64ab`.
 
 Disposition: **ALREADY GREEN**. No open PR owns #82.
 
@@ -32,14 +32,14 @@ Apps shortcut seeding, and user deletion preservation.
 
 ## Executed integrated evidence
 
-Executed in clean detached worktree `/tmp/plasmon-r2-92` at the exact release
-head:
+Executed in clean detached worktree `/tmp/plasmon-r2-current` at the exact
+release head:
 
 ```text
-bun test /tmp/plasmon-r2-92/apps/plasmon/test/managedRootBootstrap.test.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/src/os/fs/desktopCore.test.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/src/os/fs/defaultSeeds.test.ts \
-  /tmp/plasmon-r2-92/apps/plasmon/test/headlessEnvironment.test.ts
+bun test /tmp/plasmon-r2-current/apps/plasmon/test/managedRootBootstrap.test.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/src/os/fs/desktopCore.test.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/src/os/fs/defaultSeeds.test.ts \
+  /tmp/plasmon-r2-current/apps/plasmon/test/headlessEnvironment.test.ts
 ```
 
 Result: **12 passed, 0 failed, 74 expect() calls**.
