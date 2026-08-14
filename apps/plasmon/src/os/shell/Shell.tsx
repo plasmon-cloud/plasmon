@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
@@ -56,10 +55,11 @@ import {
   subscribeSearchInvalidation,
   type ShellSearchResult,
 } from "./search.ts";
+import type { StartItemPresentation } from "./StartSurface.tsx";
+import { StartSurfaceController } from "./StartSurfaceController.tsx";
+import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
 import {
-  listStartMenuFolder,
   parseStartShortcut,
-  reconcileStartMenu,
   type StartShortcutTarget,
 } from "./startMenu.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
@@ -75,12 +75,12 @@ export interface ShellProps {
   nativeApps: NativeAppRegistry;
   filesystemOpen: ShellFilesystemOpener;
   openService?: OpenService;
+  startMenu: StartMenuReconciliationController;
   children?: ReactNode;
   now?: () => Date;
 }
 
 type Flyout = "start" | "search" | "calendar" | "tray" | "settings" | null;
-type StartTrailItem = { id: string; name: string };
 type ShellContextMenuState = {
   x: number;
   y: number;
@@ -157,38 +157,18 @@ function useExternalElements(neutron: NeutronBridge) {
   return { elements, error };
 }
 
-function focusRelative(event: ReactKeyboardEvent<HTMLElement>, selector: string): void {
-  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-  const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(selector));
-  if (!items.length) return;
-  const active = typeof document === "undefined" ? null : document.activeElement;
-  const index = active instanceof HTMLElement ? items.indexOf(active) : -1;
-  let next = 0;
-  if (event.key === "End") next = items.length - 1;
-  else if (event.key === "ArrowUp") next = index <= 0 ? items.length - 1 : index - 1;
-  else if (event.key === "ArrowDown") next = index < 0 || index >= items.length - 1 ? 0 : index + 1;
-  event.preventDefault();
-  items[next]?.focus();
-}
-
 function contextPosition(client: number, viewport: number, size: number): number {
   return Math.max(8, Math.min(client, Math.max(8, viewport - size - 8)));
 }
 
 export function Shell({
-  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, openService,
+  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, openService, startMenu,
   children, now = () => new Date(),
 }: ShellProps) {
   const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
   const [preferences, setPreferences] = useState<ShellPreferences | null>(null);
   const [flyout, setFlyout] = useState<Flyout>(null);
   const [contextMenu, setContextMenu] = useState<ShellContextMenuState>(null);
-  const [startQuery, setStartQuery] = useState("");
-  const [startTrail, setStartTrail] = useState<StartTrailItem[]>([]);
-  const [startItems, setStartItems] = useState<FsNode[]>([]);
-  const [startBusy, setStartBusy] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [startSeedRevision, setStartSeedRevision] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -216,8 +196,6 @@ export function Shell({
   const nativeDefinitions = useMemo(() => nativeApps.list(), [nativeApps]);
   const nativeByHandler = useMemo(() => new Map(nativeDefinitions.map((app) => [app.handlerId, app] as const)), [nativeDefinitions]);
   const elementsById = useMemo(() => new Map(elements.map((element) => [element.id, element] as const)), [elements]);
-  const nativeSeedKey = useMemo(() => nativeDefinitions.map((app) => `${app.handlerId}:${app.name}`).sort().join("\u0000"), [nativeDefinitions]);
-  const elementSeedKey = useMemo(() => elements.map((element) => `${element.id}:${element.name}`).sort().join("\u0000"), [elements]);
   const searchController = useSearchSurfaceController({
     open: flyout === "search",
     fs,
@@ -239,47 +217,10 @@ export function Shell({
     [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
   );
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
-  const filteredStartItems = useMemo(() => {
-    const needle = startQuery.trim().toLocaleLowerCase();
-    return needle ? startItems.filter((node) => node.name.toLocaleLowerCase().includes(needle)) : startItems;
-  }, [startItems, startQuery]);
   const calendar = useMemo(() => buildCalendarMonth(calendarAnchor, clock), [calendarAnchor, clock]);
   const focused = useMemo(() => focusedWindow(windowStates), [windowStates]);
-  const currentStartFolder = startTrail[startTrail.length - 1] ?? null;
 
   useEffect(() => subscribeSearchInvalidation(fsEvents, () => setFsEpoch((value) => value + 1)), [fsEvents]);
-
-  useEffect(() => {
-    let active = true;
-    void reconcileStartMenu(fs, nativeDefinitions, elements)
-      .then(({ root }) => {
-        if (!active) return;
-        setStartTrail((current) => current.length ? current : [{ id: root.id, name: root.name || "Start Menu" }]);
-        setStartSeedRevision((value) => value + 1);
-      })
-      .catch((cause: unknown) => {
-        if (active) setStartError(`Start Menu could not be reconciled: ${formatError(cause)}`);
-      });
-    return () => { active = false; };
-    // Stable identity keys prevent running-state-only Element updates from reseeding Start.
-  }, [elementSeedKey, fs, nativeSeedKey]);
-
-  useEffect(() => {
-    if (flyout !== "start" || !currentStartFolder) return undefined;
-    let active = true;
-    setStartBusy(true);
-    void listStartMenuFolder(fs, currentStartFolder.id)
-      .then((nodes) => {
-        if (!active) return;
-        setStartItems(nodes);
-        setStartError(null);
-      })
-      .catch((cause: unknown) => {
-        if (active) setStartError(formatError(cause));
-      })
-      .finally(() => { if (active) setStartBusy(false); });
-    return () => { active = false; };
-  }, [currentStartFolder?.id, flyout, fs, fsEpoch, startSeedRevision]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -360,11 +301,6 @@ export function Shell({
 
   const openStartNode = useCallback(async (node: FsNode) => {
     setActionError(null);
-    if (node.kind === "directory") {
-      setStartTrail((current) => [...current, { id: node.id, name: node.name }]);
-      setStartQuery("");
-      return;
-    }
     setBusyId(`start:${node.id}`);
     try {
       await activateStartFilesystemNode(filesystemOpen, node);
@@ -438,6 +374,37 @@ export function Shell({
     return { icon: FILE_TYPE_ICON_ASSETS.file };
   }, [effectivePreferences.pinnedElements, effectivePreferences.pinnedNative, elementsById, nativeByHandler]);
 
+  const presentStartItem = useCallback((node: FsNode): StartItemPresentation => {
+    const shortcut = parseStartShortcut(node);
+    const presentation = shortcut
+      ? shortcutPresentation(shortcut.target)
+      : {
+        icon: node.kind === "directory" ? FILE_TYPE_ICON_ASSETS.folder : FILE_TYPE_ICON_ASSETS.file,
+        pinned: undefined,
+        pinId: undefined,
+        pinKind: undefined,
+      };
+    const pinAction = presentation.pinned === undefined ? null : taskbarPinAction(presentation.pinned);
+    const context = presentation.pinId && presentation.pinKind
+      ? { kind: presentation.pinKind, id: presentation.pinId }
+      : undefined;
+    const pin = pinAction && presentation.pinId && presentation.pinKind
+      ? {
+        kind: presentation.pinKind,
+        id: presentation.pinId,
+        label: pinAction.label,
+        pinned: pinAction.pinned,
+      }
+      : undefined;
+    return {
+      icon: presentation.icon,
+      shortcut: shortcut !== null,
+      subtitle: node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind,
+      ...(context ? { context } : {}),
+      ...(pin ? { pin } : {}),
+    };
+  }, [shortcutPresentation]);
+
   const toggleFlyout = (next: Exclude<Flyout, null>) => {
     setContextMenu(null);
     setFlyout((current) => current === next ? null : next);
@@ -490,42 +457,19 @@ export function Shell({
     {(actionError || neutronError) ? <div className="plasmon-shell__error" data-shell-owned-surface role="alert">{actionError ?? `Neutron discovery: ${neutronError}`}<button type="button" onClick={() => setActionError(null)}>Dismiss</button></div> : null}
     {notice ? <div className="plasmon-shell__notice" data-shell-owned-surface role="status">{notice}<button type="button" onClick={() => setNotice(null)}>Dismiss</button></div> : null}
 
-    {flyout === "start" ? <section className="plasmon-shell__panel plasmon-shell__start-panel" data-shell-owned-surface data-shell-flyout aria-label="Start menu">
-      <header><span>Filesystem-backed</span><h2>Start</h2></header>
-      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={startQuery} onChange={(event) => setStartQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && startQuery.trim()) { searchController.setQuery(startQuery); setFlyout("search"); } }} placeholder="Filter this folder; Enter searches everywhere" aria-label="Search Start" /></div>
-      <div className="plasmon-shell__section">
-        <div className="plasmon-shell__row">
-          <button type="button" disabled={startTrail.length <= 1} onClick={() => { setStartTrail((current) => current.slice(0, -1)); setStartQuery(""); }}>← Back</button>
-          <span><strong>{startTrail.map((item) => item.name).join(" / ") || "Start Menu"}</strong><small>Folders and shortcuts are ordinary filesystem nodes.</small></span>
-        </div>
-        {startError ? <p role="alert">{startError}</p> : null}
-        {startBusy ? <p role="status">Loading Start Menu…</p> : null}
-        <div className="plasmon-shell__list" onKeyDown={(event) => focusRelative(event, "[data-start-item]")}>{filteredStartItems.map((node) => {
-          const shortcut = parseStartShortcut(node);
-          const presentation = shortcut ? shortcutPresentation(shortcut.target) : { icon: node.kind === "directory" ? FILE_TYPE_ICON_ASSETS.folder : FILE_TYPE_ICON_ASSETS.file };
-          const pinAction = presentation.pinned === undefined ? null : taskbarPinAction(presentation.pinned);
-          return <div className="plasmon-shell__row" key={node.id}>
-            <button
-              type="button"
-              data-start-item
-              {...(presentation.pinKind === "native" ? { "data-shell-context-native": presentation.pinId } : {})}
-              {...(presentation.pinKind === "element" ? { "data-shell-context-element": presentation.pinId } : {})}
-              onClick={() => void openStartNode(node)}
-              disabled={busyId === `start:${node.id}`}
-            ><ShellIcon icon={presentation.icon} label={node.name} shortcut={shortcut !== null} context="start" /><span><strong>{node.name}</strong><small>{node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind}</small></span></button>
-            {pinAction && presentation.pinId && presentation.pinKind ? <button
-              type="button"
-              disabled={!preferencesReady}
-              title={pinAction.label}
-              aria-label={pinAction.label}
-              aria-pressed={pinAction.pinned}
-              onClick={() => presentation.pinKind === "native" ? toggleNativePin(presentation.pinId!) : toggleElementPin(presentation.pinId!)}
-            ><PinIcon pinned={pinAction.pinned} /></button> : null}
-          </div>;
-        })}{!startBusy && filteredStartItems.length === 0 ? <p>This Start Menu folder is empty.</p> : null}</div>
-      </div>
-      <footer><button type="button" onClick={() => setFlyout("settings")}>Settings</button></footer>
-    </section> : null}
+    <StartSurfaceController
+      active={flyout === "start"}
+      fs={fs}
+      reconciliation={startMenu}
+      fsRevision={fsEpoch}
+      busyId={busyId}
+      preferencesReady={preferencesReady}
+      presentItem={presentStartItem}
+      onActivate={openStartNode}
+      onSearchEverywhere={(query) => { searchController.setQuery(query); setFlyout("search"); }}
+      onPin={(kind, id) => { if (kind === "native") toggleNativePin(id); else toggleElementPin(id); }}
+      onSettings={() => setFlyout("settings")}
+    />
 
     {flyout === "search" ? <SearchSurface
       controller={searchController}

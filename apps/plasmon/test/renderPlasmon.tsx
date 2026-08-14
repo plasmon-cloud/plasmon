@@ -22,6 +22,7 @@ export async function renderPlasmon(
   options: HeadlessPlasmonEnvironmentOptions = {},
 ): Promise<RenderedPlasmon> {
   const environment = createHeadlessPlasmonEnvironment(options);
+  environment.services.startMenu.start();
   await environment.ready;
 
   const view = render(<PlasmonOS services={environment.services} />);
