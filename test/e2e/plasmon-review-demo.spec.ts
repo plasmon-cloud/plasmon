@@ -115,10 +115,11 @@ test("#118 groups canonical Explorer processes and focuses individual members", 
 
   await rootShortcut.dblclick();
   await expect(nativeWindows).toHaveCount(initialWindowCount + 2, { timeout: 20_000 });
-  const siblingWindow = plasmon.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
-  await expect(siblingWindow).toHaveCount(1);
-  const siblingId = await siblingWindow.getAttribute("data-window-id");
+  const activeSibling = plasmon.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
+  await expect(activeSibling).toHaveCount(1);
+  const siblingId = await activeSibling.getAttribute("data-window-id");
   if (!siblingId || siblingId === primaryId) throw new Error("Sibling Explorer native window has no distinct stable window id");
+  const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   await expect(siblingAddress).toHaveValue("/");
