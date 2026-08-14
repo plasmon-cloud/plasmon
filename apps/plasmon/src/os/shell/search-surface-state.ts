@@ -20,13 +20,13 @@ export function deriveSearchSurfaceViewState(input: {
   searching: boolean;
   error: string | null;
 }): SearchSurfaceViewState {
-  const results = filterSearchResults(input.batch.results, input.tab);
+  const results = input.error ? [] : filterSearchResults(input.batch.results, input.tab);
   return {
     results,
     searching: input.searching,
     error: input.error,
-    empty: !input.searching && results.length === 0,
-    warnings: input.batch.warnings,
-    truncated: input.batch.truncated,
+    empty: !input.searching && !input.error && results.length === 0,
+    warnings: input.error ? [] : input.batch.warnings,
+    truncated: input.error ? false : input.batch.truncated,
   };
 }
