@@ -13,6 +13,14 @@
 | narrow window | min width/window constraints | definitions | browser/manual |
 | focus/keyboard/Ctrl+S/context | keydown capture and Monaco | source/package edit | RTL/browser |
 
-Disposition: **VERIFIED FULL RED PACKET** for deterministic missing chrome and
-**criterion-specific browser boundary** for Monaco minimap/command/rendering.
-Exact component/CSS structure remains unspecified.
+Disposition at integrated `origin/release/0.1.0-r2`: **HARNESS GAP for executable
+RTL proof, with a confirmed core RED and exact browser remainder**. The
+production Text component still sets the process title to the filename only and
+Monaco options still disable the minimap; no visible command affordances or
+language indicator are present. A real `renderPlasmon()` attempt reaches the
+production host but the canonical Happy DOM harness lacks the browser `CSS`
+API required by Monaco startup, and startup failure becomes an unhandled async
+error. Do not polyfill/mock Monaco or assert source text as a substitute;
+Testing/Integration must repair the shared adapter or provide the accepted
+browser boundary. Monaco minimap/command rendering remains packaged-browser
+acceptance. Exact component/CSS structure remains unspecified.

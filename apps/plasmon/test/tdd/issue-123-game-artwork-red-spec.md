@@ -1,16 +1,14 @@
 # #123 game artwork RED/specification
 
-**Disposition: WAIT FOR SPECIFIC UNINTEGRATED DEPENDENCY (#190 shared
-presentation seam and #121 fixture).** A supported game
-resource with accepted artwork metadata must render artwork through the shared
-ResourcePresentation/Visual consumer in Desktop, FileManager and Search;
-invalid/missing artwork falls back canonically; lookup is stable-resource
-metadata based and never a filename/game-title dispatcher. Execution and
-association remain unchanged.
-
-Bun/headless can prove metadata and fallback once the canonical resource
-presentation seam carries artwork. RTL can prove semantic image/alt/fallback
-wiring. Packaged/manual evidence is needed for final visual scale. Current
-source has runtime/association coverage but no accepted game-artwork metadata
-contract or durable RED fixture. Wait for #190/shared presentation and #121
-legal fixture before staging a test; do not invent a Games-only icon service.
+**Disposition: HARNESS GAP / WAIT FOR SPECIFIC ARTWORK METADATA CONTRACT.**
+The integrated #190 seam now exists and #121 provides a legal packaged fixture,
+but `ResourceClassification`/`resourcePresentationForClassification` has no
+accepted game-artwork metadata field or source contract. The headless
+composition cannot express “supported game with artwork” without inventing a
+Games-only metadata key/resolver or guessing whether artwork is package-local
+or filesystem-backed. Do not stage a speculative RED. Desired vocabulary: a
+stable metadata-bearing game `FsNode` accepted by the canonical #189
+classification/presentation path, plus shared fallback inspection. Execution
+and association remain unchanged. Once that contract is released, Bun/headless
+can prove metadata/fallback, RTL can prove shared image/fallback wiring, and
+packaged/manual evidence can prove visual scale.

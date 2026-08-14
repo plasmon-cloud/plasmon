@@ -13,5 +13,13 @@
 | narrow layout/focus/keyboard | split flex panes, no acceptance test | browser/manual boundary |
 | external update/conflict | shared session | Bun GREEN |
 
-Do not count sanitizer tests as formatter UI evidence. Markdown preview/formatter
-remain app-owned, outside #200 host architecture.
+Disposition at integrated `origin/release/0.1.0-r2`: **HARNESS GAP for executable
+RTL proof, with a confirmed core RED and exact browser remainder**. Markdown has
+no formatter action/provider or visible Monaco command menu. A real
+`renderPlasmon()` attempt reaches the production host but the canonical Happy
+DOM harness lacks the browser `CSS` API required by Monaco startup, and startup
+failure becomes an unhandled async error. Do not polyfill/mock Monaco or treat
+sanitizer tests as formatter UI evidence; Testing/Integration owns the shared
+adapter repair and Monaco/formatter interaction remains packaged-browser
+acceptance. Markdown preview/formatter remain app-owned, outside #200 host
+architecture.
