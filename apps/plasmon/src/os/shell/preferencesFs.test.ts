@@ -93,11 +93,12 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     pinnedElements: [],
     themeId: "plasmon-dark",
     wallpaper: "aurora",
+    taskbarAlignment: "center",
     ...patch,
   };
 }
 
-test("FsService-backed Shell preferences load from root metadata", async () => {
+test("legacy v1 Shell preferences preserve existing values and default taskbar alignment to center", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -112,6 +113,7 @@ test("FsService-backed Shell preferences load from root metadata", async () => {
     pinnedElements: ["mail"],
     themeId: "plasmon-midnight",
     wallpaper: "plain",
+    taskbarAlignment: "center",
   }));
 });
 
@@ -139,6 +141,14 @@ test("wallpaper persists through FsService root metadata", async () => {
   expect((await new ShellPreferenceStore(fs).load()).wallpaper).toBe("plain");
 });
 
+test("taskbar alignment persists through FsService root metadata", async () => {
+  const fs = new PreferenceFs();
+  await new ShellPreferenceStore(fs).save(preferences({ taskbarAlignment: "left" }));
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.taskbarAlignment).toBe("left");
+  expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ taskbarAlignment: "left" }));
+});
+
 test("corrupt preference root metadata falls back to deterministic defaults", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
@@ -151,10 +161,23 @@ test("corrupt preference root metadata falls back to deterministic defaults", as
   expect(await new ShellPreferenceStore(fs).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
 });
 
+test("invalid explicit taskbar alignment does not partially accept corrupt preferences", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    version: 1,
+    pinnedNative: ["native:text"],
+    pinnedElements: ["mail"],
+    themeId: "plasmon-midnight",
+    wallpaper: "plain",
+    taskbarAlignment: "right",
+  };
+  expect(await new ShellPreferenceStore(fs).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
+});
+
 test("write failure keeps the selected in-memory preference outcome", async () => {
   const fs = new PreferenceFs();
   fs.failWrites = true;
-  const selected = preferences({ pinnedElements: ["mail"], wallpaper: "plain" });
+  const selected = preferences({ pinnedElements: ["mail"], wallpaper: "plain", taskbarAlignment: "left" });
   const outcome = await saveShellPreferencesNonDestructive(new ShellPreferenceStore(fs), selected);
   expect(outcome.saved).toBe(false);
   expect(outcome.error).toBeInstanceOf(Error);
