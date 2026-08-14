@@ -1,11 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-async function launchPlasmon(page: Parameters<typeof test>[0]["page"]) {
+async function launchPlasmon(page: Page) {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
 
@@ -29,9 +29,7 @@ async function launchPlasmon(page: Parameters<typeof test>[0]["page"]) {
   return { app, kernelUrl };
 }
 
-async function contextMenuDefaultPrevented(locator: {
-  evaluate<R>(pageFunction: (element: Element) => R): Promise<R>;
-}): Promise<boolean> {
+async function contextMenuDefaultPrevented(locator: Locator): Promise<boolean> {
   return locator.evaluate((element) => {
     const event = new MouseEvent("contextmenu", {
       bubbles: true,
@@ -48,8 +46,12 @@ test("#176 first-party context ownership preserves editable and Browser iframe b
 
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await taskbar.click({ button: "right" });
-  await expect(app.getByRole("menu", { name: "Shell context menu" })).toBeVisible();
-  await page.keyboard.press("Escape");
+  const shellMenu = app.getByRole("menu", { name: "Shell context menu" });
+  await expect(shellMenu).toBeVisible();
+  await taskbar.evaluate((element) => {
+    element.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  });
+  await expect(shellMenu).toHaveCount(0);
 
   const desktop = app.locator(".fm-root--desktop").first();
   await expect(desktop).toBeVisible();
