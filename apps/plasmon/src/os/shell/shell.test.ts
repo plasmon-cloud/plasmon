@@ -131,7 +131,7 @@ test("multiple native process records form one deterministic application group",
   });
 });
 
-test("native taskbar action focuses minimized/background windows and minimizes focused window", () => {
+test("native taskbar action uses canonical focus id rather than z-order", () => {
   const running = processRecord();
   const entry = deriveTaskbarEntries({
     preferences: preferences(),
@@ -141,11 +141,16 @@ test("native taskbar action focuses minimized/background windows and minimizes f
   })[0];
   if (!entry || entry.kind !== "native") throw new Error("Expected native taskbar entry");
 
-  expect(decideNativeTaskbarAction(entry, [windowState(running, 3, true)])).toBe("focus");
+  const runningWindow = windowState(running, 3, true);
+  expect(decideNativeTaskbarAction(entry, [runningWindow], runningWindow.id)).toBe("focus");
 
   const other = processRecord("native:other#1");
-  expect(decideNativeTaskbarAction(entry, [windowState(running, 3), windowState(other, 4)])).toBe("focus");
-  expect(decideNativeTaskbarAction(entry, [windowState(running, 5), windowState(other, 4)])).toBe("minimize");
+  const otherWindow = windowState(other, 9);
+  const visibleRunningWindow = windowState(running, 3);
+  expect(decideNativeTaskbarAction(entry, [visibleRunningWindow, otherWindow], otherWindow.id)).toBe("focus");
+
+  // Regression: a lower-z window can still be canonically focused.
+  expect(decideNativeTaskbarAction(entry, [visibleRunningWindow, otherWindow], visibleRunningWindow.id)).toBe("minimize");
 });
 
 test("multi-member taskbar action chooses without mutation and member selection delegates Process focus", () => {
@@ -158,7 +163,7 @@ test("multi-member taskbar action chooses without mutation and member selection 
     elements: [],
   })[0];
   if (!entry || entry.kind !== "native") throw new Error("Expected grouped native taskbar entry");
-  expect(decideNativeTaskbarAction(entry, [windowState(first, 4), windowState(second, 5)])).toBe("choose");
+  expect(decideNativeTaskbarAction(entry, [windowState(first, 4), windowState(second, 5)], first.windowId)).toBe("choose");
 
   const focused: string[] = [];
   const process = {
