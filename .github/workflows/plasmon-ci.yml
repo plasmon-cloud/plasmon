@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - version-0.1.0-os
+      - release/0.1.0-r2
     paths:
       - "apps/plasmon/**"
       - "packages/neutron-design-system/**"
