@@ -143,6 +143,10 @@ for (const gate of selectedGates) {
     throw new Error(`${gate.context} cannot reliably diff the PR base/head for cheap-skip scope`);
   }
 
+  if (source.includes("continue-on-error: true")) {
+    throw new Error(`${gate.context} must not mask required-gate failures with continue-on-error`);
+  }
+
   const detector = stepSection(lines, gate.scopeId);
   for (const pattern of gate.scopePatterns) {
     if (!detector.includes(pattern)) {
@@ -150,8 +154,17 @@ for (const gate of selectedGates) {
     }
   }
 
-  if (!detector.includes(`echo "${gate.output}=true" >> "$GITHUB_OUTPUT"`)) {
-    throw new Error(`${gate.context} must run its expensive path outside pull_request events`);
+  const requiredDetectorFragments = [
+    'base_sha="${{ github.event.pull_request.base.sha }}"',
+    'head_sha="${{ github.event.pull_request.head.sha }}"',
+    'git diff --name-only "$base_sha" "$head_sha"',
+    `${gate.output}=false`,
+    `echo "${gate.output}=true" >> "$GITHUB_OUTPUT"`,
+  ];
+  for (const fragment of requiredDetectorFragments) {
+    if (!detector.includes(fragment)) {
+      throw new Error(`${gate.context} cheap-skip detector lost required fragment: ${fragment}`);
+    }
   }
 
   const guard = `if: steps.${gate.scopeId}.outputs.${gate.output} == 'true'`;
