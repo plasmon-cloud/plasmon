@@ -160,7 +160,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await recycleResult.click();
 
   const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
-  await expect(recycleBin.toBeVisible({ timeout: 10_000 });
+  await expect(recycleBin).toBeVisible({ timeout: 10_000 });
   await expect(recycleBin.getByText("Recycle Bin is empty.")).toBeVisible();
   await expect(recycleBin.getByRole("button", { name: "Empty Recycle Bin" })).toBeDisabled();
 
