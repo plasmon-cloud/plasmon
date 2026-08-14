@@ -40,6 +40,12 @@ export interface HeadlessPlasmonEnvironment {
  * viewport are deterministic. Filesystem policy, bootstrap, associations,
  * opening, native app registration, process behavior, and window behavior all
  * come from the same production implementations used by PlasmonOS.
+ *
+ * The service composition now starts the production Start reconciliation
+ * controller below React. Pure/headless tests historically stage Start fixtures
+ * and invoke reconciliation explicitly, so this non-rendered harness suspends
+ * that presentation-runtime controller immediately. renderPlasmon restarts it
+ * before rendering, preserving the production lifecycle for semantic UI tests.
  */
 export function createHeadlessPlasmonEnvironment(
   options: HeadlessPlasmonEnvironmentOptions = {},
@@ -61,6 +67,7 @@ export function createHeadlessPlasmonEnvironment(
     neutron,
     windows,
   });
+  services.startMenu.dispose();
 
   const node = (path: string): Promise<FsNode | null> => services.fs.resolvePath(path);
 
@@ -79,6 +86,7 @@ export function createHeadlessPlasmonEnvironment(
     processes: () => services.process.list(),
     windows: () => services.windows.list(),
     dispose: () => {
+      services.startMenu.dispose();
       for (const process of services.process.list()) services.process.close(process.id);
       services.filesystem.dispose();
       windows.dispose();
