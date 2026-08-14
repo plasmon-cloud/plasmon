@@ -2,12 +2,14 @@
 import { expect, test } from "bun:test";
 import {
   horizontalSnapGeometry,
+  reachablePositionBounds,
   type WindowViewport,
 } from "./geometry.ts";
 import {
   anchoredRestoreGeometryForPointer,
   boundedDragGeometry,
   horizontalSnapSideAtPointer,
+  resizeGeometry,
 } from "./interaction.ts";
 import { NativeWindowManager } from "./NativeWindowManager.ts";
 
@@ -65,6 +67,37 @@ test("active drag geometry keeps a fitting window fully inside the usable viewpo
     ...start,
     x: 420,
     y: 290,
+  });
+});
+
+test("reachable position bounds preserve the required titlebar segment for oversized windows", () => {
+  expect(reachablePositionBounds(
+    { width: 640, height: 460 },
+    { x: 20, y: 10, width: 500, height: 300 },
+    { reachableTitlebarWidth: 72, reachableTitlebarHeight: 32 },
+  )).toEqual({
+    minX: -548,
+    maxX: 448,
+    minY: 10,
+    maxY: 278,
+  });
+});
+
+test("southeast resize shrinks deterministically and stops at production minimums", () => {
+  const viewport = { x: 0, y: 0, width: 1200, height: 800 };
+  const start = { x: 120, y: 80, width: 960, height: 650 };
+
+  expect(resizeGeometry(start, "se", -100, -80, viewport, 640, 420)).toEqual({
+    x: 120,
+    y: 80,
+    width: 860,
+    height: 570,
+  });
+  expect(resizeGeometry(start, "se", -1000, -1000, viewport, 640, 420)).toEqual({
+    x: 120,
+    y: 80,
+    width: 640,
+    height: 420,
   });
 });
 

@@ -1,6 +1,8 @@
 import type { WindowGeometry } from "../contracts/window.ts";
 import {
   constrainGeometry,
+  reachablePositionBounds,
+  type GeometryConstraints,
   type HorizontalSnapSide,
   type WindowViewport,
 } from "./geometry.ts";
@@ -52,24 +54,26 @@ export function horizontalSnapSideAtPointer(
 }
 
 /**
- * Keeps an actively dragged floating window inside the usable viewport whenever
- * the window can fit there. Oversized windows anchor to the viewport origin so
- * the browser adapter never invents a second reachability policy.
+ * Keeps fitting floating windows fully inside the usable viewport. Oversized
+ * widths may pan through the same reachable-titlebar range accepted by the
+ * manager so right-side window controls can still be brought on-screen.
  */
 export function boundedDragGeometry(
   start: WindowGeometry,
   deltaX: number,
   deltaY: number,
   viewport: WindowViewport,
+  constraints: Partial<GeometryConstraints> = {},
 ): WindowGeometry {
   const maxX = viewport.x + Math.max(0, viewport.width - start.width);
   const maxY = viewport.y + Math.max(0, viewport.height - start.height);
-  const x = start.width >= viewport.width
-    ? viewport.x
-    : clamp(start.x + deltaX, viewport.x, maxX);
-  const y = start.height >= viewport.height
-    ? viewport.y
-    : clamp(start.y + deltaY, viewport.y, maxY);
+  const reachable = reachablePositionBounds(start, viewport, constraints);
+  const x = start.width <= viewport.width
+    ? clamp(start.x + deltaX, viewport.x, maxX)
+    : clamp(start.x + deltaX, reachable.minX, reachable.maxX);
+  const y = start.height <= viewport.height
+    ? clamp(start.y + deltaY, viewport.y, maxY)
+    : viewport.y;
   return { ...start, x, y };
 }
 
@@ -84,6 +88,7 @@ export function anchoredRestoreGeometryForPointer(
   restore: WindowGeometry,
   pointer: PointerPosition,
   viewport: WindowViewport,
+  constraints: Partial<GeometryConstraints> = {},
 ): WindowGeometry {
   const grabX = clamp(pointer.x - snapped.x, 0, Math.max(0, restore.width));
   const grabY = clamp(pointer.y - snapped.y, 0, Math.max(0, restore.height));
@@ -96,6 +101,7 @@ export function anchoredRestoreGeometryForPointer(
     0,
     0,
     viewport,
+    constraints,
   );
 }
 
