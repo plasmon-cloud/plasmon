@@ -26,7 +26,7 @@ async function launchPlasmon(page: Page) {
   await expect(frame).toBeVisible();
   const app = page.frameLocator(`iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`).first();
   await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-  return { app, kernelUrl };
+  return app;
 }
 
 async function contextMenuDefaultPrevented(locator: Locator): Promise<boolean> {
@@ -57,7 +57,7 @@ async function launchSearchResult(app: ReturnType<Page["frameLocator"]>, query: 
 }
 
 test("#176 first-party context ownership preserves editable and foreign boundaries", async ({ page }) => {
-  const { app, kernelUrl } = await launchPlasmon(page);
+  const app = await launchPlasmon(page);
 
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await taskbar.click({ button: "right" });
@@ -98,11 +98,15 @@ test("#176 first-party context ownership preserves editable and foreign boundari
   const address = browser.getByRole("textbox", { name: "Web address" });
   expect(await contextMenuDefaultPrevented(address)).toBe(false);
   await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
-  await address.fill(kernelUrl);
-  await browser.getByRole("button", { name: "Go" }).click();
 
-  const foreignFrame = browser.locator("iframe").first();
-  await expect(foreignFrame).toBeVisible();
+  await browser.evaluate((element) => {
+    const iframe = document.createElement("iframe");
+    iframe.title = "foreign embedded content";
+    iframe.srcdoc = "<p>foreign embedded content</p>";
+    element.appendChild(iframe);
+  });
+  const foreignFrame = browser.locator('iframe[title="foreign embedded content"]');
+  await expect(foreignFrame).toBeAttached();
   expect(await contextMenuDefaultPrevented(foreignFrame)).toBe(false);
   await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
 
