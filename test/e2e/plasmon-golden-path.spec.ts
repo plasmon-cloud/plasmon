@@ -246,14 +246,21 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const windowLayer = app.locator(".plasmon-window-layer").first();
   await expect.poll(async () => (await windowLayer.boundingBox())?.width ?? 1000).toBeLessThan(640);
   const smallWorkspace = await windowLayer.boundingBox();
-  const smallTitlebar = await titlebar.boundingBox();
-  if (!smallWorkspace || !smallTitlebar) throw new Error("Small-workspace native window has no browser bounds");
-  const smallDragStartX = smallWorkspace.x + Math.min(180, smallWorkspace.width / 2);
-  const smallDragY = smallTitlebar.y + Math.min(16, smallTitlebar.height / 2);
-  await page.mouse.move(smallDragStartX, smallDragY);
-  await page.mouse.down();
-  await page.mouse.move(smallWorkspace.x + 20, smallDragY, { steps: 8 });
-  await page.mouse.up();
+  if (!smallWorkspace) throw new Error("Small-workspace WindowLayer has no browser bounds");
+
+  for (let pan = 0; pan < 2; pan += 1) {
+    const smallTitlebar = await titlebar.boundingBox();
+    if (!smallTitlebar) throw new Error("Small-workspace native titlebar has no browser bounds");
+    const visibleLeft = Math.max(smallWorkspace.x, smallTitlebar.x);
+    const visibleRight = Math.min(smallWorkspace.x + smallWorkspace.width, smallTitlebar.x + smallTitlebar.width);
+    if (visibleRight - visibleLeft < 16) throw new Error("Native titlebar lost its required reachable segment");
+    const smallDragStartX = (visibleLeft + visibleRight) / 2;
+    const smallDragY = smallTitlebar.y + Math.min(16, smallTitlebar.height / 2);
+    await page.mouse.move(smallDragStartX, smallDragY);
+    await page.mouse.down();
+    await page.mouse.move(smallWorkspace.x + 20, smallDragY, { steps: 8 });
+    await page.mouse.up();
+  }
 
   const maximizeControl = dialog.getByRole("button", { name: "Maximize" });
   const maximizeBounds = await maximizeControl.boundingBox();
