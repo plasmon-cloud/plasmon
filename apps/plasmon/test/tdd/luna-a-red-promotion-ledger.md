@@ -1,7 +1,7 @@
 # Luna-A RED promotion ledger
 
 This lane-local ledger complements Luna-D's master ledger. Refresh:
-integrated `4024addc4902cd019b64df548e4fb2dbf84cd053`. Active implementation
+integrated `5a6c9bb3d46d536c60a41382d5e3754539753dcd`. Active implementation
 ownership: #92/PR #223, #169/PR #221, and #193/PR #219; do not modify those
 branches or implementation packets.
 
@@ -33,10 +33,10 @@ branches or implementation packets.
 | #169 | final packet | `issue-169-final-packet.md`, `issue-169.red.test.ts` | Start reconciliation collision safety | none | headless reconciliation tests | malformed Accessories sibling rejects current path | HEADLESS RED / #194 BLOCKER |
 | #193 | final packet | `issue-193-final-packet.md` | focused Search surface over canonical results | none | Search model/RTL + #175 browser | no structural RED; #174 complete | FINAL PACKET READY / #175 BOUNDARY |
 | #194 | final packet | `issue-194-final-packet.md` | focused Start surface over `/System/Start Menu` | none | Start migration/RTL + #169/#175 | blocked by #169 | BLOCKED — #169 |
-| #196 | merged #215 at `4024add` | `issue-196-final-packet.md`, `issue-196.recon.md`, integrated strategy guards | Icons/List/Details strategies over #195 adapters | merged #215 | 17 focused tests + 1 RTL strategy test; geometry remains browser-owned | current release guards pass; no truthful structural RED | ALREADY GREEN / INTEGRATED |
+| #196 | merged #215, current head `5a6c9bb` | `issue-196-final-packet.md`, `issue-196.recon.md`, integrated strategy guards | Icons/List/Details strategies over #195 adapters | merged #215 | 17 focused tests + 1 RTL strategy test; geometry remains browser-owned | current release guards pass; no truthful structural RED | ALREADY GREEN / INTEGRATED |
 | #197 | Luna-A input packet | `issue-197-luna-a-shell-input-packet.md` | Shell composition/authority boundaries | Luna-B-owned | cross-surface guards | no competing Shell packet | BLOCKED — Luna-B |
 | #192 | integrated dependency | #172 composed closure | Desktop placement controller | merged #205 | release #192 tests + #172 composed gate | integrated source and clean-worktree execution observed | INTEGRATED / #172 GREEN |
-| #195 | merged #213 at `3d7042b`; current release `4024add` | #195 characterization and final packet | humble FileManager adapter boundaries | merged #213 | current focused FileManager guards: 17 passed | current release source/tests inspected | ALREADY GREEN / INTEGRATED / #196 CONSUMED |
+| #195 | merged #213 at `3d7042b`; current release `5a6c9bb` | #195 characterization and final packet | humble FileManager adapter boundaries | merged #213 | current focused FileManager guards: 17 passed | current release source/tests inspected | ALREADY GREEN / INTEGRATED / #196 CONSUMED |
 | #201 | final cleanup contract | `issue-201-final-cleanup-contract.md` | migration-gated deletion/import boundaries | none | owning migration suites and package/health evidence | prerequisites not complete | BLOCKED — accepted migrations |
 
 ## Promotion rules

@@ -1,7 +1,7 @@
 # Issue #92 — accepted operation-model consumption plan
 
 Status: **RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH** against
-integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`. PR #208/#65 and
+integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`. PR #208/#65 and
 #195/#196 are merged; PR #223 owns #92 implementation.
 
 ## Integrated #65 inspection

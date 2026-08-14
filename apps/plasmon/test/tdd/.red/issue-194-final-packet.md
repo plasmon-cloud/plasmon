@@ -6,7 +6,7 @@ implementation is made here. Do not modify PR #221 or derive a future Start
 contract from its unmerged branch.
 
 Integrated release: `origin/release/0.1.0-r2` at
-`4024addc4902cd019b64df548e4fb2dbf84cd053`.
+`5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
 
 ## Prerequisite
 

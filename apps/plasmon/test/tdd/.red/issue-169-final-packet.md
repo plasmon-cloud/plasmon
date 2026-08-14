@@ -3,7 +3,7 @@
 Disposition: **HEADLESS RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
 
 Integrated release: `origin/release/0.1.0-r2` at
-`4024addc4902cd019b64df548e4fb2dbf84cd053`. PR #221 (`agent/fix-169-start-reconciliation`)
+`5a6c9bb3d46d536c60a41382d5e3754539753dcd`. PR #221 (`agent/fix-169-start-reconciliation`)
 is open and owns implementation; this packet remains the accepted RED fence.
 
 ## PRESERVE
@@ -48,7 +48,7 @@ filename-only ownership guess, or test-local reconciliation.
 `Accessories` file through the headless production graph, then calls the real
 `reconcileStartMenu` with a native seed requiring Accessories.
 
-Executed against current release `4024add` in a detached release worktree:
+Executed against current release `5a6c9bb` in a detached release worktree:
 
 ```text
 bun test ./apps/plasmon/test/tdd/.red/issue-169.red.test.ts

@@ -1,7 +1,7 @@
 # Issue #193 — preserve/change/unspecified
 
 Status: **FINAL IMPLEMENTOR PACKET READY / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
-PR #219 owns #193 implementation. The release at refresh is `4024addc`;
+PR #219 owns #193 implementation. The release at refresh is `5a6c9bb3`;
 #174/#189/#190 are integrated. This document is architecture-independent
 preparation and must not create a second Search authority.
 

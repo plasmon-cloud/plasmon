@@ -1,6 +1,6 @@
 # Luna-A r2 runway disposition
 
-Refresh: integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`.
+Refresh: integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
 
 This is a staging/acceptance inventory only. No production source, active
 implementation packet, branch, or PR was modified.

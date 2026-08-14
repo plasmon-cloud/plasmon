@@ -2,7 +2,7 @@
 
 Disposition: **TDD:RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
 PR #223 (`agent/feature-92-drag-move-progress`) owns implementation. The RED
-remains against integrated release `4024addc4902cd019b64df548e4fb2dbf84cd053`
+remains against integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`
 (now including merged #195 and #196).
 
 ## Authority inspection

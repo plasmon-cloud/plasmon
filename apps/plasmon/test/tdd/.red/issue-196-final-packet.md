@@ -3,8 +3,8 @@
 Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
 This packet is retained as the #196 strategy preservation and authority fence.
 
-Checkpoint: `4024addc4902cd019b64df548e4fb2dbf84cd053`
-Release base: `4024addc4902cd019b64df548e4fb2dbf84cd053`
+Checkpoint: `5a6c9bb3d46d536c60a41382d5e3754539753dcd`
+Release base: `5a6c9bb3d46d536c60a41382d5e3754539753dcd`
 Merged dependencies: PR #213 / Issue #195 and PR #215 / Issue #196 are
 integrated at this release head.
 
@@ -141,7 +141,7 @@ bun test apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \
   apps/plasmon/src/os/file-manager/operation-presentation.test.ts
 ```
 
-Executed against release base `4024add`:
+Executed against release base `5a6c9bb`:
 
 ```text
 17 passed, 0 failed, 48 expect() calls

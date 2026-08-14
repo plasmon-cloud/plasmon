@@ -1,8 +1,8 @@
 # Issue #196 readiness disposition
 
-Checkpoint: `4024addc4902cd019b64df548e4fb2dbf84cd053`
+Checkpoint: `5a6c9bb3d46d536c60a41382d5e3754539753dcd`
 
-Integrated release: `4024addc4902cd019b64df548e4fb2dbf84cd053`.
+Integrated release: `5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
 PR #213 / Issue #195 and PR #215 / Issue #196 are merged. The actual #195
 adapter seams and #196 strategy implementation were inspected from the release
 worktree; #196 is integrated and no longer pending.

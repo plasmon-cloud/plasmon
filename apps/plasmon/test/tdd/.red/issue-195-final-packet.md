@@ -4,7 +4,7 @@ Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
 This packet is retained as the merged #195 preservation and authority fence.
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`4024addc4902cd019b64df548e4fb2dbf84cd053`.
+`5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
 
 PR #213 is merged; no active PR owns #195. Integrated dependencies and the
 follow-up #196 strategy migration are present. This packet contains no
@@ -177,7 +177,7 @@ List, FileEntry, or placement tests merely to make decomposition visible.
 
 ## Current integrated verification
 
-Against release `4024add`:
+Against release `5a6c9bb`:
 
 ```text
 bun test apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \

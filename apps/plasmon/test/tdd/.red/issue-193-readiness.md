@@ -1,6 +1,6 @@
 # Issue #193 readiness — refreshed after r2 integration
 
-Integrated release at final refresh: `4024addc4902cd019b64df548e4fb2dbf84cd053`.
+Integrated release at final refresh: `5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
 PR #219 is the active Luna-B implementation owner; this is a readiness audit,
 not an implementation branch or a competing Search packet.
 
