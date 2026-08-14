@@ -179,8 +179,8 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(dialog).toBeVisible();
   const titlebar = dialog.locator(".plasmon-window__titlebar");
 
-  const clickExposedWindowSurface = async (target: Locator): Promise<void> => {
-    const position = await target.evaluate((element) => {
+  const exposedWindowSurface = async (target: Locator): Promise<{ x: number; y: number } | null> =>
+    target.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const candidates: Array<{ x: number; y: number }> = [];
       const titlebarY = Math.min(16, Math.max(1, rect.height / 2));
@@ -203,15 +203,55 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
       }
       return null;
     });
+
+  const clickExposedWindowSurface = async (target: Locator): Promise<void> => {
+    const position = await exposedWindowSurface(target);
     if (!position) throw new Error("Native window has no exposed non-control pointer surface");
     await target.click({ position });
   };
 
+  const exposeWindowBehind = async (covering: Locator, target: Locator): Promise<void> => {
+    if (await exposedWindowSurface(target)) return;
+
+    const coveringBox = await covering.boundingBox();
+    const coveringTitlebar = covering.locator(".plasmon-window__titlebar");
+    const titlebarBox = await coveringTitlebar.boundingBox();
+    const workspaceBox = await app.locator(".plasmon-window-layer").first().boundingBox();
+    if (!coveringBox || !titlebarBox || !workspaceBox) {
+      throw new Error("Covered native window has no browser drag geometry");
+    }
+
+    const minWindowX = workspaceBox.x;
+    const maxWindowX = Math.max(minWindowX, workspaceBox.x + workspaceBox.width - coveringBox.width);
+    const leftTravel = Math.abs(coveringBox.x - minWindowX);
+    const rightTravel = Math.abs(maxWindowX - coveringBox.x);
+    const destinationWindowX = leftTravel >= rightTravel ? minWindowX : maxWindowX;
+    if (Math.abs(destinationWindowX - coveringBox.x) < 24) {
+      throw new Error("Covering native window has no horizontal drag room to expose target");
+    }
+
+    const offsetX = Math.min(80, titlebarBox.width / 2);
+    const offsetY = Math.min(16, titlebarBox.height / 2);
+    const startX = titlebarBox.x + offsetX;
+    const startY = titlebarBox.y + offsetY;
+    const titlebarInsetX = titlebarBox.x - coveringBox.x;
+    const destinationX = destinationWindowX + titlebarInsetX + offsetX;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(destinationX, startY, { steps: 8 });
+    await page.mouse.up();
+
+    await expect.poll(async () => Boolean(await exposedWindowSurface(target))).toBe(true);
+  };
+
   // Issue #199 packaged browser boundary: explicit focus remains WindowManager
-  // state while chrome renders a real active/inactive distinction. Exercise a
-  // genuinely exposed browser hit target rather than forcing through overlap.
+  // state while chrome renders a real active/inactive distinction. If normal
+  // placement fully covers the older window, first move Explorer through the
+  // real titlebar adapter, then use genuinely exposed browser hit targets.
   await expect(dialog).toHaveClass(/plasmon-window--active/);
   const activeBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
+  await exposeWindowBehind(dialog, recycleBin);
   await clickExposedWindowSurface(recycleBin);
   await expect(recycleBin).toHaveClass(/plasmon-window--active/);
   await expect(dialog).not.toHaveClass(/plasmon-window--active/);
