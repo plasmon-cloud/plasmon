@@ -8,6 +8,7 @@ It does not own process records, application registration, filesystem state, She
 
 - `NativeWindowManager.ts` — deterministic window-state manager, explicit focus/MRU ledger, geometry commits, and left/right snap transitions.
 - `geometry.ts` — pure viewport/window constraint and half-screen snap calculations.
+- `placement.ts` — filesystem-backed durable placement adapter plus the coordinator that restores/persists accepted manager geometry without becoming a second geometry authority.
 - `NativeWindow.tsx` — rendered window chrome and thin pointer interaction/edge-detection adapter.
 - `interaction.ts` — reusable interaction helpers, including bounded horizontal edge detection.
 - `WindowLayer.tsx` — subscribes to manager state, renders active presentation from explicit manager focus, and connects the available DOM viewport to the manager.
@@ -31,7 +32,11 @@ A snapped window occupies the deterministic left or right half of the manager's 
 
 Minimize/focus preserve snap placement. Maximizing a snapped window temporarily presents the maximized viewport while retaining the underlying snap placement; restoring returns to that snap first, and restoring the snapped window again returns to its pre-snap floating geometry. Dragging a snapped window restores its floating geometry before continuing the drag. Viewport changes recompute snapped geometry without replacing the saved floating restore geometry.
 
-This slice is intentionally bounded to left/right halves. Quarter snapping, tiling policy, multi-monitor placement, persisted placement, and Shell-owned snap geometry are outside this subsystem behavior.
+Durable placement uses the same filesystem-backed `FsService` persistence boundary as other Plasmon preferences. `NativeWindowPlacementController` observes only authoritative manager snapshots after a manager state change; pointer-move animation frames remain DOM previews and are never persisted. For snap/maximize/minimize presentation, the durable record is the normal/restorable rectangle (`restoreGeometry` when present), not the transient presented rectangle or visibility state.
+
+The stable durable key is the native application's `NativeAppDefinition.id`, not a `ProcessId` or `WindowId`. Only the first live window for a given app id owns that durable primary slot; concurrent sibling windows retain normal WindowManager cascade behavior and are not serialized as a session layout. On reopen, the saved rectangle is reapplied through WindowManager mutation methods, so current viewport and minimum-size constraints clamp stale/out-of-range records. Missing or corrupt records leave the manager-created default placement unchanged.
+
+This slice remains intentionally bounded to one normal/restorable rectangle per native app plus existing left/right snap behavior. Quarter snapping, tiling policy, multi-monitor/workspace placement, persisted snap/maximize/minimize/focus state, and Shell-owned geometry are outside this subsystem behavior.
 
 ## Refactor direction
 
@@ -43,4 +48,4 @@ Upstream behavioral adaptations/attribution belong in `THIRD_PARTY.md` and shoul
 
 ## Testing
 
-Use pure geometry/manager tests for creation, explicit focus/MRU transitions and fallback, z-order independence/compaction, viewport constraints, snap placement/state transitions, snapshot isolation, subscriptions, and cleanup. Use real-browser coverage for pointer drag/resize, pointer-edge activation, keyboard/focus routing, close-animation presentation, inert/accessibility, iframe interaction, ResizeObserver, and other DOM-only behavior. Manual review remains appropriate for animation/interaction feel.
+Use pure geometry/manager tests for creation, explicit focus/MRU transitions and fallback, z-order independence/compaction, viewport constraints, snap placement/state transitions, durable normal-placement restoration/clamping, snapshot isolation, subscriptions, and cleanup. Use headless production composition for filesystem-backed close/recomposition persistence. Use real-browser coverage only where pointer drag/resize, pointer-edge activation, keyboard/focus routing, close-animation presentation, inert/accessibility, iframe interaction, ResizeObserver, or another DOM-owned behavior is material. Manual review remains appropriate for animation/interaction feel.

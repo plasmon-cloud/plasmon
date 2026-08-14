@@ -5,6 +5,7 @@ import {
   test,
   type BrowserContext,
   type FrameLocator,
+  type Locator,
   type Page,
 } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
@@ -124,6 +125,53 @@ async function closePlasmonTile(page: Page): Promise<void> {
   );
 }
 
+async function openProbeWindow(app: FrameLocator, name: string): Promise<Locator> {
+  await desktopEntry(app, name).dblclick();
+  const window = app.getByRole("dialog", { name }).last();
+  await expect(window).toBeVisible({ timeout: 20_000 });
+  return window;
+}
+
+async function windowPlacement(window: Locator): Promise<{ x: number; y: number }> {
+  return await window.evaluate((element) => {
+    const html = element as HTMLElement;
+    return {
+      x: Number.parseFloat(html.style.left),
+      y: Number.parseFloat(html.style.top),
+    };
+  });
+}
+
+async function moveWindowBy(
+  page: Page,
+  window: Locator,
+  deltaX: number,
+  deltaY: number,
+): Promise<{ x: number; y: number }> {
+  const titlebar = window.locator(".plasmon-window__titlebar");
+  const bounds = await titlebar.boundingBox();
+  expect(bounds).not.toBeNull();
+  const startX = bounds!.x + Math.min(80, bounds!.width / 3);
+  const startY = bounds!.y + Math.min(14, bounds!.height / 2);
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + deltaX, startY + deltaY, { steps: 6 });
+  await page.mouse.up();
+
+  const moved = await windowPlacement(window);
+  await expect.poll(async () => await windowPlacement(window)).toEqual(moved);
+  return moved;
+}
+
+async function expectWindowPlacement(
+  app: FrameLocator,
+  name: string,
+  expected: { x: number; y: number },
+): Promise<void> {
+  const window = await openProbeWindow(app, name);
+  await expect.poll(async () => await windowPlacement(window)).toEqual(expected);
+}
+
 async function expectProbeContents(
   app: FrameLocator,
   name: string,
@@ -140,7 +188,7 @@ async function expectProbeContents(
   });
 }
 
-test("packaged Plasmon preserves a user file across tile close, reload, and real browser restart", async ({}, testInfo) => {
+test("packaged Plasmon preserves a user file and native window placement across tile close, reload, and real browser restart", async ({}, testInfo) => {
   test.setTimeout(180_000);
 
   const runtime = resolveLocalNeutronRuntime();
@@ -157,12 +205,19 @@ test("packaged Plasmon preserves a user file across tile close, reload, and real
 
     let app = await openPlasmon(page);
     const nodeId = await importPersistenceProbe(app, probeName, probeContents);
+    const probeWindow = await openProbeWindow(app, probeName);
+    const initialPlacement = await windowPlacement(probeWindow);
+    const savedPlacement = await moveWindowBy(page, probeWindow, 173, 91);
+    expect(savedPlacement).not.toEqual(initialPlacement);
 
-    // Closing only the foreground tile must not destroy its resident filesystem authority.
+    // Closing only the foreground tile destroys foreground Process/Windowing composition,
+    // but the resident filesystem authority remains. Reopening the file must restore the
+    // accepted normal rectangle through a fresh WindowManager rather than browser-local state.
     await closePlasmonTile(page);
     expect(await persistentBackgroundOrigin(page)).toBe(initialBackgroundOrigin);
     app = await openPlasmon(page);
     await expectProbeIdentity(app, probeName, nodeId);
+    await expectWindowPlacement(app, probeName, savedPlacement);
 
     // Reload recreates browser frames while retaining the same installed authority/profile.
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -170,6 +225,7 @@ test("packaged Plasmon preserves a user file across tile close, reload, and real
     expect(await persistentBackgroundOrigin(page)).toBe(initialBackgroundOrigin);
     app = await openPlasmon(page);
     await expectProbeIdentity(app, probeName, nodeId);
+    await expectWindowPlacement(app, probeName, savedPlacement);
 
     // Closing this persistent context closes Chromium. Relaunching it against the same
     // user-data directory is a browser restart; PocketIC and installed apps stay intact.
@@ -180,6 +236,7 @@ test("packaged Plasmon preserves a user file across tile close, reload, and real
     expect(await persistentBackgroundOrigin(page)).toBe(initialBackgroundOrigin);
     app = await openPlasmon(page);
     await expectProbeIdentity(app, probeName, nodeId);
+    await expectWindowPlacement(app, probeName, savedPlacement);
     await expectProbeContents(app, probeName, probeContents);
   } finally {
     await context?.close();

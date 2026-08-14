@@ -31,7 +31,11 @@ import {
 } from "../fs/index.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
-import { NativeWindowManager } from "../windowing/index.ts";
+import {
+  FsServiceWindowPlacementStore,
+  NativeWindowManager,
+  NativeWindowPlacementController,
+} from "../windowing/index.ts";
 import {
   contentAppDefinitions,
   contentAssociationRules,
@@ -74,6 +78,7 @@ export interface PlasmonServices {
   filesystem: FilesystemCoreServices;
   process: ProcessController;
   windows: WindowManager;
+  windowPlacement: NativeWindowPlacementController;
   neutron: NeutronBridge;
   authorization: ResourceAuthorizationService;
   nativeApps: NativeApplicationRegistry;
@@ -210,8 +215,8 @@ function registerWave2Applications(
  * Wave 2 composition root. In Neutron, filesystem calls are routed to the
  * persistent Plasmon background surface through FsRpcClient; standalone
  * preview selects a browser-local repository with safe fallback. Association
- * user defaults persist through that same raw FsService rather than foreground
- * browser storage.
+ * user defaults and native-window placement persist through that same raw
+ * FsService rather than foreground browser storage.
  *
  * Tests may inject only true external/runtime boundaries (for example an
  * in-memory persistence repository, a mock Neutron bridge, or deterministic window
@@ -233,10 +238,19 @@ export function createPlasmonServices(
     ? new PersistentFsService(options.filesystemRepository)
     : createFilesystemService();
   const windows = options.windows ?? new NativeWindowManager();
+  const windowPlacement = new NativeWindowPlacementController(
+    windows,
+    new FsServiceWindowPlacementStore(rawFs),
+    {
+      onPersistenceError: (error) => console.warn("Plasmon window placement persistence failed:", error),
+    },
+  );
   const neutron = options.neutron ?? createNeutronBridge();
   const nativeApps = new NativeApplicationRegistry();
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
-  const process = new NativeProcessController(nativeApps, windows);
+  const process = new NativeProcessController(nativeApps, windows, undefined, {
+    onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
+  });
   const openService = new IntegratedOpenService({ nativeApps, associations, process, neutron });
   const fileClipboard = new FileOperationClipboard();
   let filesystem: FilesystemCoreServices | null = null;
@@ -289,6 +303,7 @@ export function createPlasmonServices(
     filesystem,
     process,
     windows,
+    windowPlacement,
     neutron,
     authorization: createAuthorizationService(),
     nativeApps,
