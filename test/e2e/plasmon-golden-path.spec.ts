@@ -197,21 +197,67 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const titlebar = dialog.locator(".plasmon-window__titlebar");
   const workspace = await app.locator(".plasmon-window-layer").first().boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
+  const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
 
-  const dragTitlebarTo = async (clientX: number): Promise<void> => {
+  const beginTitlebarDrag = async (): Promise<{ x: number; y: number; offsetX: number; offsetY: number }> => {
     const box = await titlebar.boundingBox();
     if (!box) throw new Error("Native window titlebar has no browser bounds");
-    const titlebarY = box.y + Math.min(16, box.height / 2);
-    await page.mouse.move(box.x + Math.min(120, box.width / 2), titlebarY);
+    const offsetX = Math.min(120, box.width / 2);
+    const offsetY = Math.min(16, box.height / 2);
+    const x = box.x + offsetX;
+    const y = box.y + offsetY;
+    await page.mouse.move(x, y);
     await page.mouse.down();
-    await page.mouse.move(clientX, titlebarY, { steps: 5 });
-    await page.mouse.up();
+    return { x, y, offsetX, offsetY };
   };
 
-  await dragTitlebarTo(workspace.x + 1);
+  // Issue #43 reopened browser acceptance: edge intent is visible before
+  // release, and the actual dragged window stays inside the usable workspace.
+  const leftDrag = await beginTitlebarDrag();
+  await page.mouse.move(workspace.x + 1, leftDrag.y, { steps: 5 });
+  await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
+  const leftPreviewBounds = await snapPreview.boundingBox();
+  const leftDragBounds = await dialog.boundingBox();
+  if (!leftPreviewBounds || !leftDragBounds) throw new Error("Snap preview/drag window has no browser bounds");
+  expect(Math.abs(leftPreviewBounds.x - workspace.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewBounds.y - workspace.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewBounds.width - Math.floor(workspace.width / 2))).toBeLessThanOrEqual(1);
+  expect(Math.abs(leftPreviewBounds.height - workspace.height)).toBeLessThanOrEqual(1);
+  expect(leftDragBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
+  expect(leftDragBounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
+  expect(leftDragBounds.x + leftDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
+  expect(leftDragBounds.y + leftDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
+  await page.mouse.up();
+  await expect(snapPreview).toHaveCount(0);
   await expect(dialog).toHaveAttribute("data-window-snap", "left");
 
-  await dragTitlebarTo(workspace.x + workspace.width - 1);
+  // Dragging a snapped titlebar out must restore under the same pointer grab
+  // instead of jumping the handle away from the cursor. Continue that same
+  // captured drag to the opposite edge and prove the bounded preview there.
+  const snappedTitlebarBounds = await titlebar.boundingBox();
+  if (!snappedTitlebarBounds) throw new Error("Snapped native titlebar has no browser bounds");
+  const rightDrag = await beginTitlebarDrag();
+  await expect(dialog).not.toHaveAttribute("data-window-snap", "left");
+  const restoredTitlebarBounds = await titlebar.boundingBox();
+  if (!restoredTitlebarBounds) throw new Error("Restored native titlebar has no browser bounds");
+  expect(Math.abs((rightDrag.x - restoredTitlebarBounds.x) - rightDrag.offsetX)).toBeLessThanOrEqual(2);
+  expect(Math.abs((rightDrag.y - restoredTitlebarBounds.y) - rightDrag.offsetY)).toBeLessThanOrEqual(2);
+  expect(rightDrag.x).toBeGreaterThanOrEqual(restoredTitlebarBounds.x - 1);
+  expect(rightDrag.x).toBeLessThanOrEqual(restoredTitlebarBounds.x + restoredTitlebarBounds.width + 1);
+
+  await page.mouse.move(workspace.x + workspace.width - 1, rightDrag.y, { steps: 5 });
+  await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "right");
+  const rightPreviewBounds = await snapPreview.boundingBox();
+  const rightDragBounds = await dialog.boundingBox();
+  if (!rightPreviewBounds || !rightDragBounds) throw new Error("Right snap preview/drag window has no browser bounds");
+  expect(Math.abs((rightPreviewBounds.x + rightPreviewBounds.width) - (workspace.x + workspace.width))).toBeLessThanOrEqual(1);
+  expect(Math.abs(rightPreviewBounds.y - workspace.y)).toBeLessThanOrEqual(1);
+  expect(rightDragBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
+  expect(rightDragBounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
+  expect(rightDragBounds.x + rightDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
+  expect(rightDragBounds.y + rightDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
+  await page.mouse.up();
+  await expect(snapPreview).toHaveCount(0);
   await expect(dialog).toHaveAttribute("data-window-snap", "right");
 
   // Issue #42 visible boundary: create/open a real filesystem document through

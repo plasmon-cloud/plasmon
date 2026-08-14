@@ -9,16 +9,19 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { ProcessId, WindowId } from "../contracts/common.ts";
 import type { WindowGeometry, WindowManager, WindowState } from "../contracts/window.ts";
 import {
   DEFAULT_MIN_HEIGHT,
   DEFAULT_MIN_WIDTH,
-  constrainGeometry,
+  horizontalSnapGeometry,
   type HorizontalSnapSide,
   type WindowViewport,
 } from "./geometry.ts";
 import {
+  anchoredRestoreGeometryForPointer,
+  boundedDragGeometry,
   horizontalSnapSideAtPointer,
   resizeCursor,
   resizeGeometry,
@@ -77,6 +80,13 @@ function viewportFor(element: HTMLElement): WindowViewport {
   if (parent) return { x: 0, y: 0, width: Math.max(1, parent.clientWidth), height: Math.max(1, parent.clientHeight) };
   if (typeof window !== "undefined") return { x: 0, y: 0, width: Math.max(1, window.innerWidth), height: Math.max(1, window.innerHeight) };
   return { x: 0, y: 0, width: 1280, height: 720 };
+}
+
+function pointerFor(element: HTMLElement, clientX: number, clientY: number): { x: number; y: number } {
+  const parent = element.parentElement;
+  if (!parent) return { x: clientX, y: clientY };
+  const bounds = parent.getBoundingClientRect();
+  return { x: clientX - bounds.left, y: clientY - bounds.top };
 }
 
 function geometryCommitter(manager: WindowManager): WindowGeometryCommitter | null {
@@ -156,6 +166,7 @@ export function NativeWindow({
   const closeTimerRef = useRef<number | null>(null);
   const closingRef = useRef(false);
   const [closing, setClosing] = useState(false);
+  const [snapPreviewSide, setSnapPreviewSide] = useState<HorizontalSnapSide | null>(null);
   const minWidth = state.minWidth ?? DEFAULT_MIN_WIDTH;
   const minHeight = state.minHeight ?? DEFAULT_MIN_HEIGHT;
   const snapper = snapController(manager);
@@ -209,6 +220,7 @@ export function NativeWindow({
     const interaction = interactionRef.current;
     if (!interaction) return;
     interactionRef.current = null;
+    setSnapPreviewSide(null);
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -269,16 +281,22 @@ export function NativeWindow({
 
     event.preventDefault();
     event.stopPropagation();
+    setSnapPreviewSide(null);
 
     let startGeometry = geometryOf(state);
     if (kind === "drag" && snapped) {
+      const snappedGeometry = startGeometry;
       manager.restore(state.id);
       const restored = stateReader(manager)?.get(state.id);
-      if (restored) {
-        startGeometry = geometryOf(restored);
-        applyGeometry(startGeometry);
-      } else if (state.restoreGeometry) {
-        startGeometry = { ...state.restoreGeometry };
+      const restoreGeometry = restored ? geometryOf(restored) : state.restoreGeometry;
+      if (restoreGeometry) {
+        startGeometry = anchoredRestoreGeometryForPointer(
+          snappedGeometry,
+          restoreGeometry,
+          pointerFor(root, event.clientX, event.clientY),
+          viewportFor(root),
+        );
+        manager.move(state.id, startGeometry.x, startGeometry.y);
         applyGeometry(startGeometry);
       }
     }
@@ -309,15 +327,12 @@ export function NativeWindow({
     const deltaX = event.clientX - interaction.startClientX;
     const deltaY = event.clientY - interaction.startClientY;
     const viewport = viewportFor(root);
+    if (interaction.kind === "drag") setSnapPreviewSide(snapper ? pointerSnapSide(root, event.clientX) : null);
     const next = interaction.kind === "resize" && interaction.direction
       ? resizeGeometry(interaction.startGeometry, interaction.direction, deltaX, deltaY, viewport, minWidth, minHeight)
-      : constrainGeometry({
-          ...interaction.startGeometry,
-          x: interaction.startGeometry.x + deltaX,
-          y: interaction.startGeometry.y + deltaY,
-        }, viewport, { minWidth, minHeight });
+      : boundedDragGeometry(interaction.startGeometry, deltaX, deltaY, viewport);
     scheduleGeometry(next);
-  }, [minHeight, minWidth, scheduleGeometry]);
+  }, [minHeight, minWidth, scheduleGeometry, snapper]);
 
   const onPointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const interaction = interactionRef.current;
@@ -378,6 +393,10 @@ export function NativeWindow({
     closing && "plasmon-window--closing",
     className,
   );
+  const previewHost = rootRef.current?.parentElement ?? null;
+  const previewGeometry = snapPreviewSide && rootRef.current
+    ? horizontalSnapGeometry(viewportFor(rootRef.current), snapPreviewSide)
+    : null;
 
   return (
     <div
@@ -394,6 +413,21 @@ export function NativeWindow({
       onPointerDown={focusWindow}
       onAnimationEnd={closing ? finalizeClose : undefined}
     >
+      {snapPreviewSide && previewGeometry && previewHost ? createPortal(
+        <div
+          className="plasmon-window__snap-preview"
+          data-window-snap-preview={snapPreviewSide}
+          aria-hidden="true"
+          style={{
+            left: previewGeometry.x,
+            top: previewGeometry.y,
+            width: previewGeometry.width,
+            height: previewGeometry.height,
+            zIndex: Math.max(0, state.z - 1),
+          }}
+        />,
+        previewHost,
+      ) : null}
       <header
         className="plasmon-window__titlebar"
         onPointerDown={(event: ReactPointerEvent<HTMLElement>) => beginInteraction(event, "drag")}

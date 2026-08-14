@@ -14,6 +14,11 @@ export interface HorizontalEdgeBounds {
   right: number;
 }
 
+export interface PointerPosition {
+  x: number;
+  y: number;
+}
+
 const resizeCursors: Record<ResizeDirection, string> = {
   n: "ns-resize",
   ne: "nesw-resize",
@@ -24,6 +29,10 @@ const resizeCursors: Record<ResizeDirection, string> = {
   w: "ew-resize",
   nw: "nwse-resize",
 };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function resizeCursor(direction: ResizeDirection): string {
   return resizeCursors[direction];
@@ -40,6 +49,54 @@ export function horizontalSnapSideAtPointer(
   if (clientX <= left + safeThreshold) return "left";
   if (clientX >= right - safeThreshold) return "right";
   return null;
+}
+
+/**
+ * Keeps an actively dragged floating window inside the usable viewport whenever
+ * the window can fit there. Oversized windows anchor to the viewport origin so
+ * the browser adapter never invents a second reachability policy.
+ */
+export function boundedDragGeometry(
+  start: WindowGeometry,
+  deltaX: number,
+  deltaY: number,
+  viewport: WindowViewport,
+): WindowGeometry {
+  const maxX = viewport.x + Math.max(0, viewport.width - start.width);
+  const maxY = viewport.y + Math.max(0, viewport.height - start.height);
+  const x = start.width >= viewport.width
+    ? viewport.x
+    : clamp(start.x + deltaX, viewport.x, maxX);
+  const y = start.height >= viewport.height
+    ? viewport.y
+    : clamp(start.y + deltaY, viewport.y, maxY);
+  return { ...start, x, y };
+}
+
+/**
+ * Repositions restored floating geometry under the pointer when a snapped
+ * titlebar drag begins. The grab offset from the snapped titlebar is preserved
+ * where the restored rectangle and viewport permit it, then bounded by the
+ * same active-drag contract used for subsequent pointer movement.
+ */
+export function anchoredRestoreGeometryForPointer(
+  snapped: WindowGeometry,
+  restore: WindowGeometry,
+  pointer: PointerPosition,
+  viewport: WindowViewport,
+): WindowGeometry {
+  const grabX = clamp(pointer.x - snapped.x, 0, Math.max(0, restore.width));
+  const grabY = clamp(pointer.y - snapped.y, 0, Math.max(0, restore.height));
+  return boundedDragGeometry(
+    {
+      ...restore,
+      x: pointer.x - grabX,
+      y: pointer.y - grabY,
+    },
+    0,
+    0,
+    viewport,
+  );
 }
 
 export function resizeGeometry(
