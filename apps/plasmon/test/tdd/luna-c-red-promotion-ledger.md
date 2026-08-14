@@ -5,8 +5,8 @@
 | #58 | standalone typed Atom/revision/history/portability | Review tests/e2e existing | Review semantic + package e2e | model green; installed rerun |
 | #64 | NodeId-bound FS save/restore | no honest RED; HARNESS GAP packet | runtime Bun + installed e2e | missing shipped engine save/export/import seam; future owner |
 | #67 | actual Worker creation/communication | packaged e2e currently shell/edit; v2 spec | `test/e2e/plasmon-monaco-packaged.spec.ts` | visible ready insufficient |
-| #79 | Process/Window/document close composition | D-owned missing composed gate | headless cross-authority test | D gap |
-| #83 | two-runtime association/open selection | D-owned separate tests | headless runtime selection test | D gap |
+| #79 | Process/Window/document close composition | `issue-79-83-reconciliation.md`; existing process/document/headless tests | headless cross-authority test | ALREADY GREEN / RECON COMPLETE; browser close UI remains separate |
+| #83 | two-runtime association/open selection | `issue-79-83-reconciliation.md`; existing runtime/headless tests | headless runtime selection test | ALREADY GREEN / RECON COMPLETE; engine startup remains browser boundary |
 | #89 | canonical Program Files Worker route | `.red/issue-89.red.test.ts` | package + installed browser | current top-level route fails |
 | #96 | packaged stable first-party app identity metadata | `.red/issue-96`; post-#190 reassessment | package + existing shared Visual/RTL/manual | six canonical handlers/apps still publish generated data-URI glyphs; #190 consumer seam is ready |
 | #107 | integrated C native rows | closure audit | D report + specialist e2e | browser/manual |

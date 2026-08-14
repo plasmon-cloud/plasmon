@@ -26,8 +26,12 @@ cannot truthfully mount Monaco because Happy DOM lacks its CSS runtime; #123
 lacks an accepted game-artwork metadata contract; #124 waits for #64's save
 artifact and explicit save boundary.
 
-**ACTIVE OWNERSHIP:** #38 Sharing, #79/#83 D, #94/#107/#181 Testing/A/D,
-#178/#200 A, #169/#173/#174/#176/#182/#190/#191 active implementors.
+**RECONCILED:** #79/#83 are **ALREADY GREEN / RECON COMPLETE** on deterministic
+contracts; visible close UI and runtime engine startup remain their separate
+browser boundaries.
+
+**ACTIVE OWNERSHIP:** #38 Sharing, #94/#107/#181 Testing/A/D, #178/#200 A,
+#169/#173/#174/#176/#182/#190/#191 active implementors.
 
 No Issue is left in generic `VERIFIED CORE RED / INCOMPLETE ACCEPTANCE` without
 an exact browser, dependency, or owner remainder in the master inventory.
