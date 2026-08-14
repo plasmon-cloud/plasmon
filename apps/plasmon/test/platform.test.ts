@@ -21,7 +21,7 @@ test("freezes the Plasmon package contract at manifest 101 / npm 0.1.0", async (
   expect(workspace.version).toBe("0.1.0");
   expect(manifest.version).toBe(101);
   expect(deployment.artifacts?.packages?.map(({ path }) => path)).toContain(
-    "apps/plasmon/plasmon.v0.1.0.neutron",
+    "apps/plasmon/plasmon.v0.1.1.neutron",
   );
 });
 
