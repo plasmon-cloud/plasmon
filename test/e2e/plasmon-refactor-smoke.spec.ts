@@ -125,7 +125,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
       version?: number;
       tiles?: Array<{ id?: string; path?: string }>;
     }>;
-    expect(registry[PLASMON_APP_ID]?.version).toBe(101);
+    expect(registry[PLASMON_APP_ID]?.version).toBe(100);
     expect(registry[PLASMON_APP_ID]?.tiles).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: PLASMON_TILE_ID, path: "index.html" })]),
     );

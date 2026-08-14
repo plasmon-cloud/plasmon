@@ -37,7 +37,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     version?: number;
     tiles?: Array<{ id?: string; path?: string }>;
   }>;
-  expect(registry[APP_ID]?.version).toBe(101);
+  expect(registry[APP_ID]?.version).toBe(100);
   expect(registry[APP_ID]?.tiles).toEqual(
     expect.arrayContaining([expect.objectContaining({ id: TILE_ID, path: "index.html" })]),
   );

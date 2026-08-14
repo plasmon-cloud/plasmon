@@ -9,7 +9,7 @@ import {
   toolNames,
 } from "../src/platform/parse.ts";
 
-test("freezes the Plasmon package contract at manifest 101 / npm 0.1.0", async () => {
+test("freezes the Plasmon package contract at manifest 100 / npm 0.1.0", async () => {
   const [manifest, workspace, deployment] = await Promise.all([
     readFile(new URL("../neutron.json", import.meta.url), "utf8").then((value) => JSON.parse(value) as { version?: number }),
     readFile(new URL("../package.json", import.meta.url), "utf8").then((value) => JSON.parse(value) as { version?: string }),
@@ -19,9 +19,9 @@ test("freezes the Plasmon package contract at manifest 101 / npm 0.1.0", async (
   ]);
 
   expect(workspace.version).toBe("0.1.0");
-  expect(manifest.version).toBe(101);
+  expect(manifest.version).toBe(100);
   expect(deployment.artifacts?.packages?.map(({ path }) => path)).toContain(
-    "apps/plasmon/plasmon.v0.1.1.neutron",
+    "apps/plasmon/plasmon.v0.1.0.neutron",
   );
 });
 
