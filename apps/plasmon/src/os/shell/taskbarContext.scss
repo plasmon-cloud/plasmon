@@ -1,0 +1,16 @@
+@layer plasmon-shell {
+  .plasmon-shell__taskbar[data-taskbar-alignment="center"] {
+    justify-content: center;
+  }
+
+  .plasmon-shell__taskbar[data-taskbar-alignment="left"] {
+    justify-content: flex-start;
+  }
+
+  @media (max-width: 680px) {
+    .plasmon-shell__taskbar[data-taskbar-alignment="center"],
+    .plasmon-shell__taskbar[data-taskbar-alignment="left"] {
+      justify-content: flex-start;
+    }
+  }
+}
