@@ -54,3 +54,26 @@ export async function createFileManagerShortcut(
     selection: selectNode(emptySelection(), [shortcut.id], shortcut.id),
   };
 }
+
+/**
+ * FileManager's Send to Desktop command is only a destination adapter around the
+ * canonical shortcut primitive. The source resource is re-read by stable NodeId,
+ * then the normal #44 creation path owns capability checks and shortcut creation.
+ */
+export async function sendFileManagerShortcutToDesktop(
+  fs: FsService,
+  target: FsNode,
+): Promise<FsNode> {
+  let current: FsNode;
+  try {
+    current = await fs.stat(target.id);
+  } catch {
+    throw new Error(`${target.name} is no longer available`);
+  }
+
+  const desktop = await fs.resolvePath("/Desktop");
+  if (!desktop) throw new Error("Desktop is unavailable");
+  if (desktop.kind !== "directory") throw new Error("Desktop is not a directory");
+
+  return (await createFileManagerShortcut(fs, desktop.id, current)).shortcut;
+}

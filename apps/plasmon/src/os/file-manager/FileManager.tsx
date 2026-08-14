@@ -48,6 +48,7 @@ import {
 import {
   createFileManagerShortcut,
   fileManagerShortcutTarget,
+  sendFileManagerShortcutToDesktop,
 } from "./create-shortcut.ts";
 import {
   deleteFailureMessage,
@@ -60,6 +61,8 @@ import { finishEntryDragGesture } from "./drag.ts";
 import { ErrorBanner } from "./ErrorBanner.tsx";
 import { FileEntry } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
+import { spatialNeighborId, type SpatialDirection } from "./list-layout.ts";
+import { FileOperationState, type FileOperationSnapshot } from "./operation-state.ts";
 import type { InlineRenameState } from "./rename.ts";
 import { readSharedShortcut } from "./shortcut.ts";
 import { OpenWithPanel, PropertiesPanel } from "./properties.tsx";
@@ -83,6 +86,7 @@ export interface FileManagerProps {
   openService?: OpenService;
   process?: ProcessController;
   clipboard: FileOperationClipboard;
+  operationState?: FileOperationState;
   presentation?: FileManagerPresentation;
   sort?: FsListOptions["sort"];
   filterQuery?: string;
@@ -105,6 +109,17 @@ function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
+function operationStatusMessage(operation: FileOperationSnapshot): string | null {
+  if (operation.status !== "running" || !operation.kind) return null;
+  if (operation.kind === "paste") {
+    return `Pasting ${operation.totalItems} ${operation.totalItems === 1 ? "item" : "items"}…`;
+  }
+  if (operation.currentIndex !== null) {
+    return `Importing ${operation.currentIndex} of ${operation.totalItems}${operation.currentItem ? `: ${operation.currentItem}` : ""}`;
+  }
+  return `Importing ${operation.totalItems} ${operation.totalItems === 1 ? "item" : "items"}…`;
+}
+
 export function FileManager({
   directoryId,
   fs,
@@ -115,6 +130,7 @@ export function FileManager({
   openService,
   process,
   clipboard,
+  operationState: providedOperationState,
   presentation = "grid",
   sort = "name",
   filterQuery = "",
@@ -135,6 +151,9 @@ export function FileManager({
   const [propertiesNode, setPropertiesNode] = useState<FsNode | null>(null);
   const [marquee, setMarquee] = useState<MarqueeVisual>(null);
   const [dropTargetId, setDropTargetId] = useState<NodeId | null>(null);
+  const [localOperationState] = useState(() => new FileOperationState());
+  const operationState = providedOperationState ?? localOperationState;
+  const [operation, setOperation] = useState<FileOperationSnapshot>(() => operationState.snapshot());
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -168,6 +187,14 @@ export function FileManager({
     rootTop: number;
   } | null>(null);
 
+  useEffect(() => {
+    setOperation(operationState.snapshot());
+    return operationState.subscribe(setOperation);
+  }, [operationState]);
+
+  const operationRunning = operation.status === "running";
+  const operationMessage = operationStatusMessage(operation);
+
   const refresh = useCallback(async () => {
     const generation = refreshGateRef.current.begin();
     setLoading(true);
@@ -191,7 +218,6 @@ export function FileManager({
     void refresh();
     return () => refreshGateRef.current.invalidate();
   }, [refresh]);
-
   useEffect(() => {
     if (!fsEvents) return undefined;
     return fsEvents.subscribe((event) => {
@@ -316,11 +342,16 @@ export function FileManager({
   };
 
   const paste = async () => {
+    const snapshot = clipboard.snapshot();
+    if (!snapshot || snapshot.ids.length === 0 || !operationState.begin("paste", snapshot.ids.length)) return;
     try {
-      await pasteClipboardCollisionAware(fs, directoryId, clipboard);
+      const pasted = await pasteClipboardCollisionAware(fs, directoryId, clipboard);
+      operationState.completeKnownItems(pasted.length);
+      operationState.complete();
       setError(null);
       await refresh();
     } catch (cause: unknown) {
+      if (operationState.isRunning()) operationState.fail(errorMessage(cause));
       setError(errorMessage(cause));
     }
   };
@@ -353,18 +384,35 @@ export function FileManager({
     }
   };
 
+  const sendSelectionToDesktop = async () => {
+    const target = fileManagerShortcutTarget(nodes, selection.ids);
+    if (!target) return;
+    setContextMenu(null);
+    try {
+      await sendFileManagerShortcutToDesktop(fs, target);
+      setError(null);
+    } catch (cause: unknown) {
+      setError(errorMessage(cause));
+    }
+  };
+
   const importFiles = async (files: readonly File[]) => {
-    if (files.length === 0) return;
+    if (files.length === 0 || !operationState.begin("import", files.length)) return;
     setContextMenu(null);
     const imported: FsNode[] = [];
     const failures: string[] = [];
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
+      operationState.startItem(index + 1, file.name);
       try {
         imported.push(await importFileIntoFs(fs, directoryId, file));
+        operationState.succeedItem();
       } catch (cause: unknown) {
-        failures.push(`${file.name}: ${errorMessage(cause)}`);
+        const message = errorMessage(cause);
+        failures.push(`${file.name}: ${message}`);
+        operationState.failItem(file.name, message);
       }
     }
+    operationState.complete();
     await refresh();
     if (imported.length > 0) {
       const ids = imported.map((node) => node.id);
@@ -374,6 +422,7 @@ export function FileManager({
   };
 
   const triggerImport = () => {
+    if (operationState.isRunning()) return;
     setContextMenu(null);
     fileInputRef.current?.click();
   };
@@ -619,9 +668,28 @@ export function FileManager({
     if (["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key) && orderedIds.length > 0) {
       event.preventDefault();
       const currentId = selection.focus ?? orderedIds[0] ?? null;
-      const index = currentId ? Math.max(0, orderedIds.indexOf(currentId)) : 0;
-      const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
-      const nextId = orderedIds[Math.max(0, Math.min(orderedIds.length - 1, index + delta))];
+      if (!currentId) return;
+      let nextId: NodeId | null | undefined;
+      if (presentation === "list") {
+        const direction: SpatialDirection = event.key === "ArrowUp"
+          ? "up"
+          : event.key === "ArrowRight"
+            ? "right"
+            : event.key === "ArrowDown"
+              ? "down"
+              : "left";
+        const rectangles = new Map<NodeId, RectLike>();
+        for (const id of orderedIds) {
+          const rect = entriesRef.current.get(id)?.getBoundingClientRect();
+          if (rect) rectangles.set(id, { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+        }
+        nextId = spatialNeighborId(orderedIds, currentId, direction, rectangles);
+      } else {
+        const index = Math.max(0, orderedIds.indexOf(currentId));
+        const delta = event.key === "ArrowUp" || event.key === "ArrowLeft" ? -1 : 1;
+        nextId = orderedIds[Math.max(0, Math.min(orderedIds.length - 1, index + delta))];
+      }
+
       if (nextId) setSelection(selectNode(selection, orderedIds, nextId, { range: event.shiftKey, additive: commandModifier }));
     }
   };
@@ -697,17 +765,19 @@ export function FileManager({
           <button type="button" onClick={() => void createNewFolder()}>New Folder</button>
           <button type="button" onClick={() => void createNewDocument("text")}>New Text Document</button>
           <button type="button" onClick={() => void createNewDocument("markdown")}>New Markdown Document</button>
-          <button type="button" onClick={triggerImport}>Import Files…</button>
+          <button type="button" onClick={triggerImport} disabled={operationRunning}>Import Files…</button>
           <button type="button" onClick={() => copySelection()} disabled={selection.ids.size === 0}>Copy</button>
           <button type="button" onClick={() => cutSelection()} disabled={selection.ids.size === 0}>Cut</button>
           <button type="button" onClick={() => void createShortcutFromSelection()} disabled={!canCreateShortcut}>Create Shortcut</button>
-          <button type="button" onClick={() => void paste()} disabled={!clipboard.snapshot()}>Paste</button>
+          <button type="button" onClick={() => void sendSelectionToDesktop()} disabled={!canCreateShortcut}>Send to Desktop</button>
+          <button type="button" onClick={() => void paste()} disabled={operationRunning || !clipboard.snapshot()}>Paste</button>
           <button type="button" onClick={() => void removeSelected()} disabled={selection.ids.size === 0}>Delete</button>
           <button type="button" onClick={() => void refresh()}>Refresh</button>
         </div>
       ) : null}
 
       {error ? <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={() => void refresh()} /> : null}
+      {operationMessage ? <p className="fm-operation-status" role="status">{operationMessage}</p> : null}
       {loading && nodes.length === 0 ? <p className="fm-empty">Loading…</p> : null}
 
       {presentation === "details" ? (
@@ -778,9 +848,9 @@ export function FileManager({
               <button type="button" role="menuitem" onClick={() => menuAction("newFolder")}>New Folder</button>
               <button type="button" role="menuitem" onClick={() => menuAction("newText")}>New Text Document</button>
               <button type="button" role="menuitem" onClick={() => menuAction("newMarkdown")}>New Markdown Document</button>
-              <button type="button" role="menuitem" onClick={() => menuAction("import")}>Import Files…</button>
+              <button type="button" role="menuitem" disabled={operationRunning} onClick={() => menuAction("import")}>Import Files…</button>
               <div className="fm-menu-separator" role="separator" />
-              <button type="button" role="menuitem" disabled={!clipboard.snapshot()} onClick={() => menuAction("paste")}>Paste</button>
+              <button type="button" role="menuitem" disabled={operationRunning || !clipboard.snapshot()} onClick={() => menuAction("paste")}>Paste</button>
             </>
           )}
         </div>
