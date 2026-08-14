@@ -17,7 +17,7 @@ function snapshot(overrides: Partial<FileOperationSnapshot>): FileOperationSnaps
   };
 }
 
-test("#195 presents only truthful import and paste operation state", () => {
+test("presents only truthful running operation state", () => {
   expect(presentFileOperation(snapshot({}))).toEqual({ running: false, message: null });
 
   expect(presentFileOperation(snapshot({
@@ -33,4 +33,12 @@ test("#195 presents only truthful import and paste operation state", () => {
     currentIndex: 2,
     currentItem: "notes.md",
   }))).toEqual({ running: true, message: "Importing 2 of 3: notes.md" });
+
+  expect(presentFileOperation(snapshot({
+    status: "running",
+    kind: "move",
+    totalItems: 2,
+    currentIndex: 1,
+    currentItem: "draft.txt",
+  }))).toEqual({ running: true, message: "Moving 1 of 2: draft.txt" });
 });
