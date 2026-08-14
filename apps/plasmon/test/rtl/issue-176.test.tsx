@@ -86,3 +86,32 @@ test("#176 native app hosts claim first-party content while Browser edit and ifr
     app.dispose();
   }
 });
+
+test("#176 Explorer sidebar uses the native fallback while specialized FileManager context remains authoritative", async () => {
+  const app = await renderPlasmon();
+  try {
+    await act(async () => {
+      const processId = await app.environment.services.process.open("native:explorer", {});
+      if (processId === null) throw new Error("Explorer native process did not open");
+    });
+
+    const explorer = await app.findByRole("region", { name: "File Explorer" });
+    const favorites = within(explorer).getByRole("complementary", { name: "Favorites" });
+    const sidebarEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
+    await act(async () => { favorites.dispatchEvent(sidebarEvent); });
+    expect(sidebarEvent.defaultPrevented).toBe(true);
+    await waitFor(() => expect(app.getByRole("menu", { name: "Application context menu" })).toBeDefined());
+
+    await app.user.keyboard("{Escape}");
+    await waitFor(() => expect(app.queryByRole("menu", { name: "Application context menu" })).toBeNull());
+
+    const files = within(explorer).getByRole("listbox", { name: "Files" });
+    const fileManagerEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
+    await act(async () => { files.dispatchEvent(fileManagerEvent); });
+    expect(fileManagerEvent.defaultPrevented).toBe(true);
+    await waitFor(() => expect(app.getAllByRole("menu").length).toBeGreaterThan(0));
+    expect(app.queryByRole("menu", { name: "Application context menu" })).toBeNull();
+  } finally {
+    app.dispose();
+  }
+});
