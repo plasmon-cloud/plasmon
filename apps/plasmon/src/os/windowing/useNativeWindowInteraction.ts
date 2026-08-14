@@ -151,6 +151,7 @@ export function useNativeWindowInteraction({
   const snapper = useMemo(() => snapController(manager), [manager]);
   const snapSide = snapper?.getSnapSide(state.id) ?? null;
   const snapped = snapSide !== null;
+  const geometryConstraints = useMemo(() => ({ minWidth, minHeight }), [minHeight, minWidth]);
 
   const focusWindow = useCallback(() => {
     if (!active) manager.focus(state.id);
@@ -266,6 +267,7 @@ export function useNativeWindowInteraction({
           restoreGeometry,
           pointerFor(root, event.clientX, event.clientY),
           viewportFor(root),
+          geometryConstraints,
         );
         manager.move(state.id, startGeometry.x, startGeometry.y);
         applyGeometry(startGeometry);
@@ -289,7 +291,7 @@ export function useNativeWindowInteraction({
       restoreIframePointerEvents: suspendIframePointerEvents(root.ownerDocument),
       restoreDocumentSelection: suspendDocumentSelection(cursor, root.ownerDocument),
     };
-  }, [applyGeometry, canResize, focusWindow, manager, snapped, state]);
+  }, [applyGeometry, canResize, focusWindow, geometryConstraints, manager, snapped, state]);
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const interaction = interactionRef.current;
@@ -311,9 +313,15 @@ export function useNativeWindowInteraction({
         minWidth,
         minHeight,
       )
-      : boundedDragGeometry(interaction.startGeometry, deltaX, deltaY, viewport);
+      : boundedDragGeometry(
+        interaction.startGeometry,
+        deltaX,
+        deltaY,
+        viewport,
+        geometryConstraints,
+      );
     scheduleGeometry(next);
-  }, [minHeight, minWidth, scheduleGeometry, snapper]);
+  }, [geometryConstraints, minHeight, minWidth, scheduleGeometry, snapper]);
 
   const onPointerUp = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const interaction = interactionRef.current;
