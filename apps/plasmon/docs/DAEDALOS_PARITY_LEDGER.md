@@ -1,8 +1,11 @@
 # daedalOS parity and acceptance ledger
 
 Status: canonical acceptance index  
-Plasmon snapshot: `8ba35fbb265c6b86d483bd125165da03be7fc82c` (`version-0.1.0-os`, 2026-08-12)  
+Historical Plasmon evidence snapshot: `8ba35fbb265c6b86d483bd125165da03be7fc82c` (`version-0.1.0-os`, 2026-08-12)  
+Current Plasmon integration target at metadata refresh: `release/0.1.0-r2` @ `02a248e43342a7fc82a17ba19cab0ac471f9cbbb` (2026-08-14)  
 daedalOS reference snapshot: `DustinBrett/daedalOS@0df82d75e6114727ad035f6fce93842a96682355`
+
+The current-r2 line records integration identity only. The evidence rows below remain grounded in the historical snapshot and subsequent evidence explicitly named in the ledger; this metadata refresh does not silently upgrade implementation, packaged/browser, or human/manual acceptance states.
 
 This ledger records **evidence**, not roadmap priority. daedalOS is Plasmon's primary feature-completeness reference; Windows and macOS remain interaction/usability references. Matching a useful capability does not require copying daedalOS architecture or presentation.
 
