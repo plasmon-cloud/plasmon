@@ -230,6 +230,10 @@ function registerWave2Applications(
  * itself still mutates only through FsService primitives, so persistence remains
  * owned by the existing hosted/background boundary.
  *
+ * Runtime controllers are assembled here but started by the outer application
+ * bootstrap before React renders. This keeps service construction deterministic
+ * for headless callers while keeping production reconciliation below React.
+ *
  * Authenticated Neutron application surfaces remain Kernel-owned sibling
  * tiles. Plasmon only discovers and opens them through NeutronBridge.
  */
@@ -299,7 +303,6 @@ export function createPlasmonServices(
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
   );
   const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
-  startMenu.start();
 
   return {
     fs,
