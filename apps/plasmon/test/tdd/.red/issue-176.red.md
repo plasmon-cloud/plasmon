@@ -1,6 +1,9 @@
-# Issue #176 — context ownership reconnaissance
+# Issue #176 — context ownership characterization
 
-Classification: **RECONNAISSANCE — PRODUCTION EVENT POLICY SEAM REQUIRED**.
+Classification: **FINAL RTL RED PACKET — PRODUCTION EVENT POLICY SEAM REQUIRED**.
+
+See `issue-176-final-packet.md` and `issue-176.red.ui.test.tsx` for the
+current executable gate. This matrix is retained as authority reconnaissance.
 
 No deterministic first-party event-policy model currently exists below React.
 Current specialized FileManager/Shell/native handlers own local events, but a
@@ -48,5 +51,7 @@ foreign frame received the event:
     second browser menu.
 
 A browser gate should use event listeners only as observation instrumentation,
-not as a production policy substitute. Current status is not a RED assertion:
-there is no truthful lower-layer seam to exercise yet.
+not as a production policy substitute. The lower deterministic policy guards remain green, while the staged RTL gate
+now exercises the existing production DOM boundary. The intentional RED is the
+editable FileManager rename target being prevented by the outer handler; the
+foreign/owned characterization remains green. No global interceptor is added.

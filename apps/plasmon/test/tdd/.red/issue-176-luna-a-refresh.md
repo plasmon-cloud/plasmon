@@ -1,13 +1,14 @@
 # Luna RED Packet — Issue #176
 
-**Current r2 refresh / no duplicate gate**
+**Current r2 refresh / canonical gate adoption**
 
 Integrated source inspected: `origin/release/0.1.0-r2` at
 `120be60eda48ada462ba9bebeaab524aaf9afde7`.
 
 Active ownership check: no open PR owns #176. Sol 1 is expected to consume the
 packet later. The existing Luna-B packet and gate are the canonical first
-characterization destination and were not duplicated or modified:
+characterization source; the gate semantics were adopted into the current
+canonical staging packet without adding a second policy or command authority:
 
 - `apps/plasmon/test/tdd/.red/issue-176.red.ui.test.tsx`
 - `apps/plasmon/test/tdd/issue-176-acceptance-map.md`
@@ -104,8 +105,7 @@ Additional existing authority evidence:
 
 ## New characterization guards
 
-No duplicate test file is added by this refresh. The existing canonical Luna-B
-characterization gate is adopted as the new guard:
+The canonical characterization gate is now staged in this lane as:
 
 ```text
 bun test --preload ./apps/plasmon/test/setupHappyDom.ts \
@@ -169,5 +169,6 @@ This refresh packet is committed at:
 apps/plasmon/test/tdd/.red/issue-176-luna-a-refresh.md
 ```
 
-The existing canonical RED gate and browser adoption packet remain owned by the
-Luna-B staging packet and are intentionally not duplicated or modified.
+The Luna-B browser adoption packet remains the reference for packaged
+propagation work; this lane owns only the current canonical RTL RED staging
+artifact and does not modify Luna-B's branch.
