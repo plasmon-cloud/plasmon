@@ -179,7 +179,7 @@ test("#92 multi-item drag move surfaces partial success and failure", async () =
     await waitFor(() => expect(view.getByRole("status").textContent).toBe(
       "Move stopped: 1 item moved, 1 item failed (drag-two.txt: expected move failure).",
     ));
-    expect(view.getByText("expected move failure")).toBeDefined();
+    expect(view.getByRole("alert").textContent).toContain("expected move failure");
   } finally {
     document.elementFromPoint = originalElementFromPoint;
     environment.dispose();
