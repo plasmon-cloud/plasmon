@@ -2,21 +2,6 @@ name: Plasmon Browser Persistence CI
 
 on:
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "apps/kernel/src/workspace/AppBackgroundFrames.tsx"
-      - "apps/kernel/src/capabilities/**"
-      - "apps/kernel/src/runtime_deployment.ts"
-      - "packages/neutron-compiler/**"
-      - "packages/neutron-provision/**"
-      - "packages/neutron-tools/**"
-      - "test/e2e/local-playwright-identity.ts"
-      - "test/e2e/plasmon-demo-environment.ts"
-      - "test/e2e/plasmon-persistence.spec.ts"
-      - "playwright.config.ts"
-      - "plasmon-local.ndeploy.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-browser-persistence-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,13 +20,48 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect persistence-relevant changes
+        id: persistence_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_persistence=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$base_sha" "$head_sha" > /tmp/plasmon-persistence-changed-files.txt
+          cat /tmp/plasmon-persistence-changed-files.txt
+
+          run_persistence=false
+          while IFS= read -r path; do
+            case "$path" in
+              apps/plasmon/*|apps/kernel/src/workspace/AppBackgroundFrames.tsx|apps/kernel/src/capabilities/*|apps/kernel/src/runtime_deployment.ts|packages/neutron-compiler/*|packages/neutron-provision/*|packages/neutron-tools/*|test/e2e/local-playwright-identity.ts|test/e2e/plasmon-demo-environment.ts|test/e2e/plasmon-persistence.spec.ts|playwright.config.ts|plasmon-local.ndeploy.json|package-lock.json|.github/workflows/plasmon-browser-persistence-ci.yml)
+                run_persistence=true
+                break
+                ;;
+            esac
+          done < /tmp/plasmon-persistence-changed-files.txt
+
+          echo "run_persistence=$run_persistence" >> "$GITHUB_OUTPUT"
+          if [ "$run_persistence" != "true" ]; then
+            echo "No persistence-relevant changes; satisfying required Packaged browser persistence without packaging."
+          fi
 
       - name: Install Nix
+        if: steps.persistence_scope.outputs.run_persistence == 'true'
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run browser persistence gate
+        if: steps.persistence_scope.outputs.run_persistence == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
