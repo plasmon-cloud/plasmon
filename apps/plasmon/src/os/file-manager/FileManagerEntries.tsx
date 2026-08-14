@@ -1,20 +1,20 @@
-import type {
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-} from "react";
-import type {
-  AssociationRegistry,
-  FsNode,
-  FsService,
-  NodeId,
-} from "../contracts/index.ts";
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
+import type { AssociationRegistry, FsNode, FsService, NodeId } from "../contracts/index.ts";
 import { FileEntry } from "./FileEntry.tsx";
 import type { SelectionState } from "./model.ts";
 import type { InlineRenameState } from "./rename.ts";
-import type {
-  DesktopPosition,
-  FileManagerPresentation,
-} from "./render-state.ts";
+import type { DesktopPosition } from "./render-state.ts";
+import type { FileManagerViewStrategy } from "./view-strategy.ts";
+
+type FileManagerEntriesMode =
+  | {
+    kind: "desktop";
+    positions: Readonly<Record<NodeId, DesktopPosition>>;
+  }
+  | {
+    kind: "view";
+    strategy: FileManagerViewStrategy;
+  };
 
 interface FileManagerEntriesProps {
   fs: FsService;
@@ -22,8 +22,7 @@ interface FileManagerEntriesProps {
   nodes: readonly FsNode[];
   selection: SelectionState;
   dropTargetId: NodeId | null;
-  presentation: FileManagerPresentation;
-  desktopPositions: Readonly<Record<NodeId, DesktopPosition>>;
+  mode: FileManagerEntriesMode;
   rename: InlineRenameState | null;
   setEntryRef: (id: NodeId, element: HTMLDivElement | null) => void;
   onPointerDown: (node: FsNode, event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -38,34 +37,47 @@ interface FileManagerEntriesProps {
 }
 
 export function FileManagerEntries(props: FileManagerEntriesProps) {
+  const strategy = props.mode.kind === "view" ? props.mode.strategy : null;
+  const entryPresentation = strategy?.entryPresentation ?? "desktop";
+  const entriesClassName = strategy
+    ? `fm-entries fm-entries--${strategy.kind}`
+    : "fm-entries";
+
   return (
-    <div className="fm-entries">
-      {props.nodes.map((node) => (
-        <FileEntry
-          key={node.id}
-          fs={props.fs}
-          {...(props.associations ? { associations: props.associations } : {})}
-          node={node}
-          selected={props.selection.ids.has(node.id)}
-          focused={props.selection.focus === node.id}
-          dropTarget={props.dropTargetId === node.id}
-          presentation={props.presentation}
-          {...(props.presentation === "desktop"
-            ? { position: props.desktopPositions[node.id] }
-            : {})}
-          rename={props.rename}
-          setRef={(element) => props.setEntryRef(node.id, element)}
-          onPointerDown={(event) => props.onPointerDown(node, event)}
-          onPointerMove={props.onPointerMove}
-          onPointerUp={props.onPointerUp}
-          onPointerCancel={props.onPointerCancel}
-          onDoubleClick={() => props.onOpen(node)}
-          onContextMenu={(event) => props.onContextMenu(node, event)}
-          onRenameChange={props.onRenameChange}
-          onRenameCommit={props.onRenameCommit}
-          onRenameCancel={props.onRenameCancel}
-        />
-      ))}
-    </div>
+    <>
+      {strategy?.detailsColumns ? (
+        <div className="fm-details-head" aria-hidden="true">
+          {strategy.detailsColumns.map((column) => <span key={column}>{column}</span>)}
+        </div>
+      ) : null}
+      <div className={entriesClassName}>
+        {props.nodes.map((node) => (
+          <FileEntry
+            key={node.id}
+            fs={props.fs}
+            {...(props.associations ? { associations: props.associations } : {})}
+            node={node}
+            selected={props.selection.ids.has(node.id)}
+            focused={props.selection.focus === node.id}
+            dropTarget={props.dropTargetId === node.id}
+            presentation={entryPresentation}
+            {...(props.mode.kind === "desktop"
+              ? { position: props.mode.positions[node.id] }
+              : {})}
+            rename={props.rename}
+            setRef={(element) => props.setEntryRef(node.id, element)}
+            onPointerDown={(event) => props.onPointerDown(node, event)}
+            onPointerMove={props.onPointerMove}
+            onPointerUp={props.onPointerUp}
+            onPointerCancel={props.onPointerCancel}
+            onDoubleClick={() => props.onOpen(node)}
+            onContextMenu={(event) => props.onContextMenu(node, event)}
+            onRenameChange={props.onRenameChange}
+            onRenameCommit={props.onRenameCommit}
+            onRenameCancel={props.onRenameCancel}
+          />
+        ))}
+      </div>
+    </>
   );
 }

@@ -14,9 +14,8 @@
 .fm-root:focus-visible { box-shadow: inset 0 0 0 2px #75a7ff; }
 .fm-root--desktop { overflow: hidden; background: transparent; }
 .fm-entries { position: relative; min-height: 100%; }
-.fm-root--grid .fm-entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; gap: 10px; padding: 12px; }
-.fm-root--list .fm-entries { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
-.fm-root--details .fm-entries { display: flex; flex-direction: column; }
+.fm-entries--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); align-content: start; gap: 10px; padding: 12px; }
+.fm-entries--details { display: flex; flex-direction: column; }
 
 .fm-entry {
   position: relative;
