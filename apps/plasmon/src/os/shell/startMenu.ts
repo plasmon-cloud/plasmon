@@ -89,13 +89,16 @@ async function ensureStartRoot(fs: FsService): Promise<FsNode> {
   return fs.mkdir(system.id, START_MENU_NAME);
 }
 
-async function ensureChildDirectory(fs: FsService, parent: FsNode, name: string): Promise<FsNode> {
+/**
+ * Resolve a canonical managed Start category without claiming ownership of an
+ * ambiguous same-name resource. A non-directory collision is preserved and
+ * represented as a blocked placement for this reconciliation pass; callers may
+ * continue reconciling independent categories without mutating or relabeling it.
+ */
+async function resolveChildDirectory(fs: FsService, parent: FsNode, name: string): Promise<FsNode | null> {
   const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
   const existing = children.find((node) => node.name === name);
-  if (existing) {
-    if (existing.kind !== "directory") throw new Error(`${name} exists in Start Menu but is not a directory`);
-    return existing;
-  }
+  if (existing) return existing.kind === "directory" ? existing : null;
   return fs.mkdir(parent.id, name);
 }
 
@@ -264,6 +267,8 @@ async function retireManagedRuntimeOnlySeeds(
  * intentional deletion and is not recreated. Newly discovered identities are
  * seeded exactly once. Exact previously-managed defaults that are now classified
  * runtime-only are retired without weakening those user-customization semantics.
+ * Ambiguous same-name category resources block only the seeds that require that
+ * category; they are never mutated or treated as managed merely by name.
  */
 export async function reconcileStartMenu(
   fs: FsService,
@@ -279,7 +284,7 @@ export async function reconcileStartMenu(
   let preserved = 0;
   let skippedDeleted = 0;
   let changedManifest = false;
-  const folders = new Map<string, FsNode>();
+  const folders = new Map<string, FsNode | null>();
 
   for (const spec of desiredSeeds(nativeApps, elements)) {
     if (existing.has(spec.identity)) {
@@ -297,12 +302,15 @@ export async function reconcileStartMenu(
 
     let folder = root;
     if (spec.folder !== null) {
-      const cached = folders.get(spec.folder);
-      if (cached) folder = cached;
-      else {
-        folder = await ensureChildDirectory(fs, root, spec.folder);
-        folders.set(spec.folder, folder);
+      let resolved: FsNode | null;
+      if (folders.has(spec.folder)) {
+        resolved = folders.get(spec.folder) ?? null;
+      } else {
+        resolved = await resolveChildDirectory(fs, root, spec.folder);
+        folders.set(spec.folder, resolved);
       }
+      if (!resolved) continue;
+      folder = resolved;
     }
     const name = await uniqueChildName(fs, folder.id, spec.name);
     const node = await fs.createFile(folder.id, name, {

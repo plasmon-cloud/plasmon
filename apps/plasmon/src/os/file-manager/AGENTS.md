@@ -10,6 +10,7 @@ This directory owns reusable filesystem presentation and user file interaction: 
 - Generic resource opening delegates to the shared filesystem/association/open path. Do not add filename/type-specific launch switches in React.
 - File mutations must respect filesystem resource capabilities/protection rather than bypassing them.
 - Keep navigation/history keyed to stable filesystem identity where identity is the intended invariant.
+- A NodeId-keyed `FileEntry` must keep its last resolved resource presentation while an authoritative snapshot re-resolves that same resource. Do not reset a stable entry to a generic fallback merely because its `FsNode` object identity changed; packaged `<img src>` churn can cancel otherwise-valid installed asset requests.
 - Shared file-operation state must be explicit and injectable where multiple surfaces share it; avoid hidden module-global UI authority.
 - FileManager operation progress may report only information the production boundary actually knows: import can expose its sequenced current item, while paste must not fabricate byte or per-item progress that the existing paste helper does not expose.
 - Operation-state models coordinate lifecycle/presentation only; `FsService` and existing file-operation helpers retain mutation, collision, and identity semantics.
