@@ -10,7 +10,7 @@ Open implementation ownership observed: #51 PR #210, #65 PR #208, #189 PR #207,
 | #65 | import/paste are still opaque on release | VERIFIED CORE RED / INCOMPLETE; PR #208 owns implementation |
 | #66 | source DOM drag transforms; no top-level preview on release | BROWSER SPEC ONLY; repaired stack/hit/drop/cancel gate |
 | #86 | diagnostic text inherits FileManager nonselection | BROWSER SPEC ONLY; Selection API gate |
-| #92 | move path has no shared operation state | WAIT FOR DEPENDENCY on #65 |
+| #92 | move path has no shared operation state after #65 import/paste integration | TDD:RTL RED; delayed real move reaches missing status gate |
 | #93 | shared containment/lifecycle deterministic evidence green | CHARACTERIZATION ONLY; visual browser gate pending |
 | #94 | no FileManager video frame-extraction seam | IMPLEMENTATION SPECIFICATION / BROWSER BOUNDARY; not executable RED |
 | #95 | selected overlay behavior exists but dedicated browser acceptance absent | BROWSER SPEC ONLY; separate from #191 |

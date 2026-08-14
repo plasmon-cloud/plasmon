@@ -50,19 +50,23 @@ creating competing Luna-A packets. Its dispositions are:
 - **Browser boundary/specification:** #45 packaged launch/render, #93 geometry,
   #94 media thumbnail lifecycle, #110 packaged preference persistence, and #171
   installed Element icon/request budget.
-- **Dependency/readiness:** #92 waits for integrated #65 operation vocabulary;
-  #195 characterization waits for #191; #196 waits for #195/#173; #201 is late
-  cleanup only.
+- **RED gate:** #92 now has an exact integrated-head RTL RED: #65's accepted
+  operation state covers import/paste, while drag still exposes no running
+  status. #195 characterization waits for #191; #196 waits for #195/#173; #201
+  is late cleanup only.
 - **Completed integrated-head closure:** #172's composed gate passed against
   current integrated #192 in a clean detached worktree; the stale lane failure
   is retained only as historical staging evidence.
-- **Active ownership — do not touch:** #51/#65/#66/#86/#95/#173/#174/#182/
-  #190/#191 and other lane-owned concrete packets.
+- **Active ownership — do not touch:** #51/#66/#86/#95/#173/#174/#182/#191
+  and other lane-owned concrete packets. #65 and #190 are now integrated; their
+  accepted seams are consumed only as evidence, not modified.
 
 ## Produced acceptance and audit artifacts
 
 - `issue-44-closure-audit.md`
 - `issue-45-closure-audit.md`
+- `issue-92.red.md`
+- `issue-92.red.ui.test.tsx`
 - `issue-92-operation-model-consumption.md`
 - `issue-93-browser-geometry-spec.md`
 - `issue-94-thumbnail-authority-map.md`
@@ -152,5 +156,6 @@ D/testing must promote only after:
    Shell/Windowing/Luna-B evidence.
 
 No browser RED is reported for the missing session journal. No new production
-RED is manufactured for already-green behavior. The branch must be rechecked
-for a clean worktree after the final documentation commit.
+RED is manufactured for already-green behavior. #92's RTL RED is deterministic
+and does not require packaged execution. The branch must be rechecked for a
+clean worktree after the final documentation commit.

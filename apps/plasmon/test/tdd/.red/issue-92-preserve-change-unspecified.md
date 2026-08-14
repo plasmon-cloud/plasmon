@@ -1,8 +1,8 @@
 # Issue #92 — drag-move operation preservation contract
 
-Refresh: `origin/release/0.1.0-r2` = `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
-PR #208/#65 is active implementation ownership and is not consumed. #92 has no
-active implementation owner. Status: **WAIT FOR DEPENDENCY**.
+Refresh: `origin/release/0.1.0-r2` =
+`2b6984e96647eae1f3abe5719d3a3782809ceeb9`. PR #208/#65 is integrated; #92
+has no active implementation owner. Status: **RTL RED**.
 
 ## PRESERVE
 
@@ -13,9 +13,10 @@ active implementation owner. Status: **WAIT FOR DEPENDENCY**.
 - Drag preview/layering remains #66; context ownership remains #176.
 - No byte progress or cancellation is claimed without FsService support.
 
-## CHANGE after #65 integrates
+## CHANGE required by #92
 
-- represent a multi-item drag move using the accepted #65 operation vocabulary;
+- represent a multi-item drag move using the accepted FileManager operation
+  authority, extending it only where the actual drag workflow requires;
 - expose running/completed/failed state and truthful processed/total/current item;
 - preserve partial success and failure details;
 - prevent duplicate submission of one active operation;
@@ -28,9 +29,16 @@ active implementation owner. Status: **WAIT FOR DEPENDENCY**.
 - byte counts, ETA, cancellation, or background persistence;
 - a second operation model.
 
-## Stop condition
+## Current evidence
 
-Do not stage executable RED until #65 is an ancestor of the integrated release,
-its permanent `FileOperationState` vocabulary is inspected, and no new owner
-claims #92. If the #65 merge leaves a promotion gap, record it as dependency risk
-rather than repairing #65 from Luna-A.
+Integrated #65 exports `FileOperationState` with kinds `import | paste`, status
+`idle | running | completed | failed`, item counters, current item, failures,
+and duplicate `begin` protection. FileManager wires it to import and paste, but
+`handleEntryPointerUp` still calls `moveNodesToDirectory()` directly and starts
+no operation state for directory drops.
+
+The executable RTL RED therefore asserts only the truthful visible contract:
+a delayed real `FsService.move` after a multi-item directory drop must expose an
+accessible running status. It does not name a guessed `move` kind, invent byte
+progress, or duplicate #65 state policy. The gate is intentionally expected to
+fail on current integrated production.

@@ -1,21 +1,45 @@
-# Issue #92 — dependency wait refreshed
+# Issue #92 — multi-item drag-move progress
 
-Disposition: **WAIT FOR DEPENDENCY**.
+Disposition: **TDD:RTL RED** against integrated release
+`2b6984e96647eae1f3abe5719d3a3782809ceeb9`.
 
-PR #208 is open but not integrated into `release/0.1.0-r2`. Its actual proposed
-#65 seam is `FileOperationState` with `FileOperationKind`,
-`FileOperationSnapshot`, running/completed/failed status, total/processed/
-succeeded/failed item counts, current index/item, partial failures, duplicate
-`begin` protection and deterministic completion. It intentionally covers import
-per-item progress and paste known-total status only.
+## Authority inspection
 
-Do not finalize #92 against the PR branch or introduce a second operation model.
-Once #65 integrates, inspect the accepted API again and add a real drag-move
-adapter gate covering multi-item operation identity, selected NodeIds, item
-progress, full success, partial failure, refresh/selection reconciliation,
-cleanup and duplicate gesture protection. The drag mutation remains
-`moveNodesToDirectory`/FsService authority and #66 remains presentation-only.
+- Drag orchestration: `apps/plasmon/src/os/file-manager/FileManager.tsx`
+  `handleEntryPointerUp`.
+- Drop validation and mutation: `model.ts::validateDirectoryDrop` and
+  `moveNodesToDirectory`, delegating each mutation to `FsService.move`.
+- Existing operation authority: `operation-state.ts::FileOperationState`,
+  integrated by #65 for import and paste only (`FileOperationKind` is exactly
+  `import | paste`).
+- Presentation: FileManager's accessible `role="status"` operation message.
 
-Current lower-layer drag validation and move semantics are already green; the
-missing visible operation lifecycle is not yet a valid #92 RED until its shared
-state vocabulary is integrated.
+## PRESERVE / CHANGE / UNSPECIFIED
+
+Preserve canonical `directoryDropTargetId`/drop validation, source order,
+FsService move semantics, stable NodeIds, partial mutation truth, Desktop
+reposition separation, #66 drag presentation, and no byte/cancellation claims.
+
+Change the drag-originated multi-item directory move to expose a truthful
+running/completed/failed item lifecycle and accessible status, reusing the
+accepted operation-state authority rather than creating a competing model.
+
+Unspecified are API names, byte counts, ETA, cancellation, persistence, generic
+job management, and exact visual copy beyond truthful accessible status.
+
+## Executed RED gate
+
+```text
+bun test --preload /tmp/plasmon-r2-92/apps/plasmon/test/setupHappyDom.ts \
+  /tmp/plasmon-r2-92/apps/plasmon/test/tdd/.red/issue-92.red.ui.test.tsx
+```
+
+Result: **intentional failure**: after a delayed real `FsService.move` starts,
+`queryByRole("status")` is `null`. This fails for the intended missing drag
+operation lifecycle, not setup absence or a swallowed error. The gate ran
+against the exact integrated release in a clean detached worktree because the
+long-lived Luna branch predates #65.
+
+The existing lower-layer drop validation and NodeId move semantics remain green;
+this packet does not weaken or replace those tests. No browser/package test is
+needed for the deterministic accessible-status boundary.

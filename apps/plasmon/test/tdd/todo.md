@@ -29,7 +29,7 @@ This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `rele
 - [ ] #65 — Import/paste operation progress state
 - [ ] #66 — Drag preview above window stack
 - [ ] #86 — Mouse-selectable FileManager diagnostic text
-- [ ] #92 — Multi-item drag-move progress state
+- [x] #92 — Multi-item drag-move progress state — TDD:RTL RED
 - [ ] #93 — Preserve image thumbnail aspect ratio
 - [ ] #94 — Bounded video thumbnails
 - [ ] #110 — Filesystem-backed Show Hidden Files preference

@@ -1,32 +1,37 @@
 # Issue #92 — accepted operation-model consumption plan
 
-Status: **WAIT FOR DEPENDENCY**. The only observed #65 implementation is open PR
-#208 (`work/file-manager/65-operation-progress`), so this plan intentionally
-contains no import, cast, or future API name.
+Status: **RTL RED** against integrated release
+`2b6984e96647eae1f3abe5719d3a3782809ceeb9`. PR #208/#65 is merged as
+`2b6984e`; #92 has no active implementation owner.
 
-## Required post-integration inspection
+## Integrated #65 inspection
 
-1. Fetch `origin/release/0.1.0-r2` and verify #208 merge ancestry.
-2. Locate the permanent #65 operation state type/store/controller and read its
-   tests and FileManager integration.
-3. Record exact accepted kinds/status/count/current-item/error vocabulary.
-4. Confirm whether active operation identity and duplicate-trigger behavior are
-   part of #65 or require #92-specific orchestration.
-5. Check open PR ownership for #92 again.
+- #208 is an ancestor of the integrated release (`2b6984e` merge).
+- The accepted authority is `operation-state.ts::FileOperationState`.
+- Accepted kinds are exactly `import | paste`; statuses are exactly
+  `idle | running | completed | failed`.
+- It records total/processed/succeeded/failed item counts, current index/item,
+  failure records, subscriptions, and rejects a second `begin` while running.
+- `FileManager.tsx` wires this state to import and paste only.
+- The drag-drop path still calls `moveNodesToDirectory(fs, source, target)`
+  directly after pointer release, with no operation-state begin/current/final
+  lifecycle.
+- No open PR owns #92 (`gh pr list --search 92` returned none).
 
 ## Consumption mapping
 
-| #92 behavior | Accepted #65 evidence required | Expected test layer |
+| #92 behavior | Current authority/evidence | Layer/disposition |
 |---|---|---|
-| drag move starts after drop | operation starts through accepted command seam | headless/RTL |
-| truthful total/current | exact #65 item counters, no byte claims | headless |
-| per-item success | accepted completed representation | headless |
-| partial failure | accepted failure/error representation | headless + RTL |
-| duplicate active move | accepted busy/operation identity guard | RTL/headless |
-| drop validation | existing `directoryDropTargetId`/model tests | headless |
-| NodeId preservation | real FsService move | headless |
-| visible status | actual FileManager operation status semantics | RTL |
+| drag move starts after drop | `handleEntryPointerUp` -> `moveNodesToDirectory` | production path exists; no operation lifecycle — RTL RED |
+| truthful total/current | source list is available; accepted state has counters but drag does not use them | RTL RED target; no byte claim |
+| per-item success | `moveNodesToDirectory` loops `FsService.move` but returns only after completion | future headless/model seam required; not invented here |
+| partial failure | current loop rejects on first thrown move and FileManager shows one error | future RED after accepted drag orchestration seam |
+| duplicate active move | no drag-operation guard; `FileOperationState.begin` protects only import/paste | future RTL/headless criterion |
+| drop validation | `validateDirectoryDrop` and `directoryDropTargetId` | existing headless tests green |
+| NodeId preservation | real `FsService.move` | existing filesystem tests green |
+| visible status | operation status renderer exists for import/paste only | current RTL RED |
 
-No RED file is staged until this table can name real production exports. A test
-that imports a guessed `FileOperationState2`, casts a future controller, or copies
-#65's policy into the fixture would be invalid.
+`issue-92.red.ui.test.tsx` is the smallest truthful gate: it uses the real
+headless service graph, delayed real `FsService.move`, actual pointer drag/drop,
+and asserts accessible running status. It does not import a future operation
+kind, cast an API, or reimplement #65 policy.

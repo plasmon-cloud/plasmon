@@ -14,7 +14,7 @@ said so.
 | #65 | Three RTL gates now use 2 imports, current item, partial failure, duplicate trigger and paste vocabulary; current production has no status | VERIFIED CORE RED / INCOMPLETE | production model integration and full headless transition tests |
 | #66 | Browser gate now checks real multi-drag, overlapping native window, temporary stack probe, normal hit testing, drop, Escape cleanup | BROWSER SPEC ONLY | packaged execution blocked; actual destination outcome should be confirmed |
 | #86 | Browser gate uses Selection API, diagnostic role, no drag and ordinary drag | BROWSER SPEC ONLY | packaged execution blocked |
-| #92 | No gate claims a competing operation model | WAIT FOR DEPENDENCY | #65 PR is open, not integrated |
+| #92 | Integrated #65 state inspected; delayed real drag move asserts missing status | VERIFIED CORE RED / INCOMPLETE | success/partial/duplicate lifecycle remains for implementor after drag seam |
 | #93 | deterministic containment/cleanup green; new portrait/landscape/square browser gate | CHARACTERIZATION ONLY | actual packaged visual execution |
 | #95 | dedicated browser gate separates selected-label overlay from #191 bounded rename editor | BROWSER SPEC ONLY | packaged execution blocked |
 | #108 | existing navigation model/RTL/browser characterization | CHARACTERIZATION ONLY | no missing deterministic criterion identified |

@@ -36,6 +36,6 @@ manager and does not create an Issue by itself.
 
 `RefreshGate`, `reconcileSelection`, FsService revision/event contracts,
 clipboard model, Trash lifecycle, and #192 placement tests already protect
-important lower-layer semantics. #65 is not integrated on the release branch,
-so #92 remains WAIT FOR #65 and this matrix intentionally does not define a
-new operation-state API.
+important lower-layer semantics. #65 is integrated for import/paste; #92
+consumes that accepted authority without defining a new operation-state API.
+The remaining drag lifecycle is covered by the focused RTL RED.

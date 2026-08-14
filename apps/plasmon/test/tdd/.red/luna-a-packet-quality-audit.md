@@ -14,7 +14,7 @@ verification.
 | #65 | multi-file progress/partial failure/paste/duplicate protection -> repaired 3-test RTL packet, current status absent -> VERIFIED CORE RED / INCOMPLETE -> production seam integration/headless transitions |
 | #66 | top-level stack + transparent hit testing + real drop/cleanup -> repaired Playwright gate -> BROWSER SPEC ONLY -> execution blocked |
 | #86 | Selection API and drag distinction -> repaired Playwright gate -> BROWSER SPEC ONLY -> execution blocked |
-| #92 | reuse #65 state -> dependency doc only -> WAIT FOR DEPENDENCY -> #65 integration |
+| #92 | integrated #65 state inspected; drag delayed-move status gate -> TDD:RTL RED -> current drag path has no operation lifecycle |
 | #93 | containment/aspect/lifecycle -> Bun green + new visual browser gate -> CHARACTERIZATION ONLY -> browser execution remains uncovered |
 | #94 | bounded media policy -> policy document only -> BROWSER SPEC ONLY -> production eligibility/lifecycle seam and fixture |
 | #95 | selected overlay geometry distinct from rename editor -> dedicated browser gate -> BROWSER SPEC ONLY -> execution blocked |

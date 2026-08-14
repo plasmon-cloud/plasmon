@@ -43,7 +43,7 @@ Integrated release at final refresh: `f4ac3b4c9880da5c6ce3b344bde73acbed7179e3`.
 | #191 -> #195 | HARD IMPLEMENTATION DEPENDENCY | #191 PR open/not integrated |
 | #195 -> #196 | HARD IMPLEMENTATION DEPENDENCY | final #196 packet remains deferred |
 | #173 -> #196 | SOFT PRODUCT RELATIONSHIP | #173 behavior is independently specified and can proceed now |
-| #65 -> #92 | HARD IMPLEMENTATION DEPENDENCY | PR #208 open, CI green at poll; #92 remains WAIT FOR #65 integration |
+| #65 -> #92 | ACCEPTED IMPLEMENTATION DEPENDENCY | #65 integrated; its operation state covers import/paste, #92 RTL RED isolates missing drag lifecycle |
 | #44 -> #51 | HARD CONSUMER DEPENDENCY | #51 core consumer RED plus primitive fence |
 | #192 -> #172 | CLOSURE RELATIONSHIP | #192 integrated in release; composed gate passed against exact release source in clean detached worktree |
 | #190 / #171 | NO DEPENDENCY / PARALLEL | Plasmon assets versus installed Element assets remain distinct |
