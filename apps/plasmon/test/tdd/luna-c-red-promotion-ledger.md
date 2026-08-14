@@ -10,7 +10,7 @@
 | #89 | canonical Program Files Worker route | `.red/issue-89.red.test.ts` | package + installed browser | current top-level route fails |
 | #96 | packaged stable first-party app identity metadata | `.red/issue-96`; post-#190 reassessment | package + existing shared Visual/RTL/manual | six canonical handlers/apps still publish generated data-URI glyphs; #190 consumer seam is ready |
 | #107 | integrated C native rows | closure audit | D report + specialist e2e | browser/manual |
-| #112 | common semantic chrome/theme | characterization | RTL/manual app states | no honest structural RED |
+| #112 | common semantic chrome/theme | `issue-112-*` characterization packets | RTL/manual app states | ALREADY GREEN / RECON COMPLETE; no honest structural RED |
 | #113 | Text title/language/status/commands/minimap | full matrix; no fake direct-mount RED | Text RTL + Monaco e2e | CORE RED + exact RTL/browser remainder |
 | #114 | Markdown formatter/commands/preview | full matrix; no fake formatter API RED | Markdown Bun/RTL/e2e | CORE RED + exact RTL/browser remainder |
 | #121 | explicit fixture normal installed route | package/e2e closure | demo-game e2e | current release rerun |

@@ -7,7 +7,10 @@ canonical HandlerDefinition/NativeAppDefinition values still publish generated
 SVG data URIs. #113/#114 are **CORE RED + EXACT RTL/BROWSER REMAINDER**; their
 missing title/commands/formatter criteria are mapped without faking direct
 component or Monaco proof. #64 is blocked on the actual shipped engine API and
-future authorized save seam.
+future authorized save seam. #112 is **ALREADY GREEN / RECON COMPLETE** at the
+accepted architecture boundary: shared semantic chrome is characterized,
+editor chrome is shared, and no honest structural RED exists without
+prescribing a generic wrapper or visual pixels.
 
 **CORE GREEN + EXACT REMAINDER:** #58 Review model/package semantics (installed
 vanilla package); #121 fixture/package mechanics (current installed closure);
