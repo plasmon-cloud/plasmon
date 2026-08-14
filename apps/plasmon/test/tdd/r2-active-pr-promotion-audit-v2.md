@@ -1,24 +1,24 @@
 # r2 active implementation PR promotion audit v2
 
-Live GitHub snapshot: 2026-08-13 after `git fetch origin --prune`. All target `release/0.1.0-r2`; none is an ancestor of integrated `f4ac3b4c`.
+Post-merge refresh: 2026-08-14 after `git fetch origin --prune`. Integrated release is `82f176a6`; #204/#208/#210/#211/#212 are merged and no longer active implementation fences.
 
 | PR / Issue | current head/state | packet adopted | actual tests inspected | promotion verdict |
 |---|---|---|---|---|
-| #204 / #191 | draft, `a4ad1b3f`, open; Fast PASS, packaged smoke/specialist FAIL before Playwright | A `1e579bf` packet; superseded guards retired | `src/os/file-manager/issue-191.characterization.test.ts`, `test/rtl/issue-191.test.tsx`, `test/e2e/plasmon-file-entry-191.spec.ts` | WAITING MERGE; geometry spec distinct from #95. Exact-head package lane is externally blocked by shared Motoko resolver Issue #161, not by #191; earlier browser run passed geometry but failed baseline health accounting. |
-| #208 / #65 | ready, `665670102efd63bbc766c5a51f1b24fcace2ced5`, open; all exact-head checks PASS | repaired A packet `d522336` / repaired tree `8453df4` | `operation-state.test.ts`, `test/rtl/issue-65-operation-progress.test.tsx`; exact source inspected against repaired `.red/issue-65.red.ui.test.tsx` | **PROMOTION ACCEPTED**: operation model has running/completed/failed, item totals/current import item, mixed-result failure, duplicate-start rejection; FileManager sequentially exposes delayed import state, preserves partial success/error, blocks duplicate triggers, and exposes paste running lifecycle without byte/per-item fabrication. FsService helpers retain write/copy/collision/identity authority. |
-| #210 / #51 | ready, `b7e5a52d123d847cce98aea3e0aef2dfce20b392`, open; all exact-head checks PASS | repaired A packet `d522336` / repaired lower packet | `send-to-desktop.test.ts`, `test/rtl/issue-51-send-to-desktop.test.tsx`; exact source inspected against repaired `.red/issue-51.red.test.ts` and UI packet | **PROMOTION ACCEPTED**: helper tests cover canonical NodeId identity, unchanged source placement, repeated collision naming, protected system source, stale target, unavailable Desktop, and no partial state; implementation imports and delegates serialization to `createShortcut`, resolves `/Desktop`, and UI exposes the eligible command with deterministic error handling. |
-| #211 / #190 | draft, `7fae5af`, open; Fast PASS, specialist/persistence PASS, refactor smoke FAIL | A `318966c` presentation/browser packet | `src/os/visual/issue-190.test.ts`, `test/e2e/plasmon-presentation-assets.spec.ts`, Shell/Properties/Explorer consumers | **EXECUTED PRODUCT RED / RED PROMOTION GAP**: focused installed asset test failed because required representative response status was undefined (`recycle-bin.svg`, retry `file.svg`); broad smoke also saw unallowed aborted icon requests. No allowance retirement or merge. |
+| #204 / #191 | merged `82f176a6`; all checks PASS | A `1e579bf` packet; superseded guards retired | release characterization/RTL + `test/e2e/plasmon-file-entry-191.spec.ts` | **PROMOTED**: packaged smoke/spec executed green; #95 geometry remains separate. |
+| #208 / #65 | merged `2b6984e`; all checks PASS | repaired A packet `d522336` / repaired tree `8453df4` | release operation model/RTL tests | **PROMOTED**: operation state and FsService authority contract are release-owned; old one-file RED is quarantine provenance. |
+| #210 / #51 | merged `f3459881`; all checks PASS | repaired A packet `d522336` / repaired lower packet | release helper/RTL tests | **PROMOTED**: canonical shortcut authority, NodeId identity, collision, stale target/Desktop and no source mutation are release-owned. |
+| #211 / #190 | merged `c982d531`; all checks PASS | A `318966c` presentation/browser packet | release Visual test + `test/e2e/plasmon-presentation-assets.spec.ts` | **PROMOTED**: focused installed asset requests are green in merged CI; old-root `/static/...` allowance retirement remains pending. |
 
 ## Current CI/review evidence
 
-- #204 exact head has Fast Bun, Review semantic/package, Review packaged, and Kernel PASS; Plasmon packaged smoke/specialist fail before browser because shared Motoko package resolution cannot resolve the `.mops/_github/core#v2.6.0/...` path. PR comments identify canonical Issue #161 as the external repair; no #191 workaround is authorized.
-- #208 exact head `665670102efd63bbc766c5a51f1b24fcace2ced5`: Kernel, Fast Bun (`31704920900`), packaged specialist, and packaged smoke all PASS. The older concern was resolved by source-level comparison plus executed supplemental two-file/partial-failure import assertions; the exact PR's model and delayed paste tests also pass in CI.
-- #210 exact head `b7e5a52d123d847cce98aea3e0aef2dfce20b392`: Kernel, Fast Bun, packaged persistence, specialist, and smoke all PASS (`31706878739` Kernel, `31706878744` Fast Bun, `31706878719` specialist, `31706878721` persistence, `31706878736` smoke). Four headless helper tests and the RTL journey pass under the canonical happy-dom preload (local exact-head audit: `bun test --preload ./test/setupHappyDom.ts src/os/file-manager/send-to-desktop.test.ts test/rtl/issue-51-send-to-desktop.test.tsx`). The lower helper coverage is equivalent to the repaired packet's deterministic acceptance, not a source-shape requirement.
-- #211 Fast PASS; specialist and persistence later PASS, but refactor smoke FAIL on the focused #190 asset/health failure. Kernel/Review checks were still pending at the last poll. The failure is real product RED at the installed asset response boundary, not a browser-session absence.
+- #204/#208/#210/#211/#212 exact merged PR checks all passed Kernel, Fast Bun, packaged smoke, and applicable specialist/persistence/Review checks. Current release ancestry confirms these implementations are no longer active.
+- Merged PR smoke scripts now execute #173 List geometry, #190 installed asset requests, #191 FileEntry bounds, and #192 placement adapter. Their evidence is recorded in `r2-browser-spec-execution-ledger.md`.
+- #190's focused asset spec is green, but `plasmon-refactor-smoke.spec.ts` still retains old-root icon allowances; this is allowance retirement work, not a failed promotion.
+- #195 has no implementation PR and is the next implementor packet after #191.
 
-## No active implementation may be called integrated
+## Post-merge rule
 
-PR #208/#210 are not GitHub-merged and their green tests are not in the release. PR #204/#211 are drafts. A merge, passing CI, or a current PR body cannot close the promotion row until release ancestry and durable test strength are rechecked.
+Merged PR status is not itself Issue closure: retain separate evidence for lower-layer promotion, packaged execution, allowances, and human/manual acceptance. Do not call #195 green from characterization tests.
 
 ## Required implementor handoff
 

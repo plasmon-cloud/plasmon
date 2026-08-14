@@ -1,12 +1,12 @@
 # r2 RED → durable GREEN promotion ledger
 
-Rule applied: a passing fast-suite count is not promotion evidence. Each row names the permanent file and assertions inspected. Snapshot release: `f4ac3b4c`; active PR heads are not integrated.
+Rule applied: a passing fast-suite count is not promotion evidence. Each row names the permanent file and assertions inspected. Post-merge snapshot: `82f176a6`; merged PR checks and release ancestry were refreshed live.
 
 | Issue | final Luna packet | RED path / contract | implementation | durable release path | status |
 |---|---|---|---|---|---|
 | #44 | historical PR149 packet | canonical shortcut primitive: stable target, collision, rename | PR149 | `src/os/file-manager/create-shortcut.test.tsx` | PROMOTED EXACTLY |
-| #51 | A `d522336` + repaired A packet (`8453df4` tree) | NodeId target, original parent, collision/repeat, rename, missing target/Desktop, no partial state, plus UI command | PR210 active exact head `b7e5a52d` | `send-to-desktop.test.ts` plus RTL command journey | **PROMOTION ACCEPTED** — equivalent ordinary helper/RTL coverage proves the repaired deterministic contract |
-| #65 | A repaired packet `d522336` tree | >=2 files, item count, pending between writes, second observable, partial success/failure, alert, duplicate suppression, paste lifecycle, no byte progress | PR208 active exact head `665670102e` | `operation-state.test.ts`, RTL delayed lifecycle, plus exact-head supplemental two-file/partial-failure audit | **PROMOTION ACCEPTED** — implementation and equivalent executable evidence satisfy the repaired contract |
+| #51 | A `d522336` + repaired A packet (`8453df4` tree) | NodeId target, original parent, collision/repeat, rename, missing target/Desktop, no partial state, plus UI command | PR210 merged via `f3459881` | release `send-to-desktop.test.ts` plus RTL command journey | **PROMOTED — merged and CI-verified** |
+| #65 | A repaired packet `d522336` tree | >=2 files, item count, pending between writes, second observable, partial success/failure, alert, duplicate suppression, paste lifecycle, no byte progress | PR208 merged via `2b6984e9` | release `operation-state.test.ts`, FileManager wiring and RTL lifecycle | **PROMOTED — merged and CI-verified** |
 | #66 | A `ac07da4` browser packet | drag preview above real window stack / hit testing | none | none | WAITING IMPLEMENTATION |
 | #86 | A packet `issue-86.red.md` | diagnostic text selectable | none | none | WAITING IMPLEMENTATION |
 | #92 | A packet `issue-92.red.md` | multi-item move progress, failure semantics | none; depends #65 | none | WAITING IMPLEMENTATION |
@@ -20,7 +20,7 @@ Rule applied: a passing fast-suite count is not promotion evidence. Each row nam
 | #118 | A truth table | grouped process identity/state in taskbar | none | shell taskbar tests cover multiple processes, not grouping contract | PARTIALLY PROMOTED |
 | #171 | A `issue-171.red.md` | bounded icon probing / no speculative requests | none | `src/os/neutron/icon-resolver.test.ts` bounds probes, but no Issue promotion | PARTIALLY PROMOTED |
 | #172 | A composed packet `issue-172.composed.red.test.ts` | occupied Desktop restore preserves incumbents | PR205/#192 merged | placement controller tests (`src/os/desktop/layout.test.ts`) | PROMOTED AS STRONGER EQUIVALENT |
-| #173 | A `issue-173.red.md` | real compact List columns and responsive geometry | none | none | WAITING IMPLEMENTATION |
+| #173 | A `issue-173.red.md` | real compact List columns and responsive geometry | PR212 merged via `3399a873` | release List model/RTL plus `test/e2e/plasmon-list-layout-173.spec.ts` | **PROMOTED — merged and packaged CI-verified** |
 | #174 | A `issue-174.red.test.ts` | Search uses one canonical `.sys` projection and activation | none | `src/os/shell/search-projection.test.ts` covers related projection | PARTIALLY PROMOTED |
 | #175 | A `issue-175.red.md` | exact Search panel geometry across category changes | none; #193 | smoke allowance only; no exact ordinary/browser gate | NOT PROMOTED |
 | #176 | A `issue-176.red.md` | Plasmon context-menu ownership | none | `src/os/file-manager/gate3.test.tsx` protects source ownership only | PARTIALLY PROMOTED |
@@ -28,11 +28,11 @@ Rule applied: a passing fast-suite count is not promotion evidence. Each row nam
 | #178 | matrices + `issue-178.red.md` | filename MIME/language precedence and consumers | none; #189 | `src/os/fs/resourcePolicy.test.ts`/consumer tests cover classifier, not all future packet | PARTIALLY PROMOTED |
 | #182 | old `issue-182.red.{test,ui}.test.tsx` | root/Favorites policy | none | none | INVALID LUNA PACKET — RETIRED |
 | #183 | A `issue-183.red.md` | taskbar context menu actions and placement | none | none | WAITING IMPLEMENTATION |
-| #189 | A `318966c` packet; implementation adopted RED | canonical classification precedence and all consumers | PR207 merged | `src/os/fs/resourcePolicy.test.ts` plus FileManager/Search/Text/Photos/Video consumers | PROMOTED AS STRONGER EQUIVALENT |
-| #190 | A `318966c` packet | actual installed `/app/plasmon/static/...` requests load; resolver composition | PR211 active | PR branch `src/os/visual/issue-190.test.ts` + `test/e2e/plasmon-presentation-assets.spec.ts`; not release | WAITING MERGE |
-| #191 | A `1e579bf` packet, adopted/retired guards | NodeId state, selection/activation/context/rename, bounded editor/long label distinction | PR204 active | PR branch normal Bun/RTL + `test/e2e/plasmon-file-entry-191.spec.ts`; not release | WAITING MERGE |
-| #192 | A `e56b246` packet | deterministic placement/incumbent preservation and adapter | PR205 merged | `src/os/desktop/layout.test.ts`, `test/e2e/plasmon-desktop-placement-192.spec.ts` as merged in PR | PROMOTED EXACTLY |
-| #195 | A `1d55c3b` packet | decomposed FileManager wiring preserves canonical command path | none | none | WAITING IMPLEMENTATION |
+| #189 | A `318966c` packet; implementation adopted RED | canonical classification precedence and all consumers | PR207 merged via `e259d15c` | `src/os/fs/resourcePolicy.test.ts`, dedicated `test/refactor/189/issue-189.test.ts`, and consumers | **PROMOTED AS STRONGER EQUIVALENT — merged** |
+| #190 | A `318966c` packet | actual installed `/app/plasmon/static/...` requests load; resolver composition | PR211 merged via `c982d531` | release `src/os/visual/issue-190.test.ts` + `test/e2e/plasmon-presentation-assets.spec.ts`; smoke/spec CI PASS | **PROMOTED — browser evidence green; old-root allowance retirement pending** |
+| #191 | A `1e579bf` packet, adopted/retired guards | NodeId state, selection/activation/context/rename, bounded editor/long label distinction | PR204 merged via `82f176a6` | release characterization/RTL + `test/e2e/plasmon-file-entry-191.spec.ts`; smoke/spec CI PASS | **PROMOTED — merged and packaged CI-verified; #95 remains separate** |
+| #192 | A `e56b246` packet | deterministic placement/incumbent preservation and adapter | PR205 merged via `51cd761c` | `src/os/desktop/issue-192.test.ts`, layout tests, `test/e2e/plasmon-desktop-placement-192.spec.ts` | **PROMOTED EXACTLY — merged and packaged CI-verified** |
+| #195 | A `1d55c3b` packet | decomposed FileManager wiring preserves canonical command path | none | none | **WAITING IMPLEMENTATION — no refactor implementation landed** |
 | #67/#89/#113/#200 | A docs/browser contracts; C owner | real Monaco worker/package/runtime acceptance | PR131/188 related only | `src/native-apps/text/monacoAdapter.test.ts` is deterministic; specialist browser required | PACKAGED BROWSER SPEC ONLY |
 | #186 | Testing Lead packet; PR209 | stable identity/content/origin through close/reload/context relaunch | PR209 merged | `test/e2e/plasmon-persistence.spec.ts` and `.github/workflows/plasmon-browser-persistence-ci.yml` | PROMOTED EXACTLY |
 | #187 | D packet/PR188 | assembled boot, open, authorities, health, geometry | PR188 merged | `test/refactorGuards.test.ts`, `test/rtl/refactorGuardSmoke.test.tsx`, packaged smoke/docs | PROMOTED AS STRONGER EQUIVALENT |

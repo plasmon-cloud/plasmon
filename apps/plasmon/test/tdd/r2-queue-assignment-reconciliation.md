@@ -20,4 +20,14 @@ The authoritative queue is `/home/bhare/plasmon/agents/control/todo.md`; the rep
 | #46 | Luna-D/Neutron boundary | `[~] claimed:luna-d` | source/contract audit complete; external app-facing uninstall capability absent. |
 | #100 | Luna-D/Coordinator metadata | `[~] claimed:luna-d` | live GraphQL dependency audit complete; Coordinator must mutate native relationships/labels. |
 
-No queue item is silently treated as done. Unclaimed A/C items above are explicit handoffs, not D claims; lane protocol forbids D from claiming another lane's item. Coordinator must use `todoctl claim A luna-a 78`, `todoctl claim A luna-a 82`, `todoctl claim C luna-c 79`, and `todoctl claim C luna-c 83` (or record an explicit changed owner) to reach zero unexplained queue entries. #38 requires a backend owner reassignment rather than a fabricated Plasmon lane claim.
+No queue item is silently treated as done. Unclaimed A/C items above are explicit handoffs, not D claims; lane protocol forbids D from claiming another lane's item.
+
+## Post-merge stale queue audit — 2026-08-14
+
+The live queue has stale dispositions after release `82f176a6`:
+
+- **stale `[x]` green/RED labels:** #51 and #65 are merged/promoted; #93 is deterministic-green with a browser remainder; #115 is not green because no shared command seam exists; #192 is merged/green at core plus packaged evidence; #195 is **not implemented** and must not remain ALREADY GREEN; #79 and #83 have no completed composed packet and must not remain ALREADY GREEN; #112 remains characterization-ready rather than ALREADY GREEN.
+- **stale `[~]` claim:** #81's B ledger already records a stronger equivalent green lifecycle test; B/Coordinator should release it to `TDD:ALREADY GREEN` after verifying that evidence. Other `[~]` claims have documented active implementation or harness gaps and should remain claimed.
+- **merged rows missing from queue:** #173, #189, #190, #191, and #212's #173 implementation must be represented in the master ledger even though the compact live queue predates those rows.
+
+Unclaimed A/C items remain explicit handoffs, not D claims. Coordinator should use `todoctl claim A luna-a 78`, `todoctl claim A luna-a 82`, and assign #38 to Sharing/Backend rather than fabricating a Plasmon lane claim. #79/#83 are D-owned cross-surface items despite their native/runtime subject matter; their current `[x]` queue labels require correction before closure.
