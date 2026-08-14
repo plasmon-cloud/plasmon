@@ -1,6 +1,6 @@
 # Luna-A r2 runway disposition
 
-Refresh: integrated release `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+Refresh: integrated release `3d7042b2102a5df51145a1965cf347430fde91b1`.
 
 This is a staging/acceptance inventory only. No production source, active
 implementation packet, branch, or PR was modified.
@@ -15,7 +15,7 @@ implementation packet, branch, or PR was modified.
 - **#195:** final FileManager decomposition packet;
   `issue-195-final-packet.md` and `issue-195.red.test.ts`.
 - **#196:** final view-strategy packet;
-  `issue-196-final-packet.md` (blocked for implementation by #195).
+  `issue-196-final-packet.md` and `issue-196.recon.md` — ready for Sol.
 - **#197:** Luna-A Shell/FileManager authority-input packet;
   `issue-197-luna-a-shell-input-packet.md` (Shell implementation remains
   Luna-B-owned).
@@ -26,19 +26,16 @@ implementation packet, branch, or PR was modified.
 
 - **#194:** blocked by the exact #169 malformed-`Accessories` reconciliation
   RED and the separate #175 Start geometry boundary.
-- **#196 implementation:** blocked by active #195 PR #213/cutover; #173 is
-  integrated and its behavior is already mapped.
+- **#175 browser geometry:** packaged/browser acceptance remains operationally
+  blocked by the missing local session journal; this is not a product RED.
 - **#197 implementation:** blocked by Luna-B ownership and surface boundaries
   #176/#193/#194/#198; Luna-A supplied only the consumer authority packet.
 - **#201 cleanup:** blocked until #195/#193/#194/#196/#197/#199/#200 migrations
   and #169 are accepted, with consumer/reachability proof.
-- **#175 browser geometry:** operational/browser acceptance remains separate;
-  missing local session is not a product RED.
-
 ## COMPLETE / NO IMPLEMENTATION REQUIRED
 
 - **#44, #78, #82, #93, #108, #110, #115, #172, #174, #178, #189, #192,
-  #195 packet preparation, and #191/#190/#51/#65/#173 integrated dependencies.**
+  #191/#190/#51/#65/#173/#195 integrated dependencies.**
 - #78 now has composed current-head lifecycle evidence after #51 integration:
   Create Shortcut and Send to Desktop, rename/move, FileManager/Start/Search
   activation, and deterministic missing-target failure.

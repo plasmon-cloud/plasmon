@@ -1,17 +1,16 @@
 # Issue #201 cleanup / retirement readiness
 
-Final inspected release: `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
+Final inspected release: `3d7042b2102a5df51145a1965cf347430fde91b1`.
 This is an audit only. No production code is deleted or changed. #190/#191/#51/
-#65 are integrated; #195 remains active PR #213 and is not consumed as an
-implementation branch. See `issue-201-final-cleanup-contract.md` for the final
-contract.
+#65/#195 are integrated; #196 is now the next view-strategy migration. See
+`issue-201-final-cleanup-contract.md` for the final contract.
 
 ## Candidate inventory
 
 | Candidate | Current file/symbol | Consumer evidence | Migration Issue | Integrated replacement? | Status | Safe action |
 |---|---|---|---:|---|---|---|
-| FileManager inline orchestration | `os/file-manager/FileManager.tsx` state/effects/callbacks | root component actively rendered | #195 | no | ACTIVE | wait #195 |
-| FileEntry presentation seam | `FileEntry.tsx` | active FileManager consumer | #191/#190 | no | ACTIVE | wait active PRs |
+| FileManager inline orchestration | `os/file-manager/FileManager.tsx` state/effects/callbacks | root component actively rendered | #195 | yes, #195 adapter seams | INTEGRATED | preserve adapter boundary; #196 may wire strategies only |
+| FileEntry presentation seam | `FileEntry.tsx` | active FileManager consumer | #191/#190 | yes, integrated | INTEGRATED | preserve as shared entry authority |
 | selected-label/rename CSS | `file-manager.scss`, FileEntry | active selected/rename behavior | #95/#191 | no | ACTIVE | preserve browser evidence |
 | Desktop placement compatibility exports | `desktop/layout.ts`, Desktop callers/tests | imported by Desktop/FileManager/tests | #192 downstream | partial integrated controller | WAIT FOR #192 migration | inspect import graph, do not delete |
 | `resourcePolicy.classifyResource` | `os/fs/resourcePolicy.ts` | many canonical consumers | #189 | yes, current authority | ACTIVE | never retire |

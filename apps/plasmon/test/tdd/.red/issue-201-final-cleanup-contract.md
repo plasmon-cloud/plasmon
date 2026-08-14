@@ -3,11 +3,11 @@
 Disposition: **BLOCKED — accepted r2 migrations are not complete**. The cleanup
 contract is ready; no production deletion or implementation is made here.
 
-Integrated release: `82f176a6`.
+Integrated release: `3d7042b2`.
 
 ## Prerequisites
 
-- #195 implementation/cutover (PR #213 active), then #196 view strategies.
+- #196 view-strategy migration (the #195 adapter cutover is integrated).
 - #193 Search and #194 Start cutovers; #169 reconciliation RED must be resolved
   before Start cleanup.
 - #197 Shell, #199 NativeWindow, and #200 Monaco migrations where applicable.

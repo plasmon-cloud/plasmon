@@ -31,9 +31,10 @@ integrated `82f176a6f11a163197a270a6c2275dde0f95a2e9`.
 | #169 | final packet | `issue-169-final-packet.md`, `issue-169.red.test.ts` | Start reconciliation collision safety | none | headless reconciliation tests | malformed Accessories sibling rejects current path | HEADLESS RED / #194 BLOCKER |
 | #193 | final packet | `issue-193-final-packet.md` | focused Search surface over canonical results | none | Search model/RTL + #175 browser | no structural RED; #174 complete | FINAL PACKET READY / #175 BOUNDARY |
 | #194 | final packet | `issue-194-final-packet.md` | focused Start surface over `/System/Start Menu` | none | Start migration/RTL + #169/#175 | blocked by #169 | BLOCKED — #169 |
-| #196 | final packet | `issue-196-final-packet.md` | Icons/List/Details strategies | none | #173/FileEntry/shared command guards | blocked by #195 PR #213 | BLOCKED — #195 |
+| #196 | final packet | `issue-196-final-packet.md`, `issue-196.recon.md` | Icons/List/Details strategies over #195 adapters | none | 11 focused characterization tests; future strategy Bun/RTL/browser promotion | #195 integrated at `3d7042b`; no truthful structural RED | FINAL PACKET READY |
 | #197 | Luna-A input packet | `issue-197-luna-a-shell-input-packet.md` | Shell composition/authority boundaries | Luna-B-owned | cross-surface guards | no competing Shell packet | BLOCKED — Luna-B |
 | #192 | integrated dependency | #172 composed closure | Desktop placement controller | merged #205 | release #192 tests + #172 composed gate | integrated source and clean-worktree execution observed | INTEGRATED / #172 GREEN |
+| #195 | merged #213 at `3d7042b` | #195 characterization and final packet | humble FileManager adapter boundaries | merged #213 | 11 focused integrated characterization tests | release source inspected and guards passed | INTEGRATED / #196 UNBLOCKED |
 | #201 | final cleanup contract | `issue-201-final-cleanup-contract.md` | migration-gated deletion/import boundaries | none | owning migration suites and package/health evidence | prerequisites not complete | BLOCKED — accepted migrations |
 
 ## Promotion rules
