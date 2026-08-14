@@ -10,4 +10,4 @@
 | packaged/manual appearance improved/no regression | requires real packaged visual inspection | `test/e2e/plasmon-refactor-smoke.spec.ts` + human review | browser/manual evidence missing |
 | docs accurate | Visual and Shell README/AGENTS describe boundaries | docs review / #201 | current docs accurate, future migration cleanup pending |
 
-Final disposition: **CLOSURE AUDIT** with no generic incomplete claim. Semantic authority and primitive use are proven; visual convergence and deletion of duplicate local vocabulary remain owned by active #190/#201 work and require manual/package evidence. No honest behavioral CSS/source-shape RED is staged.
+Final disposition: **RECON COMPLETE — CLOSURE AUDIT**. Current r2 includes merged #190 resource-presentation work (PR #211, merge commit `c982d53`); the branch's older snapshot is not authoritative for this audit. Current Shell/Visual deterministic tests pass and authority boundaries remain explicit. Remaining broad visual convergence and deletion of duplicate local vocabulary are #201/manual/package concerns. No honest behavioral CSS/source-shape RED is staged.

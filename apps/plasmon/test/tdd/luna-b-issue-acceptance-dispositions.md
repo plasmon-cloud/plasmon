@@ -10,7 +10,7 @@ This supplements the issue inventory with explicit authority → observable → 
 | adapters use same transitions | Shell event adapter yields same visible flyout state | RTL | existing Start open/Escape RTL; full adapter extraction is future |
 | click-away/keyboard/focus | browser event delivery | RTL/browser | click-away helper and Start Escape exist; global keyboard browser proof incomplete |
 | opening remains external | dispatcher/Process/Neutron | headless composition | #32 and current callbacks prove delegation |
-| no parallel state machine | architecture/source | static audit only | source-shape RED prohibited; **CHARACTERIZATION READY** |
+| no parallel state machine | architecture/source | static audit only | source-shape RED prohibited; **RECON COMPLETE** — current React orchestration is characterized, but controller extraction remains implementation architecture work |
 
 ## #63 — Alt-Tab
 
@@ -41,7 +41,7 @@ Process identity, window identity, app identity, pin identity, pinned-only/runni
 
 ## #111 — visual convergence
 
-The shared Visual tokens/primitives are consumed for pin and resource/application icons. Shell still owns inline marks and a parallel local palette; the token map classifies each as duplicate/local/unknown. Because #111 requires appearance and no broad visual redesign, this is **CLOSURE AUDIT**, not a brittle CSS/source RED. Manual/package visual review remains missing.
+The shared Visual tokens/primitives are consumed for pin and resource/application icons. Current r2 includes merged #190 resource-presentation work (PR #211, merge commit `c982d53`). Shell still owns inline marks and surface-local palette decisions; the token map classifies each as duplicate/local/unknown. Because #111 requires appearance and no broad visual redesign, this remains **RECON COMPLETE — CLOSURE AUDIT**, not a brittle CSS/source RED. Manual/package visual review remains missing.
 
 ## #115 — shared command vocabulary
 
@@ -49,4 +49,4 @@ Shell consumers and authority/outcome vocabulary are recorded in the command mat
 
 ## #119 — transient/dialog ownership
 
-Process close negotiation is real and tested, but no accepted product surface currently qualifies as a native transient with parent identity. Existing overlays remain app-local. **CHARACTERIZATION READY**: preserve app-local overlays; do not create a fake owner API or RED for unspecified semantics. Implement only after a demonstrated true transient supplies the contract.
+Process close negotiation is real and tested, but no accepted product surface currently qualifies as a native transient with parent identity. Existing overlays remain app-local. **RECON COMPLETE — UNSPECIFIED NATIVE TRANSIENT CONTRACT**: preserve app-local overlays; do not create a fake owner API or RED for unspecified semantics. Implement only after a demonstrated true transient supplies the contract.
