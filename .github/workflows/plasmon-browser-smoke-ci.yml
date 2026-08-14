@@ -74,3 +74,13 @@ jobs:
             npm run plasmon:demo:reinstall
             npm run test:e2e:plasmon:smoke
           '
+
+      - name: Upload #217 Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-217-playwright-diagnostics
+          if-no-files-found: warn
+          path: |
+            playwright-report
+            test-results
