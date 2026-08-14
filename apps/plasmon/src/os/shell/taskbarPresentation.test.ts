@@ -69,6 +69,7 @@ function element(id: string, running: ExternalElement["running"]): ExternalEleme
 function onlyNative(input: {
   processes?: readonly ProcessRecord[];
   windows?: readonly WindowState[];
+  focusedWindowId?: WindowState["id"] | null;
   busyTaskId?: string | null;
 }) {
   const entries = deriveTaskbarEntries({
@@ -77,6 +78,7 @@ function onlyNative(input: {
     processes: input.processes ?? [],
     elements: [],
     windows: input.windows ?? [],
+    focusedWindowId: input.focusedWindowId ?? null,
     busyTaskId: input.busyTaskId,
   });
   const entry = entries[0];
@@ -84,7 +86,7 @@ function onlyNative(input: {
   return entry;
 }
 
-test("native taskbar presentation follows pin, launch, process, and Windowing focus observations", () => {
+test("native taskbar presentation follows pin, launch, process, and canonical Windowing focus observations", () => {
   const pinned = onlyNative({});
   expect(pinned.presentation).toMatchObject({
     state: "pinned-only",
@@ -101,7 +103,11 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
   expect(onlyNative({ processes: [starting] }).presentation.state).toBe("launching");
 
   const running = processRecord("running");
-  expect(onlyNative({ processes: [running], windows: [windowState(running, 2, true)] }).presentation).toMatchObject({
+  expect(onlyNative({
+    processes: [running],
+    windows: [windowState(running, 2, true)],
+    focusedWindowId: running.windowId,
+  }).presentation).toMatchObject({
     state: "running",
     running: true,
     active: false,
@@ -114,13 +120,23 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
     y: 0,
     width: 600,
     height: 400,
-    z: 4,
+    z: 9,
     minimized: false,
     maximized: false,
   };
-  expect(onlyNative({ processes: [running], windows: [windowState(running, 3), other] }).presentation.state).toBe("running");
+  expect(onlyNative({
+    processes: [running],
+    windows: [windowState(running, 3), other],
+    focusedWindowId: other.id,
+  }).presentation.state).toBe("running");
 
-  const active = onlyNative({ processes: [running], windows: [windowState(running, 5), other] });
+  // Regression: focus authority is independent of z-order. A lower-z Files
+  // window remains active when WindowManager.focusSnapshot() names it focused.
+  const active = onlyNative({
+    processes: [running],
+    windows: [windowState(running, 3), other],
+    focusedWindowId: running.windowId,
+  });
   expect(active.presentation).toMatchObject({
     state: "active",
     statusLabel: "Active and focused",
@@ -130,7 +146,7 @@ test("native taskbar presentation follows pin, launch, process, and Windowing fo
   expect(active.presentation.accessibilityLabel).toContain("Active and focused");
 });
 
-test("native group presentation uses running members before starting siblings", () => {
+test("native group presentation uses running members before starting siblings and canonical focused id", () => {
   const background = processRecord("running", "native:text#1");
   const active = processRecord("running", "native:text#2");
   const starting = processRecord("starting", "native:text#3");
@@ -141,7 +157,7 @@ test("native group presentation uses running members before starting siblings", 
     y: 0,
     width: 600,
     height: 400,
-    z: 4,
+    z: 10,
     minimized: false,
     maximized: false,
   };
@@ -149,13 +165,15 @@ test("native group presentation uses running members before starting siblings", 
   const runningGroup = onlyNative({
     processes: [background, starting],
     windows: [windowState(background, 3), other],
+    focusedWindowId: other.id,
     busyTaskId: "native:native:text",
   });
   expect(runningGroup.presentation).toMatchObject({ state: "running", running: true, active: false, launching: false });
 
   const activeGroup = onlyNative({
     processes: [background, active, starting],
-    windows: [windowState(background, 3), windowState(active, 6), other],
+    windows: [windowState(background, 3), windowState(active, 4), other],
+    focusedWindowId: active.windowId,
     busyTaskId: "native:native:text",
   });
   expect(activeGroup.presentation).toMatchObject({ state: "active", running: true, active: true, launching: false });
