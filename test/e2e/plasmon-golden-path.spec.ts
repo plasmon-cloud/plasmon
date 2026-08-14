@@ -200,9 +200,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   // Issue #177 browser boundary: keep the durable Explorer primary alive so
   // repeated sibling opens must use WindowManager default/session placement
-  // rather than being masked by #117 persistence restore.
-  let firstSiblingPlacement: { x: number; y: number } | undefined;
-  let lastSiblingPlacement: { x: number; y: number } | undefined;
+  // rather than being masked by #117 persistence restore. Deterministic wrap
+  // equality is proved below the browser in WindowManager tests; this layer
+  // protects only real rendered reachability while the old lifetime cascade
+  // is exercised repeatedly.
   for (let index = 0; index < 60; index += 1) {
     await rootShortcut.dblclick();
     await expect(nativeWindows).toHaveCount(initialWindowCount + 2, { timeout: 20_000 });
@@ -214,12 +215,9 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     expect(bounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
     expect(bounds.y + Math.min(38, bounds.height)).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
-    firstSiblingPlacement ??= { x: bounds.x, y: bounds.y };
-    lastSiblingPlacement = { x: bounds.x, y: bounds.y };
     await sibling.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
     await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
   }
-  expect(lastSiblingPlacement).toEqual(firstSiblingPlacement);
 
   const dragTitlebarTo = async (clientX: number): Promise<void> => {
     const box = await titlebar.boundingBox();
