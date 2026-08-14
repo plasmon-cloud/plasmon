@@ -47,7 +47,16 @@ async function dispatchEscape(locator: Locator): Promise<void> {
   });
 }
 
-test("#176 first-party context ownership preserves editable and Browser iframe boundaries", async ({ page }) => {
+async function launchSearchResult(app: ReturnType<Page["frameLocator"]>, query: string) {
+  await app.getByRole("button", { name: "Search" }).click();
+  const search = app.getByRole("region", { name: "Search" });
+  await search.getByRole("textbox", { name: "Search Plasmon" }).fill(query);
+  const result = search.locator("[data-search-result]", { hasText: query }).first();
+  await expect(result).toBeVisible();
+  await result.click();
+}
+
+test("#176 first-party context ownership preserves editable and foreign boundaries", async ({ page }) => {
   const { app, kernelUrl } = await launchPlasmon(page);
 
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
@@ -76,13 +85,7 @@ test("#176 first-party context ownership preserves editable and Browser iframe b
   await expect(app.getByRole("menu")).toHaveCount(0);
   await rename.press("Escape");
 
-  await app.getByRole("button", { name: "Search" }).click();
-  const search = app.getByRole("region", { name: "Search" });
-  await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Browser");
-  const browserResult = search.locator("[data-search-result]", { hasText: "Browser" }).first();
-  await expect(browserResult).toBeVisible();
-  await browserResult.click();
-
+  await launchSearchResult(app, "Browser");
   const browser = app.getByRole("region", { name: "Web browser" });
   await expect(browser).toBeVisible();
   expect(await contextMenuDefaultPrevented(browser)).toBe(true);
@@ -101,5 +104,19 @@ test("#176 first-party context ownership preserves editable and Browser iframe b
   const foreignFrame = browser.locator("iframe").first();
   await expect(foreignFrame).toBeVisible();
   expect(await contextMenuDefaultPrevented(foreignFrame)).toBe(false);
+  await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
+
+  await launchSearchResult(app, "Files");
+  const explorer = app.getByRole("region", { name: "File Explorer" });
+  await expect(explorer).toBeVisible();
+  const favorites = explorer.getByRole("complementary", { name: "Favorites" });
+  expect(await contextMenuDefaultPrevented(favorites)).toBe(true);
+  await expect(app.getByRole("menu", { name: "Application context menu" })).toBeVisible();
+  await dispatchEscape(favorites);
+  await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
+
+  const explorerFiles = explorer.getByRole("listbox", { name: "Files" });
+  expect(await contextMenuDefaultPrevented(explorerFiles)).toBe(true);
+  await expect(app.getByRole("menu").last()).toBeVisible();
   await expect(app.getByRole("menu", { name: "Application context menu" })).toHaveCount(0);
 });
