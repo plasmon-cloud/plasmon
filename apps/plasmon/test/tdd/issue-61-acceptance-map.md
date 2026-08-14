@@ -8,4 +8,4 @@
 | no parallel React-only copy after extraction | ownership/source architecture | #197 refactor guards/manual review | cannot be an honest behavioral RED without inventing API/source shape |
 | fast suite/docs | Plasmon fast + Shell docs | ordinary fast suite | current baseline green |
 
-Final disposition: **RECON COMPLETE — CURRENT BEHAVIOR CHARACTERIZED / NO HONEST STRUCTURAL RED**. Against current r2, the focused RTL characterization passes (1 test, 14 assertions) with the canonical Happy DOM preload. The unmet extraction is architectural implementation review, not a behavioral defect; this packet intentionally does not invent a future controller API.
+Final disposition: **CHARACTERIZATION — RELEASED**. Against current r2, the focused RTL characterization passes (1 test, 14 assertions) with the canonical Happy DOM preload. The unmet extraction is architectural implementation review, not a behavioral defect; this packet intentionally does not invent a future controller API. Operational claim released.
