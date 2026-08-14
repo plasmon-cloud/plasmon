@@ -51,14 +51,9 @@ import {
   type ShellPreferences,
   type ShellThemeId,
 } from "./preferences.ts";
+import { SearchSurface } from "./SearchSurface.tsx";
 import {
-  filterSearchResults,
-  LatestSearchController,
-  searchApplicationIcon,
-  searchShell,
   subscribeSearchInvalidation,
-  type SearchBatch,
-  type SearchTab,
   type ShellSearchResult,
 } from "./search.ts";
 import {
@@ -68,6 +63,7 @@ import {
   type StartShortcutTarget,
 } from "./startMenu.ts";
 import { subscribeToNativeShellState } from "./subscriptions.ts";
+import { useSearchSurfaceController } from "./use-search-surface-controller.ts";
 import "./shell.scss";
 
 export interface ShellProps {
@@ -92,8 +88,6 @@ type ShellContextMenuState = {
   handlerId?: string;
   elementId?: string;
 } | null;
-
-const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false };
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -195,19 +189,12 @@ export function Shell({
   const [startBusy, setStartBusy] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [startSeedRevision, setStartSeedRevision] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchTab, setSearchTab] = useState<SearchTab>("all");
-  const [searchBatch, setSearchBatch] = useState<SearchBatch>(EMPTY_SEARCH);
-  const [searchBusy, setSearchBusy] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [clock, setClock] = useState(() => now());
   const [calendarAnchor, setCalendarAnchor] = useState(() => startOfCalendarMonth(now()));
   const [fsEpoch, setFsEpoch] = useState(0);
-  const latestSearch = useRef(new LatestSearchController<SearchBatch>());
-  const searchAbort = useRef<AbortController | null>(null);
   const { processes, windowStates } = useNativeSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElements(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
@@ -231,6 +218,15 @@ export function Shell({
   const elementsById = useMemo(() => new Map(elements.map((element) => [element.id, element] as const)), [elements]);
   const nativeSeedKey = useMemo(() => nativeDefinitions.map((app) => `${app.handlerId}:${app.name}`).sort().join("\u0000"), [nativeDefinitions]);
   const elementSeedKey = useMemo(() => elements.map((element) => `${element.id}:${element.name}`).sort().join("\u0000"), [elements]);
+  const searchController = useSearchSurfaceController({
+    open: flyout === "search",
+    fs,
+    revision: fsEpoch,
+    nativeApps: nativeDefinitions,
+    elements,
+    pinnedNative: effectivePreferences.pinnedNative,
+    pinnedElements: effectivePreferences.pinnedElements,
+  });
   const taskbarEntries = useMemo(
     () => deriveTaskbarEntries({
       preferences: effectivePreferences,
@@ -243,7 +239,6 @@ export function Shell({
     [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
   );
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
-  const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
   const filteredStartItems = useMemo(() => {
     const needle = startQuery.trim().toLocaleLowerCase();
     return needle ? startItems.filter((node) => node.name.toLocaleLowerCase().includes(needle)) : startItems;
@@ -326,37 +321,6 @@ export function Shell({
     if (typeof document !== "undefined") document.addEventListener("pointerdown", onPointerDown, true);
     return () => { if (typeof document !== "undefined") document.removeEventListener("pointerdown", onPointerDown, true); };
   }, [contextMenu, flyout]);
-
-  useEffect(() => {
-    latestSearch.current.cancel();
-    searchAbort.current?.abort();
-    searchAbort.current = null;
-    setSearchError(null);
-    if (flyout !== "search") {
-      setSearchBusy(false);
-      return undefined;
-    }
-    setSearchBusy(true);
-    const delay = searchQuery.trim() ? 140 : 0;
-    const timer = typeof window === "undefined" ? null : window.setTimeout(() => {
-      const controller = new AbortController();
-      searchAbort.current = controller;
-      void latestSearch.current.run(
-        () => searchShell(fs, nativeDefinitions, elements, searchQuery, {
-          signal: controller.signal,
-          pinnedNative: effectivePreferences.pinnedNative,
-          pinnedElements: effectivePreferences.pinnedElements,
-        }),
-        (batch) => { setSearchBatch(batch); setSearchBusy(false); setSearchError(null); },
-      ).catch((cause: unknown) => {
-        if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
-        setSearchBusy(false);
-        setSearchError(formatError(cause));
-      });
-    }, delay);
-    if (timer === null) { setSearchBusy(false); return undefined; }
-    return () => { window.clearTimeout(timer); searchAbort.current?.abort(); };
-  }, [effectivePreferences.pinnedElements, effectivePreferences.pinnedNative, elements, flyout, fs, fsEpoch, nativeDefinitions, searchQuery]);
 
   const persistPreferences = useCallback((next: ShellPreferences) => {
     if (!preferencesReady) {
@@ -528,7 +492,7 @@ export function Shell({
 
     {flyout === "start" ? <section className="plasmon-shell__panel plasmon-shell__start-panel" data-shell-owned-surface data-shell-flyout aria-label="Start menu">
       <header><span>Filesystem-backed</span><h2>Start</h2></header>
-      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={startQuery} onChange={(event) => setStartQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && startQuery.trim()) { setSearchQuery(startQuery); setFlyout("search"); } }} placeholder="Filter this folder; Enter searches everywhere" aria-label="Search Start" /></div>
+      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={startQuery} onChange={(event) => setStartQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && startQuery.trim()) { searchController.setQuery(startQuery); setFlyout("search"); } }} placeholder="Filter this folder; Enter searches everywhere" aria-label="Search Start" /></div>
       <div className="plasmon-shell__section">
         <div className="plasmon-shell__row">
           <button type="button" disabled={startTrail.length <= 1} onClick={() => { setStartTrail((current) => current.slice(0, -1)); setStartQuery(""); }}>← Back</button>
@@ -563,15 +527,13 @@ export function Shell({
       <footer><button type="button" onClick={() => setFlyout("settings")}>Settings</button></footer>
     </section> : null}
 
-    {flyout === "search" ? <section className="plasmon-shell__panel plasmon-shell__search-panel" data-shell-owned-surface data-shell-flyout aria-label="Search">
-      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search apps, files, media, Atoms, and Start shortcuts" aria-label="Search Plasmon" />{searchBusy ? <span role="status">Searching…</span> : null}</div>
-      <div className="plasmon-shell__tabs" role="tablist">{(["all", "apps", "documents", "media", "atoms"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={searchTab === tab} onClick={() => setSearchTab(tab)}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}</div>
-      <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety/result limit; refine the query for more matches.</p> : null}{filteredSearch.map((result) => {
-        const presentation = result.kind === "start-shortcut" ? shortcutPresentation(result.target) : null;
-        const icon = searchApplicationIcon(result) ?? presentation?.icon;
-        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}><ShellIcon icon={icon} label={result.title} shortcut={presentation !== null} context="search" /><span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
-      })}{!searchBusy && filteredSearch.length === 0 ? <p>No results in this category.</p> : null}</div>
-    </section> : null}
+    {flyout === "search" ? <SearchSurface
+      controller={searchController}
+      searchMark={<SearchMark />}
+      activationBusyId={busyId}
+      resolveShortcutPresentation={shortcutPresentation}
+      onActivate={openSearchResult}
+    /> : null}
 
     {flyout === "calendar" ? <section className="plasmon-shell__panel plasmon-shell__calendar-panel" data-shell-owned-surface data-shell-flyout aria-label="Clock and calendar"><div className="plasmon-shell__calendar-time"><strong>{clockText}</strong><span>{fullDateTime}</span></div><div className="plasmon-shell__calendar-header"><button type="button" aria-label="Previous month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, -1))}>‹</button><h2>{calendar.label}</h2><button type="button" aria-label="Next month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, 1))}>›</button></div><div className="plasmon-shell__calendar-grid">{calendar.weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}{calendar.days.map((day) => <span key={day.key} className={`${day.inMonth ? "" : "is-outside"}${day.isToday ? " is-today" : ""}`} aria-current={day.isToday ? "date" : undefined}>{day.day}</span>)}</div><button type="button" onClick={() => setCalendarAnchor(startOfCalendarMonth(clock))}>Today</button></section> : null}
 
