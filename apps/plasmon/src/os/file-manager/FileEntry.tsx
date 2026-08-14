@@ -9,7 +9,6 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { AssociationRegistry, FsNode, FsService } from "../contracts/index.ts";
-import { preserveEditableContextMenu } from "../context-menu-boundary.ts";
 import { ResourceIcon, type IconContext } from "../visual/index.ts";
 import { fileVisualKind } from "./file-icons.ts";
 import {
@@ -164,7 +163,6 @@ export const FileEntry = memo(function FileEntry({
               disabled={rename.busy}
               onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
-              onContextMenu={preserveEditableContextMenu}
               onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
                 suppressBlurCommitRef.current = false;
                 onRenameChange(event.target.value);
