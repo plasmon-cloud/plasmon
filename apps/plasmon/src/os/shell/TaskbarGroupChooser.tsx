@@ -3,6 +3,7 @@ import type { ProcessRecord, WindowState } from "../contracts/index.ts";
 import { ShellIcon } from "./icon.tsx";
 import { windowForProcess, type NativeTaskbarEntry } from "./model.ts";
 import "./taskbarGroups.scss";
+import "./taskbarContext.scss";
 
 export interface TaskbarGroupChooserProps {
   entry: NativeTaskbarEntry;
