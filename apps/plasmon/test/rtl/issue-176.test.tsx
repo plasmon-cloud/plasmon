@@ -31,7 +31,7 @@ test("#176 Shell-owned context is claimed while a foreign child remains unclaime
     const shellEvent = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
     await act(async () => { taskbar.dispatchEvent(shellEvent); });
     expect(shellEvent.defaultPrevented).toBe(true);
-    await waitFor(() => expect(app.getByRole("menu", { name: "Shell context menu" })).toBeDefined());
+    await waitFor(() => expect(app.getByRole("menu", { name: "Taskbar context menu" })).toBeDefined());
 
     await app.user.keyboard("{Escape}");
     const workspace = app.container.querySelector("[data-shell-workspace]");
