@@ -14,18 +14,21 @@ Each quarantined test also carries its canonical Issue tag so the debt is visibl
 | --- | --- | --- | --- |
 | Right-snap / snap-preview acceptance | `test/e2e/plasmon-golden-path-right-snap.spec.ts` — `packaged Plasmon restores a left-snapped native window and previews right snap` — tags `@r2-quarantine @issue-244` | PR #241 head `45f2d5f2d832d9e96b6011a538a46fd4d3d317a2`, Packaged Browser run #869 / Actions run `31843462863`, job `94905042903`; right snap-preview assertion timed out on the initial attempt and retry | [#244 — Restore quarantined r2 golden-path right-snap preview acceptance](https://github.com/plasmon-cloud/plasmon/issues/244) |
 | EmulatorJS packaged readiness acceptance | `test/e2e/plasmon-emulatorjs-proof.spec.ts` — `packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets` — tags `@r2-quarantine @issue-245` | PR #241 head `45f2d5f2d832d9e96b6011a538a46fd4d3d317a2`, Packaged Browser run #869 / Actions run `31843462863`, job `94905042903`; 180 s readiness timeout followed by a passing Playwright retry | [#245 — Restore quarantined r2 EmulatorJS packaged readiness acceptance](https://github.com/plasmon-cloud/plasmon/issues/245) |
+| Packaged demo-game journey | `test/e2e/plasmon-demo-game.spec.ts` — `explicit packaged demo fixture opens through the normal js-dos desktop path` — tags `@r2-quarantine @issue-250` | PR #249 head `688440b1315c12e7dd8d4dfa33af11169f565e99`, Packaged Browser run #884 / Actions run `31848477762`, job `94919567801`; initial attempt timed out waiting for the `Games` dialog and retry #1 passed in 4.3 s | [#250 — Restore quarantined r2 packaged demo-game acceptance](https://github.com/plasmon-cloud/plasmon/issues/250) |
+| Repeated sibling-window lifetime acceptance | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — tags `@r2-quarantine @issue-251` | PR #249 head `688440b1315c12e7dd8d4dfa33af11169f565e99`, Packaged Browser run #884 / Actions run `31848477762`, job `94919567801`; both attempts exhausted the 120 s test timeout while an Explorer `Favorites` sidebar repeatedly intercepted the Root shortcut dblclick | [#251 — Restore quarantined r2 golden-path sibling-window lifetime acceptance](https://github.com/plasmon-cloud/plasmon/issues/251) |
 
 ## Required Specialist inventory while quarantine is active
 
 `npm run test:e2e:plasmon:specialist` keeps the complete Specialist spec inventory present and excludes only `@r2-quarantine` tests:
 
-- `test/e2e/plasmon-golden-path.spec.ts` — required; all non-right-snap golden-path assertions remain active.
+- `test/e2e/plasmon-golden-path.spec.ts` — required; all golden-path assertions except the separately isolated #244 right-snap journey and #251 sibling-window lifetime loop remain active.
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — retained in the lane; its single #244 test is explicitly quarantined.
+- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained in the lane; its single #251 test is explicitly quarantined.
 - `test/e2e/plasmon-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-review-demo.spec.ts` — required.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required stable loader/local-asset/network-safety test remains active; only the #245 readiness/canvas/core-start test is quarantined.
-- `test/e2e/plasmon-demo-game.spec.ts` — required.
+- `test/e2e/plasmon-demo-game.spec.ts` — retained in the lane; its single #250 demo-game journey is explicitly quarantined.
 
 BrowserHealth, package/security validation, worker/asset validation, persistence, and fail-on-flaky behavior for every non-quarantined test remain unchanged.
 
-A quarantined test may return to required CI only through its linked existing Issue with deterministic restoration evidence. Removing a spec from the Specialist command is not an acceptable quarantine mechanism.
+A quarantined test may return to required CI only through its linked Issue with deterministic restoration evidence. Removing a spec from the Specialist command is not an acceptable quarantine mechanism.
