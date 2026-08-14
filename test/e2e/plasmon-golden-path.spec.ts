@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
@@ -172,21 +172,52 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await rootShortcut.dblclick();
 
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
-  const dialog = nativeWindows.last();
+  const dialogCandidate = nativeWindows.last();
+  const dialogId = await dialogCandidate.getAttribute("data-window-id");
+  if (!dialogId) throw new Error("Explorer native window has no stable window id");
+  const dialog = app.locator(`.plasmon-window-layer [data-window-id="${dialogId}"]`);
   await expect(dialog).toBeVisible();
   const titlebar = dialog.locator(".plasmon-window__titlebar");
 
+  const clickExposedWindowSurface = async (target: Locator): Promise<void> => {
+    const position = await target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const candidates: Array<{ x: number; y: number }> = [];
+      const titlebarY = Math.min(16, Math.max(1, rect.height / 2));
+      const titlebarEnd = Math.max(12, rect.width - 144);
+      for (let x = 12; x <= titlebarEnd; x += 12) candidates.push({ x, y: titlebarY });
+
+      const contentTop = Math.min(Math.max(40, titlebarY + 24), Math.max(1, rect.height - 12));
+      const rightInset = Math.max(12, rect.width - 12);
+      for (let y = contentTop; y <= rect.height - 12; y += 12) {
+        candidates.push({ x: 12, y }, { x: rightInset, y });
+      }
+      const bottomInset = Math.max(contentTop, rect.height - 12);
+      for (let x = 12; x <= rect.width - 12; x += 12) candidates.push({ x, y: bottomInset });
+
+      for (const candidate of candidates) {
+        const hit = document.elementFromPoint(rect.left + candidate.x, rect.top + candidate.y);
+        if (!(hit instanceof Element) || !element.contains(hit)) continue;
+        if (hit.closest(".plasmon-window__controls, button, input, textarea, select, a, [role='button'], [role='menuitem']")) continue;
+        return candidate;
+      }
+      return null;
+    });
+    if (!position) throw new Error("Native window has no exposed non-control pointer surface");
+    await target.click({ position });
+  };
+
   // Issue #199 packaged browser boundary: explicit focus remains WindowManager
-  // state while chrome renders a real active/inactive distinction.
+  // state while chrome renders a real active/inactive distinction. Exercise a
+  // genuinely exposed browser hit target rather than forcing through overlap.
   await expect(dialog).toHaveClass(/plasmon-window--active/);
   const activeBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
-  const recycleTitlebar = recycleBin.locator(".plasmon-window__titlebar");
-  await recycleTitlebar.click({ position: { x: 80, y: 16 } });
+  await clickExposedWindowSurface(recycleBin);
   await expect(recycleBin).toHaveClass(/plasmon-window--active/);
   await expect(dialog).not.toHaveClass(/plasmon-window--active/);
   const inactiveBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
   expect(inactiveBorderColor).not.toBe(activeBorderColor);
-  await titlebar.click({ position: { x: 80, y: 16 } });
+  await clickExposedWindowSurface(dialog);
   await expect(dialog).toHaveClass(/plasmon-window--active/);
   await expect(recycleBin).not.toHaveClass(/plasmon-window--active/);
 
