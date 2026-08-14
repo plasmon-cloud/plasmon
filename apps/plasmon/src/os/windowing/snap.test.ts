@@ -4,7 +4,11 @@ import {
   horizontalSnapGeometry,
   type WindowViewport,
 } from "./geometry.ts";
-import { horizontalSnapSideAtPointer } from "./interaction.ts";
+import {
+  anchoredRestoreGeometryForPointer,
+  boundedDragGeometry,
+  horizontalSnapSideAtPointer,
+} from "./interaction.ts";
 import { NativeWindowManager } from "./NativeWindowManager.ts";
 
 function ids() {
@@ -46,6 +50,49 @@ test("horizontal edge detection activates only inside the bounded left/right thr
   expect(horizontalSnapSideAtPointer(887, bounds)).toBeNull();
   expect(horizontalSnapSideAtPointer(888, bounds)).toBe("right");
   expect(horizontalSnapSideAtPointer(900, bounds)).toBe("right");
+});
+
+test("active drag geometry keeps a fitting window fully inside the usable viewport", () => {
+  const viewport = { x: 20, y: 10, width: 1000, height: 700 };
+  const start = { x: 160, y: 120, width: 600, height: 420 };
+
+  expect(boundedDragGeometry(start, -1000, -1000, viewport)).toEqual({
+    ...start,
+    x: 20,
+    y: 10,
+  });
+  expect(boundedDragGeometry(start, 1000, 1000, viewport)).toEqual({
+    ...start,
+    x: 420,
+    y: 290,
+  });
+});
+
+test("snapped drag restore preserves the titlebar pointer grab offset when viewport bounds permit it", () => {
+  const viewport = { x: 0, y: 0, width: 1200, height: 800 };
+  const snapped = { x: 0, y: 0, width: 600, height: 800 };
+  const restore = { x: 90, y: 80, width: 640, height: 460 };
+  const pointer = { x: 120, y: 16 };
+
+  const anchored = anchoredRestoreGeometryForPointer(snapped, restore, pointer, viewport);
+
+  expect(anchored).toEqual({ x: 0, y: 0, width: 640, height: 460 });
+  expect(pointer.x - anchored.x).toBe(pointer.x - snapped.x);
+  expect(pointer.y - anchored.y).toBe(pointer.y - snapped.y);
+});
+
+test("snapped drag restore clamps deterministically when exact pointer anchoring would leave the viewport", () => {
+  const viewport = { x: 0, y: 0, width: 1200, height: 800 };
+  const snapped = { x: 600, y: 0, width: 600, height: 800 };
+  const restore = { x: 90, y: 80, width: 640, height: 460 };
+  const pointer = { x: 720, y: 16 };
+
+  const anchored = anchoredRestoreGeometryForPointer(snapped, restore, pointer, viewport);
+
+  expect(anchored).toEqual({ x: 560, y: 0, width: 640, height: 460 });
+  expect(anchored.x + anchored.width).toBe(viewport.x + viewport.width);
+  expect(pointer.x).toBeGreaterThanOrEqual(anchored.x);
+  expect(pointer.x).toBeLessThanOrEqual(anchored.x + anchored.width);
 });
 
 test("snap stores the final floating drag geometry and restore returns to it", () => {

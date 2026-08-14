@@ -1,4 +1,4 @@
-export type FileOperationKind = "import" | "paste";
+export type FileOperationKind = "import" | "paste" | "move";
 export type FileOperationStatus = "idle" | "running" | "completed" | "failed";
 
 export interface FileOperationFailure {

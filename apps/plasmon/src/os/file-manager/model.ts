@@ -320,14 +320,32 @@ export async function validateDirectoryDrop(
   }
 }
 
+export interface MoveNodesToDirectoryObserver {
+  onItemStart?: (index: number, source: FsNode) => void;
+  onItemSuccess?: (index: number, source: FsNode, moved: FsNode) => void;
+  onItemFailure?: (index: number, source: FsNode, cause: unknown) => void;
+}
+
 export async function moveNodesToDirectory(
   fs: FsService,
   sourceNodes: readonly FsNode[],
   target: FsNode,
+  observer: MoveNodesToDirectoryObserver = {},
 ): Promise<readonly FsNode[]> {
   await validateDirectoryDrop(fs, sourceNodes, target);
   const moved: FsNode[] = [];
-  for (const source of sourceNodes) moved.push(await fs.move(source.id, target.id));
+  for (const [offset, source] of sourceNodes.entries()) {
+    const index = offset + 1;
+    observer.onItemStart?.(index, source);
+    try {
+      const result = await fs.move(source.id, target.id);
+      moved.push(result);
+      observer.onItemSuccess?.(index, source, result);
+    } catch (cause: unknown) {
+      observer.onItemFailure?.(index, source, cause);
+      throw cause;
+    }
+  }
   return moved;
 }
 
