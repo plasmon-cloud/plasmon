@@ -20,6 +20,7 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-review-demo.spec.ts',
     'test/e2e/plasmon-emulatorjs-proof.spec.ts',
     'test/e2e/plasmon-demo-game.spec.ts',
+    'test/e2e/plasmon-first-demo.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
