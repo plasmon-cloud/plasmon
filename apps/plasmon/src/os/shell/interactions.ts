@@ -1,3 +1,5 @@
+import { resolveFirstPartyContextMenuOwnership } from "../context-menu-boundary.ts";
+
 export interface ShellDismissHit {
   insideFlyout: boolean;
   insideToggle: boolean;
@@ -22,7 +24,11 @@ export interface ShellContextMenuHit {
 
 /** Specialized task menus outrank the generic Shell fallback. */
 export function resolveShellContextMenuPolicy(hit: ShellContextMenuHit): ShellContextMenuPolicy {
-  if (!hit.shellOwned) return "none";
+  if (resolveFirstPartyContextMenuOwnership({
+    owned: hit.shellOwned,
+    editable: false,
+    foreign: false,
+  }) === "pass") return "none";
   if (hit.nativeTask) return "native-task";
   if (hit.elementTask) return "element-task";
   return "generic";
