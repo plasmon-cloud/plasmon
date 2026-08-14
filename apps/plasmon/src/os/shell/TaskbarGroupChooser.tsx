@@ -61,6 +61,8 @@ export function TaskbarGroupChooser({
               key={member.id}
               type="button"
               data-task-group-member={member.id}
+              data-shell-context-native={entry.handlerId}
+              data-shell-context-process={member.id}
               disabled={!selectable}
               aria-label={`${member.title}; ${status}`}
               onClick={() => onSelect(member)}
