@@ -9,6 +9,8 @@ on:
       - "packages/neutron-design-system/**"
       - "packages/neutron-scripts/**"
       - "packages/neutron-tools/**"
+      - "test/ci/playwright-gate*"
+      - "playwright.config.ts"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/plasmon-ci.yml"
@@ -54,7 +56,7 @@ jobs:
           run_plasmon=false
           while IFS= read -r path; do
             case "$path" in
-              apps/plasmon/*|packages/neutron-design-system/*|packages/neutron-scripts/*|packages/neutron-tools/*|package.json|package-lock.json|.github/workflows/plasmon-ci.yml|.github/workflows/plasmon-browser-ci.yml)
+              apps/plasmon/*|packages/neutron-design-system/*|packages/neutron-scripts/*|packages/neutron-tools/*|test/ci/playwright-gate*|playwright.config.ts|package.json|package-lock.json|.github/workflows/plasmon-ci.yml|.github/workflows/plasmon-browser-ci.yml)
                 run_plasmon=true
                 break
                 ;;
@@ -90,6 +92,10 @@ jobs:
       - name: Install dependencies
         if: steps.plasmon_scope.outputs.run_plasmon == 'true'
         run: npm ci
+
+      - name: Verify Playwright release-gate semantics
+        if: steps.plasmon_scope.outputs.run_plasmon == 'true'
+        run: node test/ci/verify-playwright-gate.mjs
 
       - name: Plasmon fast tests
         if: steps.plasmon_scope.outputs.run_plasmon == 'true'
