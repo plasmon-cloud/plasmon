@@ -192,3 +192,5 @@ export function installPlasmonBrowserHealth(
     },
   };
 }
+
+// #217 baseline trigger: test-only no-op; packaged product inputs remain identical to release.
