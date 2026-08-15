@@ -234,9 +234,6 @@ test("taskbar context menus stay source-adjacent and expose canonical Close and 
   await expect(itemMenu).toBeVisible();
   await expect(itemMenu.getByRole("menuitem", { name: /Pin to taskbar|Unpin from taskbar/ })).toBeVisible();
   await expect(itemMenu.getByRole("menuitem", { name: "Close" })).toBeVisible();
-  await itemMenu.evaluate(async (element) => {
-    await Promise.all(element.getAnimations().map((animation) => animation.finished));
-  });
 
   const itemMenuBounds = await itemMenu.boundingBox();
   if (!itemMenuBounds) throw new Error("Taskbar item context menu has no browser bounds");
