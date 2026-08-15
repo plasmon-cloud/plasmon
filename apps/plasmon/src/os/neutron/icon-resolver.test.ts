@@ -130,18 +130,15 @@ describe("descriptor-first and compatibility resolution", () => {
     expect(probes).toEqual([prefixed("assets/files.svg")]);
   });
 
-  test("declared icon failure uses only its two origin forms and never conventional fallback", async () => {
+  test("preferred declared origin failure hands the final safe origin to presentation without pre-probing it", async () => {
     const probes: string[] = [];
     expect(await resolveElementIcon("files", "assets/files.svg", NEUTRON_HREF, {
       probe: async (candidate) => {
         probes.push(candidate);
         return false;
       },
-    })).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("assets/files.svg"),
-      unprefixed("assets/files.svg"),
-    ]);
+    })).toBe(unprefixed("assets/files.svg"));
+    expect(probes).toEqual([prefixed("assets/files.svg")]);
   });
 
   test("no descriptor icon tries only the canonical SVG compatibility path", async () => {
@@ -155,18 +152,15 @@ describe("descriptor-first and compatibility resolution", () => {
     expect(probes).toEqual([prefixed("static/icon.svg")]);
   });
 
-  test("compatibility origin failures stop without guessing another extension", async () => {
+  test("compatibility preferred-origin failure hands off the final SVG origin without another discovery request", async () => {
     const probes: string[] = [];
     expect(await resolveElementIcon("files", undefined, NEUTRON_HREF, {
       probe: async (candidate) => {
         probes.push(candidate);
         return false;
       },
-    })).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("static/icon.svg"),
-      unprefixed("static/icon.svg"),
-    ]);
+    })).toBe(unprefixed("static/icon.svg"));
+    expect(probes).toEqual([prefixed("static/icon.svg")]);
     expect(probes.some((candidate) => /\.(?:png|webp|jpe?g)(?:$|\?)/u.test(candidate))).toBe(false);
   });
 
@@ -182,11 +176,8 @@ describe("descriptor-first and compatibility resolution", () => {
           return false;
         },
       },
-    )).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("static/icon.svg"),
-      unprefixed("static/icon.svg"),
-    ]);
+    )).toBe(unprefixed("static/icon.svg"));
+    expect(probes).toEqual([prefixed("static/icon.svg")]);
     expect(probes.some((candidate) => candidate.includes("evil.example"))).toBe(false);
   });
 });
