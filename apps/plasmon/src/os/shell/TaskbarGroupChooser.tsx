@@ -1,7 +1,8 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import type { ProcessRecord, WindowState } from "../contracts/index.ts";
 import { ShellIcon } from "./icon.tsx";
-import { windowForProcess, type NativeTaskbarEntry } from "./taskbar.ts";
+import type { NativeTaskbarEntry } from "./taskbar.ts";
+import { deriveTaskbarMemberPresentation } from "./taskbarMember.ts";
 import "./taskbarGroups.scss";
 import "./taskbarContext.scss";
 
@@ -26,13 +27,6 @@ function focusMember(event: ReactKeyboardEvent<HTMLElement>): void {
   items[next]?.focus();
 }
 
-function memberStatus(member: ProcessRecord, window: WindowState | null, focusedWindowId: string | null): string {
-  if (member.state === "starting") return "Launching";
-  if (window?.minimized) return "Minimized";
-  if (window && window.id === focusedWindowId) return "Active";
-  return "Running";
-}
-
 export function TaskbarGroupChooser({
   entry,
   windows,
@@ -54,22 +48,21 @@ export function TaskbarGroupChooser({
       </header>
       <div className="plasmon-shell__task-group-members" onKeyDown={focusMember}>
         {entry.members.map((member) => {
-          const memberWindow = windowForProcess(member, windows);
-          const status = memberStatus(member, memberWindow, focusedWindowId);
-          const selectable = member.state === "running";
+          const presentation = deriveTaskbarMemberPresentation(member, windows, focusedWindowId);
           return (
             <button
               key={member.id}
               type="button"
               data-task-group-member={member.id}
+              data-task-group-member-state={presentation.state}
               data-shell-context-native={entry.handlerId}
               data-shell-context-process={member.id}
-              disabled={!selectable}
-              aria-label={`${member.title}; ${status}`}
+              disabled={!presentation.selectable}
+              aria-label={`${member.title}; ${presentation.statusLabel}`}
               onClick={() => onSelect(member)}
             >
               <ShellIcon icon={member.icon} label={member.title} context="start" />
-              <span><strong>{member.title}</strong><small>{status}</small></span>
+              <span><strong>{member.title}</strong><small>{presentation.statusLabel}</small></span>
             </button>
           );
         })}
