@@ -173,7 +173,7 @@ function useExternalElements(neutron: NeutronBridge) {
 }
 
 export function Shell({
-  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, openService, startMenu,
+  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, startMenu,
   children, now = () => new Date(),
 }: ShellProps) {
   const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
@@ -374,24 +374,15 @@ export function Shell({
     setActionError(null);
     setBusyId(result.id);
     try {
-      if (result.kind === "native-app") {
-        if (openService) await openService.open(result.app.handlerId, {});
-        else {
-          const id = await process.open(result.app.handlerId, {});
-          if (id === null) throw new Error(`${result.title} is not registered with the native process runtime`);
-        }
-      } else if (result.kind === "element") {
-        await neutron.openElement(result.element.id);
-      } else {
-        await activateSearchFilesystemResult(filesystemOpen, result);
-      }
+      if (!("node" in result)) throw new Error("Search result has no canonical filesystem identity");
+      await activateSearchFilesystemResult(filesystemOpen, result);
       setFlyout(null);
     } catch (cause: unknown) {
       setActionError(`Could not open ${result.title}: ${formatError(cause)}`);
     } finally {
       setBusyId(null);
     }
-  }, [filesystemOpen, neutron, openService, process]);
+  }, [filesystemOpen]);
 
   const shortcutPresentation = useCallback((target: StartShortcutTarget): { icon?: string; pinned?: boolean; pinId?: string; pinKind?: "native" | "element" } => {
     if (target.kind === "native") {
