@@ -5,13 +5,12 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-// Issue #277 temporarily quarantines the flaky shared #43 left-edge
-// preview/snap boundary from required r2 Specialist CI. Keep the contract in
-// the Specialist inventory so restoration evidence remains executable while
-// --grep-invert @r2-quarantine prevents this narrow flake from blocking r2.
+// Issue #279 restores the isolated #43 left-edge preview/snap acceptance to
+// required r2 Specialist CI. The journey stays isolated from the broader golden
+// path so earlier desktop interactions cannot contaminate the pointer session.
 test(
-  "packaged Plasmon previews and commits left snap @issue-277",
-  { tag: ["@r2-quarantine", "@issue-277"] },
+  "packaged Plasmon previews and commits left snap @issue-279",
+  { tag: ["@issue-279"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
