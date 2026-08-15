@@ -21,13 +21,19 @@ test("#66 active multi-selection drag preview is above windows and transparent t
     await expect(files).toBeVisible({ timeout: 30_000 });
 
     // Open a real native Explorer window so the drag crosses an actual window
-    // stack rather than a synthetic div.
+    // stack rather than a synthetic div. Window creation is authoritative;
+    // Explorer's accessible title propagates asynchronously, so bind the newly
+    // active Windowing record and prove its real surface is initialized.
     const root = frame.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(root).toBeVisible();
     await root.dblclick();
-    const explorer = frame.getByRole("dialog", { name: "Root" }).last();
-    await expect(explorer).toBeVisible({ timeout: 15_000 });
-    const windowBox = await explorer.boundingBox();
+    const explorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
+    await expect(explorer).toHaveCount(1);
+    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+    const explorerId = await explorer.getAttribute("data-window-id");
+    if (!explorerId) throw new Error("Explorer native window has no stable window id");
+    const explorerWindow = frame.locator(`.plasmon-window-layer [data-window-id="${explorerId}"]`);
+    const windowBox = await explorerWindow.boundingBox();
     if (!windowBox) throw new Error("Explorer window has no browser bounds");
 
     const entries = files.getByRole("option");
@@ -81,7 +87,7 @@ test("#66 active multi-selection drag preview is above windows and transparent t
 
     // A real drop on an Explorer directory must still reach that owner; the
     // preview is not allowed to become the drop target.
-    const destination = explorer.locator("[data-fm-node-id]").filter({ hasText: "Documents" }).first();
+    const destination = explorerWindow.locator("[data-fm-node-id]").filter({ hasText: "Documents" }).first();
     await expect(destination).toBeVisible();
     const destinationBox = await destination.boundingBox();
     if (!destinationBox) throw new Error("Explorer destination has no bounds");
