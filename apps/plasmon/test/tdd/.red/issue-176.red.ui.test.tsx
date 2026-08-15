@@ -33,7 +33,7 @@ test("Shell policy preserves specialized ownership and leaves foreign content un
     const generic = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
     await act(async () => { taskbar.dispatchEvent(generic); });
     expect(generic.defaultPrevented).toBe(true);
-    await waitFor(() => expect(app.getByRole("menu", { name: "Shell context menu" })).toBeDefined());
+    await waitFor(() => expect(app.getByRole("menu", { name: "Taskbar context menu" })).toBeDefined());
 
     await app.user.keyboard("{Escape}");
     const workspace = app.container.querySelector("[data-shell-workspace]");

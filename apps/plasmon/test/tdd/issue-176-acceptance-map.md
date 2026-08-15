@@ -31,7 +31,7 @@ bun test --preload ./apps/plasmon/test/setupHappyDom.ts \
 Current result: **1 RED, 1 passing characterization**.
 
 - RED: FileManager inline rename input receives a prevented `contextmenu`; expected editable boundary remains unclaimed.
-- Pass: Shell-owned taskbar context is claimed while an appended foreign iframe element remains unclaimed.
+- Pass: Shell-owned taskbar context is claimed while an appended foreign iframe element remains unclaimed. The current release names this specialized surface `Taskbar context menu`.
 
 Existing specialized policy tests remain authoritative for `none`, `generic`, `native-task`, and `element-task` precedence. Existing FileManager tests cover capability-aware specialized actions. Do not duplicate those command semantics in this packet.
 
