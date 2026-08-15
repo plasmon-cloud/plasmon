@@ -61,6 +61,8 @@ jobs:
           set -euxo pipefail
           echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "attempt=${{ matrix.attempt }}/10"
+          echo "run_id=${{ github.run_id }}"
+          echo "run_attempt=${{ github.run_attempt }}"
           echo "target=$PROBE_TARGET"
           git rev-parse HEAD
 
@@ -84,6 +86,8 @@ jobs:
           set -u
           mkdir -p flake-probe-result
           {
+            echo "run_id=${{ github.run_id }}"
+            echo "run_attempt=${{ github.run_attempt }}"
             echo "attempt=${{ matrix.attempt }}"
             echo "outcome=${{ steps.probe.outcome }}"
             echo "sha=${PROBE_SHA:-unknown}"
@@ -94,7 +98,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-result-${{ github.run_attempt }}-${{ matrix.attempt }}
+          name: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
@@ -104,6 +108,7 @@ jobs:
         run: |
           set -u
           mkdir -p flake-probe-diagnostics
+          cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt 2>/dev/null || true
           cp /tmp/plasmon-pocketic.log flake-probe-diagnostics/pocketic.log 2>/dev/null || true
           if [ -d playwright-report ]; then
             cp -R playwright-report flake-probe-diagnostics/playwright-report
@@ -116,7 +121,7 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-diagnostics-${{ github.run_attempt }}-${{ matrix.attempt }}
+          name: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
@@ -134,7 +139,7 @@ jobs:
       - name: Download attempt results
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-result-${{ github.run_attempt }}-*
+          pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*
           path: flake-probe-results
 
       - name: Summarize exact-head stability
@@ -145,16 +150,53 @@ jobs:
           passed=0
           sha=unknown
           target=unknown
+          declare -A seen_attempts=()
+          declare -A seen_shas=()
+          declare -A seen_targets=()
 
           for result_file in "${result_files[@]}"; do
+            attempt=$(sed -n 's/^attempt=//p' "$result_file" | head -n 1)
+            current_sha=$(sed -n 's/^sha=//p' "$result_file" | head -n 1)
+            current_target=$(sed -n 's/^target=//p' "$result_file" | head -n 1)
+
+            if [[ ! "$attempt" =~ ^([1-9]|10)$ ]]; then
+              echo "Invalid or missing probe attempt identity in $result_file: $attempt" >&2
+              exit 1
+            fi
+            if [ -z "$current_sha" ] || [ "$current_sha" = unknown ]; then
+              echo "Missing exact SHA in $result_file" >&2
+              exit 1
+            fi
+            if [ -z "$current_target" ] || [ "$current_target" = unknown ]; then
+              echo "Missing target in $result_file" >&2
+              exit 1
+            fi
+
+            seen_attempts["$attempt"]=1
+            seen_shas["$current_sha"]=1
+            seen_targets["$current_target"]=1
+
             if grep -q '^outcome=success$' "$result_file"; then
               passed=$((passed + 1))
             fi
             if [ "$sha" = unknown ]; then
-              sha=$(sed -n 's/^sha=//p' "$result_file" | head -n 1)
-              target=$(sed -n 's/^target=//p' "$result_file" | head -n 1)
+              sha=$current_sha
+              target=$current_target
             fi
           done
+
+          if [ "${#seen_attempts[@]}" -ne 10 ] || [ "$total" -ne 10 ]; then
+            echo "Expected ten unique fresh attempt results; saw $total files and ${#seen_attempts[@]} unique attempts" >&2
+            exit 1
+          fi
+          if [ "${#seen_shas[@]}" -ne 1 ]; then
+            echo "Probe result artifacts disagree on exact SHA" >&2
+            exit 1
+          fi
+          if [ "${#seen_targets[@]}" -ne 1 ]; then
+            echo "Probe result artifacts disagree on target" >&2
+            exit 1
+          fi
 
           {
             echo "## Plasmon flake probe"
@@ -164,13 +206,13 @@ jobs:
             echo "- Fresh attempts reported: $total/10"
             echo "- First-attempt passes: $passed/10"
             echo
-            if [ "$total" -eq 10 ] && [ "$passed" -eq 10 ]; then
+            if [ "$passed" -eq 10 ]; then
               echo "**STABILITY OBSERVED: 10/10 fresh attempts passed.**"
             else
               echo "**FLAKE/FAILURE OBSERVED: only $passed/10 fresh attempts passed ($total/10 reported).**"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$total" -ne 10 ] || [ "$passed" -ne 10 ]; then
+          if [ "$passed" -ne 10 ]; then
             exit 1
           fi
