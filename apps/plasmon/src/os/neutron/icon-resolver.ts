@@ -4,10 +4,7 @@ export const DEFAULT_ELEMENT_ICON_PROBE_TIMEOUT_MS = 1_500;
 
 const ICON_PATH_MAX_LENGTH = 512;
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:/u;
-const COMPATIBILITY_ICON_PATHS = [
-  "static/icon.svg",
-  "static/icon.png",
-] as const;
+const COMPATIBILITY_ICON_PATH = "static/icon.svg";
 
 export type ElementIconProbe = (candidate: string) => boolean | Promise<boolean>;
 
@@ -211,9 +208,9 @@ export function probeBrowserImage(
  *
  * Descriptor-declared safe paths always win and are the only path tried when
  * present. Current Kernel apps.describe does not expose tile/tray icon paths,
- * so a missing declaration receives one tightly bounded compatibility search:
- * static/icon.svg followed by static/icon.png. Each path tries the preferred
- * Neutron origin, then the alternate origin, and every success short-circuits.
+ * so a missing declaration receives one tightly bounded compatibility path:
+ * static/icon.svg. That path tries the preferred Neutron origin and then the
+ * alternate established origin; no other filename or extension is guessed.
  */
 export async function resolveElementIcon(
   appId: string,
@@ -222,20 +219,14 @@ export async function resolveElementIcon(
   options: ElementIconResolveOptions = {},
 ): Promise<string | undefined> {
   const safeDeclaredPath = safePackageIconPath(declaredPath);
-  const paths = safeDeclaredPath === undefined
-    ? COMPATIBILITY_ICON_PATHS
-    : [safeDeclaredPath];
+  const path = safeDeclaredPath ?? COMPATIBILITY_ICON_PATH;
   const timeout = normalizedTimeout(options.timeoutMs);
   const probe = options.probe
     ?? ((candidate: string) => probeBrowserImage(candidate, timeout));
 
-  for (const path of paths) {
-    const resolved = await firstLoadableIconCandidate(
-      elementIconCandidates(appId, path, href),
-      probe,
-      timeout,
-    );
-    if (resolved !== undefined) return resolved;
-  }
-  return undefined;
+  return await firstLoadableIconCandidate(
+    elementIconCandidates(appId, path, href),
+    probe,
+    timeout,
+  );
 }
