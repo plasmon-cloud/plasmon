@@ -1,0 +1,38 @@
+name: Issue 268 formatting cleanup
+
+on:
+  push:
+    branches:
+      - ci/issue-268-viewport-reachability-sync
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ci/issue-268-viewport-reachability-sync
+          fetch-depth: 0
+      - name: Normalize indentation and remove helper
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('test/e2e/plasmon-golden-path.spec.ts')
+          text = path.read_text()
+          old = '    await page.mouse.up();\n  await expect(dialog).not.toHaveAttribute("data-interacting", "drag");\n'
+          new = '  await page.mouse.up();\n  await expect(dialog).not.toHaveAttribute("data-interacting", "drag");\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one formatting target, found {text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          git rm .github/workflows/issue-268-indent-fix.yml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add test/e2e/plasmon-golden-path.spec.ts
+          git commit -m '#268 Normalize viewport-stable pointer patch formatting'
+          git push origin HEAD:ci/issue-268-viewport-reachability-sync
