@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -127,6 +128,7 @@ test("#89 packaged Monaco workers run from Program Files through the opaque-orig
   const entry = explorer.locator("[data-fm-node-id]", { hasText: "Monaco Worker Probe.ts" }).first();
   await expect(entry).toBeVisible();
   const beforeEditor = await nativeWindows.count();
+  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
   await entry.dblclick();
   await expect(nativeWindows).toHaveCount(beforeEditor + 1, { timeout: 20_000 });
 
@@ -191,6 +193,8 @@ test("#89 packaged Monaco workers run from Program Files through the opaque-orig
   ).toBe(true);
   expect(workerWarnings, `${browserName} must not fall back from real Monaco workers`).toEqual([]);
   expect(pageErrors, `${browserName} worker acceptance must not emit page errors`).toEqual([]);
+  health.assertClean();
+  health.dispose();
 });
 
 declare global {
