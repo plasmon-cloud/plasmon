@@ -9,7 +9,7 @@ A native application definition, a running process record, a window, a filesyste
 - `registry.ts` stores native application/process-host metadata and lazy loaders. The registry remains complete even when a definition declares `runtimeOnly: true`; that flag classifies product exposure for application inventories and does not make the definition non-runnable.
 - `controller.ts` owns process creation, singleton/multi-instance behavior, target/title updates, focus delegation, close lifecycle, and reconciliation when windows disappear.
 - `store.ts` owns process records/subscriptions.
-- `NativeProcessHost.tsx` is the React adapter that subscribes to process state and mounts the registered lazy component.
+- `NativeProcessHost.tsx` is the React adapter that subscribes to process state and mounts the registered lazy component. It also applies the shared first-party context-menu ownership boundary to native application content without acquiring application command semantics: specialized child menus win, editable controls and explicitly foreign/iframe content pass through, and otherwise-unhandled first-party content receives the bounded no-action fallback.
 
 The controller delegates geometry/chrome/focus mechanics to `WindowManager`; the window manager does not become process storage. Real Neutron Elements remain outside this process model. Process does not infer user-launchable application identity from registration; Shell/application-inventory consumers project that distinction from shared native definition metadata.
 
@@ -35,10 +35,10 @@ The rendered native-window close control routes through the process ordinary-clo
 
 ## Refactor direction
 
-Keep lifecycle state and decisions in the controller/store/registry so Shell and apps can be tested without rendering React. Keep the React host thin: loading/mounting an app should not become the place where process policy accumulates.
+Keep lifecycle state and decisions in the controller/store/registry so Shell and apps can be tested without rendering React. Keep the React host thin: loading/mounting an app and adapting shared browser-event ownership must not become the place where process or application command policy accumulates.
 
 If lifecycle semantics expand (activation, recovery, multi-window ownership), evolve the production controller/contracts deliberately rather than encoding them as taskbar or app-specific event handlers.
 
 ## Testing
 
-Use fast controller/registry/store tests for creation, singleton/multi-instance behavior, concurrent activation while lazy loading is pending, target/title updates, startup failure cleanup/retry, focus delegation through real Windowing semantics where needed, ordinary/deferred/forced close behavior, window-close routing, subscriptions, and loader retry/cache behavior. Browser tests are only needed when the claim depends on visible focus/window/taskbar behavior rather than controller state.
+Use fast controller/registry/store tests for creation, singleton/multi-instance behavior, concurrent activation while lazy loading is pending, target/title updates, startup failure cleanup/retry, focus delegation through real Windowing semantics where needed, ordinary/deferred/forced close behavior, window-close routing, subscriptions, and loader retry/cache behavior. Use RTL/browser coverage for the native-host browser-event boundary because editable/foreign context ownership and fallback presentation depend on rendered DOM propagation. Other browser tests are only needed when the claim depends on visible focus/window/taskbar behavior rather than controller state.
