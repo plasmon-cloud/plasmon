@@ -57,21 +57,6 @@ function staticSearchFs(children: readonly FsNode[]): FsService {
   } as FsService;
 }
 
-function element(
-  id: string,
-  running: ExternalElement["running"],
-  input: { name?: string; description?: string; icon?: string } = {},
-): ExternalElement {
-  return {
-    id,
-    name: input.name ?? id,
-    description: input.description ?? "",
-    ...(input.icon ? { icon: input.icon } : {}),
-    tiles: [{ id: "main", title: input.name ?? id }],
-    running,
-  };
-}
-
 test("canonical Neutron projection metadata classifies as Apps without trusting the .neutron suffix", () => {
   const projection = projectionNode("projection-mail", {
     elementId: "mail",
@@ -130,28 +115,7 @@ test("projection presentation falls back to canonical Element identity instead o
   expect(result.node.name).toBe("Internal-Package.neutron");
 });
 
-test("direct Element Search state uses user-facing vocabulary and preserves unknown uncertainty", async () => {
-  const running = element("review", "yes", { name: "Review", description: "Collaborative reviews" });
-  const stopped = element("mail", "no", { name: "Mail" });
-  const unknown = element("calendar", "unknown", { name: "Calendar", description: "Calendar" });
-
-  const batch = await searchShell(staticSearchFs([]), [], [running, stopped, unknown], "");
-  const resultFor = (id: string) => batch.results.find(
-    (result) => result.kind === "element" && result.element.id === id,
-  );
-
-  expect(resultFor("review")?.subtitle).toBe("Collaborative reviews · Running");
-  expect(resultFor("mail")?.subtitle).toBe("Neutron application · Not running");
-  expect(resultFor("calendar")?.subtitle).toBe("Calendar · Runtime status unavailable");
-  expect(resultFor("calendar")?.subtitle.toLocaleLowerCase()).not.toContain("not running");
-  expect(resultFor("calendar")?.subtitle.toLocaleLowerCase()).not.toContain("stopped");
-
-  for (const result of batch.results) {
-    expect(result.subtitle).not.toMatch(/running\s+(yes|no|unknown)/iu);
-  }
-});
-
-test("Search de-duplicates a projection against direct Element discovery while retaining canonical opening identity and presentation", async () => {
+test("Search enriches a canonical projection from direct Element metadata without creating a direct fallback", async () => {
   const projection = projectionNode("projection-mail", {
     elementId: "mail",
     name: "Projected Mail",
@@ -192,21 +156,16 @@ test("Search de-duplicates a projection against direct Element discovery while r
   expect(mail.node.name).toBe(projection.name);
   expect(mail.elementId).toBe(direct.id);
   expect(mail.title).toBe(direct.name);
-  expect(mail.subtitle).toBe("Canonical Neutron Mail · Running");
+  expect(mail.subtitle).toBe("Canonical Neutron Mail");
+  expect(mail.subtitle).not.toMatch(/running|stopped|runtime status/iu);
   expect(mail.icon).toBe(direct.icon);
   expect(searchApplicationIcon(mail)).toBe(direct.icon);
 
   const directBatch = await searchShell(staticSearchFs([]), [], [direct], "");
-  const directResult = directBatch.results.find(
-    (result) => result.kind === "element" && result.element.id === direct.id,
-  );
-  expect(directResult?.title).toBe(mail.title);
-  expect(directResult?.subtitle).toBe(mail.subtitle);
-  expect(directResult && searchApplicationIcon(directResult)).toBe(mail.icon);
+  expect(directBatch.results.filter((result) => result.category === "apps")).toHaveLength(0);
 
   const calendar = batch.results.find(
     (result) => result.kind === "element" && result.element.id === directOnly.id,
   );
-  expect(calendar?.kind).toBe("element");
-  expect(calendar?.subtitle).toBe("Canonical Neutron Calendar · Runtime status unavailable");
+  expect(calendar).toBeUndefined();
 });
