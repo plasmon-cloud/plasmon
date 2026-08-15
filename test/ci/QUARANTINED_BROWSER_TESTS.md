@@ -38,10 +38,10 @@ The #244 restoration PR must still obtain clean exact-head required CI before in
 - `test/e2e/plasmon-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-review-demo.spec.ts` — required.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — stable loader/local-asset/network-safety coverage remains required; only the #245 readiness/canvas/core-start test remains quarantined on this branch until #245 integrates.
-- `test/e2e/plasmon-demo-game.spec.ts` — required under the serialized harness; #250 preserves prior fail-then-pass evidence but is not an active CI quarantine.
+- `test/e2e/plasmon-demo-game.spec.ts` — required under the serialized harness; #250 was deterministically repaired and integrated by PR #263 after the serialized harness reproduced its activation race, and it carries no active quarantine.
 
 BrowserHealth, package/security validation, worker/asset validation, persistence, and fail-on-flaky behavior for every required test remain unchanged.
 
-#250 and #251 are evidence-debt Issues only under this policy. They do not authorize `@r2-quarantine` and must not remove their tests from required CI.
+#250 is resolved and integrated by PR #263; its historical fail-then-pass evidence remains useful, but the production acceptance is required and no quarantine is authorized. #251 remains historical evidence debt under the serialized policy and likewise does not authorize `@r2-quarantine`.
 
 #244 remains the canonical restoration Issue until its required exact-head evidence is clean and the restoration is integrated. #245 remains the only active quarantine represented by this branch's inventory policy. Additional quarantines require new explicit owner authorization.
