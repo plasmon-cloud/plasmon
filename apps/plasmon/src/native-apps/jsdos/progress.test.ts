@@ -9,31 +9,32 @@ import {
 
 async function fixture() {
   const fs = new PersistentFsService(new MemoryFsRepository());
-  const documents = await fs.resolvePath("/Documents");
-  const downloads = await fs.resolvePath("/Downloads");
-  if (!documents || !downloads) throw new Error("test filesystem defaults are unavailable");
-  const game = await fs.createFile(documents.id, "Game.jsdos", { mime: "application/x-jsdos" });
+  const root = await fs.resolvePath("/");
+  if (!root || root.kind !== "directory") throw new Error("test filesystem root is unavailable");
+  const source = await fs.mkdir(root.id, "Game Source");
+  const destination = await fs.mkdir(root.id, "Game Destination");
+  const game = await fs.createFile(source.id, "Game.jsdos", { mime: "application/x-jsdos" });
   await fs.write(game.id, Uint8Array.from([0x50, 0x4b, 0x03, 0x04]), { truncate: true });
-  return { fs, game, documents, downloads };
+  return { fs, game, source, destination };
 }
 
 test("js-dos progress remains associated with stable game NodeId across rename and move", async () => {
-  const { fs, game, downloads } = await fixture();
+  const { fs, game, destination } = await fixture();
   const progress = new JsDosProgressStore(fs, game.id);
   const saved = Uint8Array.from([0x50, 0x4b, 1, 2, 3, 4]);
 
   await progress.save(saved);
   await fs.rename(game.id, "Renamed.jsdos");
-  await fs.move(game.id, downloads.id);
+  await fs.move(game.id, destination.id);
 
   expect(Array.from(await progress.load() ?? [])).toEqual(Array.from(saved));
   expect(await fs.resolvePath(jsDosProgressPath(game.id))).not.toBeNull();
 });
 
 test("copied game gets a distinct progress identity", async () => {
-  const { fs, game, downloads } = await fixture();
+  const { fs, game, destination } = await fixture();
   await new JsDosProgressStore(fs, game.id).save(Uint8Array.from([0x50, 0x4b, 7]));
-  const copy = await fs.copy(game.id, downloads.id, "Copy.jsdos");
+  const copy = await fs.copy(game.id, destination.id, "Copy.jsdos");
 
   expect(copy.id).not.toBe(game.id);
   expect(await new JsDosProgressStore(fs, copy.id).load()).toBeNull();
