@@ -26,7 +26,7 @@ Therefore Plasmon must not expose a working Neutron Uninstall command until vani
 
 Malformed or unavailable metadata for one external application should not poison unrelated applications. Metadata/icon caching is an efficiency layer and must not change authority: invalidate when the available Kernel discovery identity changes, and keep runtime refresh separate from expensive metadata discovery when possible.
 
-Untrusted package metadata must be safety-bounded before it becomes a URL/resource request.
+Untrusted package metadata must be safety-bounded before it becomes a URL/resource request. A safe descriptor-declared package icon path is authoritative when available. Current Kernel `apps.describe` compatibility can omit tile/tray icon metadata, so the bridge permits exactly one legacy package path, `static/icon.svg`, when no declaration is available. That path may use only Neutron's two established app-origin forms and is probed sequentially. The bridge must not fan out across guessed filenames/extensions or fetch arbitrary external artwork; unresolved icons fall back through ordinary Plasmon presentation.
 
 ## Refactor direction
 
