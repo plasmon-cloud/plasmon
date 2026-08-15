@@ -11,10 +11,12 @@ import {
 } from './plasmon-test-inventory.mjs';
 
 const args = new Set(process.argv.slice(2));
-const activeQuarantineIssues = Object.freeze({
-  'test/e2e/plasmon-golden-path-left-snap.spec.ts': '@issue-277',
-  'test/e2e/plasmon-golden-path-right-snap.spec.ts': '@issue-244',
-  'test/e2e/plasmon-emulatorjs-proof.spec.ts': '@issue-245',
+const activeQuarantines = Object.freeze({
+  'test/e2e/plasmon-golden-path-left-snap.spec.ts': { count: 1, issues: ['@issue-277'] },
+  'test/e2e/plasmon-golden-path-right-snap.spec.ts': { count: 1, issues: ['@issue-244'] },
+  'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 2, issues: ['@issue-251', '@issue-308'] },
+  'test/e2e/plasmon-review-demo.spec.ts': { count: 1, issues: ['@issue-303'] },
+  'test/e2e/plasmon-emulatorjs-proof.spec.ts': { count: 1, issues: ['@issue-245'] },
 });
 
 function sameSet(actual, expected) {
@@ -99,19 +101,28 @@ async function verify(inventory) {
   for (const path of browserLanes.specialist) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
     const quarantineTags = source.match(/tag:\s*\[[^\]]*"@r2-quarantine"[^\]]*\]/g) ?? [];
-    const issue = activeQuarantineIssues[path];
-    if (issue) {
-      assert(quarantineTags.length === 1, `${path} must contain exactly one active @r2-quarantine test`);
-      assert(quarantineTags[0].includes(issue), `${path} active quarantine must remain linked to ${issue}`);
+    const expected = activeQuarantines[path];
+    if (expected) {
+      assert(quarantineTags.length === expected.count, `${path} must contain exactly ${expected.count} active @r2-quarantine test(s)`);
+      for (const issue of expected.issues) {
+        assert(quarantineTags.some((tag) => tag.includes(issue)), `${path} active quarantine must remain linked to ${issue}`);
+      }
     } else {
       assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
     }
   }
 
+  const browserHealth = await readFile(resolve(repoRoot, 'test/e2e/plasmon-browser-health.ts'), 'utf8');
+  assert(browserHealth.includes('#305'), 'BrowserHealth exact warning quarantine must remain linked to #305');
+  assert(browserHealth.includes('An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.'), 'BrowserHealth #305 rule must remain exact-message bounded');
+  assert(!browserHealth.includes('messageIncludes: "sandbox"'), 'BrowserHealth must not broadly ignore sandbox warnings');
+
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
   assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
   assert(quarantineDoc.includes('#277') && quarantineDoc.includes('#279'), 'Quarantine documentation must retain #277 quarantine and #279 restoration ownership');
-  assert(quarantineDoc.includes('#250') && quarantineDoc.includes('#251'), 'Quarantine documentation must state that #250/#251 evidence remains tracked while their tests stay required');
+  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308']) {
+    assert(quarantineDoc.includes(issue), `Quarantine documentation must preserve ${issue} disposition`);
+  }
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
   assertAlwaysRunPrWorkflow(fastWorkflow, 'Fast Bun tests');
