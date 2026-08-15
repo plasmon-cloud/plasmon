@@ -1,4 +1,5 @@
 import type { FsNode, FsService } from "../contracts/index.ts";
+import { readResourcePreviewMetadata } from "../fs/resourcePreview.ts";
 
 export const MAX_IMAGE_THUMBNAIL_BYTES = 8 * 1024 * 1024;
 
@@ -36,15 +37,7 @@ export interface LoadedImageThumbnail {
   revoke(): void;
 }
 
-export async function loadImageThumbnail(
-  fs: FsService,
-  node: FsNode,
-  urlApi: ThumbnailObjectUrlApi = URL,
-): Promise<LoadedImageThumbnail | null> {
-  const mime = imageThumbnailMime(node);
-  if (!mime || !canLoadImageThumbnail(node)) return null;
-  const bytes = await fs.read(node.id, { offset: 0, length: node.size });
-  if (bytes.byteLength === 0) return null;
+function loadedThumbnail(bytes: Uint8Array, mime: string, urlApi: ThumbnailObjectUrlApi): LoadedImageThumbnail {
   const blob = new Blob([bytes], { type: mime });
   const url = urlApi.createObjectURL(blob);
   let revoked = false;
@@ -56,4 +49,38 @@ export async function loadImageThumbnail(
       urlApi.revokeObjectURL(url);
     },
   };
+}
+
+export async function loadResourcePreviewThumbnail(
+  fs: FsService,
+  node: FsNode,
+  urlApi: ThumbnailObjectUrlApi = URL,
+): Promise<LoadedImageThumbnail | null> {
+  const preview = readResourcePreviewMetadata(node);
+  if (!preview) return null;
+
+  try {
+    const image = await fs.stat(preview.nodeId);
+    if (image.kind !== "file"
+      || image.mime !== preview.mime
+      || image.size !== preview.byteSize
+      || image.size <= 0) return null;
+    const bytes = await fs.read(image.id, { offset: 0, length: image.size });
+    if (bytes.byteLength !== preview.byteSize) return null;
+    return loadedThumbnail(bytes, preview.mime, urlApi);
+  } catch {
+    return null;
+  }
+}
+
+export async function loadImageThumbnail(
+  fs: FsService,
+  node: FsNode,
+  urlApi: ThumbnailObjectUrlApi = URL,
+): Promise<LoadedImageThumbnail | null> {
+  const mime = imageThumbnailMime(node);
+  if (!mime || !canLoadImageThumbnail(node)) return null;
+  const bytes = await fs.read(node.id, { offset: 0, length: node.size });
+  if (bytes.byteLength === 0) return null;
+  return loadedThumbnail(bytes, mime, urlApi);
 }
