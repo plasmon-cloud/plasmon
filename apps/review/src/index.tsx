@@ -16,6 +16,7 @@ import type {
   ReviewRevision,
   WorkState,
 } from "./model.ts";
+import { draftAfterReviewAction, settleReviewAction } from "./action_outcome.ts";
 import {
   DESIRED_OPTIONS,
   EFFORT_OPTIONS,
@@ -83,18 +84,18 @@ export function App() {
     if (atom) setLastSavedAt(atom.meta.updatedAt);
   }, [atom?.meta.atomId]);
 
-  const perform = useCallback(async (work: () => Promise<void>, options: { persisted?: boolean } = {}) => {
+  const perform = useCallback(async (work: () => Promise<void>, options: { persisted?: boolean } = {}): Promise<boolean> => {
     setBusy(true);
     setError(null);
     setNotice(null);
-    try {
-      await work();
+    const outcome = await settleReviewAction(work);
+    if (outcome.ok) {
       if (options.persisted) setLastSavedAt(Date.now());
-    } catch (cause) {
-      setError(message(cause));
-    } finally {
-      setBusy(false);
+    } else {
+      setError(outcome.error);
     }
+    setBusy(false);
+    return outcome.ok;
   }, []);
 
   const createReview = () => perform(async () => {
@@ -130,8 +131,10 @@ export function App() {
 
   const addItem = () => {
     const title = newItem.trim();
-    if (!title) return;
-    void apply({ type: "review.create_item", title }).then(() => setNewItem(""));
+    if (!title || busy) return;
+    void apply({ type: "review.create_item", title }).then((succeeded) => {
+      setNewItem((current) => draftAfterReviewAction(current, title, succeeded));
+    });
   };
 
   const onDirtyChange = useCallback((itemId: string, dirty: boolean) => {
@@ -229,7 +232,7 @@ export function App() {
               <p>Describe the outcome or condition you want to review.</p>
             </div>
             <div className="inline-control">
-              <input id="new-review-item" aria-label="New review item" value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addItem(); }} placeholder="What should be true?" />
+              <input id="new-review-item" aria-label="New review item" value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !busy) addItem(); }} placeholder="What should be true?" />
               <button className="primary-button" type="button" disabled={busy || !newItem.trim()} onClick={addItem}>Add item</button>
             </div>
           </div>
@@ -298,7 +301,7 @@ export function App() {
                   <span>This makes that content current while keeping the same Review Atom and preserving all history.</span>
                   <div className="restore-actions">
                     <button className="secondary-button" type="button" disabled={busy} onClick={() => setRestoreRevision(null)}>Cancel</button>
-                    <button className="danger-button" type="button" disabled={busy} onClick={() => void apply({ type: "history.restore", revisionId: revision.revisionId }).then(() => setRestoreRevision(null))}>Restore revision</button>
+                    <button className="danger-button" type="button" disabled={busy} onClick={() => void apply({ type: "history.restore", revisionId: revision.revisionId }).then((succeeded) => { if (succeeded) setRestoreRevision(null); })}>Restore revision</button>
                   </div>
                 </div>}
               </article>;
@@ -331,7 +334,7 @@ function ReviewItemCard({ item, atom, busy, apply, onDirtyChange }: {
   item: ReviewItem;
   atom: ReviewAtomState;
   busy: boolean;
-  apply: (operation: ReviewOperation) => Promise<void>;
+  apply: (operation: ReviewOperation) => Promise<boolean>;
   onDirtyChange: (itemId: string, dirty: boolean) => void;
 }) {
   const localResult = item.results["human:local"]?.result ?? "not_tested";
@@ -430,7 +433,7 @@ function ReviewItemCard({ item, atom, busy, apply, onDirtyChange }: {
         </article>)}
         <div className="comment-entry">
           <label className="sr-only" htmlFor={`comment-${item.itemId}`}>Evidence note on {item.title}</label>
-          <input id={`comment-${item.itemId}`} aria-label={`Comment on ${item.title}`} value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && comment.trim()) addComment(); }} placeholder="Add evidence or a review note…" />
+          <input id={`comment-${item.itemId}`} aria-label={`Comment on ${item.title}`} value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !busy && comment.trim()) addComment(); }} placeholder="Add evidence or a review note…" />
           <button className="secondary-button" type="button" disabled={busy || !comment.trim()} onClick={addComment}>Add note</button>
         </div>
       </div>
@@ -439,9 +442,10 @@ function ReviewItemCard({ item, atom, busy, apply, onDirtyChange }: {
 
   function addComment() {
     const body = comment.trim();
-    if (!body) return;
-    setComment("");
-    void apply({ type: "comment.add", itemId: item.itemId, body });
+    if (!body || busy) return;
+    void apply({ type: "comment.add", itemId: item.itemId, body }).then((succeeded) => {
+      setComment((current) => draftAfterReviewAction(current, body, succeeded));
+    });
   }
 }
 
@@ -453,7 +457,7 @@ function persistenceTitle({ atom, busy, error, dirtyCount }: { atom: ReviewAtomS
 }
 
 function persistenceDescription({ atom, busy, error, dirtyCount, lastSavedAt }: { atom: ReviewAtomState | null; busy: boolean; error: string | null; dirtyCount: number; lastSavedAt: number | null }): string {
-  if (error) return "The last action did not complete; Review is not implying it was saved.";
+  if (error) return "The last action did not complete; Review kept your pending input so you can retry.";
   if (dirtyCount) return "Choose Save details in the edited item. Other completed actions are already durable.";
   if (busy) return "Review is completing the current action.";
   if (!atom) return "Completed actions are stored automatically by Review’s provider.";
