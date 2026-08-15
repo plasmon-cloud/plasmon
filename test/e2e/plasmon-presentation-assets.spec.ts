@@ -12,23 +12,33 @@ function pathname(value: string): string {
   return new URL(value).pathname;
 }
 
+function isReviewIconUrl(value: string): boolean {
+  return pathname(value).startsWith(`/app/${REVIEW_APP_ID}/static/icon.`);
+}
+
 test("#190 installed Plasmon requests shared assets and #171 bounds installed Element icon probing", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const iconRequests: string[] = [];
   const iconResponses = new Map<string, number>();
   const reviewIconRequests: string[] = [];
+  const reviewIconResponses: Array<{ url: string; status: number }> = [];
+  const reviewIconFailures: string[] = [];
 
   page.on("request", (request) => {
     const path = pathname(request.url());
     if (path.includes("/static/plasmon/icons/")) iconRequests.push(path);
-    if (path.startsWith(`/app/${REVIEW_APP_ID}/static/icon.`)) {
-      reviewIconRequests.push(request.url());
-    }
+    if (isReviewIconUrl(request.url())) reviewIconRequests.push(request.url());
   });
   page.on("response", (response) => {
     const path = pathname(response.url());
     if (path.includes("/static/plasmon/icons/")) iconResponses.set(path, response.status());
+    if (isReviewIconUrl(response.url())) {
+      reviewIconResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+  page.on("requestfailed", (request) => {
+    if (isReviewIconUrl(request.url())) reviewIconFailures.push(request.url());
   });
 
   await page.goto(kernelUrl);
@@ -63,19 +73,46 @@ test("#190 installed Plasmon requests shared assets and #171 bounds installed El
   }
 
   // Review is an independently installed Neutron package in the canonical demo
-  // deployment. Plasmon may use the one documented legacy package-local SVG
-  // compatibility path while Kernel apps.describe omits icon metadata, but it
-  // must not fan out across guessed extensions or repeat an identical request.
+  // deployment. Kernel apps.describe currently omits icon metadata, so one
+  // documented package-local fallback may try the two established Neutron app
+  // origins sequentially. A successful candidate is then consumed by the shared
+  // ResourceIcon <img>; that consumer request is not another resolver probe.
+  // Bound distinct candidate URLs and per-URL multiplicity so normal rendering
+  // cannot be mistaken for extension/path fan-out while request storms still fail.
   await expect.poll(
     () => reviewIconRequests.length,
     { timeout: 15_000, message: "installed Review icon should be resolved during Element discovery" },
   ).toBeGreaterThanOrEqual(1);
-  expect(reviewIconRequests.length).toBeLessThanOrEqual(2);
-  expect(new Set(reviewIconRequests).size).toBe(reviewIconRequests.length);
+
+  const distinctReviewUrls = [...new Set(reviewIconRequests)];
   expect(
-    reviewIconRequests.every((url) => pathname(url) === REVIEW_ICON_PATH),
+    distinctReviewUrls.length,
+    `Review icon candidates: ${distinctReviewUrls.join(", ")}`,
+  ).toBeLessThanOrEqual(2);
+  expect(
+    reviewIconRequests.length,
     `Review icon requests: ${reviewIconRequests.join(", ")}`,
+  ).toBeLessThanOrEqual(3);
+  expect(
+    distinctReviewUrls.every((url) => pathname(url) === REVIEW_ICON_PATH),
+    `Review icon candidates: ${distinctReviewUrls.join(", ")}`,
   ).toBe(true);
+
+  for (const url of distinctReviewUrls) {
+    expect(
+      reviewIconRequests.filter((candidate) => candidate === url).length,
+      `Review icon request multiplicity for ${url}: ${reviewIconRequests.join(", ")}`,
+    ).toBeLessThanOrEqual(2);
+  }
+
+  expect(
+    reviewIconResponses.some(({ status }) => status === 200),
+    `Review icon responses: ${JSON.stringify(reviewIconResponses)}`,
+  ).toBe(true);
+  expect(
+    reviewIconFailures.length,
+    `Review icon failed requests: ${reviewIconFailures.join(", ")}`,
+  ).toBeLessThanOrEqual(1);
 });
 
 declare global {
