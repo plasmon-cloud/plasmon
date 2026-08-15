@@ -5,7 +5,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const BROWSER_WORKER_ROOT = `/app/${APP_ID}/runtime/monaco/`;
+const BROWSER_TRANSPORT_PATH = `/app/${APP_ID}/runtime/monaco/worker-sources.js`;
 
 type WorkerProbeRecord = {
   url: string;
@@ -42,7 +42,7 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
   const workerWarnings: string[] = [];
-  const browserWorkerRequests = new Set<string>();
+  let browserTransportLoaded = false;
 
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
@@ -101,13 +101,13 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
   });
   page.on("requestfinished", (finished) => {
     const pathname = decodeURIComponent(new URL(finished.url()).pathname);
-    if (pathname.startsWith(BROWSER_WORKER_ROOT)) browserWorkerRequests.add(pathname);
+    if (pathname === BROWSER_TRANSPORT_PATH) browserTransportLoaded = true;
   });
 
-  for (const file of ["editor.worker.js", "ts.worker.js"]) {
-    const response = await request.get(new URL(`${BROWSER_WORKER_ROOT}${file}`, kernelUrl).href);
-    expect(response.ok(), `${file} browser transport must be served from the installed package`).toBe(true);
-  }
+  const transport = await request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href);
+  expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
+  const obsoleteMirror = await request.get(new URL(`/app/${APP_ID}/runtime/monaco/editor.worker.js`, kernelUrl).href);
+  expect(obsoleteMirror.ok(), "the obsolete per-worker HTTP mirror must not remain packaged").toBe(false);
   const retired = await request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
 
@@ -199,14 +199,7 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
     expect(worker.errors, `${worker.name} must not emit Worker errors`).toBe(0);
   }
 
-  expect(
-    [...browserWorkerRequests].some((path) => path.endsWith("/editor.worker.js")),
-    `${browserName} must load the editor worker bytes from the installed browser transport`,
-  ).toBe(true);
-  expect(
-    [...browserWorkerRequests].some((path) => path.endsWith("/ts.worker.js")),
-    `${browserName} must load the TypeScript worker bytes from the installed browser transport`,
-  ).toBe(true);
+  expect(browserTransportLoaded, `${browserName} must preload the installed opaque-origin worker transport`).toBe(true);
   expect(workerWarnings, `${browserName} must not fall back from real Monaco workers`).toEqual([]);
   expect(pageErrors, `${browserName} worker acceptance must not emit page errors`).toEqual([]);
   health.assertClean();
