@@ -11,10 +11,13 @@ const MONACO_WORKERS = [
 ] as const;
 
 const GENERATED_TRANSPORT = "./public/runtime/monaco/worker-sources.js";
+const CANONICAL_OUTPUT_ROOT = "System/Program Files/MonacoEditor";
 
-async function bundleWorker(entryPoint: string, devMode: boolean): Promise<string> {
+async function bundleWorker(filename: string, entryPoint: string, devMode: boolean): Promise<string> {
+  const outputName = filename.replace(/\.js$/, "");
   const result = await esbuild.build({
-    entryPoints: [entryPoint],
+    entryPoints: [{ in: entryPoint, out: `${CANONICAL_OUTPUT_ROOT}/${outputName}` }],
+    outdir: "./dist/web",
     bundle: true,
     write: false,
     minify: !devMode,
@@ -26,15 +29,21 @@ async function bundleWorker(entryPoint: string, devMode: boolean): Promise<strin
     platform: "browser",
     logLevel: "silent",
   });
-  if (!result.outputFiles || result.outputFiles.length !== 1) {
-    throw new Error(`Monaco worker transport expected one bundled output for ${entryPoint}`);
+
+  const canonicalSuffix = `/${CANONICAL_OUTPUT_ROOT}/${filename}`;
+  const workerOutput = result.outputFiles?.find((file) =>
+    file.path.replaceAll("\\", "/").endsWith(canonicalSuffix)
+  );
+  if (!workerOutput) {
+    const outputs = result.outputFiles?.map((file) => file.path).join(", ") ?? "none";
+    throw new Error(`Monaco worker transport did not emit ${filename}; outputs: ${outputs}`);
   }
-  return result.outputFiles[0]!.text;
+  return workerOutput.text;
 }
 
 const sources: Record<string, string> = {};
 for (const [filename, entryPoint] of MONACO_WORKERS) {
-  sources[filename] = await bundleWorker(entryPoint, process.argv.includes("dev"));
+  sources[filename] = await bundleWorker(filename, entryPoint, process.argv.includes("dev"));
 }
 
 const script = [
