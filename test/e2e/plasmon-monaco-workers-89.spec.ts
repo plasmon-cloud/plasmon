@@ -37,7 +37,7 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
   page,
   request,
   browserName,
-}) => {
+}, testInfo) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -135,13 +135,23 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
 
   const explorer = nativeWindows.last();
   await expect(explorer.getByLabel("File Explorer", { exact: true })).toBeVisible();
-  await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
-  const rename = explorer.getByRole("textbox", { name: /^Rename New Text Document/ }).first();
-  await expect(rename).toBeVisible();
-  await rename.fill("Monaco Worker Probe.ts");
-  await rename.press("Enter");
 
-  const entry = explorer.locator("[data-fm-node-id]", { hasText: "Monaco Worker Probe.ts" }).first();
+  // FileManager's New Text Document command intentionally persists text/plain,
+  // and canonical resource classification gives persisted MIME precedence over
+  // a later filename change. Import a real TypeScript resource instead so this
+  // acceptance actually exercises Monaco's TypeScript worker without weakening
+  // the filesystem MIME authority or any worker assertion below.
+  const probeName = `Monaco Worker Probe ${testInfo.retry}.ts`;
+  const chooserPromise = page.waitForEvent("filechooser");
+  await explorer.getByRole("button", { name: "Import Files…", exact: true }).click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: probeName,
+    mimeType: "text/typescript",
+    buffer: Buffer.from("", "utf8"),
+  });
+
+  const entry = explorer.locator("[data-fm-node-id]", { hasText: probeName }).first();
   await expect(entry).toBeVisible();
   const beforeEditor = await nativeWindows.count();
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
