@@ -1,4 +1,5 @@
 export const MONACO_PROGRAM_FILES_RUNTIME_ROOT = "./System/Program Files/MonacoEditor";
+export const MONACO_BROWSER_TRANSPORT_ROOT = "./runtime/monaco";
 
 export function monacoWorkerFile(label: string): string {
   if (label === "json") return "json.worker.js";
@@ -12,15 +13,19 @@ export function monacoWorkerPath(label: string): string {
   return `${MONACO_PROGRAM_FILES_RUNTIME_ROOT}/${monacoWorkerFile(label)}`;
 }
 
+export function monacoWorkerBrowserPath(label: string): string {
+  return `${MONACO_BROWSER_TRANSPORT_ROOT}/${monacoWorkerFile(label)}`;
+}
+
 /**
- * Sandboxed Neutron application frames have an opaque origin. A browser cannot
- * use their HTTP package URL as the top-level Worker script even though that
- * package is the runtime authority. Keep the worker itself a module Worker and
- * use a same-origin blob module only as a transport bootstrap; the executable
- * worker code remains the canonical Program Files asset.
+ * Sandboxed Neutron application frames have an opaque origin. Kernel app-host
+ * serving requires a URL-safe package-local transport for assets beneath paths
+ * with spaces, so the opaque frame cannot import the logical Program Files URL
+ * directly. The transport bytes are copied from the canonical Program Files
+ * workers during build and are not a second Monaco runtime authority.
  */
 export function monacoWorkerBootstrapSource(label: string, baseHref: string): string {
-  const workerUrl = new URL(monacoWorkerPath(label), baseHref).href;
+  const workerUrl = new URL(monacoWorkerBrowserPath(label), baseHref).href;
   return `import ${JSON.stringify(workerUrl)};\n`;
 }
 

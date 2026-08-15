@@ -5,7 +5,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const CANONICAL_WORKER_ROOT = `/app/${APP_ID}/System/Program Files/MonacoEditor/`;
+const BROWSER_WORKER_ROOT = `/app/${APP_ID}/runtime/monaco/`;
 
 type WorkerProbeRecord = {
   url: string;
@@ -33,7 +33,7 @@ test.afterEach(async ({ browserName }, testInfo) => {
   );
 });
 
-test("#89 packaged Monaco workers run from Program Files through the opaque-origin adapter", async ({
+test("#89 packaged Monaco workers use Program Files authority through the opaque-origin transport", async ({
   page,
   request,
   browserName,
@@ -42,7 +42,7 @@ test("#89 packaged Monaco workers run from Program Files through the opaque-orig
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
   const workerWarnings: string[] = [];
-  const canonicalWorkerRequests = new Set<string>();
+  const browserWorkerRequests = new Set<string>();
 
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
@@ -101,12 +101,12 @@ test("#89 packaged Monaco workers run from Program Files through the opaque-orig
   });
   page.on("requestfinished", (finished) => {
     const pathname = decodeURIComponent(new URL(finished.url()).pathname);
-    if (pathname.startsWith(CANONICAL_WORKER_ROOT)) canonicalWorkerRequests.add(pathname);
+    if (pathname.startsWith(BROWSER_WORKER_ROOT)) browserWorkerRequests.add(pathname);
   });
 
   for (const file of ["editor.worker.js", "ts.worker.js"]) {
-    const response = await request.get(new URL(`${CANONICAL_WORKER_ROOT}${file}`, kernelUrl).href);
-    expect(response.ok(), `${file} must be served from the canonical installed package path`).toBe(true);
+    const response = await request.get(new URL(`${BROWSER_WORKER_ROOT}${file}`, kernelUrl).href);
+    expect(response.ok(), `${file} browser transport must be served from the installed package`).toBe(true);
   }
   const retired = await request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
@@ -200,12 +200,12 @@ test("#89 packaged Monaco workers run from Program Files through the opaque-orig
   }
 
   expect(
-    [...canonicalWorkerRequests].some((path) => path.endsWith("/editor.worker.js")),
-    `${browserName} must load the editor worker code from Program Files`,
+    [...browserWorkerRequests].some((path) => path.endsWith("/editor.worker.js")),
+    `${browserName} must load the editor worker bytes from the installed browser transport`,
   ).toBe(true);
   expect(
-    [...canonicalWorkerRequests].some((path) => path.endsWith("/ts.worker.js")),
-    `${browserName} must load the TypeScript worker code from Program Files`,
+    [...browserWorkerRequests].some((path) => path.endsWith("/ts.worker.js")),
+    `${browserName} must load the TypeScript worker bytes from the installed browser transport`,
   ).toBe(true);
   expect(workerWarnings, `${browserName} must not fall back from real Monaco workers`).toEqual([]);
   expect(pageErrors, `${browserName} worker acceptance must not emit page errors`).toEqual([]);
