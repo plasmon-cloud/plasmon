@@ -8,14 +8,14 @@ import {
   PACKAGED_DEMO_GAME_ARTWORK_SRC,
   reconcilePackagedDemoGameArtwork,
 } from "./artwork.ts";
-import { PACKAGED_DEMO_GAME_NAME } from "./demoFixture.ts";
+import { DEMO_GAME_RESOURCE_NAME } from "./demoFixtureBundle.ts";
 
 test("#123 legal demo fixture receives canonical package artwork idempotently", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   const root = await fs.resolvePath("/");
   if (!root) throw new Error("Filesystem root is unavailable");
   const games = await fs.resolvePath("/Games") ?? await fs.mkdir(root.id, "Games");
-  const game = await fs.createFile(games.id, PACKAGED_DEMO_GAME_NAME, { mime: "application/x-jsdos" });
+  const game = await fs.createFile(games.id, DEMO_GAME_RESOURCE_NAME, { mime: "application/x-jsdos" });
 
   expect(await reconcilePackagedDemoGameArtwork(fs)).toBe(true);
   expect(await reconcilePackagedDemoGameArtwork(fs)).toBe(false);
