@@ -24,31 +24,29 @@ jobs:
           from pathlib import Path
           path = Path('test/e2e/plasmon-golden-path.spec.ts')
           text = path.read_text()
-          old = '''  const normalTitlebarBox = await titlebar.boundingBox();
-          if (!normalTitlebarBox) throw new Error("Restored native titlebar has no browser bounds");
-          const normalDragStartX = normalTitlebarBox.x + normalDragPoint.x;
-          const normalDragY = normalTitlebarBox.y + normalDragPoint.y;
-          await page.mouse.move(normalDragStartX, normalDragY);
-          await page.mouse.down();
-          await expect(dialog).toHaveAttribute("data-interacting", "drag");
-          await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
-          '''
-          new = '''  // The hit-test above runs inside the Plasmon iframe, while Locator.boundingBox()
-          // reports main-frame coordinates. After a viewport restore the WindowLayer ResizeObserver
-          // can still reconcile native geometry between those two observations. Let Playwright
-          // re-resolve the same rendered titlebar point through its stable/receives-events
-          // actionability boundary, then keep the real top-level pointerdown/drag path below.
-          await titlebar.hover({ position: normalDragPoint });
-          await page.mouse.down();
-          await expect(dialog).toHaveAttribute("data-interacting", "drag");
-          const draggingTitlebarBox = await titlebar.boundingBox();
-          if (!draggingTitlebarBox) throw new Error("Dragging native titlebar has no browser bounds");
-          const normalDragY = draggingTitlebarBox.y + normalDragPoint.y;
-          await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
-          '''
-          if text.count(old) != 1:
-              raise SystemExit(f'expected one target block, found {text.count(old)}')
-          path.write_text(text.replace(old, new))
+          start_marker = '  const normalTitlebarBox = await titlebar.boundingBox();\n'
+          end_marker = '  await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });\n'
+          start = text.find(start_marker)
+          if start < 0:
+              raise SystemExit('start marker not found')
+          end_start = text.find(end_marker, start)
+          if end_start < 0:
+              raise SystemExit('end marker not found')
+          end = end_start + len(end_marker)
+          replacement = '''  // The hit-test above runs inside the Plasmon iframe, while Locator.boundingBox()
+            // reports main-frame coordinates. After a viewport restore the WindowLayer ResizeObserver
+            // can still reconcile native geometry between those two observations. Let Playwright
+            // re-resolve the same rendered titlebar point through its stable/receives-events
+            // actionability boundary, then keep the real top-level pointerdown/drag path below.
+            await titlebar.hover({ position: normalDragPoint });
+            await page.mouse.down();
+            await expect(dialog).toHaveAttribute("data-interacting", "drag");
+            const draggingTitlebarBox = await titlebar.boundingBox();
+            if (!draggingTitlebarBox) throw new Error("Dragging native titlebar has no browser bounds");
+            const normalDragY = draggingTitlebarBox.y + normalDragPoint.y;
+            await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
+            '''
+          path.write_text(text[:start] + replacement + text[end:])
           PY
           git rm .github/workflows/issue-268-viewport-sync-patch.yml
           git config user.name github-actions
