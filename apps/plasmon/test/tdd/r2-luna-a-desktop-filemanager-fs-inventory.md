@@ -3,11 +3,11 @@
 Refresh date: 2026-08-14
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
-Ownership refresh: #92/PR #223, #169/PR #221, and #193/PR #219 are active
-implementation ownership and were not modified. #195/PR #213 and #196/PR #215
-are integrated. Luna-B owns concrete Shell/taskbar/Windowing issues; Luna-C
+Ownership refresh: #193/PR #219 remains active implementation ownership and
+was not modified. #92/PR #223, #169/PR #221, #194/PR #230, #195/PR #213,
+and #196/PR #215 are integrated. Luna-B owns concrete Shell/taskbar/Windowing issues; Luna-C
 owns Native Apps/media/editor issues; Luna-D owns cross-surface and master
 closure ledgers. Active implementation and cross-lane packets are not modified
 here.
@@ -35,7 +35,7 @@ Sources searched:
 | #78 | Cross-surface shortcut lifecycle | no PR; #31/#44/#51 integrated | `issue-78-closure-audit.md`, `issue-78.lifecycle.test.ts`, integrated shortcut/open tests | COMPLETE / NO IMPLEMENTATION REQUIRED | all creation/activation prerequisites integrated | no RED; 1 composed lifecycle test passed | no | 12 integrated/core tests plus lifecycle composition |
 | #82 | managed-root bootstrap | no PR; integrated production tests | `issue-82-closure-audit.md` + managed-root/default-seed/core tests | ALREADY GREEN | none; current head covers full managed-root composition | no honest RED | no | `test/managedRootBootstrap.test.ts`, `src/os/fs/desktopCore.test.ts`, `defaultSeeds.test.ts` |
 | #86 | FileManager diagnostic text selection | today's unattended ownership | prior browser packet; do not improve | ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH | #66/browser text boundary | no competing RED | existing packet only | implementor/D promotion |
-| #92 | FileManager drag-move operation state | no PR; #65/#208 integrated | `issue-92.red.md`, `issue-92.red.ui.test.tsx`, operation-model/preserve docs | RTL RED | current #65 state covers import/paste only; drag calls `moveNodesToDirectory` directly | yes; exact integrated-head RTL failure | no | implementor adopts drag lifecycle using existing operation authority, then adds success/partial/duplicate coverage |
+| #92 | FileManager drag-move operation state | PR #223 merged at `34e5dae` | `issue-92.red.md`, promoted `test/rtl/issue-92.test.tsx`, operation tests | GREEN IN R2 / RED CONSUMED | merged move lifecycle uses #65 FileOperationState | no current RED; 3 promoted RTL tests pass | no | retain ordinary RTL/Bun promotion coverage |
 | #93 | FileManager image thumbnail presentation | no PR observed | `issue-93-browser-geometry-spec.md`; improved existing browser spec | BROWSER SPEC ONLY | #52/#190 presentation seam | deterministic core already green | yes, not executed locally | `src/os/file-manager/polish.test.tsx`, Visual tests; packaged geometry promotion |
 | #94 | FileManager/Visual video thumbnail boundary | no PR observed | three authority/eligibility/lifecycle docs | BROWSER SPEC ONLY / REFACTOR RED GAP | no current FileManager video-thumbnail seam | no honest RED without inventing API | yes, adoption-ready; no fixture/execution | future thumbnail adapter + Bun eligibility/lifecycle tests |
 | #95 | Desktop selected filename geometry | today's unattended ownership | prior dedicated browser packet; do not improve | ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH | #191 FileEntry seam | no competing RED | existing packet only | implementor/D promotion |
@@ -51,8 +51,8 @@ Sources searched:
 | #190 | shared Visual/presentation asset identity | integrated | post-#189 consumer audit + integrated Visual tests | INTEGRATED DEPENDENCY | #193/#198/#201 | no reopen | installed browser evidence remains owned | Visual/presentation tests and package health |
 | #191 | Desktop FileEntry pilot | integrated in release via #204 | `issue-191.characterization.test.ts`, RTL/browser guards, final packet | INTEGRATED DEPENDENCY; consumed by #195 | #195/#196/#95 | no competing RED | existing bounded geometry only | FileEntry state/presentation guards and packaged #191 spec |
 | #192 | Desktop deterministic placement | integrated in release | post-192 audit + composed #172 | INTEGRATED; #172 closure green | #195/#196/#201 | no reopen | no new browser claim | release #192 tests + integrated #172 composed regression |
-| #195 | FileManager decomposition | PR #213 merged; present at `5a6c9bb` | final packet + refresh characterization + preservation matrices | ALREADY GREEN / INTEGRATED / CONSUMED BY #196 | #51/#65/#173/#189/#190/#191/#192 integrated | no structural RED; #92 remains separate RTL RED | existing browser boundaries only | `issue-195-final-packet.md`, `issue-195.red.test.ts`, indexed permanent guards |
-| #196 | Icons/List/Details strategies | PR #215 merged at `5a6c9bb` | `issue-196-final-packet.md`, `issue-196.recon.md`, integrated `view-strategy.ts`/RTL guards | ALREADY GREEN / INTEGRATED | #173/#189/#190/#191/#192/#195 integrated | 17 focused tests + 1 RTL strategy test pass | packaged session unavailable; geometry remains browser-owned | preserve integrated strategy guards and bounded geometry evidence |
+| #195 | FileManager decomposition | PR #213 merged; present at `56752dc` | final packet + refresh characterization + preservation matrices | GREEN IN R2 / CONSUMED BY #196/#92 | #51/#65/#173/#189/#190/#191/#192 integrated | no structural RED; former #92 RED consumed | existing browser boundaries only | `issue-195-final-packet.md`, `issue-195.characterization.test.ts`, indexed permanent guards |
+| #196 | Icons/List/Details strategies | PR #215 merged; current head `56752dc` | `issue-196-final-packet.md`, `issue-196.recon.md`, integrated `view-strategy.ts`/RTL guards | GREEN IN R2 / INTEGRATED | #173/#189/#190/#191/#192/#195 integrated | current focused strategy and RTL guards pass | packaged session unavailable; geometry remains browser-owned | preserve integrated strategy guards and bounded view geometry evidence |
 | #201 | residual cleanup | no PR observed | `issue-201-final-cleanup-contract.md`, expanded cleanup audit | BLOCKED — accepted migrations | #195/#193/#194/#197/#199/#200 and #169 | no cleanup RED | inherited package/browser gates | deletion/import rules only after proof |
 
 ## B. Related older or cross-lane Issues accounted for
@@ -78,9 +78,9 @@ Sources searched:
 | #124 | game save screenshot thumbnails | blocked on #64 and Luna-C/runtime boundary; no competing #94 packet |
 | #177 | bounded repeated native-window placement | Luna-B/Windowing ownership; distinct from Desktop #192 placement |
 | #185 | Show Desktop command | Luna-B Shell/Windowing ownership; no competing packet |
-| #169 | Start reconciliation | no PR; `issue-169-final-packet.md` + headless RED | HEADLESS RED / #194 blocker; malformed Accessories sibling rejects reconciliation |
-| #193 | Search reconstruction | no PR; `issue-193-final-packet.md` | FINAL IMPLEMENTOR PACKET READY; #175 geometry remains prerequisite |
-| #194 | Start reconstruction | no PR; `issue-194-final-packet.md` | BLOCKED — #169 RED and #175 geometry |
+| #169 | Start reconciliation | PR #221 merged at `02a248e` | `issue-169-final-packet.md` + promoted reconciliation tests | GREEN IN R2 / RED CONSUMED |
+| #193 | Search reconstruction | PR #219 active implementation ownership — do not touch | `issue-193-final-packet.md` | ACTIVE IMPLEMENTATION OWNERSHIP; #175 geometry remains prerequisite |
+| #194 | Start reconstruction | PR #230 merged at `d8dd1ea` | `issue-194-final-packet.md` + promoted Start guards | GREEN IN R2; #175 geometry remains separate |
 | #197 | Shell decomposition | Luna-B ownership; `issue-197-luna-a-shell-input-packet.md` | BLOCKED — Luna-B implementation / #193/#194/#176 surface boundaries |
 | #176 | browser context ownership | today's/B ownership; drag map records boundary only |
 | #181 | first-demo fixtures | Luna-D/testing ownership; not duplicate FileManager fixtures |

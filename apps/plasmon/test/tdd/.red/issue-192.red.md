@@ -1,4 +1,9 @@
-# Issue #192 RED packet — Desktop placement controller
+# Issue #192 promotion packet — Desktop placement controller
+
+Disposition: **GREEN IN R2 — RED CONSUMED**. PR #205 merged at
+`51cd761c207573a59197d53c9e2884335f2e7cc7`; current release is
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`. The former RED tests are retained
+as permanent placement regression coverage.
 
 This staging packet protects deterministic Desktop placement without changing
 filesystem or Trash authority. It deliberately does not prescribe a React

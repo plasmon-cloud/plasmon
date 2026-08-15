@@ -24,17 +24,18 @@ This `planning/release-0.1.0-r2-tdd` branch is staging only. It is not the `rele
 
 ## Lane A — Desktop / FileManager / Filesystem interaction
 
-- [ ] #44 — Create Shortcut through the canonical shortcut primitive
-- [ ] #51 — Send to Desktop shortcut command
-- [ ] #65 — Import/paste operation progress state
-- [ ] #66 — Drag preview above window stack
-- [ ] #86 — Mouse-selectable FileManager diagnostic text
-- [x] #92 — Multi-item drag-move progress state — TDD:RTL RED
-- [ ] #93 — Preserve image thumbnail aspect ratio
-- [ ] #94 — Bounded video thumbnails
-- [ ] #110 — Filesystem-backed Show Hidden Files preference
-- [ ] #115 — Shared thin resource-command layer
-- [x] #195 — FileManager adapter decomposition — LUNA-A FINAL PACKET READY
+- [x] #44 — Create Shortcut through the canonical shortcut primitive — ALREADY GREEN
+- [x] #51 — Send to Desktop shortcut command — GREEN IN R2 / PR #210
+- [x] #65 — Import/paste operation progress state — GREEN IN R2 / PR #208+#232
+- [x] #66 — Drag preview above window stack — BROWSER RED NOT YET CONSUMED
+- [x] #86 — Mouse-selectable FileManager diagnostic text — BROWSER RED NOT YET CONSUMED
+- [x] #92 — Multi-item drag-move progress state — GREEN IN R2 / PR #223
+- [x] #93 — Preserve image thumbnail aspect ratio — DETERMINISTIC GREEN / BROWSER PENDING
+- [x] #94 — Bounded video thumbnails — DEFERRED / NO VALID RED
+- [x] #110 — Filesystem-backed Show Hidden Files preference — GREEN IN R2 / BROWSER PENDING
+- [x] #115 — Shared thin resource-command layer — CHARACTERIZATION ONLY
+- [x] #192 — Desktop deterministic placement controller — GREEN IN R2 / PR #205
+- [x] #195 — FileManager adapter decomposition — GREEN IN R2 / PR #213
 
 ## Lane B — Shell / Windowing / global desktop interaction
 

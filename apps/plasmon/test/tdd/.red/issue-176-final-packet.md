@@ -5,10 +5,14 @@ Plasmon-owned UI**
 
 Target release: `release/0.1.0-r2`
 
-Integrated source inspected: `origin/release/0.1.0-r2` at
-`120be60eda48ada462ba9bebeaab524aaf9afde7`.
+Integrated source inspected for current promotion audit:
+`origin/release/0.1.0-r2` at
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
-Ownership check: no open PR owns #176. Sol 1 owns eventual implementation.
+Original RED reproduction was against `120be60eda48ada462ba9bebeaab524aaf9afde7`.
+PR #235 (`agent/issue-176-context-menu-boundary`) is now open and owns
+implementation; Sol 1 has adopted this packet and must not be duplicated or
+modified here.
 This packet contains no production implementation. The existing Luna-B
 acceptance map/browser-adoption notes were consumed; the canonical RED test is
 now staged here without adding a second policy or command authority.
@@ -102,8 +106,9 @@ bun test --preload ./apps/plasmon/test/setupHappyDom.ts \
   ./apps/plasmon/test/tdd/.red/issue-176.red.ui.test.tsx
 ```
 
-Current result against `120be60`: **1 intentional RED, 1 passing
-characterization, 5 expects**.
+Original characterization result against `120be60`: **1 intentional RED,
+1 passing characterization, 5 expects**. Current r2 promotion is pending PR
+#235; its permanent regression paths are tracked in the open PR.
 
 Failure:
 
@@ -141,4 +146,5 @@ HARNESS GAP and not a product RED.
 
 - Packet: `apps/plasmon/test/tdd/.red/issue-176-final-packet.md`
 - RED gate: `apps/plasmon/test/tdd/.red/issue-176.red.ui.test.tsx`
-- Commit: recorded after staging this packet and gate.
+- Luna-A staging commit: `7a69d9b7ba810ffc00aa2ccc8907f1e60db454ef`.
+- Promotion owner: PR #235; do not modify the active implementation branch.

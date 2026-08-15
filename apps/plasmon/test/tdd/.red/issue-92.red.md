@@ -1,15 +1,16 @@
 # Issue #92 — multi-item drag-move progress
 
-Disposition: **TDD:RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
-PR #223 (`agent/feature-92-drag-move-progress`) owns implementation. The RED
-remains against integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`
-(now including merged #195 and #196).
+Disposition: **GREEN IN R2 — RED CONSUMED**.
+PR #223 (`agent/feature-92-drag-move-progress`) merged at
+`34e5daea6b59e66a7980a892df90a61729ffd7c5`. The original RED was reproduced
+against the pre-#223 release; current release is
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 ## Authority inspection
 
 - Drag orchestration: merged #195
   `apps/plasmon/src/os/file-manager/use-file-manager-pointer-adapter.ts`
-  `handleEntryPointerUp`.
+  `handleEntryPointerUp`, now consuming the merged move operation state.
 - Drop validation and mutation: `model.ts::validateDirectoryDrop` and
   `moveNodesToDirectory`, delegating each mutation to `FsService.move`.
 - Existing operation authority: `operation-state.ts::FileOperationState`,
@@ -30,19 +31,17 @@ accepted operation-state authority rather than creating a competing model.
 Unspecified are API names, byte counts, ETA, cancellation, persistence, generic
 job management, and exact visual copy beyond truthful accessible status.
 
-## Executed RED gate
+## Original RED and promoted regression
 
-```text
-bun test --preload /tmp/plasmon-r2-92-final/apps/plasmon/test/setupHappyDom.ts \
-  /tmp/plasmon-r2-92-final/apps/plasmon/test/tdd/.red/issue-92.red.ui.test.tsx
-```
+Original RED: the delayed real `FsService.move` path returned no accessible
+`role="status"` while a multi-item move was running. PR #223 consumed that gate
+and promoted it to ordinary production coverage:
 
-Result: **intentional failure**: after a delayed real `FsService.move` starts,
-`queryByRole("status")` is `null`. This fails for the intended missing drag
-operation lifecycle, not setup absence or a swallowed error. The gate ran
-against the exact integrated release in a clean detached worktree because the
-long-lived Luna branch predates #65.
+- `apps/plasmon/test/rtl/issue-92.test.tsx` — running/completion,
+  partial-failure, and duplicate-operation guards;
+- `apps/plasmon/src/os/file-manager/move-operation.test.ts` — ordered partial
+  mutation truth;
+- `operation-state.test.ts` and `operation-presentation.test.ts` — permanent
+  move vocabulary/presentation guards.
 
-The existing lower-layer drop validation and NodeId move semantics remain green;
-this packet does not weaken or replace those tests. No browser/package test is
-needed for the deterministic accessible-status boundary.
+Current release focused execution: **3 #92 RTL tests passed**.

@@ -1,19 +1,19 @@
 # Issue #194 — final Start surface reconstruction packet
 
-Disposition: **BLOCKED — #169 RED / PR #221 active implementation ownership**.
-The characterization and implementation boundary are ready; no production
-implementation is made here. Do not modify PR #221 or derive a future Start
-contract from its unmerged branch.
+Disposition: **GREEN IN R2 — IMPLEMENTATION INTEGRATED**.
+PR #230 / Issue #194 is merged at
+`d8dd1ea5966e8a3580873ff0dc95782ceac139b7`; #169 / PR #221 is also merged.
+The remaining Start geometry acceptance is the separate #175 browser boundary.
 
 Integrated release: `origin/release/0.1.0-r2` at
-`5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 ## Prerequisite
 
-#169 currently has a real headless RED for malformed `Accessories` sibling
-reconciliation. #194 must consume the accepted #169 result/controller and must
-not trigger reconciliation from React render/effect lifecycle. #189/#190 are
-integrated dependencies.
+#169's malformed `Accessories` sibling RED is consumed by the merged
+reconciliation controller. #194 consumes that result and must not trigger
+reconciliation from React render/effect lifecycle. #189/#190 are integrated
+dependencies.
 
 ## PRESERVE
 

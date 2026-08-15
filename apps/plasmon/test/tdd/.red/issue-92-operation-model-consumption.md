@@ -1,8 +1,8 @@
 # Issue #92 — accepted operation-model consumption plan
 
-Status: **RTL RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH** against
-integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`. PR #208/#65 and
-#195/#196 are merged; PR #223 owns #92 implementation.
+Status: **GREEN IN R2 — RED CONSUMED**. PR #208/#65 and #195/#196 are
+merged; PR #223/#92 merged at `34e5daea6b59e66a7980a892df90a61729ffd7c5`.
+Current integrated release: `56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 ## Integrated #65 inspection
 
@@ -16,8 +16,8 @@ integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`. PR #208/#65 and
 - The drag-drop path still calls `moveNodesToDirectory(fs, source, target)`
   directly after pointer release, with no operation-state begin/current/final
   lifecycle.
-- PR #223 (`agent/feature-92-drag-move-progress`) is open; Luna-A does not
-  inspect or modify its implementation branch.
+- PR #223 is merged; its ordinary `test/rtl/issue-92.test.tsx` adoption is
+  now the permanent semantic regression destination.
 
 ## Consumption mapping
 

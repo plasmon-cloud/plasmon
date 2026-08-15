@@ -1,10 +1,12 @@
 # Issue #169 — final Start reconciliation packet
 
-Disposition: **HEADLESS RED / ACTIVE IMPLEMENTATION OWNERSHIP — DO NOT TOUCH**.
+Disposition: **GREEN IN R2 — RED CONSUMED**.
 
-Integrated release: `origin/release/0.1.0-r2` at
-`5a6c9bb3d46d536c60a41382d5e3754539753dcd`. PR #221 (`agent/fix-169-start-reconciliation`)
-is open and owns implementation; this packet remains the accepted RED fence.
+PR #221 (`agent/fix-169-start-reconciliation`) merged at
+`02a248e43342a7fc82a17ba19cab0ac471f9cbbb`. Current integrated release:
+`origin/release/0.1.0-r2` at
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`. This packet remains the accepted
+RED and permanent reconciliation-fence record.
 
 ## PRESERVE
 
@@ -48,16 +50,10 @@ filename-only ownership guess, or test-local reconciliation.
 `Accessories` file through the headless production graph, then calls the real
 `reconcileStartMenu` with a native seed requiring Accessories.
 
-Executed against current release `5a6c9bb` in a detached release worktree:
-
-```text
-bun test ./apps/plasmon/test/tdd/.red/issue-169.red.test.ts
-```
-
-Result: **intentional failure** because reconciliation rejects when the sibling
-exists but is not a directory. The RED remains unchanged under active PR #221;
-this is a production RED for the canonical ambiguous-entry criterion, not a
-source-shape assertion.
+Original RED was the malformed `Accessories` sibling rejection. PR #221
+consumed it and promoted the permanent reconciliation tests. Current release
+contains the corrected Start migration path; this historical RED must not be
+re-run as a current product failure.
 
 ## Browser boundary / HARNESS GAP
 

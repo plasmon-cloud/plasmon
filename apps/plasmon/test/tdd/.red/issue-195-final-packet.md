@@ -4,7 +4,7 @@ Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
 This packet is retained as the merged #195 preservation and authority fence.
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 PR #213 is merged; no active PR owns #195. Integrated dependencies and the
 follow-up #196 strategy migration are present. This packet contains no
@@ -75,9 +75,9 @@ turning FileEntry into a command or placement authority.
   import/paste. Its kinds are exactly `import | paste`; statuses are exactly
   `idle | running | completed | failed`; counters/current item/failure records
   and duplicate `begin` protection remain unchanged.
-- #92 is a separate RTL RED: drag-originated directory moves currently bypass
-  operation state. #195 must preserve that RED and must not quietly implement a
-  second operation model or absorb #92's product change.
+- #92 is now integrated through the shared FileOperationState move vocabulary;
+  #195's adapter boundary remains the authority consumed by PR #223. No second
+  operation model or byte-progress claim is introduced.
 
 ### Shortcut and presentation boundaries
 
@@ -155,7 +155,7 @@ The following are intentionally not contracts:
 | clipboard copy/cut/paste/collision | `src/os/file-manager/file-manager.test.ts`; `src/os/file-manager/polish.test.tsx`; `src/os/file-manager/final-gate.test.ts`; `FileOperationClipboard`/`clipboard.ts` |
 | Create Shortcut | `src/os/file-manager/create-shortcut.test.tsx`; `src/os/file-manager/gate3.test.tsx`; `src/os/fs/desktopCore.test.ts` |
 | Send to Desktop (#51) | `src/os/file-manager/send-to-desktop.test.ts`; `test/rtl/issue-51-send-to-desktop.test.tsx` |
-| #65 operation state | `src/os/file-manager/operation-state.test.ts`; `test/rtl/issue-65-operation-progress.test.tsx`; FileManager `operationState` integration. The RTL packet has a current timeout in this detached run and remains #65-owned evidence, not a #195 RED. |
+| #65 operation state | `src/os/file-manager/operation-state.test.ts`; `test/rtl/issue-65-operation-progress.test.tsx`; FileManager `operationState` integration. Current release promotion is green; any timing warnings remain test-harness diagnostics, not a #195 RED. |
 | #173 List behavior | `src/os/file-manager/spatial-navigation.test.ts`; `list-layout.ts`; `test/e2e/plasmon-list-layout-173.spec.ts`; current integrated #173 package/RTL coverage |
 | #189 classification | `test/refactor/189/issue-189.test.ts`; FileManager file-icon/property consumers; Search/Photos/Video/Text consumer imports |
 | #190 shared presentation | `src/os/visual/issue-190.test.ts`; `src/os/visual/visual.components.test.tsx`; `test/e2e/plasmon-presentation-assets.spec.ts`; FileManager `use-file-entry-presentation.ts` |
@@ -177,7 +177,7 @@ List, FileEntry, or placement tests merely to make decomposition visible.
 
 ## Current integrated verification
 
-Against release `5a6c9bb`:
+Against release `56752dc`:
 
 ```text
 bun test apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts \
@@ -197,9 +197,9 @@ Result: **17 tests, 0 failures, 48 expects**. The integrated #196 RTL strategy
 ## Corrective REDs
 
 **No corrective RED belongs to #195 itself.** A broad-component/source-shape
-assertion is explicitly invalid. Existing independent REDs remain separate:
+assertion is explicitly invalid. Former independent REDs are promoted:
 
-- #92 RTL RED — drag operation status is missing after delayed real moves;
+- #92 move lifecycle — consumed by PR #223 and ordinary RTL/Bun coverage;
 - #66/#86/#95 browser boundaries — pointer stacking/text selection/selected-label
   geometry;
 - any future behavior defect found during extraction must become the smallest

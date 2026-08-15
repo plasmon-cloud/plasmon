@@ -3,7 +3,7 @@
 **Current r2 refresh / canonical gate adoption**
 
 Integrated source inspected: `origin/release/0.1.0-r2` at
-`120be60eda48ada462ba9bebeaab524aaf9afde7`.
+`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 Active ownership check: no open PR owns #176. Sol 1 is expected to consume the
 packet later. The existing Luna-B packet and gate are the canonical first
@@ -80,7 +80,7 @@ second command authorities, or source-shape tests.
 
 ## Existing guards
 
-Executed against current r2 (`120be60`):
+Original characterization executed against r2 `120be60` before PR #235:
 
 ```text
 bun test apps/plasmon/src/os/shell/gate3.test.ts \

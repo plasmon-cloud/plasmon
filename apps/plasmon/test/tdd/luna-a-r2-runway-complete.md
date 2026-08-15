@@ -1,16 +1,16 @@
 # Luna-A r2 runway disposition
 
-Refresh: integrated release `5a6c9bb3d46d536c60a41382d5e3754539753dcd`.
+Refresh: integrated release `56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
 
 This is a staging/acceptance inventory only. No production source, active
 implementation packet, branch, or PR was modified.
 
 ## READY PACKETS
 
-- **#92:** RTL RED; `issue-92.red.md` and `issue-92.red.ui.test.tsx`;
-  active implementation PR #223 owns the Issue.
-- **#169:** Headless RED; `issue-169-final-packet.md` and
-  `issue-169.red.test.ts`; active implementation PR #221 owns the Issue.
+- **#92:** RED consumed / GREEN IN R2; `issue-92.red.md` and promoted
+  `test/rtl/issue-92.test.tsx`.
+- **#169:** RED consumed / GREEN IN R2; PR #221 merged at
+  `02a248e43342a7fc82a17ba19cab0ac471f9cbbb`.
 - **#193:** final Search reconstruction packet;
   `issue-193-final-packet.md`; active implementation PR #219 owns the Issue.
 - **#195/#196:** integrated and green; retained packets are preservation
@@ -23,8 +23,7 @@ implementation packet, branch, or PR was modified.
 
 ## BLOCKED
 
-- **#194:** blocked by #169's current RED and active PR #221, plus the
-  separate #175 Start geometry boundary.
+- **#193:** implementation remains active in PR #219; do not modify.
 - **#175 browser geometry:** packaged/browser acceptance remains operationally
   blocked by the missing local session journal; this is not a product RED.
 - **#197 implementation:** blocked by Luna-B ownership and surface boundaries
@@ -33,8 +32,8 @@ implementation packet, branch, or PR was modified.
   #169 are accepted, with consumer/reachability proof.
 ## COMPLETE / NO IMPLEMENTATION REQUIRED
 
-- **#44, #78, #82, #93, #108, #110, #115, #172, #174, #178, #189, #192,
-  #191/#190/#51/#65/#173/#195/#196 integrated dependencies.**
+- **#44, #78, #82, #93, #108, #110, #115, #169, #172, #174, #178, #189,
+  #192, #191/#190/#51/#65/#92/#173/#195/#196 integrated dependencies.**
 - #78 now has composed current-head lifecycle evidence after #51 integration:
   Create Shortcut and Send to Desktop, rename/move, FileManager/Start/Search
   activation, and deterministic missing-target failure.

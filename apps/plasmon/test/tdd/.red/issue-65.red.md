@@ -1,11 +1,15 @@
 # Issue #65 — repaired packet
 
-Disposition: **VERIFIED CORE RED / INCOMPLETE ACCEPTANCE**.
+Disposition: **GREEN IN R2 — RED CONSUMED**.
 
-## Executable gate
+PR #208 merged at `2b6984e96647eae1f3abe5719d3a3782809ceeb9`; recovery PR #232
+merged at `aebb255bb0605f945258d581acab96d1f905b4b0`. The permanent RTL
+regression is `apps/plasmon/test/rtl/issue-65-operation-progress.test.tsx`.
 
-`issue-65.red.ui.test.tsx` now uses the real headless Plasmon services and real
-FileManager adapter. It covers:
+## Promoted gate
+
+The former `issue-65.red.ui.test.tsx` uses the real headless Plasmon services
+and real FileManager adapter. It covers:
 
 - two-file import, item total, current item/name, completion and deterministic
   status cleanup;
@@ -15,9 +19,9 @@ FileManager adapter. It covers:
 - paste through the same accepted operation vocabulary (`Pasting N item(s)…`)
   with no fabricated byte progress.
 
-The first test's intentional RED occurs only after delayed real FsService writes
-begin and the expected accessible status is missing. No production operation API
-is fabricated by the packet.
+The former first-test RED was consumed by the merged operation-state
+implementation; current release execution passes the import and paste journeys.
+No production operation API is fabricated by the packet.
 
 ## Vocabulary fence
 
