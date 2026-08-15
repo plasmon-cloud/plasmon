@@ -1,0 +1,42 @@
+name: Issue 161 Regenerate Candidate Binding
+
+on:
+  push:
+    branches:
+      - ci/issue-161-mops-integrity-materialization
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: ci/issue-161-mops-integrity-materialization
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Regenerate and commit canonical candidate binding
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm ci
+            npm --workspace neutron-kernel run certified-assets:candidate-binding:write
+          '
+          if git diff --quiet -- apps/kernel/certified-assets-candidate-binding.json; then
+            echo "Candidate binding already canonical."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/kernel/certified-assets-candidate-binding.json
+          git commit -m "chore(kernel): refresh certified-assets candidate binding"
+          git push origin HEAD:ci/issue-161-mops-integrity-materialization
