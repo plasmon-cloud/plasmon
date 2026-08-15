@@ -1,6 +1,9 @@
 name: Plasmon Packaged Smoke CI
 
 on:
+  push:
+    branches:
+      - release/0.1.0-r2
   pull_request:
   workflow_dispatch:
 

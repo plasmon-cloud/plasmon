@@ -1,4 +1,4 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Route } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
@@ -6,13 +6,20 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
+const DEMO_ARTWORK_PATH = "static/plasmon/artwork/plasmon-demo.svg";
+
+async function activateFileManagerEntry(entry: Locator): Promise<void> {
+  await entry.click();
+  await expect(entry).toHaveAttribute("aria-selected", "true");
+  await entry.press("Enter");
+}
 
 // #250 preserves the prior fail-then-pass evidence from Packaged Browser #884.
 // This acceptance remains required under the serialized Specialist harness and
 // is intentionally not an active r2 quarantine.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@issue-250"] },
+  { tag: ["@issue-250", "@issue-123", "@issue-202"] },
   async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -44,6 +51,12 @@ test(
   );
   expect(fixtureResponse.ok(), "demo fixture should be served from the installed Plasmon package").toBe(true);
   expect((await fixtureResponse.body()).length).toBeGreaterThan(0);
+
+  const artworkResponse = await request.get(
+    new URL(`/app/${APP_ID}/${DEMO_ARTWORK_PATH}`, kernelUrl).href,
+  );
+  expect(artworkResponse.ok(), "demo artwork should be served from the installed Plasmon package").toBe(true);
+  expect((await artworkResponse.body()).length).toBeGreaterThan(0);
 
   // The fixture flag is startup configuration. Keep every installed Plasmon
   // main-document request flagged until the real application has completed
@@ -98,18 +111,19 @@ test(
   expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
   await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
 
-  // Enter the fixture through ordinary filesystem UI. Directory navigation is
-  // FileManager-owned; the .jsdos activation itself delegates to the canonical
-  // filesystem dispatcher -> AssociationRegistry/OpenService -> Process/Windowing.
+  // Enter the fixture through ordinary filesystem UI. Select each FileManager
+  // entry and use its production keyboard activation path so React selection is
+  // committed before openNode delegates to the canonical filesystem dispatcher
+  // -> AssociationRegistry/OpenService -> Process/Windowing.
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-  await rootShortcut.dblclick();
+  await activateFileManagerEntry(rootShortcut);
 
   const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
   await expect(explorer).toBeVisible({ timeout: 20_000 });
   const games = explorer.locator("[data-fm-node-id]", { hasText: "Games" }).first();
   await expect(games).toBeVisible();
-  await games.dblclick();
+  await activateFileManagerEntry(games);
 
   // Explorer titles follow the active directory. Reacquire the same normal
   // FileManager surface by its canonical Games title after navigation rather
@@ -118,7 +132,17 @@ test(
   await expect(gamesExplorer).toBeVisible({ timeout: 20_000 });
   const demo = gamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
   await expect(demo).toBeVisible({ timeout: 20_000 });
-  await demo.dblclick();
+
+  // #123 browser boundary: the ordinary FileManager resource consumes the
+  // shared thumbnail primitive and the package-local artwork must decode.
+  const artwork = demo.locator("img.plasmon-media-thumbnail").first();
+  await expect(artwork).toHaveAttribute("src", DEMO_ARTWORK_PATH);
+  await expect.poll(
+    () => artwork.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0),
+    { timeout: 20_000 },
+  ).toBeGreaterThan(0);
+
+  await activateFileManagerEntry(demo);
 
   // The runtime window stays generic by design; target filenames never become
   // game-title-specific product/runtime behavior.
@@ -141,6 +165,17 @@ test(
     ].join("\n"));
   }
   await expect(player.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+
+  // #202 owner-level browser regression: the real packaged runtime must not
+  // probe origin-backed storage APIs that the intended opaque sandbox denies.
+  expect(
+    consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'")),
+    "js-dos must not emit the sandbox-incompatible StorageManager.estimate error",
+  ).toEqual([]);
+  expect(
+    consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed")),
+    "js-dos must not emit the sandbox-denied storage-directory error",
+  ).toEqual([]);
 
   // The self-authored demo accepts SPACE as gameplay input. Browser automation
   // does not OCR the emulator canvas; runtime readiness + rendered canvas + real
