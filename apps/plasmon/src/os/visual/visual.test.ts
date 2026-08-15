@@ -47,6 +47,33 @@ test("visual-tokens.scss is the single numeric source for approved context sizes
   ]) expect(tokens).toContain(declaration);
 });
 
+test("shared native app chrome consumes the semantic Visual token vocabulary", () => {
+  const css = readFileSync(new URL("./visual.scss", import.meta.url), "utf8");
+
+  for (const selector of [
+    ".plasmon-native-app-surface",
+    ".plasmon-native-app-toolbar",
+    ".plasmon-native-app-button",
+    ".plasmon-native-app-status",
+    ".plasmon-native-app-state",
+    ".plasmon-native-app-panel",
+  ]) expect(css).toContain(selector);
+
+  for (const token of [
+    "var(--plasmon-window-background)",
+    "var(--plasmon-panel-background)",
+    "var(--plasmon-panel-elevated)",
+    "var(--plasmon-border-subtle)",
+    "var(--plasmon-border-strong)",
+    "var(--plasmon-text-primary)",
+    "var(--plasmon-text-secondary)",
+    "var(--plasmon-focus-ring)",
+    "var(--plasmon-danger)",
+    "var(--plasmon-radius-control)",
+    "var(--plasmon-radius-panel)",
+  ]) expect(css).toContain(token);
+});
+
 test("native artwork and thumbnails use contain instead of crop-to-fill", () => {
   expect(ICON_IMAGE_OBJECT_FIT).toBe("contain");
   expect(THUMBNAIL_OBJECT_FIT).toBe("contain");

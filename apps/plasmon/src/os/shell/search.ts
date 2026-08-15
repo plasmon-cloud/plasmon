@@ -6,7 +6,13 @@ import type {
   JsonValue,
   NativeAppDefinition,
 } from "../contracts/index.ts";
-import { classifyResource, type NeutronAppMetadata } from "../fs/index.ts";
+import {
+  classifyResource,
+  readResourceArtworkMetadata,
+  type NeutronAppMetadata,
+} from "../fs/index.ts";
+import type { ResourceIconPresentation } from "../visual/primitives.tsx";
+import { resourcePresentationForClassification } from "../visual/resource-presentation.ts";
 import {
   parseStartShortcut,
   startShortcutTargetIdentity,
@@ -224,11 +230,18 @@ function withElementPresentation(
   };
 }
 
-export function searchApplicationIcon(result: ShellSearchResult): NativeAppDefinition["icon"] | string | undefined {
+export function searchApplicationIcon(
+  result: ShellSearchResult,
+): NativeAppDefinition["icon"] | string | ResourceIconPresentation | undefined {
   switch (result.kind) {
     case "native-app": return result.app.icon;
     case "element": return result.element.icon;
     case "neutron-projection": return result.icon;
+    case "directory":
+    case "file":
+      return resourcePresentationForClassification(classifyResource(result.node), {
+        artwork: readResourceArtworkMetadata(result.node),
+      });
     default: return undefined;
   }
 }

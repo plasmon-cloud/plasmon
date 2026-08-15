@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "apps/plasmon/**"
+      - release/0.1.0-r2
   pull_request:
   workflow_dispatch:
 
@@ -26,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Push/main and manual runs preserve the existing full Kernel lane.
+          # Push/main, release integration, and manual runs preserve the full Kernel lane.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "run_kernel=true" >> "$GITHUB_OUTPUT"
             exit 0

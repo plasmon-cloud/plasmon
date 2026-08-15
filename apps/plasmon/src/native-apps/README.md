@@ -11,8 +11,10 @@ Native application UI consumes the same OS authorities as other surfaces:
 - filesystem content through `FsService`;
 - handler/default selection through associations/opening services;
 - lifecycle/windows through process/window services;
-- common resource/application presentation through the shared visual system;
+- common resource/application presentation and reusable application-owned content chrome through the shared Visual system;
 - Kernel application behavior through the Neutron boundary rather than local emulation.
+
+The shared Visual content-chrome vocabulary applies only inside the native window. It provides common content-surface, toolbar/button, status, loading/error/empty-state, panel, spacing, and theme-token presentation where multiple apps demonstrate the same need. Native Apps still choose their controls, labels, workflow, document/media semantics, accessible roles, and domain-specific presentation. Windowing continues to own the outer title bar, border, focus, and geometry; the content-chrome primitives are not another application framework or window implementation.
 
 An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns. Such definitions declare `runtimeOnly: true` on their existing `NativeAppDefinition`; that classification does not unregister the Process host or association handler, and consumers that specifically need user-launchable application inventory exclude runtime-only definitions. js-dos and EmulatorJS use this shared classification rather than a parallel catalog or handler-name rule.
 
@@ -32,6 +34,8 @@ Document applications consume Process close negotiation rather than replacing it
 - `jsdos/` — association-backed packaged runtime/player integration.
 - `emulatorjs/` — association-backed packaged EmulatorJS runtime for the initial NES (`.nes`) slice.
 
+Representative editor, media, and utility/system surfaces consume the shared content-chrome vocabulary while retaining their specialized controls. Future migrations should reuse the same small primitives when the presentation is genuinely common rather than copying local palettes or forcing unrelated workflows into one toolbar shape.
+
 ## Package structural coverage
 
 `packaging.ts` validates the esbuild metafile for the accepted user-launchable first-party native app component inputs: Text, Markdown, Photos, Video, Browser, Settings, Explorer, Properties, and Recycle Bin. The assertion searches the complete build graph rather than depending on generated chunk filenames, so eager and dynamically imported loaders remain covered without freezing bundler output naming.
@@ -40,12 +44,12 @@ This structural check proves that required application code is represented in th
 
 ## Refactor direction
 
-Build reusable application infrastructure instead of solving the same document/media/runtime problem in each app. Prefer shared document sessions/editor chrome, common media/object-URL helpers, reusable navigation models, shared settings capability seams, and consistent application chrome/presentation.
+Build reusable application infrastructure instead of solving the same document/media/runtime problem in each app. Prefer shared document sessions/editor chrome, common media/object-URL helpers, reusable navigation models, shared settings capability seams, and shared Visual content-chrome presentation where meaning is actually common.
 
-Keep domain semantics below React when they can be deterministic. Browser engine adapters (Monaco, media elements, iframes, fullscreen, packaged scripts/workers) should remain isolated from filesystem/document/domain policy.
+Keep domain semantics below React when they can be deterministic. Browser engine adapters (Monaco, media elements, iframes, fullscreen, packaged scripts/workers) should remain isolated from filesystem/document/domain policy. Do not use presentation convergence to introduce a generic native-app controller or duplicate Process/Windowing authority.
 
 Concrete titles, menu omissions, file-type corrections, runtime paths, and current acceptance bugs belong in Issues/tests, not in this overview.
 
 ## Testing
 
-Use fast model/domain tests for document sessions, document close decisions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use real-browser/package tests for Monaco/workers, visible document-close interaction, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.
+Use fast model/domain tests for document sessions, document close decisions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use RTL/component tests for deterministic shared content-chrome consumption. Use real-browser/package tests for Monaco/workers, visible document-close interaction, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.

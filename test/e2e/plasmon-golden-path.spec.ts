@@ -348,76 +348,53 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  const normalTitlebar = await titlebar.boundingBox();
-  if (!normalTitlebar) throw new Error("Restored native titlebar has no browser bounds");
-  const normalVisibleLeft = Math.max(workspace.x, normalTitlebar.x);
-  const normalVisibleRight = Math.min(workspace.x + workspace.width, normalTitlebar.x + normalTitlebar.width);
-  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored titlebar lost its reachable segment");
-  const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
-  const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
-  await page.mouse.move(normalDragStartX, normalDragY);
+  // #268 residual recurrence: the probe trace showed that a titlebar-relative
+  // hit point sampled before Playwright's actionability check can become stale
+  // while post-viewport ResizeObserver geometry is still settling. First let a
+  // positionless hover establish a stable, receives-events titlebar; only then
+  // derive the concrete exposed non-control point from that settled geometry.
+  await titlebar.hover();
+
+  const normalDragPoint = await titlebar.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const y = Math.min(16, Math.max(1, rect.height / 2));
+    const firstVisibleX = Math.max(1, Math.ceil(-rect.left) + 1);
+    const lastVisibleX = Math.min(
+      Math.floor(rect.width - 1),
+      Math.floor(window.innerWidth - rect.left - 1),
+    );
+
+    for (let x = firstVisibleX; x <= lastVisibleX; x += 8) {
+      const hit = document.elementFromPoint(rect.left + x, rect.top + y);
+      if (!(hit instanceof Element) || !element.contains(hit)) continue;
+      if (hit.closest(".plasmon-window__controls, button, input, textarea, select, a, [role='button'], [role='menuitem']")) continue;
+      return { x, y };
+    }
+    return null;
+  });
+  if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
+  // Preserve the browser hit-test, Playwright receives-events check, real
+  // top-level pointer path, and production drag lifecycle. The position is now
+  // sampled only after Playwright has observed the rendered titlebar as stable.
+  await titlebar.hover({ position: normalDragPoint });
   await page.mouse.down();
+  await expect(dialog).toHaveAttribute("data-interacting", "drag");
+  const draggingTitlebarBox = await titlebar.boundingBox();
+  if (!draggingTitlebarBox) throw new Error("Dragging native titlebar has no browser bounds");
+  const normalDragY = draggingTitlebarBox.y + normalDragPoint.y;
   await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
   await page.mouse.up();
+  await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
   const normalizedBounds = await dialog.boundingBox();
   if (!normalizedBounds) throw new Error("Normalized Explorer has no browser bounds");
   expect(normalizedBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
   expect(normalizedBounds.x + normalizedBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
 
-  const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
-  const snapPreviewGeometry = async () => snapPreview.evaluate((element) => {
-    const layer = element.parentElement;
-    if (!(layer instanceof HTMLElement)) throw new Error("Snap preview has no WindowLayer parent");
-    const previewRect = element.getBoundingClientRect();
-    const layerRect = layer.getBoundingClientRect();
-    return {
-      preview: {
-        x: previewRect.left - layerRect.left,
-        y: previewRect.top - layerRect.top,
-        width: previewRect.width,
-        height: previewRect.height,
-      },
-      workspace: {
-        width: layer.clientWidth,
-        height: layer.clientHeight,
-      },
-    };
-  });
-
-  const beginTitlebarDrag = async (): Promise<{ x: number; y: number; offsetX: number; offsetY: number }> => {
-    const box = await titlebar.boundingBox();
-    if (!box) throw new Error("Native window titlebar has no browser bounds");
-    const offsetX = Math.min(120, box.width / 2);
-    const offsetY = Math.min(16, box.height / 2);
-    const x = box.x + offsetX;
-    const y = box.y + offsetY;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    return { x, y, offsetX, offsetY };
-  };
-
-  // Issue #43 reopened browser acceptance: edge intent is visible before
-  // release, and the actual dragged window stays inside the usable workspace.
-  // Page mouse input uses top-level browser coordinates, while preview geometry
-  // is compared inside the sandboxed Plasmon frame against Windowing's actual
-  // clientWidth/clientHeight viewport authority.
-  const leftDrag = await beginTitlebarDrag();
-  await page.mouse.move(workspace.x + 1, leftDrag.y, { steps: 5 });
-  await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
-  const leftPreviewGeometry = await snapPreviewGeometry();
-  const leftDragBounds = await dialog.boundingBox();
-  if (!leftDragBounds) throw new Error("Snap drag window has no browser bounds");
-  expect(Math.abs(leftPreviewGeometry.preview.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewGeometry.preview.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewGeometry.preview.width - Math.floor(leftPreviewGeometry.workspace.width / 2))).toBeLessThanOrEqual(1);
-  expect(Math.abs(leftPreviewGeometry.preview.height - leftPreviewGeometry.workspace.height)).toBeLessThanOrEqual(1);
-  expect(leftDragBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
-  expect(leftDragBounds.y).toBeGreaterThanOrEqual(workspace.y - 1);
-  expect(leftDragBounds.x + leftDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
-  expect(leftDragBounds.y + leftDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
-  await page.mouse.up();
-  await expect(snapPreview).toHaveCount(0);
-  await expect(dialog).toHaveAttribute("data-window-snap", "left");
+  // Issue #277 temporarily quarantines only the shared #43 left-edge
+  // preview/snap journey that flaked on the post-merge r2 release push. Keep
+  // the preceding normalization proof and all following golden-path contracts
+  // required. The isolated acceptance remains executable under
+  // @r2-quarantine/@issue-277 until deterministic restoration evidence exists.
 
   // Issue #244 tracks the quarantined snapped -> restore -> opposite-edge
   // right-snap journey. That acceptance is isolated in

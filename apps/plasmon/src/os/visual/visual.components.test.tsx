@@ -1,6 +1,14 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
+import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppPanel,
+  NativeAppStateSurface,
+  NativeAppStatusStrip,
+  NativeAppToolbar,
+} from "./native-app-chrome.tsx";
 import { NativeAppIcon, PinIcon, ResourceIcon } from "./primitives.tsx";
 
 test("native app presentation preserves developer artwork and contain sizing", () => {
@@ -12,6 +20,26 @@ test("native app presentation preserves developer artwork and contain sizing", (
 test("native app presentation has a non-letter application fallback", () => {
   const markup = renderToStaticMarkup(<NativeAppIcon src={null} />);
   expect(markup).toContain("static/plasmon/icons/application.svg");
+});
+
+test("shared native app chrome preserves caller semantics and only adds presentation classes", () => {
+  const markup = renderToStaticMarkup(
+    <NativeAppContentSurface aria-label="Example app">
+      <NativeAppToolbar as="nav" aria-label="Example controls">
+        <NativeAppButton type="button">Run</NativeAppButton>
+      </NativeAppToolbar>
+      <NativeAppPanel aria-label="Example panel">Panel</NativeAppPanel>
+      <NativeAppStateSurface tone="error" role="alert">Failed</NativeAppStateSurface>
+      <NativeAppStatusStrip aria-label="Example status">Ready</NativeAppStatusStrip>
+    </NativeAppContentSurface>,
+  );
+
+  expect(markup).toContain('class="plasmon-native-app-surface"');
+  expect(markup).toContain('<nav aria-label="Example controls" class="plasmon-native-app-toolbar">');
+  expect(markup).toContain('class="plasmon-native-app-button"');
+  expect(markup).toContain('class="plasmon-native-app-panel"');
+  expect(markup).toContain('role="alert" class="plasmon-native-app-state plasmon-native-app-state--error"');
+  expect(markup).toContain('class="plasmon-native-app-status"');
 });
 
 test("shared pin presentation uses canonical artwork and structural pinned state", () => {

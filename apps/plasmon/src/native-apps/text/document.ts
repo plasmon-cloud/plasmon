@@ -13,7 +13,8 @@ export interface DocumentSnapshot {
   error: string | null;
 }
 
-export interface DocumentSessionOptions { autosaveMs?: number; }
+export const DEFAULT_DOCUMENT_AUTOSAVE = false;
+export interface DocumentSessionOptions { autosave?: boolean; autosaveMs?: number; }
 interface FileStamp { id: NodeId; name: string; size: number; modifiedAt: number; contentHash?: string; mime?: string; parentId: NodeId | null; }
 function stamp(node: FsNode): FileStamp { return { id: node.id, name: node.name, size: node.size, modifiedAt: node.modifiedAt, ...(node.contentHash ? { contentHash: node.contentHash } : {}), ...(node.mime ? { mime: node.mime } : {}), parentId: node.parentId }; }
 /** Content identity check that does not treat rename/move metadata as a write conflict. */
@@ -23,16 +24,16 @@ export function cursorLineColumn(text: string, offset: number): { line: number; 
 async function stableRead(fs: FsService, nodeId: NodeId): Promise<{ node: FsNode; text: string }> { for (let attempt = 0; attempt < 2; attempt += 1) { const before = await fs.stat(nodeId); const bytes = await fs.read(nodeId); const after = await fs.stat(nodeId); if (sameFileContent(stamp(before), stamp(after))) { try { return { node: after, text: decoder.decode(bytes) }; } catch { throw new Error(`${after.name || "File"} is not valid UTF-8`); } } } throw new Error("The file changed while it was being read. Try again."); }
 
 export class DocumentSession {
-  private readonly fs: FsService; private readonly autosaveMs: number; private readonly listeners = new Set<() => void>();
+  private readonly fs: FsService; private readonly autosave: boolean; private readonly autosaveMs: number; private readonly listeners = new Set<() => void>();
   private state: DocumentSnapshot = { nodeId: null, name: "", mime: null, text: "", dirty: false, status: "idle", error: null };
   private baseline: FileStamp | null = null; private lastRevision: Revision | null = null; private generation = 0; private autosaveTimer: ReturnType<typeof setTimeout> | null = null; private disposed = false; private disposing = false; private autosaveSuspended = false; private suppressDisposeFlush = false;
-  constructor(fs: FsService, options: DocumentSessionOptions = {}) { this.fs = fs; this.autosaveMs = options.autosaveMs ?? 750; }
+  constructor(fs: FsService, options: DocumentSessionOptions = {}) { this.fs = fs; this.autosave = options.autosave ?? DEFAULT_DOCUMENT_AUTOSAVE; this.autosaveMs = options.autosaveMs ?? 750; }
   snapshot(): DocumentSnapshot { return { ...this.state }; }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   private emit(): void { for (const listener of this.listeners) listener(); }
   private setState(patch: Partial<DocumentSnapshot>): void { this.state = { ...this.state, ...patch }; this.emit(); }
   private clearAutosave(): void { if (this.autosaveTimer !== null) { clearTimeout(this.autosaveTimer); this.autosaveTimer = null; } }
-  private scheduleAutosave(): void { if (this.autosaveSuspended) return; this.clearAutosave(); const generation = this.generation; const nodeId = this.state.nodeId; this.autosaveTimer = setTimeout(() => { this.autosaveTimer = null; if (this.disposed || generation !== this.generation || nodeId !== this.state.nodeId) return; void this.save(); }, this.autosaveMs); }
+  private scheduleAutosave(): void { if (!this.autosave || this.autosaveSuspended) return; this.clearAutosave(); const generation = this.generation; const nodeId = this.state.nodeId; this.autosaveTimer = setTimeout(() => { this.autosaveTimer = null; if (this.disposed || generation !== this.generation || nodeId !== this.state.nodeId) return; void this.save(); }, this.autosaveMs); }
   async setTarget(nodeId: NodeId | null): Promise<void> { this.clearAutosave(); this.autosaveSuspended = false; this.suppressDisposeFlush = false; const generation = ++this.generation; this.baseline = null; this.lastRevision = null; if (!nodeId) { this.setState({ nodeId: null, name: "", mime: null, text: "", dirty: false, status: "idle", error: null }); return; } this.setState({ nodeId, name: "", mime: null, text: "", dirty: false, status: "loading", error: null }); try { const loaded = await stableRead(this.fs, nodeId); const revision = await this.fs.revision(); if (this.disposed || generation !== this.generation) return; this.baseline = stamp(loaded.node); this.lastRevision = revision; this.setState({ nodeId, name: loaded.node.name, mime: loaded.node.mime ?? null, text: loaded.text, dirty: false, status: "ready", error: null }); } catch (error) { if (this.disposed || generation !== this.generation) return; this.setState({ status: "error", error: errorMessage(error) }); } }
   edit(text: string): void { if (this.disposed || this.state.nodeId === null || this.state.status === "loading") return; this.suppressDisposeFlush = false; this.setState({ text, dirty: true, status: "ready", error: null }); this.scheduleAutosave(); }
   suspendAutosave(): void { if (this.disposed) return; this.autosaveSuspended = true; this.clearAutosave(); }
