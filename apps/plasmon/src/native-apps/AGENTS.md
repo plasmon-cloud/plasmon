@@ -10,6 +10,8 @@
 - Read/write filesystem documents through `FsService` or shared document-session abstractions rather than app-private persistence.
 - Keep one-off opening/default selection in association/opening services rather than app-local file-type switches.
 - Reuse shared process/window/visual infrastructure.
+- Reuse Visual native-app content-chrome primitives for genuinely common toolbar/button/status/loading/error/empty/panel framing and shared theme-token consumption. Keep app-specific controls, labels, actions, document/media semantics, and accessibility meaning in the owning application; do not turn shared presentation into a generic app framework.
+- Outer native-window title bars/borders/focus/geometry remain Windowing-owned and must not be recreated inside applications.
 - Document close decisions belong to the application/document model, but ordinary lifecycle authority remains Process-owned. Consume `ProcessController.registerCloseHandler()` rather than closing windows or processes directly from document UI.
 - Text and Markdown must share one dirty-close policy. A pending dirty-close decision must suspend autosave so Save / Discard / Cancel remain truthful; Discard must also suppress dispose-time flush for that close, while failed save/conflict must leave the Process request unresolved.
 - Distinguish application/product identity from the mechanism used to host a runtime in a native window.
@@ -20,8 +22,8 @@ Specific filename suffixes, exact window titles, individual menu affordances, ru
 
 ## Refactor direction
 
-Prefer reusable production models/services for document sessions, navigation, editor/media/runtime adapters, and settings/resource inspection. Keep React components focused on application presentation and browser-event integration.
+Prefer reusable production models/services for document sessions, navigation, editor/media/runtime adapters, and settings/resource inspection. Keep React components focused on application presentation and browser-event integration. Converge duplicated application-owned content chrome on Visual without moving domain behavior or lifecycle authority into presentation primitives.
 
 ## Validation
 
-Use fast tests for deterministic domain/model behavior, including shared dirty-close decisions and persistence/flush interaction. Use real-browser/package tests only for actual browser-dependent or visible interaction boundaries such as Monaco/workers and the rendered close prompt. Do not change release/version metadata outside an explicit release task.
+Use fast tests for deterministic domain/model behavior, including shared dirty-close decisions and persistence/flush interaction. Use RTL/component coverage for deterministic shared presentation consumption. Use real-browser/package tests only for actual browser-dependent or visible interaction boundaries such as Monaco/workers and the rendered close prompt. Do not change release/version metadata outside an explicit release task.
