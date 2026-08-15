@@ -40,8 +40,193 @@ export type JsDosFunction = (
 
 type JsDosGlobal = typeof globalThis & { Dos?: JsDosFunction };
 type KeyboardNavigator = object & { keyboard?: unknown };
+type StorageNavigator = object & { storage?: unknown };
+type MemoryEntry = MemoryDirectoryHandle | MemoryFileHandle;
 
+interface EmbeddedStorageLease {
+  references: number;
+  hadOwnStorage: boolean;
+  ownStorageDescriptor?: PropertyDescriptor;
+  adapter: MemoryStorageManager;
+}
+
+const embeddedStorageLeases = new WeakMap<object, EmbeddedStorageLease>();
 let runtimePromise: Promise<JsDosFunction> | null = null;
+
+function fileSystemError(name: string, message: string): Error {
+  if (typeof DOMException === "function") return new DOMException(message, name);
+  const error = new Error(message);
+  error.name = name;
+  return error;
+}
+
+async function writeBytes(data: unknown): Promise<Uint8Array> {
+  if (typeof data === "string") return new TextEncoder().encode(data);
+  if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());
+  if (data instanceof ArrayBuffer) return new Uint8Array(data.slice(0));
+  if (ArrayBuffer.isView(data)) {
+    return new Uint8Array(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
+  }
+  if (typeof data === "object" && data !== null && "type" in data && "data" in data) {
+    const command = data as { type?: unknown; data?: unknown };
+    if (command.type === "write") return writeBytes(command.data);
+  }
+  throw new TypeError("Unsupported js-dos volatile storage write");
+}
+
+class MemoryFileHandle {
+  readonly kind = "file" as const;
+  private bytes = new Uint8Array();
+
+  constructor(readonly name: string) {}
+
+  async getFile(): Promise<File> {
+    return new File([this.bytes.slice()], this.name, { lastModified: 0 });
+  }
+
+  async createWritable(): Promise<FileSystemWritableFileStream> {
+    const file = this;
+    return {
+      async write(data: unknown) {
+        file.bytes = await writeBytes(data);
+      },
+      async close() {},
+    } as unknown as FileSystemWritableFileStream;
+  }
+}
+
+class MemoryDirectoryHandle {
+  readonly kind = "directory" as const;
+  private readonly children = new Map<string, MemoryEntry>();
+
+  constructor(readonly name: string) {}
+
+  async getDirectoryHandle(name: string, options: { create?: boolean } = {}): Promise<FileSystemDirectoryHandle> {
+    const existing = this.children.get(name);
+    if (existing) {
+      if (existing.kind !== "directory") {
+        throw fileSystemError("TypeMismatchError", `${name} is not a directory`);
+      }
+      return existing as unknown as FileSystemDirectoryHandle;
+    }
+    if (!options.create) throw fileSystemError("NotFoundError", `${name} does not exist`);
+    const directory = new MemoryDirectoryHandle(name);
+    this.children.set(name, directory);
+    return directory as unknown as FileSystemDirectoryHandle;
+  }
+
+  async getFileHandle(name: string, options: { create?: boolean } = {}): Promise<FileSystemFileHandle> {
+    const existing = this.children.get(name);
+    if (existing) {
+      if (existing.kind !== "file") {
+        throw fileSystemError("TypeMismatchError", `${name} is not a file`);
+      }
+      return existing as unknown as FileSystemFileHandle;
+    }
+    if (!options.create) throw fileSystemError("NotFoundError", `${name} does not exist`);
+    const file = new MemoryFileHandle(name);
+    this.children.set(name, file);
+    return file as unknown as FileSystemFileHandle;
+  }
+
+  async removeEntry(name: string, options: { recursive?: boolean } = {}): Promise<void> {
+    const existing = this.children.get(name);
+    if (!existing) throw fileSystemError("NotFoundError", `${name} does not exist`);
+    if (existing.kind === "directory" && !options.recursive && existing.children.size !== 0) {
+      throw fileSystemError("InvalidModificationError", `${name} is not empty`);
+    }
+    this.children.delete(name);
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<[string, MemoryEntry]> {
+    for (const entry of this.children.entries()) yield entry;
+  }
+}
+
+/**
+ * js-dos 8.4.1 unconditionally uses StorageManager/OPFS for its own bundle
+ * cache, local-change cache and storage statistics. Neutron intentionally gives
+ * the installed Plasmon app an opaque sandboxed origin, where those APIs exist
+ * in Chromium but reject. This adapter provides only the volatile subset that
+ * js-dos itself requires. It is deliberately not durable Plasmon storage.
+ */
+class MemoryStorageManager {
+  private readonly root = new MemoryDirectoryHandle("");
+
+  async estimate(): Promise<StorageEstimate> {
+    return {};
+  }
+
+  async getDirectory(): Promise<FileSystemDirectoryHandle> {
+    return this.root as unknown as FileSystemDirectoryHandle;
+  }
+}
+
+/**
+ * Keep js-dos' internal OPFS/cache calls inside a volatile runtime-host adapter
+ * while an embedded player is active. Multiple js-dos windows share one lease
+ * just as native OPFS would be origin-scoped. The original browser StorageManager
+ * is restored after the last player closes.
+ */
+export function installEmbeddedJsDosStorageCompatibility(
+  embedded: boolean,
+  navigatorObject: StorageNavigator,
+): () => void {
+  if (!embedded) return () => {};
+
+  const existing = embeddedStorageLeases.get(navigatorObject);
+  if (existing) {
+    existing.references += 1;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      releaseEmbeddedStorageLease(navigatorObject, existing);
+    };
+  }
+
+  const hadOwnStorage = Object.prototype.hasOwnProperty.call(navigatorObject, "storage");
+  const ownStorageDescriptor = hadOwnStorage
+    ? Object.getOwnPropertyDescriptor(navigatorObject, "storage")
+    : undefined;
+  const lease: EmbeddedStorageLease = {
+    references: 1,
+    hadOwnStorage,
+    ownStorageDescriptor,
+    adapter: new MemoryStorageManager(),
+  };
+
+  try {
+    Object.defineProperty(navigatorObject, "storage", {
+      configurable: true,
+      enumerable: false,
+      value: lease.adapter,
+      writable: false,
+    });
+  } catch (error) {
+    throw new Error(`Unable to isolate js-dos storage bootstrap: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  embeddedStorageLeases.set(navigatorObject, lease);
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    releaseEmbeddedStorageLease(navigatorObject, lease);
+  };
+}
+
+function releaseEmbeddedStorageLease(navigatorObject: StorageNavigator, lease: EmbeddedStorageLease): void {
+  lease.references -= 1;
+  if (lease.references > 0) return;
+  embeddedStorageLeases.delete(navigatorObject);
+
+  if (lease.hadOwnStorage && lease.ownStorageDescriptor) {
+    Object.defineProperty(navigatorObject, "storage", lease.ownStorageDescriptor);
+  } else if (!Reflect.deleteProperty(navigatorObject, "storage")) {
+    throw new Error("Unable to restore js-dos StorageManager capability");
+  }
+}
 
 /**
  * js-dos 8.4.1 probes the optional Keyboard Lock API during synchronous
@@ -90,11 +275,35 @@ export function startJsDosPlayer(
   element: HTMLDivElement,
   options: JsDosPlayerOptions,
 ): JsDosPlayerHandle {
-  return withEmbeddedKeyboardLockUnavailable(
-    window.top !== window,
-    window.navigator as KeyboardNavigator,
-    () => Dos(element, options),
+  const embedded = window.top !== window;
+  const releaseStorage = installEmbeddedJsDosStorageCompatibility(
+    embedded,
+    window.navigator as StorageNavigator,
   );
+
+  try {
+    const player = withEmbeddedKeyboardLockUnavailable(
+      embedded,
+      window.navigator as KeyboardNavigator,
+      () => Dos(element, options),
+    );
+    let storageReleased = false;
+    return {
+      async stop() {
+        try {
+          await player.stop();
+        } finally {
+          if (!storageReleased) {
+            storageReleased = true;
+            releaseStorage();
+          }
+        }
+      },
+    };
+  } catch (error) {
+    releaseStorage();
+    throw error;
+  }
 }
 
 function installStylesheet(): void {
