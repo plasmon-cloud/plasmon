@@ -357,8 +357,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
   await page.mouse.move(normalDragStartX, normalDragY);
   await page.mouse.down();
+  await expect(dialog).toHaveAttribute("data-interacting", "drag");
   await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
   await page.mouse.up();
+  await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
   const normalizedBounds = await dialog.boundingBox();
   if (!normalizedBounds) throw new Error("Normalized Explorer has no browser bounds");
   expect(normalizedBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
