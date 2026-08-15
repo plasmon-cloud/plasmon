@@ -24,6 +24,7 @@ import {
 } from "./types.ts";
 
 const SYSTEM_APP_IDS = new Set(["kernel", "plasmon"]);
+const UNKNOWN_RUNTIME: RuntimeSnapshot = { known: false, liveAppIds: new Set() };
 
 const defaultApi: VanillaNeutronApi = {
   listApps,
@@ -163,6 +164,11 @@ type CachedElementMetadata = {
   element: ExternalElement;
 };
 
+type PendingElementMetadata = {
+  discoveryDescription: string;
+  promise: Promise<ExternalElement>;
+};
+
 /**
  * Vanilla-Neutron adapter. Launching always delegates to workspace.open_tile;
  * this class never obtains or embeds a Neutron application frame itself.
@@ -175,6 +181,7 @@ export class VanillaNeutronBridge implements NeutronBridge {
   private readonly lifecycleTargets: ForegroundLifecycleTargets | undefined;
   private elements: ExternalElement[] = [];
   private readonly metadataCache = new Map<string, CachedElementMetadata>();
+  private readonly metadataLoads = new Map<string, PendingElementMetadata>();
   private readonly listeners = new Set<() => void>();
   private stopLifecycle: (() => void) | undefined;
 
@@ -268,6 +275,37 @@ export class VanillaNeutronBridge implements NeutronBridge {
       return withRuntimeState(cached.element, runtime);
     }
 
+    const pending = this.metadataLoads.get(hint.id);
+    if (pending && pending.discoveryDescription === hint.description) {
+      return withRuntimeState(await pending.promise, runtime);
+    }
+
+    const promise = this.resolveElementMetadata(hint);
+    this.metadataLoads.set(hint.id, {
+      discoveryDescription: hint.description,
+      promise,
+    });
+
+    try {
+      const element = await promise;
+      const current = this.metadataLoads.get(hint.id);
+      if (current?.promise === promise) {
+        this.metadataCache.set(hint.id, {
+          discoveryDescription: hint.description,
+          element: cloneExternalElement(element),
+        });
+      }
+      return withRuntimeState(element, runtime);
+    } finally {
+      if (this.metadataLoads.get(hint.id)?.promise === promise) {
+        this.metadataLoads.delete(hint.id);
+      }
+    }
+  }
+
+  private async resolveElementMetadata(
+    hint: InstalledElementHint,
+  ): Promise<ExternalElement> {
     let descriptor: unknown = null;
     try {
       descriptor = await this.api.describeApp(hint.id);
@@ -281,18 +319,13 @@ export class VanillaNeutronBridge implements NeutronBridge {
     try {
       // A missing safe descriptor path intentionally reaches the resolver:
       // current Kernel apps.describe strips tile/tray icon paths, so the
-      // resolver performs only the bounded SVG -> PNG compatibility search.
+      // resolver performs only the bounded static/icon.svg compatibility path.
       icon = await this.resolveIcon(hint.id, declaredPath);
     } catch {
       // Icon failure must never hide the Element or poison other metadata.
     }
 
-    const element = parseExternalElement(descriptor, hint, runtime, icon);
-    this.metadataCache.set(hint.id, {
-      discoveryDescription: hint.description,
-      element: cloneExternalElement(element),
-    });
-    return element;
+    return parseExternalElement(descriptor, hint, UNKNOWN_RUNTIME, icon);
   }
 
   private pruneMetadataCache(hints: readonly InstalledElementHint[]): void {
