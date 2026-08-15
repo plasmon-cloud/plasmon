@@ -37,6 +37,7 @@ describe("Search surface view state", () => {
       results: [document, media],
       warnings: ["partial directory unavailable"],
       truncated: true,
+      capped: true,
     };
 
     const view = deriveSearchSurfaceViewState({
@@ -50,32 +51,33 @@ describe("Search surface view state", () => {
     expect(view.results[0]).toBe(document);
     expect(view.warnings).toEqual(["partial directory unavailable"]);
     expect(view.truncated).toBe(true);
+    expect(view.capped).toBe(true);
     expect(view.empty).toBe(false);
   });
 
   test("keeps loading, error, and empty presentation state explicit", () => {
-    const empty: SearchBatch = { results: [], warnings: [], truncated: false };
+    const empty: SearchBatch = { results: [], warnings: [], truncated: false, capped: false };
 
     expect(deriveSearchSurfaceViewState({
       batch: empty,
       tab: "all",
       searching: true,
       error: null,
-    })).toMatchObject({ searching: true, error: null, empty: false });
+    })).toMatchObject({ searching: true, error: null, empty: false, capped: false });
 
     expect(deriveSearchSurfaceViewState({
       batch: empty,
       tab: "all",
       searching: false,
       error: "Search failed",
-    })).toMatchObject({ searching: false, error: "Search failed", empty: false });
+    })).toMatchObject({ searching: false, error: "Search failed", empty: false, capped: false });
 
     expect(deriveSearchSurfaceViewState({
       batch: empty,
       tab: "all",
       searching: false,
       error: null,
-    })).toMatchObject({ searching: false, error: null, empty: true });
+    })).toMatchObject({ searching: false, error: null, empty: true, capped: false });
   });
 
   test("does not expose stale results or batch warnings while the current request is in error", () => {
@@ -84,6 +86,7 @@ describe("Search surface view state", () => {
       results: [stale],
       warnings: ["stale warning"],
       truncated: true,
+      capped: true,
     };
 
     expect(deriveSearchSurfaceViewState({
@@ -98,6 +101,7 @@ describe("Search surface view state", () => {
       empty: false,
       warnings: [],
       truncated: false,
+      capped: false,
     });
   });
 });
