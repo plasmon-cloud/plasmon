@@ -16,6 +16,8 @@ The directory already separates a number of deterministic concerns:
 
 - `activation.ts` — thin Start/Search adapters into canonical filesystem opening;
 - `taskbar.ts` — the focused taskbar projection over pin/application/Process/Windowing state plus canonical task actions and taskbar menu policy;
+- `altTab.ts` — pure held-gesture projection/cycling over canonical WindowManager MRU snapshots;
+- `AltTabBoundary.tsx` — global Alt-Tab keyboard/presentation adapter that owns only ephemeral switcher selection;
 - `model.ts` — non-taskbar Start/tray/general Shell modeling plus compatibility re-exports during the taskbar migration;
 - `preferences.ts` — persisted shell preferences;
 - `search.ts` — search/query inventory, classification, limits, and invalidation;
@@ -24,7 +26,7 @@ The directory already separates a number of deterministic concerns:
 - `subscriptions.ts` — derived-state invalidation;
 - `calendar.ts` — date/calendar calculations.
 
-`Shell.tsx` composes those models with DOM/browser lifecycle, flyouts, keyboard/pointer events, and rendering. Taskbar compatibility re-exports do not retain taskbar state: the implementation and authority translation live in `taskbar.ts`.
+`Shell.tsx` composes those models with DOM/browser lifecycle, flyouts, keyboard/pointer events, and rendering. Focused Shell adapters may live beside it when their gesture/presentation boundary is independently testable; taskbar compatibility re-exports do not retain taskbar state, and the taskbar implementation/authority translation remains in `taskbar.ts`.
 
 ### Resource presentation
 
@@ -37,6 +39,8 @@ Taskbar presentation is one deterministic projection of existing authorities rat
 Native taskbar entries are grouped at application/handler identity while retaining the current ordered `ProcessRecord` members as canonical member identity. A zero-member group is pinned-only, a single member keeps the direct launch/focus/minimize task-button behavior, and a multi-member group opens a bounded chooser. The chooser stores only which handler is open; its rows are re-derived from current Process/Windowing snapshots, and selecting a running member delegates to `ProcessController.focus()` so Windowing remains authoritative for restore/focus/z-order behavior. A starting sibling does not disable an already-running member group.
 
 Taskbar context menus are presentation over those same authorities. Item/background menus use pure taskbar placement policy from the invoking DOM source and current viewport; the policy stores no browser geometry. A native `Close` is exposed only when the context resolves to one concrete canonical process and delegates to ordinary `ProcessController.close()` negotiation rather than `forceClose` or direct WindowManager mutation. Center/Left taskbar alignment is persisted through the existing Shell preference store and changes only the application-button group; tray/status placement remains independently owned by the taskbar status surface.
+
+Alt-Tab likewise consumes rather than redefines Windowing authority. `AltTabBoundary` snapshots the current `WindowManager.focusSnapshot().mru` only for the lifetime of a held Alt gesture, filters that snapshot against live windows, and stores only the selected window ID. Opening or cycling the chooser never calls focus and never derives order from z-order, process arrays, taskbar grouping, or DOM order. Alt release commits the selected ID through `WindowManager.focus()`, which remains responsible for restoring minimized windows and promoting canonical MRU; Escape, blur, and hidden-page cleanup cancel without changing focus. Process records contribute labels/icons only and remain lifecycle/presentation metadata rather than switching authority.
 
 `/System/Start Menu` remains the durable filesystem authority for Start. Default Settings, Explorer, and Properties shortcuts are seeded directly at that Start root rather than under a managed visible `System` category. Retirement of the former managed `System` child is deliberately conservative: only the exact previously-seeded, uncustomized legacy default shape is migrated; user renames, moves, deletions, folder metadata, or extra content prevent migration and are preserved.
 
@@ -52,4 +56,4 @@ Feature-completeness work should use mature desktop conventions for discoverabil
 
 ## Testing
 
-Use fast tests for taskbar projection/actions/menu policy, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
+Use fast tests for taskbar projection/actions/menu policy, Alt-Tab MRU/cycle/reconciliation policy, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.

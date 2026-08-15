@@ -195,7 +195,7 @@ test("target switching cancels stale autosave", async () => {
   const fs = new TinyFs();
   const first = fs.seed("one.txt", "one");
   const second = fs.seed("two.txt", "two");
-  const session = new DocumentSession(fs, { autosaveMs: 20 });
+  const session = new DocumentSession(fs, { autosave: true, autosaveMs: 20 });
   await session.setTarget(first);
   session.edit("changed one");
   await session.setTarget(second);
@@ -235,7 +235,7 @@ test("external revision conflict does not overwrite newer bytes", async () => {
 test("dispose flushes a pending dirty autosave without stale timer writes", async () => {
   const fs = new TinyFs();
   const id = fs.seed("notes.txt", "before");
-  const session = new DocumentSession(fs, { autosaveMs: 1000 });
+  const session = new DocumentSession(fs, { autosave: true, autosaveMs: 1000 });
   await session.setTarget(id);
   session.edit("after");
   session.dispose({ flush: true });
@@ -246,7 +246,7 @@ test("dispose flushes a pending dirty autosave without stale timer writes", asyn
 test("pending close decision suspends autosave until Cancel resumes it", async () => {
   const fs = new TinyFs();
   const id = fs.seed("notes.txt", "before");
-  const session = new DocumentSession(fs, { autosaveMs: 15 });
+  const session = new DocumentSession(fs, { autosave: true, autosaveMs: 15 });
   await session.setTarget(id);
   session.edit("after");
   session.suspendAutosave();
@@ -262,7 +262,7 @@ test("pending close decision suspends autosave until Cancel resumes it", async (
 test("Discard suppresses pending autosave and dispose flush", async () => {
   const fs = new TinyFs();
   const id = fs.seed("notes.txt", "before");
-  const session = new DocumentSession(fs, { autosaveMs: 15 });
+  const session = new DocumentSession(fs, { autosave: true, autosaveMs: 15 });
   await session.setTarget(id);
   session.edit("discard me");
   session.suspendAutosave();
