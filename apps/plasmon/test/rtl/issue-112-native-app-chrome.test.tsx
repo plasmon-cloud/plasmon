@@ -8,8 +8,10 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
  * editor, media, and utility/system surfaces to consume the shared Visual
  * content-chrome vocabulary while retaining their own semantic controls.
  *
- * Keep the editor case on its deterministic empty-state path: mounting Monaco
- * crosses a browser-engine boundary that Happy DOM intentionally does not fake.
+ * Keep browser-engine adapters outside this deterministic lane: Text remains on
+ * its no-document path rather than mounting Monaco, and Video remains on its
+ * no-target error path rather than mounting a media element. Those engines keep
+ * their existing browser/package coverage.
  */
 test("#112 representative native apps consume shared content chrome", async () => {
   const app = await renderPlasmon();
@@ -23,15 +25,15 @@ test("#112 representative native apps consume shared content chrome", async () =
     expect(editorEmpty.classList.contains("plasmon-native-app-state")).toBe(true);
 
     await act(async () => {
-      await app.environment.services.process.open("native:photos", {});
+      await app.environment.services.process.open("native:video", {});
     });
-    const mediaToolbar = await app.findByRole("navigation", { name: "Photo controls" });
-    expect(mediaToolbar.classList.contains("plasmon-native-app-toolbar")).toBe(true);
-    const zoomOut = app.getByRole("button", { name: "Zoom out" });
-    expect(zoomOut.classList.contains("plasmon-native-app-button")).toBe(true);
-    const mediaEmpty = await app.findByText("Choose an image to open.");
-    expect(mediaEmpty.classList.contains("plasmon-native-app-state")).toBe(true);
-    const mediaStatus = app.getByText(/next image/).closest("footer");
+    const mediaSurface = await app.findByRole("region", { name: "Video player" });
+    expect(mediaSurface.classList.contains("plasmon-native-app-surface")).toBe(true);
+    const mediaError = await app.findByRole("alert");
+    expect(mediaError.textContent).toContain("No video target was supplied");
+    expect(mediaError.classList.contains("plasmon-native-app-state")).toBe(true);
+    expect(mediaError.classList.contains("plasmon-native-app-state--error")).toBe(true);
+    const mediaStatus = app.getByText(/play-pause/).closest("footer");
     expect(mediaStatus?.classList.contains("plasmon-native-app-status")).toBe(true);
 
     await act(async () => {
