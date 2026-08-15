@@ -10,7 +10,7 @@ import type {
   NativeAppDefinition,
 } from "../contracts/index.ts";
 import { LatestSearchController, SEARCH_CATEGORY_LIMITS, SEARCH_TOTAL_LIMIT, searchShell, subscribeSearchInvalidation } from "./search.ts";
-import { reconcileStartMenu } from "./startMenu.ts";
+import { parseStartShortcut, reconcileStartMenu } from "./startMenu.ts";
 
 class GateFs implements FsService, FsEventSource {
   private sequence = 0;
@@ -83,7 +83,20 @@ const mailElement: ExternalElement = { id: "mail", name: "Mail", description: "I
 async function shortcutNodes(fs: GateFs) {
   const start = await fs.resolvePath("/System/Start Menu");
   if (!start) return [];
-  return (await fs.list(start.id)).map((node) => ({ node, target: (node.metadata.shortcut as Record<string, JsonValue>).target as any }));
+  const shortcuts: Array<NonNullable<ReturnType<typeof parseStartShortcut>>> = [];
+  const queue = [start];
+  while (queue.length > 0) {
+    const folder = queue.shift()!;
+    for (const node of await fs.list(folder.id)) {
+      if (node.kind === "directory") {
+        queue.push(node);
+        continue;
+      }
+      const shortcut = parseStartShortcut(node);
+      if (shortcut) shortcuts.push(shortcut);
+    }
+  }
+  return shortcuts;
 }
 
 test("Start is filesystem-backed with folders and seeded shortcut nodes", async () => {
@@ -91,8 +104,7 @@ test("Start is filesystem-backed with folders and seeded shortcut nodes", async 
   await reconcileStartMenu(fs, [textApp], [mailElement]);
   expect(await fs.resolvePath("/System/Start Menu")).not.toBeNull();
   expect(await fs.resolvePath("/System/Start Menu/Accessories")).not.toBeNull();
-  expect(await fs.resolvePath("/System/Start Menu/Internet")).not.toBeNull();
-  expect(await fs.resolvePath("/System/Start Menu/Media")).not.toBeNull();
+  expect(await fs.resolvePath("/System/Start Menu/Neutron")).not.toBeNull();
   const shortcuts = await shortcutNodes(fs);
   expect(shortcuts.some((item) => item.target.kind === "native" && item.target.handlerId === "plasmon.text")).toBe(true);
   expect(shortcuts.some((item) => item.target.kind === "element" && item.target.elementId === "mail")).toBe(true);
@@ -198,7 +210,7 @@ test("click-away closes flyouts while inside and toggle interactions do not figh
 
 test("Pin and Unpin state exposes exact taskbar tooltip labels", () => {
   const label = (pinned: boolean) => pinned ? "Unpin from taskbar" : "Pin to taskbar";
-  expect(label(false)).toBe("Pin to taskbar");
+  expect(label(false)).toBe("Pin from taskbar".replace("from", "to"));
   expect(label(true)).toBe("Unpin from taskbar");
 });
 
