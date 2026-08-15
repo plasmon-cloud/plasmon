@@ -57,7 +57,6 @@ run_one() {
     npx playwright test \
       --workers=1 \
       --retries=0 \
-      --grep-invert @r2-quarantine \
       "$1"
 }
 
