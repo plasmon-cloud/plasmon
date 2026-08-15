@@ -12,6 +12,7 @@ export interface SearchSurfaceViewState {
   empty: boolean;
   warnings: readonly string[];
   truncated: boolean;
+  capped: boolean;
 }
 
 export function deriveSearchSurfaceViewState(input: {
@@ -28,5 +29,6 @@ export function deriveSearchSurfaceViewState(input: {
     empty: !input.searching && !input.error && results.length === 0,
     warnings: input.error ? [] : input.batch.warnings,
     truncated: input.error ? false : input.batch.truncated,
+    capped: input.error ? false : input.batch.capped,
   };
 }
