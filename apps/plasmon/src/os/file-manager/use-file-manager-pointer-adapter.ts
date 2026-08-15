@@ -86,7 +86,7 @@ function errorMessage(cause: unknown): string {
 function styleDragPreview(element: HTMLDivElement): void {
   Object.assign(element.style, {
     position: "fixed",
-    zIndex: "2400",
+    zIndex: "2147483646",
     minWidth: "88px",
     minHeight: "48px",
     display: "grid",
