@@ -159,8 +159,8 @@ async function probeWithTimeout(
 
 /**
  * Probe candidates strictly in priority order and stop after the first success.
- * This avoids the old burst of parallel 404s while retaining a finite timeout
- * for an origin that never settles.
+ * This helper remains useful where every candidate must be verified before use;
+ * Element icon presentation deliberately has a narrower final-origin handoff.
  */
 export async function firstLoadableIconCandidate(
   candidates: readonly string[],
@@ -176,7 +176,7 @@ export async function firstLoadableIconCandidate(
 
 /**
  * Browser Image probing avoids fetch/CORS assumptions. Each call is bounded;
- * the caller controls sequential candidate ordering and short-circuiting.
+ * the caller controls candidate ordering and short-circuiting.
  */
 export function probeBrowserImage(
   candidate: string,
@@ -204,13 +204,15 @@ export function probeBrowserImage(
 }
 
 /**
- * Resolve exactly one verified package-local icon for ExternalElement.icon.
+ * Resolve one safe package-local icon URL for ExternalElement.icon.
  *
- * Descriptor-declared safe paths always win and are the only path tried when
- * present. Current Kernel apps.describe does not expose tile/tray icon paths,
- * so a missing declaration receives one tightly bounded compatibility path:
- * static/icon.svg. That path tries the preferred Neutron origin and then the
- * alternate established origin; no other filename or extension is guessed.
+ * Descriptor-declared safe paths always win and are the only path considered
+ * when present. Current Kernel apps.describe can omit tile/tray icon paths, so
+ * a missing declaration receives one tightly bounded compatibility path:
+ * static/icon.svg. At most the preferred safe origin is preloaded. If that
+ * origin fails and the second established safe origin exists, hand that final
+ * candidate to the shared ResourceIcon image/fallback boundary rather than
+ * fetching it once for discovery and again merely to render it.
  */
 export async function resolveElementIcon(
   appId: string,
@@ -220,13 +222,21 @@ export async function resolveElementIcon(
 ): Promise<string | undefined> {
   const safeDeclaredPath = safePackageIconPath(declaredPath);
   const path = safeDeclaredPath ?? COMPATIBILITY_ICON_PATH;
+  const candidates = elementIconCandidates(appId, path, href);
+  const preferred = candidates[0];
+  if (!preferred) return undefined;
+
+  // A single safe origin has no speculative alternative to choose between;
+  // let shared presentation perform its normal load/error/fallback handling.
+  const alternate = candidates[1];
+  if (!alternate) return preferred;
+
   const timeout = normalizedTimeout(options.timeoutMs);
   const probe = options.probe
     ?? ((candidate: string) => probeBrowserImage(candidate, timeout));
 
-  return await firstLoadableIconCandidate(
-    elementIconCandidates(appId, path, href),
-    probe,
-    timeout,
-  );
+  if (await firstLoadableIconCandidate([preferred], probe, timeout)) {
+    return preferred;
+  }
+  return alternate;
 }
