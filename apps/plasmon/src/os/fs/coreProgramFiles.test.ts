@@ -31,9 +31,12 @@ test("#89 filesystem core ready reconciles one stable MonacoEditor Program Files
   const raw = new PersistentFsService(new MemoryFsRepository());
 
   const firstCore = createFilesystemCore(dependencies(raw));
+  const earlyRuntimePromise = firstCore.programFiles.ensureRuntimeDirectory("MonacoEditor");
   await firstCore.ready;
   const first = await raw.resolvePath(`${PROGRAM_FILES_PATH}/MonacoEditor`);
   assert.ok(first);
+  const earlyRuntime = await earlyRuntimePromise;
+  assert.equal(earlyRuntime.id, first.id, "an early runtime consumer must share the core bootstrap identity");
   assert.equal(first.kind, "directory");
   assert.equal(first.metadata[OWNERSHIP_METADATA_KEY], "system-required");
   assert.equal(await raw.resolvePath("/System/MonacoEditor.sys"), null);
