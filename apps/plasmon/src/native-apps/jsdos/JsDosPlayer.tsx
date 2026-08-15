@@ -20,10 +20,7 @@ function messageFor(state: PlayerState): string {
   return "";
 }
 
-async function saveBeforeClose(
-  player: JsDosPlayerHandle,
-  captureAndPersistPreview: () => Promise<void>,
-): Promise<"complete" | "timeout"> {
+async function saveBeforeClose(saveWork: () => Promise<void>): Promise<"complete" | "timeout"> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (result: "complete" | "timeout") => {
@@ -33,11 +30,7 @@ async function saveBeforeClose(
       resolve(result);
     };
     const timer = setTimeout(() => finish("timeout"), CLOSE_SAVE_TIMEOUT_MS);
-    void (async () => {
-      const previewWork = captureAndPersistPreview();
-      await player.save().catch(() => false);
-      await previewWork.catch(() => undefined);
-    })().then(
+    void saveWork().then(
       () => finish("complete"),
       () => finish("complete"),
     );
@@ -113,10 +106,14 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         if (allowCloseAfterTimeoutRef.current) return "allow";
         const active = playerRef.current;
         if (!active) return "allow";
-        void saveBeforeClose(active, async () => {
-          const preview = await captureJsDosPreview(root);
-          if (!preview) return;
-          const savedPreview = await progressStore.savePreview(preview);
+        void saveBeforeClose(async () => {
+          // Capture the representative frame at the same save boundary, but do
+          // not attach it until the authoritative #64 save has completed.
+          const previewPromise = captureJsDosPreview(root).catch(() => null);
+          const saved = await active.save().catch(() => false);
+          const preview = await previewPromise;
+          if (!saved || !preview) return;
+          const savedPreview = await progressStore.savePreview(preview).catch(() => null);
           if (!disposed && savedPreview) root.dataset.jsdosPreviewSaved = "true";
         }).then((result) => {
           if (disposed) return;
