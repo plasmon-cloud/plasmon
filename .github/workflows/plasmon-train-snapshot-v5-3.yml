@@ -31,6 +31,8 @@ jobs:
           import json
           import os
           import re
+          import subprocess
+          import time
           import urllib.parse
           import urllib.request
 
@@ -197,6 +199,92 @@ jobs:
           if not target_sha:
               raise RuntimeError("could not resolve release target SHA")
 
+          captured = int(time.time())
+          observations = {}
+
+          def gh_json(args):
+              env = dict(os.environ)
+              env["GH_TOKEN"] = TOKEN
+              proc = subprocess.run(["gh", *args], text=True, capture_output=True, env=env)
+              text = proc.stdout.strip()
+              if not text:
+                  return None
+              try:
+                  return json.loads(text)
+              except json.JSONDecodeError:
+                  return None
+
+          for row in rows:
+              pr_num = row.get("pr")
+              if pr_num is None or not row.get("open"):
+                  continue
+              detail = gh_json([
+                  "pr", "view", str(pr_num), "--repo", REPO,
+                  "--json", "mergeable,reviewDecision,reviewRequests,isDraft,headRefOid,headRefName,baseRefName",
+              ]) or {}
+              checks = gh_json([
+                  "pr", "checks", str(pr_num), "--repo", REPO, "--required",
+                  "--json", "name,state,bucket,workflow,link",
+              ]) or []
+              if not isinstance(checks, list):
+                  checks = []
+
+              passed = running = failed = 0
+              for check in checks:
+                  bucket = str(check.get("bucket") or check.get("state") or "unknown").lower()
+                  if bucket in {"pass", "success", "skipping", "skipped"}:
+                      passed += 1
+                  elif bucket in {"pending", "queued", "running", "in_progress", "in-progress"}:
+                      running += 1
+                  else:
+                      failed += 1
+              if running:
+                  ci = "running"
+              elif failed:
+                  ci = "failed"
+              elif checks and passed == len(checks):
+                  ci = "success"
+              else:
+                  ci = "unknown"
+
+              decision = str(detail.get("reviewDecision") or "unknown").lower()
+              if decision == "changes_requested":
+                  review = "changes_requested"
+              elif decision == "approved":
+                  review = "approved"
+              elif decision in {"review_required", "review_requested"}:
+                  review = "pending"
+              else:
+                  review = "unknown"
+
+              mergeable_raw = str(detail.get("mergeable") or "unknown").lower()
+              if mergeable_raw == "mergeable":
+                  mergeable = "true"
+              elif mergeable_raw == "conflicting":
+                  mergeable = "false"
+              else:
+                  mergeable = "unknown"
+
+              observations[str(pr_num)] = {
+                  "head": detail.get("headRefOid") or None,
+                  "branch": detail.get("headRefName") or row.get("pr_branch"),
+                  "base": detail.get("baseRefName") or row.get("pr_base"),
+                  "ci": ci,
+                  "review": review,
+                  "mergeable": mergeable,
+                  "draft": "true" if detail.get("isDraft") else "false",
+                  "check_passed": passed,
+                  "check_running": running,
+                  "check_failed": failed,
+                  "check_total": len(checks),
+                  "review_requests": [
+                      item.get("login") or item.get("name")
+                      for item in (detail.get("reviewRequests") or [])
+                      if isinstance(item, dict)
+                  ],
+                  "observed_at": captured,
+              }
+
           milestone_after = api(f"/milestones/{milestone_number}")
           after = (
               int(milestone_after.get("open_issues") or 0),
@@ -222,7 +310,6 @@ jobs:
           if missing:
               raise RuntimeError("open r2 metadata incomplete: " + "; ".join(missing))
 
-          captured = int(dt.datetime.now(dt.timezone.utc).timestamp())
           snapshot = {
               "schema": "plasmon-train-snapshot-v5.3",
               "lane_complete": True,
@@ -231,12 +318,9 @@ jobs:
               "milestone": MILESTONE_TITLE,
               "captured_at": captured,
               "target_sha": target_sha,
-              "lane_counts": {
-                  "open": before[0],
-                  "closed": before[1],
-                  "total": sum(before),
-              },
+              "lane_counts": {"open": before[0], "closed": before[1], "total": sum(before)},
               "issues": rows,
+              "observations": observations,
           }
           with open("plasmon-train-snapshot-v5-3.json", "w", encoding="utf-8") as f:
               json.dump(snapshot, f, indent=2, sort_keys=False)
