@@ -348,13 +348,21 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  const normalTitlebar = await titlebar.boundingBox();
-  if (!normalTitlebar) throw new Error("Restored native titlebar has no browser bounds");
-  const normalVisibleLeft = Math.max(workspace.x, normalTitlebar.x);
-  const normalVisibleRight = Math.min(workspace.x + workspace.width, normalTitlebar.x + normalTitlebar.width);
-  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored titlebar lost its reachable segment");
+  // #268 follow-up: the whole visible titlebar includes controls whose
+  // pointerdown deliberately stops propagation. Start normalization from the
+  // rendered identity region so this remains the real production titlebar drag
+  // path while never sampling Minimize/Maximize/Close.
+  const normalDragSurface = dialog.locator(".plasmon-window__identity");
+  const normalDragSurfaceBox = await normalDragSurface.boundingBox();
+  if (!normalDragSurfaceBox) throw new Error("Restored native drag identity has no browser bounds");
+  const normalVisibleLeft = Math.max(workspace.x, normalDragSurfaceBox.x);
+  const normalVisibleRight = Math.min(
+    workspace.x + workspace.width,
+    normalDragSurfaceBox.x + normalDragSurfaceBox.width,
+  );
+  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored drag identity lost its reachable segment");
   const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
-  const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
+  const normalDragY = normalDragSurfaceBox.y + Math.min(16, normalDragSurfaceBox.height / 2);
   await page.mouse.move(normalDragStartX, normalDragY);
   await page.mouse.down();
   await expect(dialog).toHaveAttribute("data-interacting", "drag");
