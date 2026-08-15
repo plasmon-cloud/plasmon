@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { JsonValue } from "../contracts/index.ts";
 import {
   readResourceArtworkMetadata,
   resourceArtworkMetadata,
@@ -6,7 +7,7 @@ import {
 import { classifyResource } from "../fs/resourcePolicy.ts";
 import { resourcePresentationForClassification } from "./resource-presentation.ts";
 
-function gameNode(metadata: Record<string, unknown> = {}) {
+function gameNode(metadata: Record<string, JsonValue> = {}) {
   return {
     name: "PlasmonDemo.jsdos",
     kind: "file" as const,
