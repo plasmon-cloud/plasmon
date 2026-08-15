@@ -7,6 +7,7 @@ import {
   startJsDosPlayer,
   type JsDosPlayerHandle,
 } from "./runtime.ts";
+import { waitForJsDosSave } from "./save-lifecycle.ts";
 
 type PlayerState = "loading" | "starting" | "ready" | "error";
 
@@ -19,23 +20,6 @@ function messageFor(state: PlayerState): string {
   return "";
 }
 
-async function saveBeforeClose(player: JsDosPlayerHandle): Promise<"complete" | "timeout"> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (result: "complete" | "timeout") => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(result);
-    };
-    const timer = setTimeout(() => finish("timeout"), CLOSE_SAVE_TIMEOUT_MS);
-    void player.save().then(
-      () => finish("complete"),
-      () => finish("complete"),
-    );
-  });
-}
-
 /**
  * Generic .jsdos execution host. It knows only the selected filesystem node;
  * game names and demo-content policy stay outside runtime dispatch.
@@ -44,7 +28,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
   const rootRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<JsDosPlayerHandle | null>(null);
   const bundleUrlRef = useRef<string | null>(null);
-  const allowCloseAfterTimeoutRef = useRef(false);
+  const allowCloseWithoutSaveRef = useRef(false);
   const [state, setState] = useState<PlayerState>("loading");
   const [detail, setDetail] = useState<string | null>(null);
   const [progressWarning, setProgressWarning] = useState<string | null>(null);
@@ -101,14 +85,20 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       });
       playerRef.current = player;
       unregisterClose = process.registerCloseHandler(processId, (request) => {
-        if (allowCloseAfterTimeoutRef.current) return "allow";
+        if (allowCloseWithoutSaveRef.current) return "allow";
         const active = playerRef.current;
         if (!active) return "allow";
-        void saveBeforeClose(active).then((result) => {
+        void waitForJsDosSave(() => active.save(), CLOSE_SAVE_TIMEOUT_MS).then((result) => {
           if (disposed) return;
           if (result === "timeout") {
-            allowCloseAfterTimeoutRef.current = true;
+            allowCloseWithoutSaveRef.current = true;
             setProgressWarning("Saving game progress timed out. Close again to exit without saving.");
+            request.cancel();
+            return;
+          }
+          if (result === "failed") {
+            allowCloseWithoutSaveRef.current = true;
+            setProgressWarning("Game progress could not be saved. Close again to exit without saving.");
             request.cancel();
             return;
           }
@@ -128,7 +118,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
     return () => {
       disposed = true;
       unregisterClose();
-      allowCloseAfterTimeoutRef.current = false;
+      allowCloseWithoutSaveRef.current = false;
       if (rootRef.current) {
         delete rootRef.current.dataset.jsdosReady;
         delete rootRef.current.dataset.jsdosProgressRestored;
