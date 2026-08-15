@@ -21,9 +21,7 @@ class AutosaveFs {
     },
     write: async (id: NodeId, data: Uint8Array, _options?: WriteOptions) => {
       if (id !== this.nodeId) throw new Error("missing document");
-      this.content = data.slice();
-      this.modifiedAt += 1;
-      this.revisionValue += 1n;
+      this.replace(data);
       return this.node();
     },
     revision: async (): Promise<Revision> => this.revisionValue,
@@ -31,6 +29,16 @@ class AutosaveFs {
 
   text(): string {
     return new TextDecoder().decode(this.content);
+  }
+
+  externalWrite(text: string): void {
+    this.replace(new TextEncoder().encode(text));
+  }
+
+  private replace(data: Uint8Array): void {
+    this.content = data.slice();
+    this.modifiedAt += 1;
+    this.revisionValue += 1n;
   }
 
   private node(): FsNode {
@@ -74,5 +82,21 @@ test("autosave persists only after explicit opt-in through the shared session", 
   expect(fs.text()).toBe("autosaved draft");
   expect(session.snapshot().dirty).toBe(false);
   expect(session.snapshot().status).toBe("ready");
+  session.dispose();
+});
+
+test("opt-in autosave cannot overwrite a newer filesystem revision", async () => {
+  const fs = new AutosaveFs();
+  const session = new DocumentSession(fs.service, { autosave: true, autosaveMs: 10 });
+  await session.setTarget(fs.nodeId);
+
+  session.edit("my draft");
+  fs.externalWrite("newer external content");
+  await delay(30);
+
+  expect(fs.text()).toBe("newer external content");
+  expect(session.snapshot().text).toBe("my draft");
+  expect(session.snapshot().dirty).toBe(true);
+  expect(session.snapshot().status).toBe("conflict");
   session.dispose();
 });
