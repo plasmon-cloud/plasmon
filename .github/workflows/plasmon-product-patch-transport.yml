@@ -1,0 +1,60 @@
+name: Plasmon Product Patch Transport
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-3
+    paths:
+      - .github/plasmon-product-patch-trigger.json
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout helper transport
+        uses: actions/checkout@v4
+        with:
+          path: helper
+      - name: Read transport request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          request=helper/.github/plasmon-product-patch-trigger.json
+          echo "branch=$(jq -r .branch "$request")" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$(jq -r .base_sha "$request")" >> "$GITHUB_OUTPUT"
+          echo "patch_sha256=$(jq -r .patch_sha256 "$request")" >> "$GITHUB_OUTPUT"
+          echo "message=$(jq -r .message "$request")" >> "$GITHUB_OUTPUT"
+      - name: Checkout exact Product branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.branch }}
+          fetch-depth: 0
+          path: work
+      - name: Reassemble and verify patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_base=$(git -C work rev-parse HEAD)
+          test "$actual_base" = "${{ steps.request.outputs.base_sha }}"
+          : > /tmp/product.patch
+          for part in helper/.github/plasmon-product-patches/current/*.b64; do
+            base64 -d "$part" >> /tmp/product.patch
+          done
+          echo "${{ steps.request.outputs.patch_sha256 }}  /tmp/product.patch" | sha256sum -c -
+          git -C work apply --check /tmp/product.patch
+          git -C work apply /tmp/product.patch
+          git -C work diff --check
+      - name: Commit exactly once and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C work config user.name "plasmon-product-transport[bot]"
+          git -C work config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C work add -A
+          test -n "$(git -C work diff --cached --name-only)"
+          git -C work commit -m "${{ steps.request.outputs.message }}"
+          git -C work push origin "HEAD:${{ steps.request.outputs.branch }}"
