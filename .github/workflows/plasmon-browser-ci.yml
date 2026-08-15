@@ -69,6 +69,5 @@ jobs:
             npm run plasmon:demo:status
             npm run plasmon:demo:reinstall
             npm run test:e2e:plasmon:specialist
-            NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test --workers=1 --project=chromium test/e2e/plasmon-monaco-workers-89.spec.ts
             NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json PLAYWRIGHT_FIREFOX=1 playwright test --workers=1 --project=firefox test/e2e/plasmon-monaco-workers-89.spec.ts
           '
