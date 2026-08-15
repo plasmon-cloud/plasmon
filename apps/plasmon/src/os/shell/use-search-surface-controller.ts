@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ExternalElement,
+  FsEventSource,
   FsService,
   NativeAppDefinition,
 } from "../contracts/index.ts";
@@ -8,6 +9,7 @@ import { deriveSearchSurfaceViewState, type SearchSurfaceViewState } from "./sea
 import {
   LatestSearchController,
   searchShell,
+  subscribeSearchInvalidation,
   type SearchBatch,
   type SearchTab,
 } from "./search.ts";
@@ -21,7 +23,7 @@ function formatError(error: unknown): string {
 export interface SearchSurfaceControllerOptions {
   open: boolean;
   fs: FsService;
-  revision: number;
+  fsEvents?: FsEventSource;
   nativeApps: readonly NativeAppDefinition[];
   elements: readonly ExternalElement[];
   pinnedNative: readonly string[];
@@ -44,8 +46,14 @@ export function useSearchSurfaceController(
   const [batch, setBatch] = useState<SearchBatch>(EMPTY_SEARCH);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
   const latest = useRef(new LatestSearchController<SearchBatch>());
   const abort = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => subscribeSearchInvalidation(options.fsEvents, () => setRevision((value) => value + 1)),
+    [options.fsEvents],
+  );
 
   useEffect(() => {
     latest.current.cancel();
@@ -97,8 +105,8 @@ export function useSearchSurfaceController(
     options.open,
     options.pinnedElements,
     options.pinnedNative,
-    options.revision,
     query,
+    revision,
   ]);
 
   const view = useMemo(
