@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
-import { createJsDosFsChanges } from "./progress.ts";
+import { captureJsDosPreview } from "./preview.ts";
+import { JsDosProgressStore, createJsDosFsChanges } from "./progress.ts";
 import {
   jsDosPackageAssetUrl,
   loadJsDosRuntime,
@@ -19,7 +20,10 @@ function messageFor(state: PlayerState): string {
   return "";
 }
 
-async function saveBeforeClose(player: JsDosPlayerHandle): Promise<"complete" | "timeout"> {
+async function saveBeforeClose(
+  player: JsDosPlayerHandle,
+  captureAndPersistPreview: () => Promise<void>,
+): Promise<"complete" | "timeout"> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (result: "complete" | "timeout") => {
@@ -29,7 +33,11 @@ async function saveBeforeClose(player: JsDosPlayerHandle): Promise<"complete" | 
       resolve(result);
     };
     const timer = setTimeout(() => finish("timeout"), CLOSE_SAVE_TIMEOUT_MS);
-    void player.save().then(
+    void (async () => {
+      const previewWork = captureAndPersistPreview();
+      await player.save().catch(() => false);
+      await previewWork.catch(() => undefined);
+    })().then(
       () => finish("complete"),
       () => finish("complete"),
     );
@@ -64,6 +72,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       const bytes = await fs.read(node.id);
       if (bytes.length === 0) throw new Error("DOS bundle is empty");
 
+      const progressStore = new JsDosProgressStore(fs, gameNodeId);
       const bundleUrl = URL.createObjectURL(new Blob([bytes.slice().buffer], { type: "application/zip" }));
       bundleUrlRef.current = bundleUrl;
       setState("starting");
@@ -104,7 +113,12 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         if (allowCloseAfterTimeoutRef.current) return "allow";
         const active = playerRef.current;
         if (!active) return "allow";
-        void saveBeforeClose(active).then((result) => {
+        void saveBeforeClose(active, async () => {
+          const preview = await captureJsDosPreview(root);
+          if (!preview) return;
+          const savedPreview = await progressStore.savePreview(preview);
+          if (!disposed && savedPreview) root.dataset.jsdosPreviewSaved = "true";
+        }).then((result) => {
           if (disposed) return;
           if (result === "timeout") {
             allowCloseAfterTimeoutRef.current = true;
@@ -133,6 +147,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         delete rootRef.current.dataset.jsdosReady;
         delete rootRef.current.dataset.jsdosProgressRestored;
         delete rootRef.current.dataset.jsdosProgressSaved;
+        delete rootRef.current.dataset.jsdosPreviewSaved;
       }
       const player = playerRef.current;
       playerRef.current = null;
