@@ -105,8 +105,12 @@ test("#118 groups canonical Explorer processes and focuses individual members", 
   await rootShortcut.dblclick();
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
 
-  const primary = plasmon.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(primary).toBeVisible();
+  // The native window count is the creation boundary. Explorer publishes its
+  // canonical title asynchronously, so bind the newly active Windowing record
+  // first and prove the real Explorer surface is initialized before continuing.
+  const primary = plasmon.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
+  await expect(primary).toHaveCount(1);
+  await expect(primary.getByRole("textbox", { name: "Address" })).toHaveValue("/");
   const primaryId = await primary.getAttribute("data-window-id");
   if (!primaryId) throw new Error("Primary Explorer native window has no stable window id");
   const primaryWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${primaryId}"]`);
@@ -234,6 +238,9 @@ test("taskbar context menus stay source-adjacent and expose canonical Close and 
   await expect(itemMenu).toBeVisible();
   await expect(itemMenu.getByRole("menuitem", { name: /Pin to taskbar|Unpin from taskbar/ })).toBeVisible();
   await expect(itemMenu.getByRole("menuitem", { name: "Close" })).toBeVisible();
+  await itemMenu.evaluate(async (element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
 
   const itemMenuBounds = await itemMenu.boundingBox();
   if (!itemMenuBounds) throw new Error("Taskbar item context menu has no browser bounds");
