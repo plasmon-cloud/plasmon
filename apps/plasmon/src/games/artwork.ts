@@ -3,7 +3,7 @@ import {
   readResourceArtworkMetadata,
   resourceArtworkMetadata,
 } from "../os/fs/index.ts";
-import { PACKAGED_DEMO_GAME_PATH } from "./demoFixture.ts";
+import { DEMO_GAME_FIXTURE_PATH } from "./demoFixture.ts";
 
 export const PACKAGED_DEMO_GAME_ARTWORK_SRC = "static/plasmon/artwork/plasmon-demo.svg";
 export const PACKAGED_DEMO_GAME_ARTWORK_MIME = "image/svg+xml" as const;
@@ -14,7 +14,7 @@ export const PACKAGED_DEMO_GAME_ARTWORK_BYTES = 1193;
  * is generic; Games does not render, resolve, or execute artwork.
  */
 export async function reconcilePackagedDemoGameArtwork(fs: FsService): Promise<boolean> {
-  const node = await fs.resolvePath(PACKAGED_DEMO_GAME_PATH);
+  const node = await fs.resolvePath(DEMO_GAME_FIXTURE_PATH);
   if (!node || node.kind !== "file") return false;
 
   const current = readResourceArtworkMetadata(node);
