@@ -1,6 +1,7 @@
-import type {
-  ButtonHTMLAttributes,
-  HTMLAttributes,
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
 } from "react";
 
 function chromeClass(base: string, className?: string): string {
@@ -12,9 +13,17 @@ function chromeClass(base: string, className?: string): string {
  * window. Window title bars/borders remain Windowing-owned; application state
  * and controls remain with the consuming Native App.
  */
-export function NativeAppContentSurface({ className, ...props }: HTMLAttributes<HTMLElement>) {
-  return <section {...props} className={chromeClass("plasmon-native-app-surface", className)} />;
-}
+export const NativeAppContentSurface = forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(
+  function NativeAppContentSurface({ className, ...props }, ref) {
+    return (
+      <section
+        {...props}
+        ref={ref}
+        className={chromeClass("plasmon-native-app-surface", className)}
+      />
+    );
+  },
+);
 
 export interface NativeAppToolbarProps extends HTMLAttributes<HTMLElement> {
   as?: "div" | "nav";
