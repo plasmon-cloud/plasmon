@@ -20,7 +20,7 @@ async function fixture() {
   return { fs, game, store, progress };
 }
 
-test("#124 preview metadata references one bounded filesystem image on the canonical save", async () => {
+test("#124 preview metadata references one bounded filesystem image on the canonical save and visible game projection", async () => {
   const { fs, game, store } = await fixture();
   const first = await store.savePreview({
     bytes: Uint8Array.from([137, 80, 78, 71, 1, 2, 3]),
@@ -30,18 +30,20 @@ test("#124 preview metadata references one bounded filesystem image on the canon
   });
   expect(first).not.toBeNull();
 
-  const save = await fs.resolvePath(jsDosProgressPath(game.id));
-  if (!save) throw new Error("save record missing");
-  expect(readResourcePreviewMetadata(save)).toEqual({
-    format: "plasmon.resource-preview",
-    version: 1,
-    source: "filesystem-node",
+  const expectedFirst = {
+    format: "plasmon.resource-preview" as const,
+    version: 1 as const,
+    source: "filesystem-node" as const,
     nodeId: first!.id,
-    mime: "image/png",
+    mime: "image/png" as const,
     byteSize: 7,
     width: 320,
     height: 200,
-  });
+  };
+  const save = await fs.resolvePath(jsDosProgressPath(game.id));
+  if (!save) throw new Error("save record missing");
+  expect(readResourcePreviewMetadata(save)).toEqual(expectedFirst);
+  expect(readResourcePreviewMetadata(await fs.stat(game.id))).toEqual(expectedFirst);
 
   const second = await store.savePreview({
     bytes: Uint8Array.from([137, 80, 78, 71, 4, 5]),
@@ -51,6 +53,12 @@ test("#124 preview metadata references one bounded filesystem image on the canon
   });
   expect(second?.id).toBe(first?.id);
   expect(Array.from(await fs.read(second!.id))).toEqual([137, 80, 78, 71, 4, 5]);
+  expect(readResourcePreviewMetadata(await fs.stat(game.id))).toEqual({
+    ...expectedFirst,
+    byteSize: 6,
+    width: 240,
+    height: 150,
+  });
 
   const directory = await fs.resolvePath("/.jsdos-progress");
   if (!directory) throw new Error("progress directory missing");
@@ -75,9 +83,10 @@ test("#124 missing preview bytes never affect authoritative progress correctness
   const save = await fs.resolvePath(jsDosProgressPath(game.id));
   if (!save) throw new Error("save record missing");
   expect(readResourcePreviewMetadata(save)?.nodeId).toBe(preview.id);
+  expect(readResourcePreviewMetadata(await fs.stat(game.id))?.nodeId).toBe(preview.id);
 });
 
-test("#124 oversized preview capture is ignored without rewriting the save", async () => {
+test("#124 oversized preview capture is ignored without rewriting the save or visible game presentation", async () => {
   const { fs, game, store, progress } = await fixture();
   const result = await store.savePreview({
     bytes: new Uint8Array(RESOURCE_PREVIEW_MAX_BYTES + 1),
@@ -91,4 +100,5 @@ test("#124 oversized preview capture is ignored without rewriting the save", asy
   const save = await fs.resolvePath(jsDosProgressPath(game.id));
   if (!save) throw new Error("save record missing");
   expect(readResourcePreviewMetadata(save)).toBeNull();
+  expect(readResourcePreviewMetadata(await fs.stat(game.id))).toBeNull();
 });
