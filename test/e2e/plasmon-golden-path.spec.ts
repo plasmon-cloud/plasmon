@@ -371,15 +371,19 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     return null;
   });
   if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
-  const normalTitlebarBox = await titlebar.boundingBox();
-  if (!normalTitlebarBox) throw new Error("Restored native titlebar has no browser bounds");
-  const normalDragStartX = normalTitlebarBox.x + normalDragPoint.x;
-  const normalDragY = normalTitlebarBox.y + normalDragPoint.y;
-  await page.mouse.move(normalDragStartX, normalDragY);
+  // The hit-test above runs inside the Plasmon iframe, while Locator.boundingBox()
+  // reports main-frame coordinates. After a viewport restore the WindowLayer ResizeObserver
+  // can still reconcile native geometry between those two observations. Let Playwright
+  // re-resolve the same rendered titlebar point through its stable/receives-events
+  // actionability boundary, then keep the real top-level pointerdown/drag path below.
+  await titlebar.hover({ position: normalDragPoint });
   await page.mouse.down();
   await expect(dialog).toHaveAttribute("data-interacting", "drag");
+  const draggingTitlebarBox = await titlebar.boundingBox();
+  if (!draggingTitlebarBox) throw new Error("Dragging native titlebar has no browser bounds");
+  const normalDragY = draggingTitlebarBox.y + normalDragPoint.y;
   await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
-  await page.mouse.up();
+    await page.mouse.up();
   await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
   const normalizedBounds = await dialog.boundingBox();
   if (!normalizedBounds) throw new Error("Normalized Explorer has no browser bounds");
