@@ -6,7 +6,9 @@ Text is the Plasmon native text/code editor built around a packaged Monaco edito
 
 Filesystem persistence and document conflict semantics must remain independent of Monaco engine lifecycle so they can be tested without a browser. Ordinary close remains Process-owned: the document model only decides whether an accepted Process request may proceed, must remain deferred, or is cancelled.
 
-For a dirty close, autosave is suspended while the decision is pending. Save completes the deferred request only after the current edits persist successfully; failed save or conflict leaves the document open. Discard suppresses the pending autosave and dispose-time flush for that close. Cancel resumes normal autosave behavior and keeps the dirty process/window alive.
+Text and Markdown use explicit-save document sessions by default. Autosave is an explicit shared `DocumentSession`/`useDocumentSession` opt-in (`autosave: true`), not something implied by configuring the debounce duration. There is no accepted persistent editor-preference store yet, so the current product contract is the documented shared session default OFF; Settings/localStorage must not become a parallel preference or document authority. When autosave is enabled, it still routes through the same conflict-aware `save()` path.
+
+For a dirty close, autosave is suspended while the decision is pending. Save completes the deferred request only after the current edits persist successfully; failed save or conflict leaves the document open. Discard suppresses the pending autosave and dispose-time flush for that close. Cancel resumes autosave only when that session explicitly opted in and keeps the dirty process/window alive.
 
 Monaco worker executables are packaged beneath the canonical `/System/Program Files/MonacoEditor` runtime root. That Program Files subtree is the sole logical runtime authority, not an application-installation registry. Ordinary browser contexts construct module Workers from that path directly. The package also retains the URL-safe `runtime/monaco/` serving mirror required by Kernel app-host routing; package tests require every mirrored worker to be byte-identical to Program Files and it carries no independent lifecycle/model authority. Neutron's application frame intentionally has an opaque origin, so worker startup uses the minimum browser compatibility adapter needed by that sandbox. Packaged builds generate one `runtime/monaco/worker-sources.js` preload from the same self-contained worker bundles used for Program Files and the URL-safe mirror. It serializes those bytes as inert strings in the application document. Normal origins continue to execute the canonical Program Files path as module Workers; only the opaque application frame materializes the identical preloaded bytes as `blob:` classic Workers because Chromium rejects `blob:null/...` module Workers there while classic blob Workers execute normally. Package tests require Program Files, the URL-safe mirror, and the preloaded source to agree byte-for-byte. The retired top-level `monaco-workers/` path remains forbidden.
 
@@ -15,6 +17,8 @@ Monaco worker executables are packaged beneath the canonical `/System/Program Fi
 Continue sharing document-session, close-decision, command, status, and editor-chrome infrastructure with Markdown/other document apps. Keep Monaco-specific adapters isolated from generic document semantics and expose mature editor capabilities through reusable command models/UI rather than app-specific shortcuts only.
 
 Shared language/type metadata should come from common association/content metadata rather than a Text-only extension table when other OS surfaces need the same answer.
+
+When a typed shared preference store becomes an accepted OS capability, editor autosave preference persistence should be injected through that authority rather than added as Text/Markdown-private storage.
 
 ## Testing
 
