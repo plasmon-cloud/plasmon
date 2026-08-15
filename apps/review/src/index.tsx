@@ -98,19 +98,40 @@ export function App() {
     return outcome.ok;
   }, []);
 
-  const createReview = () => perform(async () => {
-    const title = newTitle.trim() || "Untitled Review";
-    const result = await call<{ atomId: string }>(target, "review_create", { commandId: command("create"), title });
-    await refreshCatalog(result.atomId);
-    setNewTitle("");
-    setNotice("Review created. Completed actions are stored by Review automatically.");
-  }, { persisted: true });
+  const refreshAfterAcceptedAction = useCallback(async (work: () => Promise<void>): Promise<boolean> => {
+    const outcome = await settleReviewAction(work);
+    if (outcome.ok) return true;
+    setNotice(`Saved, but Review could not refresh the latest state. Reopen Review before making another change. ${outcome.error}`);
+    return false;
+  }, []);
 
-  const importReview = () => perform(async () => {
-    const result = await call<{ atomId: string; importedItems: number }>(target, "review_file", { action: "import", commandId: command("import"), path: importPath.trim() });
-    await refreshCatalog(result.atomId);
-    setNotice(`Imported ${result.importedItems} item${result.importedItems === 1 ? "" : "s"} into a new Review. The source file is provenance, not the Review identity.`);
-  }, { persisted: true });
+  const createReview = async (): Promise<boolean> => {
+    const title = newTitle.trim() || "Untitled Review";
+    let createdAtomId: string | null = null;
+    const accepted = await perform(async () => {
+      const result = await call<{ atomId: string }>(target, "review_create", { commandId: command("create"), title });
+      createdAtomId = result.atomId;
+    }, { persisted: true });
+    if (!accepted || !createdAtomId) return false;
+    setNewTitle("");
+    const refreshed = await refreshAfterAcceptedAction(() => refreshCatalog(createdAtomId!));
+    if (refreshed) setNotice("Review created. Completed actions are stored by Review automatically.");
+    return true;
+  };
+
+  const importReview = async (): Promise<boolean> => {
+    let imported: { atomId: string; importedItems: number } | null = null;
+    const accepted = await perform(async () => {
+      imported = await call<{ atomId: string; importedItems: number }>(target, "review_file", { action: "import", commandId: command("import"), path: importPath.trim() });
+    }, { persisted: true });
+    if (!accepted || !imported) return false;
+    const result = imported as { atomId: string; importedItems: number };
+    const refreshed = await refreshAfterAcceptedAction(() => refreshCatalog(result.atomId));
+    if (refreshed) {
+      setNotice(`Imported ${result.importedItems} item${result.importedItems === 1 ? "" : "s"} into a new Review. The source file is provenance, not the Review identity.`);
+    }
+    return true;
+  };
 
   const exportReview = () => perform(async () => {
     if (!atom) return;
@@ -118,16 +139,20 @@ export function App() {
     setNotice(`Exported the current Review to ${exportPath.trim()}. This is a portable copy, not a live share.`);
   });
 
-  const apply = useCallback((operation: ReviewOperation) => perform(async () => {
-    if (!atom) return;
-    await call(target, "review_command", {
-      atomId: atom.meta.atomId,
-      expectedRevision: atom.meta.currentRevision,
-      commandId: command(operation.type),
-      operation,
-    });
-    await refreshCurrent();
-  }, { persisted: true }), [atom, perform, refreshCurrent, target]);
+  const apply = useCallback(async (operation: ReviewOperation): Promise<boolean> => {
+    if (!atom) return false;
+    const accepted = await perform(async () => {
+      await call(target, "review_command", {
+        atomId: atom.meta.atomId,
+        expectedRevision: atom.meta.currentRevision,
+        commandId: command(operation.type),
+        operation,
+      });
+    }, { persisted: true });
+    if (!accepted) return false;
+    await refreshAfterAcceptedAction(refreshCurrent);
+    return true;
+  }, [atom, perform, refreshAfterAcceptedAction, refreshCurrent, target]);
 
   const addItem = () => {
     const title = newItem.trim();
