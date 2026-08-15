@@ -34,7 +34,24 @@ Pinned js-dos 8.4.1 exposes a supported `fsChanges` contract with `urlToKey`, `p
 
 The hidden progress directory is ordinary Plasmon filesystem state behind the normal durable filesystem service/repository boundary. It is distinct from the embedded volatile StorageManager adapter: the latter exists only for engine-internal cache/bootstrap compatibility and never becomes save authority.
 
-The progress file is the accepted durable save representation for the js-dos runtime. Presentation metadata such as future screenshot thumbnails may reference or extend that save record, but preview bytes must never become authoritative for save correctness.
+The `.changes` file is the accepted durable save representation for the js-dos runtime.
+
+## Save screenshot previews
+
+When a live js-dos canvas is available at the normal save-before-close boundary, `preview.ts` captures a bounded PNG frame while `player.save()` persists the authoritative change set. The screenshot is attached only after the save reports success.
+
+The preview lifecycle is deliberately presentation-only:
+
+- at most one sibling `<NodeId>.preview.png` image is retained per js-dos save; a later successful capture overwrites it instead of accumulating snapshots;
+- the preview image remains private filesystem state and the canonical `.changes` save record references it through validated `plasmon.resourcePreview` metadata;
+- after that canonical reference is written, the same validated preview reference is projected onto the visible game resource so ordinary FileManager/resource surfaces can show the latest saved frame without exposing the progress directory or creating a second save resource;
+- both references use the preview resource's stable `NodeId`, not a mutable path;
+- failure to project presentation metadata onto the visible game resource is non-authoritative and cannot turn a successful progress save into a failed save;
+- capture, canvas encoding, preview write, missing preview data, or image decoding failure never changes save validity or restore behavior;
+- FileManager resolves the reference through its existing shared thumbnail/Object-URL lifecycle and falls back normally when the preview cannot be loaded;
+- preview bytes are never inspected by `JsDosProgressStore.load()` and are not part of the save checksum/runtime compatibility contract.
+
+This is not a generic screenshot service and does not require every runtime to support capture. js-dos owns the actual canvas capture because it owns that browser/runtime surface; the filesystem/Visual layers own only the bounded preview reference and shared presentation mechanics.
 
 ## Refactor direction
 
@@ -42,4 +59,4 @@ Keep runtime loading/configuration independent of file association and process/w
 
 ## Testing
 
-Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, embedded storage compatibility, and deterministic helpers. Use package/browser tests for script/style asset presence, runtime global initialization, failure/retry, canvas/input behavior, real save-before-close, reopen/restore, sandbox storage compatibility, and actual playable startup because those claims depend on a browser engine and packaged assets.
+Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, embedded storage compatibility, preview metadata/lifecycle, shared preview loading, and deterministic helpers. Use package/browser tests for script/style asset presence, runtime global initialization, failure/retry, canvas/input behavior, real save-before-close, screenshot capture/presentation, reopen/restore, sandbox storage compatibility, and actual playable startup because those claims depend on a browser engine and packaged assets.

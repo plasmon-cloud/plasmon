@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
-import { createJsDosFsChanges } from "./progress.ts";
+import { captureJsDosPreview } from "./preview.ts";
+import { JsDosProgressStore, createJsDosFsChanges } from "./progress.ts";
 import {
   jsDosPackageAssetUrl,
   loadJsDosRuntime,
@@ -48,6 +49,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       const bytes = await fs.read(node.id);
       if (bytes.length === 0) throw new Error("DOS bundle is empty");
 
+      const progressStore = new JsDosProgressStore(fs, gameNodeId);
       const bundleUrl = URL.createObjectURL(new Blob([bytes.slice().buffer], { type: "application/zip" }));
       bundleUrlRef.current = bundleUrl;
       setState("starting");
@@ -88,7 +90,18 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         if (allowCloseWithoutSaveRef.current) return "allow";
         const active = playerRef.current;
         if (!active) return "allow";
-        void waitForJsDosSave(() => active.save(), CLOSE_SAVE_TIMEOUT_MS).then((result) => {
+        void waitForJsDosSave(async () => {
+          // Capture the representative frame at the same explicit save boundary,
+          // but attach it only after the authoritative #64 save succeeds.
+          const previewPromise = captureJsDosPreview(root).catch(() => null);
+          const saved = await active.save();
+          const preview = await previewPromise;
+          if (saved && preview) {
+            const savedPreview = await progressStore.savePreview(preview).catch(() => null);
+            if (!disposed && savedPreview) root.dataset.jsdosPreviewSaved = "true";
+          }
+          return saved;
+        }, CLOSE_SAVE_TIMEOUT_MS).then((result) => {
           if (disposed) return;
           if (result === "timeout") {
             allowCloseWithoutSaveRef.current = true;
@@ -123,6 +136,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         delete rootRef.current.dataset.jsdosReady;
         delete rootRef.current.dataset.jsdosProgressRestored;
         delete rootRef.current.dataset.jsdosProgressSaved;
+        delete rootRef.current.dataset.jsdosPreviewSaved;
       }
       const player = playerRef.current;
       playerRef.current = null;
