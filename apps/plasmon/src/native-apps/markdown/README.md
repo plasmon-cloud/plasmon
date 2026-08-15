@@ -4,7 +4,9 @@ Markdown is a Plasmon native document application built on the shared Monaco edi
 
 `MarkdownEditor.tsx` coordinates edit/split/preview presentation. `MarkdownPreview.tsx` and `render.ts` own rendered Markdown presentation/sanitization. Loading, dirty state, save/conflict behavior, persistence, and dirty-close decisions reuse the shared Text document infrastructure, including the same deterministic close model and Save / Discard / Cancel prompt.
 
-Markdown does not own a second lifecycle policy. Ordinary close remains Process-owned; Markdown supplies only the same document decision semantics as Text. Failed save/conflict keeps the deferred close pending, Discard suppresses persistence of the dirty edits for that close, and Cancel keeps the process/window alive.
+Markdown does not own a second lifecycle or autosave policy. Like Text, it uses the shared document-session default of explicit Save with autosave OFF. Any future autosave opt-in must continue to come through the shared document-session/preference authority rather than Markdown-private persistence, and it must retain the same conflict/error and dirty-close semantics.
+
+Ordinary close remains Process-owned; Markdown supplies only the same document decision semantics as Text. Failed save/conflict keeps the deferred close pending, Discard suppresses persistence of the dirty edits for that close, and Cancel keeps the process/window alive.
 
 ## Refactor direction
 
