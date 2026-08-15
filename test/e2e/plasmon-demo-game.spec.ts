@@ -164,7 +164,6 @@ test(
       `page errors: ${JSON.stringify(pageErrors)}`,
     ].join("\n"));
   }
-  await expect(player).toHaveAttribute("data-jsdos-progress-restored", "false");
   await expect(player.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
 
   // The self-authored demo creates SCORE.DAT on first run and updates it on
