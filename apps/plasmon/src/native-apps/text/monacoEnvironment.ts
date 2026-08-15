@@ -33,23 +33,29 @@ type MonacoWorkerScope = typeof globalThis & {
   origin?: string;
 };
 
+function monacoWorkerName(label: string): string {
+  return `plasmon-monaco-${label || "editor"}`;
+}
+
 /**
  * Program Files remains the sole logical Monaco runtime authority. Normal
- * browser origins can construct the packaged module Worker from that path
- * directly. Neutron application frames intentionally have an opaque origin;
- * their package transport is preloaded as inert, byte-identical bundled worker
- * source and used only to materialize a blob: module Worker without crossing
- * the sandbox boundary during Worker startup.
+ * browser origins construct the packaged worker from that path directly with
+ * module Worker semantics. Neutron application frames intentionally have an
+ * opaque origin. Chromium rejects module Workers backed by blob:null URLs in
+ * that sandbox even when the blob was created by the same frame, while classic
+ * blob Workers execute there. Packaged worker bytes are therefore emitted as a
+ * self-contained bundle that is valid in either execution mode: normal origins
+ * use the canonical Program Files path as a module Worker, and only the opaque
+ * frame materializes the preloaded identical bytes as a classic blob Worker.
  */
 function createMonacoWorker(target: typeof globalThis, label: string): Worker {
   const scope = target as MonacoWorkerScope;
-  const options: WorkerOptions = {
-    type: "module",
-    name: `plasmon-monaco-${label || "editor"}`,
-  };
+  const name = monacoWorkerName(label);
   const workerPath = monacoWorkerPath(label);
 
-  if (scope.origin !== "null") return new Worker(workerPath, options);
+  if (scope.origin !== "null") {
+    return new Worker(workerPath, { type: "module", name });
+  }
 
   const bootstrap = new Blob(
     [monacoWorkerBootstrapSource(label, scope.__PLASMON_MONACO_WORKER_SOURCES__)],
@@ -57,7 +63,7 @@ function createMonacoWorker(target: typeof globalThis, label: string): Worker {
   );
   const bootstrapUrl = URL.createObjectURL(bootstrap);
   try {
-    return new Worker(bootstrapUrl, options);
+    return new Worker(bootstrapUrl, { name });
   } catch (error: unknown) {
     URL.revokeObjectURL(bootstrapUrl);
     throw error;

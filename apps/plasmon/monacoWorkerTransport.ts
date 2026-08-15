@@ -23,7 +23,10 @@ async function bundleWorker(filename: string, entryPoint: string, devMode: boole
     minify: !devMode,
     sourcemap: devMode ? "inline" : false,
     external: [],
-    format: "esm",
+    // Keep one self-contained worker byte stream that is valid both as a normal
+    // module Worker script and as the classic blob transport required by
+    // Neutron's opaque-origin application sandbox.
+    format: "iife",
     jsx: "automatic",
     loader: { ".ts": "ts", ".tsx": "tsx", ".ttf": "file" },
     platform: "browser",

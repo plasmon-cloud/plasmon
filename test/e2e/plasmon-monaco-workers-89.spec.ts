@@ -193,7 +193,7 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
   const workers = (await readWorkers()).filter((record) => record.name.startsWith("plasmon-monaco-"));
   expect(workers.length).toBeGreaterThanOrEqual(2);
   for (const worker of workers) {
-    expect(worker.type, `${worker.name} must preserve module Worker semantics`).toBe("module");
+    expect(worker.type, `${worker.name} must use the opaque-sandbox classic Worker compatibility path`).toBe("classic");
     expect(worker.origin, `${worker.name} must be constructed inside Neutron's opaque sandbox`).toBe("null");
     expect(worker.url, `${worker.name} must use the opaque-origin transport adapter`).toMatch(/^blob:/u);
     expect(worker.errors, `${worker.name} must not emit Worker errors`).toBe(0);
