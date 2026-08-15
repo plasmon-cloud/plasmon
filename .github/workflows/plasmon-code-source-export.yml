@@ -1,0 +1,31 @@
+name: Plasmon Code Source Export
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-3
+    paths:
+      - .github/workflows/plasmon-code-source-export.yml
+      - .github/plasmon-code-export-trigger.txt
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/0.1.0-r2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-code-source-export
+          retention-days: 1
+          path: |
+            apps/plasmon/src/os/shell
+            apps/plasmon/src/os/fs
+            apps/plasmon/src/os/contracts
+            apps/plasmon/test
+            apps/plasmon/package.json
+            apps/plasmon/tsconfig.json
