@@ -100,9 +100,17 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
     return { ...bootstrap, neutronProjectionError };
   };
 
-  const ready = initialize();
+  // Runtime subtrees are filesystem-managed durable locations, not application
+  // registrations. Build the generic Program Files service over base bootstrap,
+  // then include required curated runtime reconciliation in the public ready
+  // barrier so no consumer observes a half-initialized runtime inventory.
+  const bootstrapReady = initialize();
+  const programFiles = new ManagedProgramFilesService(options.fs, bootstrapReady);
+  const ready = bootstrapReady.then(async (initialization) => {
+    await programFiles.ensureRuntimeDirectory("MonacoEditor");
+    return initialization;
+  });
   managed.setInitialization(ready);
-  const programFiles = new ManagedProgramFilesService(options.fs, ready);
 
   stopNeutron = options.neutron.subscribe(() => {
     if (disposed) return;
