@@ -176,22 +176,16 @@ test(
   await gameWindow.getByRole("button", { name: "Close" }).click();
   await expect(gameWindow).not.toBeVisible({ timeout: 20_000 });
 
-  // #124 shared presentation boundary: the canonical save resource references
-  // one bounded filesystem image. FileManager resolves that reference through
-  // its ordinary ResourceIcon thumbnail path; the hidden preview image itself
-  // is not a second save resource or a second persistence database.
-  await activateFileManagerEntry(rootShortcut);
-  const savedRootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(savedRootExplorer).toBeVisible({ timeout: 20_000 });
-  const progressDirectory = savedRootExplorer.locator("[data-fm-node-id]", { hasText: ".jsdos-progress" }).first();
-  await expect(progressDirectory).toBeVisible({ timeout: 20_000 });
-  await activateFileManagerEntry(progressDirectory);
-
-  const progressExplorer = app.getByRole("dialog", { name: ".jsdos-progress" }).last();
-  await expect(progressExplorer).toBeVisible({ timeout: 20_000 });
-  const saveEntry = progressExplorer.locator("[data-fm-node-id]", { hasText: /\.changes$/ }).first();
-  await expect(saveEntry).toBeVisible({ timeout: 20_000 });
-  const savePreview = saveEntry.locator("img.plasmon-media-thumbnail").first();
+  // #124 shared presentation boundary: the canonical hidden `.changes` save
+  // owns the preview reference, and the same presentation-only reference is
+  // projected onto the visible game resource. FileManager therefore proves the
+  // shared thumbnail path without exposing private progress storage or creating
+  // another save resource/database.
+  const savedGamesExplorer = app.getByRole("dialog", { name: "Games" }).last();
+  await expect(savedGamesExplorer).toBeVisible({ timeout: 20_000 });
+  const savedDemo = savedGamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
+  await expect(savedDemo).toBeVisible({ timeout: 20_000 });
+  const savePreview = savedDemo.locator("img.plasmon-media-thumbnail").first();
   await expect(savePreview).toHaveAttribute("src", /^blob:/, { timeout: 20_000 });
   await expect.poll(
     () => savePreview.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0),
@@ -202,15 +196,7 @@ test(
   // FileManager -> AssociationRegistry/OpenService path. The new runtime must
   // receive the authoritative filesystem-backed change set; screenshot bytes
   // are presentation metadata and are not consulted for restoration.
-  await activateFileManagerEntry(rootShortcut);
-  const reopenedRootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  const reopenedGames = reopenedRootExplorer.locator("[data-fm-node-id]", { hasText: "Games" }).first();
-  await expect(reopenedGames).toBeVisible({ timeout: 20_000 });
-  await activateFileManagerEntry(reopenedGames);
-  const reopenedGamesExplorer = app.getByRole("dialog", { name: "Games" }).last();
-  const reopenedDemo = reopenedGamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
-  await expect(reopenedDemo).toBeVisible({ timeout: 20_000 });
-  await activateFileManagerEntry(reopenedDemo);
+  await activateFileManagerEntry(savedDemo);
 
   const reopenedWindow = app.getByRole("dialog", { name: "js-dos" }).last();
   await expect(reopenedWindow).toBeVisible({ timeout: 20_000 });
