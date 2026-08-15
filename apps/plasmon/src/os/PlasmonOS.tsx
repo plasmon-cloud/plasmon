@@ -61,6 +61,11 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
             renderWindow={(state, active) => {
               const record = processById.get(state.processId);
               const title = record?.title ?? "Plasmon";
+              const nativeWindow = {
+                maximized: state.maximized,
+                maximize: () => services.windows.maximize(state.id),
+                restore: () => services.windows.restore(state.id),
+              };
               return (
                 <NativeWindow
                   key={state.id}
@@ -83,6 +88,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                       registry={services.nativeApps}
                       process={services.process}
                       fs={services.fs}
+                      nativeWindow={nativeWindow}
                       fallback={<div className="plasmon-os-host-state" role="status">Loading {title}…</div>}
                       missingFallback={<div className="plasmon-os-host-state" role="alert">Application host is unavailable.</div>}
                       errorFallback={(error) => (

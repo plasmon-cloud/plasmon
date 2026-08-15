@@ -10,12 +10,14 @@ import {
 } from "react";
 import type { FsService, ProcessController, ProcessId } from "../contracts/index.ts";
 import type { NativeApplicationRegistry } from "./registry.ts";
+import type { NativeAppWindowControl } from "./runtime.ts";
 
 export interface NativeProcessHostProps {
   processId: ProcessId;
   registry: NativeApplicationRegistry;
   process: ProcessController;
   fs: FsService;
+  nativeWindow?: NativeAppWindowControl;
   fallback?: ReactNode;
   missingFallback?: ReactNode;
   errorFallback?: ReactNode | ((error: unknown) => ReactNode);
@@ -70,6 +72,7 @@ export function NativeProcessHost({
   registry,
   process,
   fs,
+  nativeWindow,
   fallback = null,
   missingFallback = null,
   errorFallback = null,
@@ -99,6 +102,7 @@ export function NativeProcessHost({
           target={record.target}
           fs={fs}
           process={process}
+          {...(nativeWindow ? { nativeWindow } : {})}
         />
       </Suspense>
     </NativeHostErrorBoundary>

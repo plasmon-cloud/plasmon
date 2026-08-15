@@ -15,18 +15,19 @@ Neutron applications are presented in Search as applications rather than package
 The directory already separates a number of deterministic concerns:
 
 - `activation.ts` — thin Start/Search adapters into canonical filesystem opening;
-- `model.ts` — taskbar/tray derivation, user-facing taskbar presentation state, and native task actions;
+- `taskbar.ts` — the focused taskbar projection over pin/application/Process/Windowing state plus canonical task actions and taskbar menu policy;
+- `model.ts` — non-taskbar Start/tray/general Shell modeling plus compatibility re-exports during the taskbar migration;
 - `preferences.ts` — persisted shell preferences;
 - `search.ts` — canonical Search inventory/query, projection/classification consumption, limits, filtering, cancellation helper, and invalidation adapter;
 - `search-surface-state.ts` — deterministic projection of canonical Search batches into explicit loading/error/warning/empty/result presentation state;
 - `use-search-surface-controller.ts` — transient Search query/category/request lifecycle over `searchShell`; it does not discover applications, classify resources, or launch results;
 - `SearchSurface.tsx` — rendered Search presentation and semantic result-list keyboard/focus translation;
 - `startMenu.ts` — Start inventory, reconciliation, and shortcut presentation metadata;
-- `interactions.ts` — click-away/context/pin decisions;
+- `interactions.ts` — shared Shell dismissal/context-ownership decisions plus compatibility re-exports of taskbar interaction policy;
 - `subscriptions.ts` — derived-state invalidation;
 - `calendar.ts` — date/calendar calculations.
 
-`Shell.tsx` composes those models with Shell-global flyout exclusivity, Escape/outside dismissal, canonical activation callbacks, and the remaining workspace/taskbar/browser lifecycle. Search query/category/request state and Search result JSX are not duplicated in `Shell.tsx` after the Search surface cutover.
+`Shell.tsx` composes those models with Shell-global flyout exclusivity, Escape/outside dismissal, canonical activation callbacks, DOM/browser lifecycle, and rendering. Taskbar compatibility re-exports do not retain taskbar state: the implementation and authority translation live in `taskbar.ts`. Search query/category/request state and Search result JSX are not duplicated in `Shell.tsx` after the Search surface cutover.
 
 Search frame geometry remains a browser/CSS acceptance concern rather than deterministic Search authority. Measured popup containment and internal scrolling are validated at the real-browser layer; deterministic and RTL Search tests must not invent layout behavior that Happy DOM cannot truthfully measure.
 
@@ -36,11 +37,11 @@ Start, Search, tray, and taskbar render resource/application identity through th
 
 `ShellIcon` is a rendering adapter only. Image loading/failure, generic application fallback, shortcut overlay composition, and context sizing belong to shared Visual presentation. Shell may choose which already-authoritative application/shortcut metadata is relevant to a Start/Search/taskbar row, but it does not classify MIME/types, resolve filesystem shortcut execution, choose associations, or own application installation. Missing artwork degrades to the shared application fallback rather than a Shell-specific initials system.
 
-Taskbar presentation is a projection of existing authorities rather than a lifecycle store. Native pinned/running/active state is derived from Process and Windowing snapshots; transient launch state may reflect an in-progress Shell action; Element running state comes from `NeutronBridge`, and an unavailable runtime observation remains explicitly uncertain rather than being interpreted as stopped.
+Taskbar presentation is one deterministic projection of existing authorities rather than a lifecycle store. Native pinned/running/active state is derived from current Process and Windowing snapshots; canonical focus comes only from `WindowManager.focusSnapshot()` and never from z-order. Transient launch state may reflect an in-progress Shell action; Element running state comes from `NeutronBridge`, and an unavailable runtime observation remains explicitly uncertain rather than being interpreted as stopped. The projection retains application, process, and window identity separately and does not persist a second running-app inventory.
 
 Native taskbar entries are grouped at application/handler identity while retaining the current ordered `ProcessRecord` members as canonical member identity. A zero-member group is pinned-only, a single member keeps the direct launch/focus/minimize task-button behavior, and a multi-member group opens a bounded chooser. The chooser stores only which handler is open; its rows are re-derived from current Process/Windowing snapshots, and selecting a running member delegates to `ProcessController.focus()` so Windowing remains authoritative for restore/focus/z-order behavior. A starting sibling does not disable an already-running member group.
 
-Taskbar context menus are Shell presentation over those same authorities. Item/background menus are positioned from the invoking DOM source and clamped to the current viewport; a native `Close` is exposed only when the context resolves to one concrete canonical process and delegates to ordinary `ProcessController.close()` negotiation rather than `forceClose` or direct WindowManager mutation. Center/Left taskbar alignment is persisted through the existing Shell preference store and changes only the application-button group; tray/status placement remains independently owned by the taskbar status surface.
+Taskbar context menus are presentation over those same authorities. Item/background menus use pure taskbar placement policy from the invoking DOM source and current viewport; the policy stores no browser geometry. A native `Close` is exposed only when the context resolves to one concrete canonical process and delegates to ordinary `ProcessController.close()` negotiation rather than `forceClose` or direct WindowManager mutation. Center/Left taskbar alignment is persisted through the existing Shell preference store and changes only the application-button group; tray/status placement remains independently owned by the taskbar status surface.
 
 `/System/Start Menu` remains the durable filesystem authority for Start. Default Settings, Explorer, and Properties shortcuts are seeded directly at that Start root rather than under a managed visible `System` category. Retirement of the former managed `System` child is deliberately conservative: only the exact previously-seeded, uncustomized legacy default shape is migrated; user renames, moves, deletions, folder metadata, or extra content prevent migration and are preserved.
 
@@ -48,7 +49,7 @@ The native registry is also allowed to contain `runtimeOnly` process-host defini
 
 ## Refactor direction
 
-`Shell.tsx` still coordinates many independent state machines. Continue moving Start/taskbar/flyout action logic into production controllers/models where it can be tested without rendering the entire shell. Keep React focused on composition and browser events.
+`Shell.tsx` still coordinates many independent state machines. Continue moving Start/Search/flyout action logic into production controllers/models where it can be tested without rendering the entire shell. Taskbar lifecycle/presentation derivation belongs in the focused taskbar projection; React should render that projection and translate user intent into canonical Process/Windowing/Shell commands rather than rebuilding running/focus state locally.
 
 Start/Search/taskbar inventories should continue to derive from shared authorities rather than introducing shell-owned application truth. Preference persistence remains behind the approved filesystem-backed store. Treat unavailable/uncertain external runtime information as uncertainty rather than inventing stronger Kernel knowledge.
 
@@ -56,4 +57,4 @@ Feature-completeness work should use mature desktop conventions for discoverabil
 
 ## Testing
 
-Use fast tests for task derivation/actions, pin/preferences semantics, canonical Search classification/query ordering plus deterministic Search surface state, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use RTL for Search query/category/result semantics and keyboard/focus behavior that does not depend on browser layout. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for measured Search popup geometry/containment/internal scrolling, global keyboard shortcuts, focus behavior that Happy DOM cannot model, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
+Use fast tests for taskbar projection/actions/menu policy, pin/preferences semantics, canonical Search classification/query ordering plus deterministic Search surface state, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use RTL for Search query/category/result semantics and keyboard/focus behavior that does not depend on browser layout. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for measured Search popup geometry/containment/internal scrolling, global keyboard shortcuts, focus behavior that Happy DOM cannot model, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
