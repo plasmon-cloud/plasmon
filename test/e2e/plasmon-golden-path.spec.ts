@@ -348,16 +348,40 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  const normalTitlebar = await titlebar.boundingBox();
-  if (!normalTitlebar) throw new Error("Restored native titlebar has no browser bounds");
-  const normalVisibleLeft = Math.max(workspace.x, normalTitlebar.x);
-  const normalVisibleRight = Math.min(workspace.x + workspace.width, normalTitlebar.x + normalTitlebar.width);
-  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored titlebar lost its reachable segment");
-  const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
-  const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
-  await page.mouse.move(normalDragStartX, normalDragY);
+  // #268 follow-up: the visible titlebar can be partially off-screen after
+  // the small-workspace pan, and its controls deliberately stop pointerdown
+  // propagation. Ask the browser for an actually exposed titlebar hit target
+  // that is not inside the control cluster, then keep the real top-level
+  // pointer path and production drag lifecycle assertions below.
+  const normalDragPoint = await titlebar.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const y = Math.min(16, Math.max(1, rect.height / 2));
+    const firstVisibleX = Math.max(1, Math.ceil(-rect.left) + 1);
+    const lastVisibleX = Math.min(
+      Math.floor(rect.width - 1),
+      Math.floor(window.innerWidth - rect.left - 1),
+    );
+
+    for (let x = firstVisibleX; x <= lastVisibleX; x += 8) {
+      const hit = document.elementFromPoint(rect.left + x, rect.top + y);
+      if (!(hit instanceof Element) || !element.contains(hit)) continue;
+      if (hit.closest(".plasmon-window__controls, button, input, textarea, select, a, [role='button'], [role='menuitem']")) continue;
+      return { x, y };
+    }
+    return null;
+  });
+  if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
+  // The hit-test above runs inside the Plasmon iframe, while Locator.boundingBox()
+  // reports main-frame coordinates. After a viewport restore the WindowLayer ResizeObserver
+  // can still reconcile native geometry between those two observations. Let Playwright
+  // re-resolve the same rendered titlebar point through its stable/receives-events
+  // actionability boundary, then keep the real top-level pointerdown/drag path below.
+  await titlebar.hover({ position: normalDragPoint });
   await page.mouse.down();
   await expect(dialog).toHaveAttribute("data-interacting", "drag");
+  const draggingTitlebarBox = await titlebar.boundingBox();
+  if (!draggingTitlebarBox) throw new Error("Dragging native titlebar has no browser bounds");
+  const normalDragY = draggingTitlebarBox.y + normalDragPoint.y;
   await page.mouse.move(workspace.x + Math.min(240, workspace.width / 2), normalDragY, { steps: 8 });
   await page.mouse.up();
   await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
