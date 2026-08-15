@@ -183,6 +183,9 @@ export class JsDosProgressStore {
    * Attach one presentation-only screenshot to the canonical save resource.
    * Repeated captures overwrite the same preview node, so preview storage is
    * bounded to one image per game save. Save correctness never reads it.
+   * The same validated reference is projected onto the visible game resource
+   * so ordinary shared resource surfaces can present the latest saved frame
+   * without exposing the private progress directory or creating another save.
    */
   async savePreview(preview: JsDosProgressPreview): Promise<FsNode | null> {
     if (!(preview.bytes instanceof Uint8Array)
@@ -215,13 +218,20 @@ export class JsDosProgressStore {
       });
     }
 
-    await this.fs.setMetadata(save.id, resourcePreviewMetadata({
+    const metadata = resourcePreviewMetadata({
       nodeId: image.id,
       mime: preview.mime,
       byteSize: preview.bytes.length,
       width: preview.width,
       height: preview.height,
-    }));
+    });
+    await this.fs.setMetadata(save.id, metadata);
+    try {
+      await this.fs.setMetadata(this.gameNodeId, metadata);
+    } catch {
+      // The save record remains canonical. A presentation projection failure
+      // must never turn a successful progress save into a failed save.
+    }
     return image;
   }
 
