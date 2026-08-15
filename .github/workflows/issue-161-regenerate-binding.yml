@@ -29,6 +29,9 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
+            cd apps/kernel
+            mops install --lock update
+            cd ../..
             npm --workspace neutron-kernel run certified-assets:candidate-binding:write
           '
           if git diff --quiet -- apps/kernel/certified-assets-candidate-binding.json; then
