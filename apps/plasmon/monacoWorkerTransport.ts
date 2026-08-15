@@ -10,7 +10,9 @@ const MONACO_WORKERS = [
   ["ts.worker.js", "monaco-editor/esm/vs/language/typescript/ts.worker.js"],
 ] as const;
 
-const GENERATED_TRANSPORT = "./public/runtime/monaco/worker-sources.js";
+const GENERATED_RUNTIME_ROOT = "./public/runtime/monaco";
+const GENERATED_CANONICAL_ROOT = "./public/System/Program Files/MonacoEditor";
+const GENERATED_TRANSPORT = `${GENERATED_RUNTIME_ROOT}/worker-sources.js`;
 const CANONICAL_OUTPUT_ROOT = "System/Program Files/MonacoEditor";
 
 async function bundleWorker(filename: string, entryPoint: string, devMode: boolean): Promise<string> {
@@ -60,5 +62,20 @@ const script = [
   "",
 ].join("\n");
 
+// build.ts emits worker entry points so the package metafile continues to prove
+// their presence. The static-file copy step runs after esbuild output and
+// deliberately replaces those transport copies with these canonical IIFE bytes.
+// That leaves Program Files, the URL-safe mirror, and the opaque-frame preload
+// derived from one exact byte stream while keeping main.js in ESM format.
+await Promise.all([
+  mkdir(GENERATED_CANONICAL_ROOT, { recursive: true }),
+  mkdir(GENERATED_RUNTIME_ROOT, { recursive: true }),
+]);
+await Promise.all(
+  Object.entries(sources).flatMap(([filename, source]) => [
+    writeFile(`${GENERATED_CANONICAL_ROOT}/${filename}`, source),
+    writeFile(`${GENERATED_RUNTIME_ROOT}/${filename}`, source),
+  ]),
+);
 await mkdir(dirname(GENERATED_TRANSPORT), { recursive: true });
 await writeFile(GENERATED_TRANSPORT, script);
