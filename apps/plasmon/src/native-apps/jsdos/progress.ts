@@ -1,4 +1,9 @@
 import type { FsNode, FsService, JsonValue, NodeId } from "../../os/contracts/index.ts";
+import {
+  RESOURCE_PREVIEW_MAX_BYTES,
+  resourcePreviewMetadata,
+  type ResourcePreviewMime,
+} from "../../os/fs/resourcePreview.ts";
 
 export const JS_DOS_PROGRESS_DIRECTORY = "/.jsdos-progress";
 export const JS_DOS_PROGRESS_METADATA_KEY = "plasmon.jsdos.progress.v1";
@@ -6,6 +11,7 @@ export const JS_DOS_PROGRESS_MIME = "application/x-plasmon-jsdos-progress";
 export const JS_DOS_PROGRESS_FORMAT = "plasmon.jsdos-progress";
 export const JS_DOS_PROGRESS_VERSION = 1;
 export const JS_DOS_PROGRESS_RUNTIME_VERSION = "8.4.1";
+export const JS_DOS_PROGRESS_PREVIEW_METADATA_KEY = "plasmon.jsdos.progressPreviewFor";
 
 export interface JsDosFsChangesOptions {
   local: false;
@@ -18,6 +24,13 @@ export interface JsDosProgressCallbacks {
   onWarning?: (message: string) => void;
   onRestored?: (restored: boolean) => void;
   onSaved?: () => void;
+}
+
+export interface JsDosProgressPreview {
+  bytes: Uint8Array;
+  mime: ResourcePreviewMime;
+  width: number;
+  height: number;
 }
 
 interface ProgressMetadata {
@@ -78,6 +91,14 @@ export function jsDosProgressFileName(gameNodeId: NodeId): string {
 
 export function jsDosProgressPath(gameNodeId: NodeId): string {
   return `${JS_DOS_PROGRESS_DIRECTORY}/${jsDosProgressFileName(gameNodeId)}`;
+}
+
+export function jsDosProgressPreviewFileName(gameNodeId: NodeId): string {
+  return `${encodeURIComponent(gameNodeId)}.preview.png`;
+}
+
+export function jsDosProgressPreviewPath(gameNodeId: NodeId): string {
+  return `${JS_DOS_PROGRESS_DIRECTORY}/${jsDosProgressPreviewFileName(gameNodeId)}`;
 }
 
 async function ensureProgressDirectory(fs: FsService): Promise<FsNode> {
@@ -156,6 +177,52 @@ export class JsDosProgressStore {
     return this.fs.setMetadata(save.id, {
       [JS_DOS_PROGRESS_METADATA_KEY]: recordFor(this.gameNodeId, bytes) as unknown as JsonValue,
     });
+  }
+
+  /**
+   * Attach one presentation-only screenshot to the canonical save resource.
+   * Repeated captures overwrite the same preview node, so preview storage is
+   * bounded to one image per game save. Save correctness never reads it.
+   */
+  async savePreview(preview: JsDosProgressPreview): Promise<FsNode | null> {
+    if (!(preview.bytes instanceof Uint8Array)
+      || preview.bytes.length === 0
+      || preview.bytes.length > RESOURCE_PREVIEW_MAX_BYTES) {
+      return null;
+    }
+
+    const save = await this.fs.resolvePath(jsDosProgressPath(this.gameNodeId));
+    if (!save || save.kind !== "file") return null;
+    const record = readRecord(save.metadata[JS_DOS_PROGRESS_METADATA_KEY]);
+    if (!record || record.gameNodeId !== this.gameNodeId) return null;
+
+    const directory = await ensureProgressDirectory(this.fs);
+    let image = await this.fs.resolvePath(jsDosProgressPreviewPath(this.gameNodeId));
+    if (image && image.kind !== "file") return null;
+    if (!image) {
+      image = await this.fs.createFile(directory.id, jsDosProgressPreviewFileName(this.gameNodeId), {
+        mime: preview.mime,
+        metadata: {
+          hidden: true,
+          [JS_DOS_PROGRESS_PREVIEW_METADATA_KEY]: this.gameNodeId,
+        },
+      });
+    }
+    image = await this.fs.write(image.id, preview.bytes, { truncate: true });
+    if (image.mime !== preview.mime) {
+      image = await this.fs.setMetadata(image.id, {
+        [JS_DOS_PROGRESS_PREVIEW_METADATA_KEY]: this.gameNodeId,
+      });
+    }
+
+    await this.fs.setMetadata(save.id, resourcePreviewMetadata({
+      nodeId: image.id,
+      mime: preview.mime,
+      byteSize: preview.bytes.length,
+      width: preview.width,
+      height: preview.height,
+    }));
+    return image;
   }
 
   private warn(message: string): void {
