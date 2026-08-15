@@ -66,7 +66,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
 
   if (!target.nodeId) {
     return (
-      <NativeAppContentSurface style={styles.root}>
+      <NativeAppContentSurface style={styles.root} aria-label="Text editor">
         <NativeAppStateSurface role="status">Choose a text file to open.</NativeAppStateSurface>
       </NativeAppContentSurface>
     );
