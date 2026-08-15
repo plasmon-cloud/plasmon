@@ -20,6 +20,7 @@ import {
 import { FilesystemOpenDispatcher } from "./openDispatcher.ts";
 import {
   ManagedProgramFilesService,
+  reconcileProgramFilesRuntimeDirectory,
   type ProgramFilesService,
 } from "./programFiles.ts";
 import { ProtectedManagedFsService } from "./protectedService.ts";
@@ -101,16 +102,15 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
   };
 
   // Runtime subtrees are filesystem-managed durable locations, not application
-  // registrations. Build the generic Program Files service over base bootstrap,
-  // then include required curated runtime reconciliation in the public ready
-  // barrier so no consumer observes a half-initialized runtime inventory.
-  const bootstrapReady = initialize();
-  const programFiles = new ManagedProgramFilesService(options.fs, bootstrapReady);
-  const ready = bootstrapReady.then(async (initialization) => {
-    await programFiles.ensureRuntimeDirectory("MonacoEditor");
+  // registrations. Include required curated runtime reconciliation in the core
+  // readiness barrier, then gate the public Program Files service on that final
+  // barrier so an early runtime consumer cannot race the same directory create.
+  const ready = initialize().then(async (initialization) => {
+    await reconcileProgramFilesRuntimeDirectory(options.fs, "MonacoEditor");
     return initialization;
   });
   managed.setInitialization(ready);
+  const programFiles = new ManagedProgramFilesService(options.fs, ready);
 
   stopNeutron = options.neutron.subscribe(() => {
     if (disposed) return;
