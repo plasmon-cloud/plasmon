@@ -348,13 +348,33 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  const normalTitlebar = await titlebar.boundingBox();
-  if (!normalTitlebar) throw new Error("Restored native titlebar has no browser bounds");
-  const normalVisibleLeft = Math.max(workspace.x, normalTitlebar.x);
-  const normalVisibleRight = Math.min(workspace.x + workspace.width, normalTitlebar.x + normalTitlebar.width);
-  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored titlebar lost its reachable segment");
-  const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
-  const normalDragY = normalTitlebar.y + Math.min(16, normalTitlebar.height / 2);
+  // #268 follow-up: the visible titlebar can be partially off-screen after
+  // the small-workspace pan, and its controls deliberately stop pointerdown
+  // propagation. Ask the browser for an actually exposed titlebar hit target
+  // that is not inside the control cluster, then keep the real top-level
+  // pointer path and production drag lifecycle assertions below.
+  const normalDragPoint = await titlebar.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const y = Math.min(16, Math.max(1, rect.height / 2));
+    const firstVisibleX = Math.max(1, Math.ceil(-rect.left) + 1);
+    const lastVisibleX = Math.min(
+      Math.floor(rect.width - 1),
+      Math.floor(window.innerWidth - rect.left - 1),
+    );
+
+    for (let x = firstVisibleX; x <= lastVisibleX; x += 8) {
+      const hit = document.elementFromPoint(rect.left + x, rect.top + y);
+      if (!(hit instanceof Element) || !element.contains(hit)) continue;
+      if (hit.closest(".plasmon-window__controls, button, input, textarea, select, a, [role='button'], [role='menuitem']")) continue;
+      return { x, y };
+    }
+    return null;
+  });
+  if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
+  const normalTitlebarBox = await titlebar.boundingBox();
+  if (!normalTitlebarBox) throw new Error("Restored native titlebar has no browser bounds");
+  const normalDragStartX = normalTitlebarBox.x + normalDragPoint.x;
+  const normalDragY = normalTitlebarBox.y + normalDragPoint.y;
   await page.mouse.move(normalDragStartX, normalDragY);
   await page.mouse.down();
   await expect(dialog).toHaveAttribute("data-interacting", "drag");
