@@ -6,6 +6,7 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
+const DEMO_ARTWORK_PATH = "static/plasmon/artwork/plasmon-demo.svg";
 
 async function activateFileManagerEntry(entry: Locator): Promise<void> {
   await entry.click();
@@ -18,7 +19,7 @@ async function activateFileManagerEntry(entry: Locator): Promise<void> {
 // is intentionally not an active r2 quarantine.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@issue-250"] },
+  { tag: ["@issue-250", "@issue-123"] },
   async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -50,6 +51,12 @@ test(
   );
   expect(fixtureResponse.ok(), "demo fixture should be served from the installed Plasmon package").toBe(true);
   expect((await fixtureResponse.body()).length).toBeGreaterThan(0);
+
+  const artworkResponse = await request.get(
+    new URL(`/app/${APP_ID}/${DEMO_ARTWORK_PATH}`, kernelUrl).href,
+  );
+  expect(artworkResponse.ok(), "demo artwork should be served from the installed Plasmon package").toBe(true);
+  expect((await artworkResponse.body()).length).toBeGreaterThan(0);
 
   // The fixture flag is startup configuration. Keep every installed Plasmon
   // main-document request flagged until the real application has completed
@@ -125,6 +132,16 @@ test(
   await expect(gamesExplorer).toBeVisible({ timeout: 20_000 });
   const demo = gamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
   await expect(demo).toBeVisible({ timeout: 20_000 });
+
+  // #123 browser boundary: the ordinary FileManager resource consumes the
+  // shared thumbnail primitive and the package-local artwork must decode.
+  const artwork = demo.locator("img.plasmon-media-thumbnail").first();
+  await expect(artwork).toHaveAttribute("src", DEMO_ARTWORK_PATH);
+  await expect.poll(
+    () => artwork.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0),
+    { timeout: 20_000 },
+  ).toBeGreaterThan(0);
+
   await activateFileManagerEntry(demo);
 
   // The runtime window stays generic by design; target filenames never become

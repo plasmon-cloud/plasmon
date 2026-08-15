@@ -14,6 +14,7 @@ export const browserLanes = Object.freeze({
   ]),
   specialist: Object.freeze([
     'test/e2e/plasmon-golden-path.spec.ts',
+    'test/e2e/plasmon-golden-path-left-snap.spec.ts',
     'test/e2e/plasmon-golden-path-right-snap.spec.ts',
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-monaco-packaged.spec.ts',

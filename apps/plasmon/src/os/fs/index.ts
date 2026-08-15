@@ -3,6 +3,7 @@ export * from "./service.ts";
 export * from "./transport.ts";
 export * from "./client.ts";
 export * from "./resourcePolicy.ts";
+export * from "./resourceArtwork.ts";
 export * from "./shortcut.ts";
 export * from "./managed.ts";
 export * from "./programFiles.ts";

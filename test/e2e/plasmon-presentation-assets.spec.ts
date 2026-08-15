@@ -4,7 +4,9 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
+const REVIEW_APP_ID = "review";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
+const REVIEW_ICON_PATH = `/app/${REVIEW_APP_ID}/static/icon.svg`;
 const NATIVE_IDENTITY_ASSETS = [
   "text.svg",
   "markdown.svg",
@@ -18,19 +20,33 @@ function pathname(value: string): string {
   return new URL(value).pathname;
 }
 
-test("#190 installed shared assets and #96 native identities resolve from the Plasmon application mount", async ({ page }) => {
+function isReviewIconUrl(value: string): boolean {
+  return pathname(value).startsWith(`/app/${REVIEW_APP_ID}/static/icon.`);
+}
+
+test("#190/#96 installed assets and #171 bounded Element icon probing use canonical package resources", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const iconRequests: string[] = [];
   const iconResponses = new Map<string, number>();
+  const reviewIconRequests: string[] = [];
+  const reviewIconResponses: Array<{ url: string; status: number }> = [];
+  const reviewIconFailures: string[] = [];
 
   page.on("request", (request) => {
     const path = pathname(request.url());
     if (path.includes("/static/plasmon/icons/")) iconRequests.push(path);
+    if (isReviewIconUrl(request.url())) reviewIconRequests.push(request.url());
   });
   page.on("response", (response) => {
     const path = pathname(response.url());
     if (path.includes("/static/plasmon/icons/")) iconResponses.set(path, response.status());
+    if (isReviewIconUrl(response.url())) {
+      reviewIconResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+  page.on("requestfailed", (request) => {
+    if (isReviewIconUrl(request.url())) reviewIconFailures.push(request.url());
   });
 
   await page.goto(kernelUrl);
@@ -63,6 +79,36 @@ test("#190 installed shared assets and #96 native identities resolve from the Pl
       { timeout: 15_000, message: `${path} should load successfully` },
     ).toBe(200);
   }
+
+  // #171: Review is an independently installed Neutron package in the canonical
+  // demo deployment. Kernel apps.describe currently omits icon metadata, so the
+  // one documented legacy package-local SVG compatibility path may use at most
+  // the two established Neutron app origins. It must not fan out across guessed
+  // extensions or repeat an identical candidate request.
+  await expect.poll(
+    () => reviewIconRequests.length,
+    { timeout: 15_000, message: "installed Review icon should be resolved during Element discovery" },
+  ).toBeGreaterThanOrEqual(1);
+  expect(
+    reviewIconRequests.length,
+    `Review icon requests: ${reviewIconRequests.join(", ")}; responses: ${JSON.stringify(reviewIconResponses)}; failures: ${reviewIconFailures.join(", ")}`,
+  ).toBeLessThanOrEqual(2);
+  expect(
+    new Set(reviewIconRequests).size,
+    `Review icon requests must not repeat: ${reviewIconRequests.join(", ")}`,
+  ).toBe(reviewIconRequests.length);
+  expect(
+    reviewIconRequests.every((url) => pathname(url) === REVIEW_ICON_PATH),
+    `Review icon requests: ${reviewIconRequests.join(", ")}`,
+  ).toBe(true);
+  expect(
+    reviewIconResponses.some(({ status }) => status === 200),
+    `Review icon responses: ${JSON.stringify(reviewIconResponses)}`,
+  ).toBe(true);
+  expect(
+    reviewIconFailures.length,
+    `Review icon failed requests: ${reviewIconFailures.join(", ")}`,
+  ).toBeLessThanOrEqual(1);
 
   // #96: exercise the canonical filesystem-backed Start projection rather than
   // inventing a presentation-only app catalog. Settings is a direct Start root

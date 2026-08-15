@@ -12,6 +12,7 @@ import {
 
 const args = new Set(process.argv.slice(2));
 const activeQuarantineIssues = Object.freeze({
+  'test/e2e/plasmon-golden-path-left-snap.spec.ts': '@issue-277',
   'test/e2e/plasmon-golden-path-right-snap.spec.ts': '@issue-244',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts': '@issue-245',
 });
@@ -109,6 +110,7 @@ async function verify(inventory) {
 
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
   assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
+  assert(quarantineDoc.includes('#277') && quarantineDoc.includes('#279'), 'Quarantine documentation must retain #277 quarantine and #279 restoration ownership');
   assert(quarantineDoc.includes('#250') && quarantineDoc.includes('#251'), 'Quarantine documentation must state that #250/#251 evidence remains tracked while their tests stay required');
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
