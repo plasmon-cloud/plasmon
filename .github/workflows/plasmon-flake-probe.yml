@@ -1,0 +1,176 @@
+name: Plasmon Flake Probe
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Optional branch, tag, or SHA to probe; defaults to the dispatched ref
+        required: false
+        type: string
+      target:
+        description: Specialist boundary to probe
+        required: true
+        default: specialist
+        type: choice
+        options:
+          - specialist
+          - right-snap
+          - left-snap
+          - window-lifetime
+          - monaco
+          - emulatorjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (github.event.pull_request.base.ref == 'release/0.1.0-r2' &&
+          contains(github.event.pull_request.labels.*.name, 'ci:flake-probe'))
+      }}
+    name: Flake probe ${{ matrix.attempt }}/10
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    env:
+      PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'specialist' }}
+
+    steps:
+      - name: Checkout exact probe ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Record exact probe identity
+        run: |
+          set -euxo pipefail
+          echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "attempt=${{ matrix.attempt }}/10"
+          echo "target=$PROBE_TARGET"
+          git rev-parse HEAD
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run fresh packaged Specialist probe
+        id: probe
+        continue-on-error: true
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET"
+          '
+
+      - name: Record attempt result
+        if: always()
+        run: |
+          set -u
+          mkdir -p flake-probe-result
+          {
+            echo "attempt=${{ matrix.attempt }}"
+            echo "outcome=${{ steps.probe.outcome }}"
+            echo "sha=${PROBE_SHA:-unknown}"
+            echo "target=${PROBE_TARGET:-unknown}"
+          } > flake-probe-result/result.txt
+
+      - name: Upload attempt result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-probe-result-${{ matrix.attempt }}
+          path: flake-probe-result/result.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Collect failed-attempt diagnostics
+        if: always() && steps.probe.outcome != 'success'
+        run: |
+          set -u
+          mkdir -p flake-probe-diagnostics
+          cp /tmp/plasmon-pocketic.log flake-probe-diagnostics/pocketic.log 2>/dev/null || true
+          if [ -d playwright-report ]; then
+            cp -R playwright-report flake-probe-diagnostics/playwright-report
+          fi
+          if [ -d test-results ]; then
+            cp -R test-results flake-probe-diagnostics/test-results
+          fi
+
+      - name: Upload failed-attempt diagnostics
+        if: always() && steps.probe.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-probe-diagnostics-${{ matrix.attempt }}
+          path: flake-probe-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Fail observed probe failure
+        if: always() && steps.probe.outcome != 'success'
+        run: exit 1
+
+  summary:
+    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci:flake-probe'))
+    name: Flake probe summary
+    needs: probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download attempt results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: flake-probe-result-*
+          path: flake-probe-results
+
+      - name: Summarize exact-head stability
+        run: |
+          set -euo pipefail
+          mapfile -t result_files < <(find flake-probe-results -name result.txt -type f | sort)
+          total=${#result_files[@]}
+          passed=0
+          sha=unknown
+          target=unknown
+
+          for result_file in "${result_files[@]}"; do
+            if grep -q '^outcome=success$' "$result_file"; then
+              passed=$((passed + 1))
+            fi
+            if [ "$sha" = unknown ]; then
+              sha=$(sed -n 's/^sha=//p' "$result_file" | head -n 1)
+              target=$(sed -n 's/^target=//p' "$result_file" | head -n 1)
+            fi
+          done
+
+          {
+            echo "## Plasmon flake probe"
+            echo
+            echo "- Exact SHA: \`$sha\`"
+            echo "- Target: \`$target\`"
+            echo "- Fresh attempts reported: $total/10"
+            echo "- First-attempt passes: $passed/10"
+            echo
+            if [ "$total" -eq 10 ] && [ "$passed" -eq 10 ]; then
+              echo "**STABILITY OBSERVED: 10/10 fresh attempts passed.**"
+            else
+              echo "**FLAKE/FAILURE OBSERVED: only $passed/10 fresh attempts passed ($total/10 reported).**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$total" -ne 10 ] || [ "$passed" -ne 10 ]; then
+            exit 1
+          fi
