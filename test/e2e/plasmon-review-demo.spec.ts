@@ -73,7 +73,10 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
   expect(pageErrors).toEqual([]);
 });
 
-test("#118 groups canonical Explorer processes and focuses individual members", async ({ page }) => {
+test(
+  "#118 groups canonical Explorer processes and focuses individual members",
+  { tag: ["@r2-quarantine", "@issue-303"] },
+  async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -188,7 +191,8 @@ test("#118 groups canonical Explorer processes and focuses individual members", 
   await primaryWindow.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
   await expect(nativeWindows).toHaveCount(initialWindowCount, { timeout: 10_000 });
   expect(pageErrors).toEqual([]);
-});
+  },
+);
 
 test("taskbar context menus stay source-adjacent and expose canonical Close and alignment", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
