@@ -106,8 +106,8 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
 
   const transport = await request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href);
   expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
-  const obsoleteMirror = await request.get(new URL(`/app/${APP_ID}/runtime/monaco/editor.worker.js`, kernelUrl).href);
-  expect(obsoleteMirror.ok(), "the obsolete per-worker HTTP mirror must not remain packaged").toBe(false);
+  const httpMirror = await request.get(new URL(`/app/${APP_ID}/runtime/monaco/editor.worker.js`, kernelUrl).href);
+  expect(httpMirror.ok(), "the URL-safe Monaco serving mirror must remain installed").toBe(true);
   const retired = await request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
 
