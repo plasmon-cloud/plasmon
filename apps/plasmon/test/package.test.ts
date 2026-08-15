@@ -229,7 +229,7 @@ test("plasmon packages EmulatorJS authority, URL-safe browser assets, NES core, 
   expect([...fixture.subarray(0, 8)]).toEqual([0x4e, 0x45, 0x53, 0x1a, 0x01, 0x01, 0x00, 0x00]);
 });
 
-test("#89 Monaco opaque-origin transport contains the canonical Program Files worker bytes", async () => {
+test("#89 Monaco browser transports remain byte-identical to Program Files authority", async () => {
   const transportScript = await readFile(monacoBrowserTransportUrl, "utf8");
   const transportScope: Record<string, unknown> = {};
   runInNewContext(transportScript, transportScope);
@@ -237,13 +237,19 @@ test("#89 Monaco opaque-origin transport contains the canonical Program Files wo
 
   expect(sources).toBeDefined();
   for (const worker of monacoWorkers) {
-    const canonical = await readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url));
+    const [canonical, httpMirror] = await Promise.all([
+      readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url)),
+      readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url)),
+    ]);
     const transported = Buffer.from(sources?.[worker] ?? "", "utf8");
     expect(canonical.length, `${worker} canonical worker must contain runtime bytes`).toBeGreaterThan(100);
-    expect(transported, `${worker} opaque transport must be byte-identical to Program Files`).toEqual(canonical);
+    expect(httpMirror, `${worker} URL-safe mirror must be byte-identical to Program Files`).toEqual(canonical);
+    expect(transported, `${worker} opaque preload must be byte-identical to Program Files`).toEqual(canonical);
   }
 
-  expect((await readdir(monacoBrowserTransportDirectoryUrl)).sort()).toEqual(["worker-sources.js"]);
+  expect((await readdir(monacoBrowserTransportDirectoryUrl)).sort()).toEqual(
+    [...monacoWorkers, "worker-sources.js"].sort(),
+  );
 });
 
 test("plasmon package contains the deterministic redistributable js-dos demo fixture", async () => {
