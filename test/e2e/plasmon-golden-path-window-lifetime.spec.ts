@@ -26,9 +26,9 @@ async function openInstalledPlasmon(page: import("@playwright/test").Page) {
   return { app, kernelUrl };
 }
 
-// #251 owns the shared second-Explorer creation/readiness failure signature.
-// Both exact acceptances below are quarantined for r2 only because each has
-// independently failed at that same pre-semantics sibling-window boundary.
+// #251 and #308 independently own the two quarantined acceptances below.
+// They have both failed at the same pre-semantics second-Explorer boundary,
+// but workflow v4.0 requires a dedicated repair/add-back Issue per flaky test.
 test(
   "packaged Plasmon repeatedly opens and closes reachable Explorer siblings",
   { tag: ["@r2-quarantine", "@issue-251"] },
@@ -64,7 +64,7 @@ test(
 
 test(
   "#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
-  { tag: ["@r2-quarantine", "@issue-63", "@issue-251"] },
+  { tag: ["@r2-quarantine", "@issue-63", "@issue-308"] },
   async ({ page }) => {
     const { app, kernelUrl } = await openInstalledPlasmon(page);
     const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
