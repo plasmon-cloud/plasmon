@@ -210,7 +210,7 @@ test("click-away closes flyouts while inside and toggle interactions do not figh
 
 test("Pin and Unpin state exposes exact taskbar tooltip labels", () => {
   const label = (pinned: boolean) => pinned ? "Unpin from taskbar" : "Pin to taskbar";
-  expect(label(false)).toBe("Pin from taskbar".replace("from", "to"));
+  expect(label(false)).toBe("Pin to taskbar");
   expect(label(true)).toBe("Unpin from taskbar");
 });
 
