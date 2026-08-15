@@ -44,26 +44,6 @@ const gates = [
       "version-0.1.0-os",
       releaseBranch,
     ],
-    pushPatterns: [
-      "apps/plasmon/**",
-      "apps/review/**",
-      "apps/kernel/**",
-      "packages/neutron-provision/**",
-      "packages/neutron-tools/**",
-      "test/e2e/plasmon-demo-environment.ts",
-      "test/e2e/plasmon-browser-health.ts",
-      "test/e2e/plasmon-refactor-smoke.spec.ts",
-      "test/e2e/plasmon-golden-path.spec.ts",
-      "test/e2e/plasmon-monaco-packaged.spec.ts",
-      "test/e2e/plasmon-review-demo.spec.ts",
-      "test/e2e/plasmon-emulatorjs-proof.spec.ts",
-      "test/e2e/plasmon-demo-game.spec.ts",
-      "playwright.config.ts",
-      "plasmon-local.ndeploy.json",
-      "package.json",
-      "package-lock.json",
-      ".github/workflows/plasmon-browser-ci.yml",
-    ],
   },
   {
     id: "persistence",
@@ -149,6 +129,14 @@ function assertPushBranch(path, branch) {
   return push;
 }
 
+function assertUnfilteredReleasePush(path) {
+  const push = assertPushBranch(path, releaseBranch);
+  if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
+    throw new Error(`${path} cannot path-filter ${releaseBranch} pushes; every release push must schedule this required gate`);
+  }
+  return push;
+}
+
 for (const gate of selectedGates) {
   const source = readFileSync(gate.path, "utf8");
   const lines = source.split(/\r?\n/);
@@ -210,16 +198,6 @@ for (const gate of selectedGates) {
         throw new Error(`${gate.context} direct-push coverage lost required branch ${branch}`);
       }
     }
-    if (gate.pushPatterns) {
-      if (!push.includes("    paths:")) {
-        throw new Error(`${gate.context} must preserve the specialist direct-push path filter`);
-      }
-      for (const pattern of gate.pushPatterns) {
-        if (!push.some((line) => line.includes(`"${pattern}"`))) {
-          throw new Error(`${gate.context} direct-push path filter lost required path ${pattern}`);
-        }
-      }
-    }
   }
 }
 
@@ -231,12 +209,7 @@ const requiredReleasePushWorkflows = [
   ".github/workflows/plasmon-browser-persistence-ci.yml",
 ];
 for (const path of requiredReleasePushWorkflows) {
-  assertPushBranch(path, releaseBranch);
+  assertUnfilteredReleasePush(path);
 }
 
-const kernelPush = assertPushBranch(".github/workflows/kernel-ci.yml", releaseBranch);
-if (kernelPush.some((line) => /^    paths-ignore:/.test(line))) {
-  throw new Error("Kernel CI release pushes cannot ignore apps/plasmon changes");
-}
-
-console.log(`Required r2 browser gate PR-always-run and five-gate release-push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+console.log(`Required r2 browser gate PR-always-run and unfiltered five-gate release-push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
