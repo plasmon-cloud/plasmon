@@ -19,7 +19,7 @@ async function activateFileManagerEntry(entry: Locator): Promise<void> {
 // is intentionally not an active r2 quarantine.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@issue-250", "@issue-123"] },
+  { tag: ["@issue-250", "@issue-123", "@issue-202"] },
   async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -165,6 +165,17 @@ test(
     ].join("\n"));
   }
   await expect(player.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+
+  // #202 owner-level browser regression: the real packaged runtime must not
+  // probe origin-backed storage APIs that the intended opaque sandbox denies.
+  expect(
+    consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'")),
+    "js-dos must not emit the sandbox-incompatible StorageManager.estimate error",
+  ).toEqual([]);
+  expect(
+    consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed")),
+    "js-dos must not emit the sandbox-denied storage-directory error",
+  ).toEqual([]);
 
   // The self-authored demo accepts SPACE as gameplay input. Browser automation
   // does not OCR the emulator canvas; runtime readiness + rendered canvas + real
