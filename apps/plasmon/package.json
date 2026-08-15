@@ -5,7 +5,7 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "build": "bun build.ts && bun src/native-apps/text/installMonacoBrowserTransport.ts && npm run mogen",
+    "build": "bun build.ts && npm run mogen",
     "dev": "bun build.ts dev",
     "mogen": "bun ../../packages/neutron-scripts/src/mogen.ts",
     "mopack": "bun ../../packages/neutron-scripts/src/mopack.ts",
