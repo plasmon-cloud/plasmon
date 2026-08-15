@@ -4,7 +4,7 @@ Disposition: **INTEGRATED / ALREADY GREEN — NO IMPLEMENTATION REQUIRED**.
 This packet is retained as the merged #195 preservation and authority fence.
 
 Integrated release inspected: `origin/release/0.1.0-r2` at
-`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
+`8cfb4d68414b271303bd0afefdcac9dc8449c315`.
 
 PR #213 is merged; no active PR owns #195. Integrated dependencies and the
 follow-up #196 strategy migration are present. This packet contains no

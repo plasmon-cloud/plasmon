@@ -2,7 +2,7 @@
 
 Disposition: **GREEN IN R2 — RED CONSUMED**. PR #205 merged at
 `51cd761c207573a59197d53c9e2884335f2e7cc7`; current release is
-`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`. The former RED tests are retained
+`8cfb4d68414b271303bd0afefdcac9dc8449c315`. The former RED tests are retained
 as permanent placement regression coverage.
 
 This staging packet protects deterministic Desktop placement without changing

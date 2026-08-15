@@ -2,7 +2,7 @@
 
 Status: **GREEN IN R2 — RED CONSUMED**. PR #208/#65 and #195/#196 are
 merged; PR #223/#92 merged at `34e5daea6b59e66a7980a892df90a61729ffd7c5`.
-Current integrated release: `56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
+Current integrated release: `8cfb4d68414b271303bd0afefdcac9dc8449c315`.
 
 ## Integrated #65 inspection
 

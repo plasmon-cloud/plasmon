@@ -24,9 +24,10 @@ protection remain the permanent lower-layer fence.
 #44's shortcut serializer/primitive, FsService target identity and collision
 naming remain authoritative. The original resource is never moved or copied.
 
-## Remaining criterion
+## Promotion result
 
-The missing production Desktop destination command must resolve `/Desktop`,
-check one eligible selection, delegate to the canonical helper, surface
-unavailable/ineligible errors, and preserve normal selection/rename behavior for
-the created shortcut. No generic command framework is required by this packet.
+The production Desktop destination command now resolves `/Desktop`, checks one
+eligible selection, delegates to the canonical helper, surfaces
+unavailable/ineligible errors, and preserves normal selection/rename behavior
+for the created shortcut. No generic command framework is required by this
+packet.

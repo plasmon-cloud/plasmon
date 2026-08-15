@@ -4,7 +4,7 @@ Disposition: **GREEN IN R2 — RED CONSUMED**.
 PR #223 (`agent/feature-92-drag-move-progress`) merged at
 `34e5daea6b59e66a7980a892df90a61729ffd7c5`. The original RED was reproduced
 against the pre-#223 release; current release is
-`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`.
+`8cfb4d68414b271303bd0afefdcac9dc8449c315`.
 
 ## Authority inspection
 

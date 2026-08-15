@@ -1,7 +1,11 @@
 # Issue #94 — bounded video thumbnail specification
 
-Disposition: **IMPLEMENTATION SPECIFICATION / BROWSER BOUNDARY — NOT EXECUTABLE RED YET**.
-A production media policy seam and redistribution-safe fixture are still required.
+Disposition: **DEFERRED — NO VALID CORRECTIVE RED**.
+Current integrated release audited at
+`8cfb4d68414b271303bd0afefdcac9dc8449c315`. A production media policy seam and
+redistribution-safe fixture are still required. Product owner: **SOL 1**, with
+Coordinator dependency review. Reopen only when the bounded probe/frame-lease
+authority and approved same-origin fixtures are integrated.
 
 ## Current boundary
 

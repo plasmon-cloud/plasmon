@@ -1,7 +1,7 @@
 # Issue #92 — drag-move operation preservation contract
 
 Refresh: `origin/release/0.1.0-r2` =
-`56752dc3e0fdb21c8c2d13e174c1836d73e6dde8`. PR #208/#65, #195/#196, and
+`8cfb4d68414b271303bd0afefdcac9dc8449c315`. PR #208/#65, #195/#196, and
 #223/#92 are integrated. Status: **GREEN IN R2 — RED CONSUMED**.
 
 ## PRESERVE
