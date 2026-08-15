@@ -6,9 +6,9 @@ Shell derives state from public authorities. Native task state comes from `Proce
 
 Filesystem-backed Start and Search activation delegates to the canonical `FilesystemOpenDispatcher`. Shell keeps Start-folder navigation, Search result selection, overlay dismissal, pinning, and genuinely non-filesystem native/Element actions, but does not duplicate directory/shortcut/system-app/Neutron-app/association launch policy.
 
-Shell Search recognizes Neutron application projections only through canonical filesystem resource classification/metadata. A projection remains a filesystem resource with stable `NodeId`; when the same Element is also present through direct Neutron discovery, Search emits one application result, uses the direct Element's current presentation metadata where available, and retains the projection node for canonical filesystem opening. This de-duplication does not make the filesystem an installation authority.
+Shell Search uses canonical filesystem application projections as its only visible application identities: `/System/*.sys` for first-party native applications and `/Apps/*.neutron` for installed Neutron Elements. Each result retains the projection's stable `NodeId` for canonical filesystem opening. Native registry and Neutron discovery metadata may enrich an existing projection's user-facing title, description, or icon, but neither source injects a second visible Search row or becomes installation/filesystem authority.
 
-Neutron applications are presented in Search as applications rather than package resources: user-facing title, description, and icon come from canonical Element/projection metadata while the underlying `.neutron` filename and `NodeId` remain unchanged. Confirmed runtime observations use user-facing state text, and an `unknown` observation remains explicitly unavailable rather than being presented as stopped; raw `yes`/`no`/`unknown` transport tokens are not Search presentation.
+Neutron applications are presented in Search as applications rather than package resources: user-facing title, description, and icon may be enriched from the matching Element while the underlying `.neutron` filename and `NodeId` remain unchanged. Runtime `yes`/`no`/`unknown` state is lifecycle information, not Search presentation, and is not appended to Search labels.
 
 ## Production models
 
@@ -18,7 +18,7 @@ The directory already separates a number of deterministic concerns:
 - `taskbar.ts` — the focused taskbar projection over pin/application/Process/Windowing state plus canonical task actions and taskbar menu policy;
 - `model.ts` — non-taskbar Start/tray/general Shell modeling plus compatibility re-exports during the taskbar migration;
 - `preferences.ts` — persisted shell preferences;
-- `search.ts` — canonical Search inventory/query, projection/classification consumption, limits, filtering, cancellation helper, and invalidation adapter;
+- `search.ts` — canonical filesystem-backed Search inventory/query, registry enrichment of existing projections, classification consumption, limits, filtering, cancellation helper, and invalidation adapter;
 - `search-surface-state.ts` — deterministic projection of canonical Search batches into explicit loading/error/warning/empty/result presentation state;
 - `use-search-surface-controller.ts` — transient Search query/category/request lifecycle over `searchShell`; it does not discover applications, classify resources, or launch results;
 - `SearchSurface.tsx` — rendered Search presentation and semantic result-list keyboard/focus translation;
@@ -45,7 +45,7 @@ Taskbar context menus are presentation over those same authorities. Item/backgro
 
 `/System/Start Menu` remains the durable filesystem authority for Start. Default Settings, Explorer, and Properties shortcuts are seeded directly at that Start root rather than under a managed visible `System` category. Retirement of the former managed `System` child is deliberately conservative: only the exact previously-seeded, uncustomized legacy default shape is migrated; user renames, moves, deletions, folder metadata, or extra content prevent migration and are preserved.
 
-The native registry is also allowed to contain `runtimeOnly` process-host definitions. Those definitions stay available to Process and association opening, but Start default seeding and the direct native-application Search inventory project only user-launchable definitions (`runtimeOnly !== true`). When a previously managed Start seed later becomes runtime-only, reconciliation retires only the exact ledger-backed default entry whose canonical folder/name, shortcut metadata, and empty content still prove managed ownership; renamed, moved, deleted, metadata/content-customized, and user-created shortcuts are preserved. Shell does not infer this distinction from handler names or create a parallel application catalog.
+The native registry is also allowed to contain `runtimeOnly` process-host definitions. Those definitions stay available to Process and association opening, but only user-launchable first-party definitions receive canonical `.sys` projections; Search follows those filesystem projections and never turns runtime-only registry entries into visible application results. When a previously managed Start seed later becomes runtime-only, reconciliation retires only the exact ledger-backed default entry whose canonical folder/name, shortcut metadata, and empty content still prove managed ownership; renamed, moved, deleted, metadata/content-customized, and user-created shortcuts are preserved. Shell does not infer this distinction from handler names or create a parallel application catalog.
 
 ## Refactor direction
 
