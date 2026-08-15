@@ -1,3 +1,5 @@
+import type { JsDosFsChangesOptions } from "./progress.ts";
+
 export type DosEvent = "emu-ready" | "ci-ready" | "bnd-play" | "open-key" | "fullscreen-change";
 
 /** Logical managed runtime authority; this is not a host-root HTTP URL. */
@@ -26,10 +28,12 @@ export interface JsDosPlayerOptions {
   autoSave?: boolean;
   kiosk?: boolean;
   mouseCapture?: boolean;
+  fsChanges?: JsDosFsChangesOptions;
   onEvent?: (event: DosEvent, arg?: unknown) => void;
 }
 
 export interface JsDosPlayerHandle {
+  save(): Promise<boolean>;
   stop(): Promise<void>;
 }
 
