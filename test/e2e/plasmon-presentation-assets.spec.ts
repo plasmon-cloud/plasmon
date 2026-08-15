@@ -7,6 +7,14 @@ const PLASMON_TILE_ID = "main";
 const REVIEW_APP_ID = "review";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
 const REVIEW_ICON_PATH = `/app/${REVIEW_APP_ID}/static/icon.svg`;
+const NATIVE_IDENTITY_ASSETS = [
+  "text.svg",
+  "markdown.svg",
+  "photos.svg",
+  "video.svg",
+  "browser.svg",
+  "settings.svg",
+] as const;
 
 function pathname(value: string): string {
   return new URL(value).pathname;
@@ -16,7 +24,7 @@ function isReviewIconUrl(value: string): boolean {
   return pathname(value).startsWith(`/app/${REVIEW_APP_ID}/static/icon.`);
 }
 
-test("#190 installed Plasmon requests shared assets and #171 bounds installed Element icon probing", async ({ page }) => {
+test("#190/#96 installed assets and #171 bounded Element icon probing use canonical package resources", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const iconRequests: string[] = [];
@@ -60,7 +68,7 @@ test("#190 installed Plasmon requests shared assets and #171 bounds installed El
 
   await expect.poll(() => new Set(iconRequests).size, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
 
-  const requested = [...new Set(iconRequests)];
+  let requested = [...new Set(iconRequests)];
   expect(requested.every((path) => path.startsWith(ICON_PREFIX)), `shared icon requests: ${requested.join(", ")}`).toBe(true);
 
   for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
@@ -72,17 +80,15 @@ test("#190 installed Plasmon requests shared assets and #171 bounds installed El
     ).toBe(200);
   }
 
-  // Review is an independently installed Neutron package in the canonical demo
-  // deployment. Kernel apps.describe currently omits icon metadata, so the one
-  // documented legacy package-local SVG compatibility path may use at most the
-  // two established Neutron app origins. It must not fan out across extensions,
-  // repeat an identical candidate request, or turn normal presentation into a
-  // request storm.
+  // #171: Review is an independently installed Neutron package in the canonical
+  // demo deployment. Kernel apps.describe currently omits icon metadata, so the
+  // one documented legacy package-local SVG compatibility path may use at most
+  // the two established Neutron app origins. It must not fan out across guessed
+  // extensions or repeat an identical candidate request.
   await expect.poll(
     () => reviewIconRequests.length,
     { timeout: 15_000, message: "installed Review icon should be resolved during Element discovery" },
   ).toBeGreaterThanOrEqual(1);
-
   expect(
     reviewIconRequests.length,
     `Review icon requests: ${reviewIconRequests.join(", ")}; responses: ${JSON.stringify(reviewIconResponses)}; failures: ${reviewIconFailures.join(", ")}`,
@@ -103,6 +109,31 @@ test("#190 installed Plasmon requests shared assets and #171 bounds installed El
     reviewIconFailures.length,
     `Review icon failed requests: ${reviewIconFailures.join(", ")}`,
   ).toBeLessThanOrEqual(1);
+
+  // #96: exercise the canonical filesystem-backed Start projection rather than
+  // inventing a presentation-only app catalog. Settings is a direct Start root
+  // entry; the remaining five first-party apps are ordinary Accessories seeds.
+  await plasmon.getByRole("button", { name: "Start" }).click();
+  const start = plasmon.getByRole("region", { name: "Start menu" });
+  await expect(start).toBeVisible();
+  await expect(start.getByRole("button", { name: /Settings/u }).first()).toBeVisible();
+  await start.getByRole("button", { name: /Accessories/u }).first().click();
+
+  for (const name of ["Text Editor", "Markdown", "Photos", "Video Player", "Browser"] as const) {
+    await expect(start.getByRole("button", { name: new RegExp(name, "u") }).first()).toBeVisible();
+  }
+
+  await expect.poll(
+    () => NATIVE_IDENTITY_ASSETS.filter((name) => iconResponses.get(`${ICON_PREFIX}${name}`) === 200).length,
+    { timeout: 15_000, message: "all six canonical native identity assets should load from the installed package" },
+  ).toBe(NATIVE_IDENTITY_ASSETS.length);
+
+  requested = [...new Set(iconRequests)];
+  for (const name of NATIVE_IDENTITY_ASSETS) {
+    const path = `${ICON_PREFIX}${name}`;
+    expect(requested, `${path} should be requested by canonical Start presentation`).toContain(path);
+    expect(iconResponses.get(path), `${path} should stay offline/package-local and load successfully`).toBe(200);
+  }
 });
 
 declare global {
