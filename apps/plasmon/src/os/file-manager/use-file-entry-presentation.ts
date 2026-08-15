@@ -1,5 +1,6 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { AssociationRegistry, FsNode, FsService } from "../contracts/index.ts";
+import { readResourcePreviewMetadata } from "../fs/resourcePreview.ts";
 import type { ResourceIconPresentation } from "../visual/index.ts";
 import {
   fallbackFileResourcePresentation,
@@ -7,7 +8,12 @@ import {
   resolveFileResourcePresentation,
   type FileVisualKind,
 } from "./file-icons.ts";
-import { canLoadImageThumbnail, loadImageThumbnail, type LoadedImageThumbnail } from "./thumbnail.ts";
+import {
+  canLoadImageThumbnail,
+  loadImageThumbnail,
+  loadResourcePreviewThumbnail,
+  type LoadedImageThumbnail,
+} from "./thumbnail.ts";
 
 export interface FileEntryResolvedPresentation {
   visualKind: FileVisualKind;
@@ -51,13 +57,25 @@ export function useFileEntryResolvedPresentation(
     let active = true;
     let observer: IntersectionObserver | null = null;
     let loaded: LoadedImageThumbnail | null = null;
-    setThumbnailUrl(null);
-    if (!canLoadImageThumbnail(node)) return undefined;
+    const hasReferencedPreview = readResourcePreviewMetadata(node) !== null;
+    const canLoadOwnImage = canLoadImageThumbnail(node);
+    if (!hasReferencedPreview && !canLoadOwnImage) {
+      setThumbnailUrl(null);
+      return undefined;
+    }
 
     const load = () => {
-      void loadImageThumbnail(fs, node)
+      void (async () => {
+        const thumbnail = hasReferencedPreview
+          ? await loadResourcePreviewThumbnail(fs, node)
+          : null;
+        return thumbnail ?? (canLoadOwnImage ? loadImageThumbnail(fs, node) : null);
+      })()
         .then((thumbnail) => {
-          if (!thumbnail) return;
+          if (!thumbnail) {
+            if (active) setThumbnailUrl(null);
+            return;
+          }
           if (!active) {
             thumbnail.revoke();
             return;
@@ -89,7 +107,7 @@ export function useFileEntryResolvedPresentation(
       observer?.disconnect();
       loaded?.revoke();
     };
-  }, [fs, node.contentHash, node.id, node.mime, node.modifiedAt, node.name, node.size, entryRef]);
+  }, [fs, node.contentHash, node.id, node.metadata, node.mime, node.modifiedAt, node.name, node.size, entryRef]);
 
   return {
     visualKind: fileVisualKind(node),
