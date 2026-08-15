@@ -51,6 +51,9 @@ class GateFs implements FsService, FsEventSource {
     const node: FsNode = { id: `node-${++this.sequence}`, parentId, name, kind: "directory", size: 0, createdAt: this.sequence, modifiedAt: this.sequence, metadata: options?.metadata ?? {} };
     this.nodes.set(node.id, node); this.emit(node.id); return node;
   }
+  async mkdir(parentId: string, name: string): Promise<FsNode> {
+    return this.createDirectory(parentId, name);
+  }
   async createFile(parentId: string, name: string, options: { mime?: string; kind?: "file" | "shortcut" | "atom"; metadata?: Record<string, JsonValue> } = {}): Promise<FsNode> {
     const node: FsNode = { id: `node-${++this.sequence}`, parentId, name, kind: options.kind ?? "file", mime: options.mime, size: 0, createdAt: this.sequence, modifiedAt: this.sequence, metadata: options.metadata ?? {} };
     this.nodes.set(node.id, node); this.emit(node.id); return node;
