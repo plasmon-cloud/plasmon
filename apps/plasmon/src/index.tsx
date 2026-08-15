@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createFirstDemoSeeds } from "./demo/firstDemoFixture.ts";
+import { reconcilePackagedDemoGameArtwork } from "./games/artwork.ts";
 import { loadPackagedDemoGameSeeds } from "./games/demoFixture.ts";
 import { installAppIconFallbacks } from "./iconFallback.ts";
 import { PlasmonOS } from "./os/PlasmonOS.tsx";
@@ -19,6 +20,7 @@ async function start(): Promise<void> {
     ...createFirstDemoSeeds(pageUrl),
   ];
   const services = createPlasmonServices({ ...(demoSeeds.length > 0 ? { demoSeeds } : {}) });
+  await reconcilePackagedDemoGameArtwork(services.fs);
   services.startMenu.start();
   createRoot(container).render(<PlasmonOS services={services} />);
 }

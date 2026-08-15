@@ -130,21 +130,18 @@ describe("descriptor-first and compatibility resolution", () => {
     expect(probes).toEqual([prefixed("assets/files.svg")]);
   });
 
-  test("declared icon failure uses only its two origin forms and never conventional fallback", async () => {
+  test("preferred declared origin failure hands the final safe origin to presentation without pre-probing it", async () => {
     const probes: string[] = [];
     expect(await resolveElementIcon("files", "assets/files.svg", NEUTRON_HREF, {
       probe: async (candidate) => {
         probes.push(candidate);
         return false;
       },
-    })).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("assets/files.svg"),
-      unprefixed("assets/files.svg"),
-    ]);
+    })).toBe(unprefixed("assets/files.svg"));
+    expect(probes).toEqual([prefixed("assets/files.svg")]);
   });
 
-  test("no descriptor icon tries SVG compatibility path first and SVG success prevents PNG", async () => {
+  test("no descriptor icon tries only the canonical SVG compatibility path", async () => {
     const probes: string[] = [];
     expect(await resolveElementIcon("files", undefined, NEUTRON_HREF, {
       probe: async (candidate) => {
@@ -155,37 +152,16 @@ describe("descriptor-first and compatibility resolution", () => {
     expect(probes).toEqual([prefixed("static/icon.svg")]);
   });
 
-  test("SVG origin failures permit PNG compatibility fallback", async () => {
-    const probes: string[] = [];
-    expect(await resolveElementIcon("files", undefined, NEUTRON_HREF, {
-      probe: async (candidate) => {
-        probes.push(candidate);
-        return candidate === prefixed("static/icon.png");
-      },
-    })).toBe(prefixed("static/icon.png"));
-    expect(probes).toEqual([
-      prefixed("static/icon.svg"),
-      unprefixed("static/icon.svg"),
-      prefixed("static/icon.png"),
-    ]);
-  });
-
-  test("worst-case no-descriptor compatibility probing is bounded to four and never WebP/JPEG", async () => {
+  test("compatibility preferred-origin failure hands off the final SVG origin without another discovery request", async () => {
     const probes: string[] = [];
     expect(await resolveElementIcon("files", undefined, NEUTRON_HREF, {
       probe: async (candidate) => {
         probes.push(candidate);
         return false;
       },
-    })).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("static/icon.svg"),
-      unprefixed("static/icon.svg"),
-      prefixed("static/icon.png"),
-      unprefixed("static/icon.png"),
-    ]);
-    expect(probes.some((candidate) => /\.webp(?:$|\?)/u.test(candidate))).toBe(false);
-    expect(probes.some((candidate) => /\.jpe?g(?:$|\?)/u.test(candidate))).toBe(false);
+    })).toBe(unprefixed("static/icon.svg"));
+    expect(probes).toEqual([prefixed("static/icon.svg")]);
+    expect(probes.some((candidate) => /\.(?:png|webp|jpe?g)(?:$|\?)/u.test(candidate))).toBe(false);
   });
 
   test("unsafe declared metadata never becomes an arbitrary probe URL", async () => {
@@ -200,13 +176,8 @@ describe("descriptor-first and compatibility resolution", () => {
           return false;
         },
       },
-    )).toBeUndefined();
-    expect(probes).toEqual([
-      prefixed("static/icon.svg"),
-      unprefixed("static/icon.svg"),
-      prefixed("static/icon.png"),
-      unprefixed("static/icon.png"),
-    ]);
+    )).toBe(unprefixed("static/icon.svg"));
+    expect(probes).toEqual([prefixed("static/icon.svg")]);
     expect(probes.some((candidate) => candidate.includes("evil.example"))).toBe(false);
   });
 });
