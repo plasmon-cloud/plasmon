@@ -4,21 +4,27 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
+const REVIEW_APP_ID = "review";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
+const REVIEW_ICON_PATH = `/app/${REVIEW_APP_ID}/static/icon.svg`;
 
 function pathname(value: string): string {
   return new URL(value).pathname;
 }
 
-test("#190 installed Plasmon requests shared icon assets from its application mount", async ({ page }) => {
+test("#190 installed Plasmon requests shared assets and #171 bounds installed Element icon probing", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const iconRequests: string[] = [];
   const iconResponses = new Map<string, number>();
+  const reviewIconRequests: string[] = [];
 
   page.on("request", (request) => {
     const path = pathname(request.url());
     if (path.includes("/static/plasmon/icons/")) iconRequests.push(path);
+    if (path.startsWith(`/app/${REVIEW_APP_ID}/static/icon.`)) {
+      reviewIconRequests.push(request.url());
+    }
   });
   page.on("response", (response) => {
     const path = pathname(response.url());
@@ -55,6 +61,21 @@ test("#190 installed Plasmon requests shared icon assets from its application mo
       { timeout: 15_000, message: `${path} should load successfully` },
     ).toBe(200);
   }
+
+  // Review is an independently installed Neutron package in the canonical demo
+  // deployment. Plasmon may use the one documented legacy package-local SVG
+  // compatibility path while Kernel apps.describe omits icon metadata, but it
+  // must not fan out across guessed extensions or repeat an identical request.
+  await expect.poll(
+    () => reviewIconRequests.length,
+    { timeout: 15_000, message: "installed Review icon should be resolved during Element discovery" },
+  ).toBeGreaterThanOrEqual(1);
+  expect(reviewIconRequests.length).toBeLessThanOrEqual(2);
+  expect(new Set(reviewIconRequests).size).toBe(reviewIconRequests.length);
+  expect(
+    reviewIconRequests.every((url) => pathname(url) === REVIEW_ICON_PATH),
+    `Review icon requests: ${reviewIconRequests.join(", ")}`,
+  ).toBe(true);
 });
 
 declare global {
