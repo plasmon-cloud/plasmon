@@ -91,48 +91,115 @@ function storedZip(entries: readonly StoredZipEntry[]): Uint8Array {
   return concat([...localParts, centralDirectory, end]);
 }
 
+type DemoFixup = { at: number; label: string; kind: "absolute16" | "relative8" };
+
 /**
  * Tiny Plasmon-authored DOS program used only as a legal package/runtime proof.
  *
- * COM equivalent (ORG 100h): print instructions, wait for a key without echo,
- * print "Point!" for SPACE, and quit for Q/q. The machine code and strings are
- * authored in this repository, so the generated fixture contains no third-party
- * game content.
+ * The fixture persists SCORE.DAT inside the emulated filesystem. The first run
+ * creates the file, SPACE updates it, and later runs print a restored-progress
+ * message when the file is present. This gives packaged persistence acceptance
+ * a real engine-owned filesystem mutation without third-party game content.
  */
 function demoCom(): Uint8Array {
-  const code = Uint8Array.from([
-    0xba, 0x00, 0x00, // mov dx, message
-    0xb4, 0x09,       // mov ah, 09h
-    0xcd, 0x21,       // int 21h
-    0xb4, 0x08,       // loop: mov ah, 08h
-    0xcd, 0x21,       // int 21h
-    0x3c, 0x71,       // cmp al, 'q'
-    0x74, 0x11,       // je quit
-    0x3c, 0x51,       // cmp al, 'Q'
-    0x74, 0x0d,       // je quit
-    0x3c, 0x20,       // cmp al, ' '
-    0x75, 0xf0,       // jne loop
-    0xba, 0x00, 0x00, // mov dx, point
-    0xb4, 0x09,       // mov ah, 09h
-    0xcd, 0x21,       // int 21h
-    0xeb, 0xe7,       // jmp loop
-    0xb8, 0x00, 0x4c, // quit: mov ax, 4c00h
-    0xcd, 0x21,       // int 21h
-  ]);
-  const message = encoder.encode("PLASMON DEMO GAME\r\nPress SPACE to score. Press Q to quit.\r\n$");
-  const point = encoder.encode("Point!\r\n$");
-  const messageAddress = 0x100 + code.length;
-  const pointAddress = messageAddress + message.length;
-  code[1] = messageAddress & 0xff;
-  code[2] = messageAddress >>> 8;
-  code[24] = pointAddress & 0xff;
-  code[25] = pointAddress >>> 8;
-  return concat([code, message, point]);
+  const code: number[] = [];
+  const labels = new Map<string, number>();
+  const fixups: DemoFixup[] = [];
+  const emit = (...bytes: number[]) => code.push(...bytes);
+  const mark = (label: string) => labels.set(label, code.length);
+  const movDx = (label: string) => {
+    emit(0xba, 0x00, 0x00);
+    fixups.push({ at: code.length - 2, label, kind: "absolute16" });
+  };
+  const jump8 = (opcode: number, label: string) => {
+    emit(opcode, 0x00);
+    fixups.push({ at: code.length - 1, label, kind: "relative8" });
+  };
+
+  movDx("message");
+  emit(0xb4, 0x09, 0xcd, 0x21); // print instructions
+
+  // If SCORE.DAT exists, close it and announce that saved progress was restored.
+  movDx("scoreName");
+  emit(0xb8, 0x00, 0x3d, 0xcd, 0x21); // open read-only
+  jump8(0x72, "initializeScore"); // jc initializeScore
+  emit(0x89, 0xc3, 0xb4, 0x3e, 0xcd, 0x21); // mov bx,ax; close
+  movDx("restored");
+  emit(0xb4, 0x09, 0xcd, 0x21);
+  jump8(0xeb, "inputLoop");
+
+  // First run: create SCORE.DAT with 0 so the runtime has a deterministic
+  // filesystem change even before gameplay input arrives.
+  mark("initializeScore");
+  movDx("scoreName");
+  emit(0x31, 0xc9, 0xb4, 0x3c, 0xcd, 0x21); // xor cx,cx; create/truncate
+  jump8(0x72, "inputLoop");
+  emit(0x89, 0xc3); // mov bx,ax
+  movDx("initialValue");
+  emit(0xb9, 0x01, 0x00, 0xb4, 0x40, 0xcd, 0x21); // write one byte
+  emit(0xb4, 0x3e, 0xcd, 0x21); // close
+
+  mark("inputLoop");
+  emit(0xb4, 0x08, 0xcd, 0x21); // read key without echo
+  emit(0x3c, 0x71); // cmp al,'q'
+  jump8(0x74, "quit");
+  emit(0x3c, 0x51); // cmp al,'Q'
+  jump8(0x74, "quit");
+  emit(0x3c, 0x20); // cmp al,' '
+  jump8(0x75, "inputLoop");
+
+  // SPACE records a point by replacing SCORE.DAT with the byte "1".
+  movDx("scoreName");
+  emit(0x31, 0xc9, 0xb4, 0x3c, 0xcd, 0x21);
+  jump8(0x72, "printPoint");
+  emit(0x89, 0xc3);
+  movDx("scoreValue");
+  emit(0xb9, 0x01, 0x00, 0xb4, 0x40, 0xcd, 0x21);
+  emit(0xb4, 0x3e, 0xcd, 0x21);
+
+  mark("printPoint");
+  movDx("point");
+  emit(0xb4, 0x09, 0xcd, 0x21);
+  jump8(0xeb, "inputLoop");
+
+  mark("quit");
+  emit(0xb8, 0x00, 0x4c, 0xcd, 0x21);
+
+  mark("message");
+  emit(...encoder.encode("PLASMON DEMO GAME\r\nPress SPACE to score. Press Q to quit.\r\n$"));
+  mark("restored");
+  emit(...encoder.encode("Restored saved progress.\r\n$"));
+  mark("point");
+  emit(...encoder.encode("Point!\r\n$"));
+  mark("scoreName");
+  emit(...encoder.encode("SCORE.DAT\0"));
+  mark("initialValue");
+  emit(0x30);
+  mark("scoreValue");
+  emit(0x31);
+
+  for (const fixup of fixups) {
+    const target = labels.get(fixup.label);
+    if (target === undefined) throw new Error(`Missing demo label: ${fixup.label}`);
+    if (fixup.kind === "absolute16") {
+      const address = 0x100 + target;
+      code[fixup.at] = address & 0xff;
+      code[fixup.at + 1] = (address >>> 8) & 0xff;
+      continue;
+    }
+    const displacement = target - (fixup.at + 1);
+    if (displacement < -128 || displacement > 127) {
+      throw new Error(`Demo jump out of range: ${fixup.label}`);
+    }
+    code[fixup.at] = displacement & 0xff;
+  }
+
+  return Uint8Array.from(code);
 }
 
 const DOSBOX_CONF = `[dosbox]\nmemsize=16\n\n[cpu]\ncore=auto\ncycles=auto\n\n[autoexec]\nmount c .\nc:\nPLASMON.COM\n`;
 
-const README = `Plasmon Demo Game fixture\r\n\r\nThis tiny keyboard demo and its generated bundle are authored by Plasmon contributors\r\nand distributed under the repository GNU GPL version 3 license. It contains no\r\ncommercial or third-party game data.\r\n\r\nPress SPACE to print a point. Press Q to exit the demo program.\r\n\r\nCorresponding source: apps/plasmon/src/games/demoFixtureBundle.ts\r\n`;
+const README = `Plasmon Demo Game fixture\r\n\r\nThis tiny keyboard demo and its generated bundle are authored by Plasmon contributors\r\nand distributed under the repository GNU GPL version 3 license. It contains no\r\ncommercial or third-party game data.\r\n\r\nThe demo creates SCORE.DAT on first run. Press SPACE to record a point; reopening\r\na restored js-dos change set prints a saved-progress message. Press Q to quit.\r\n\r\nCorresponding source: apps/plasmon/src/games/demoFixtureBundle.ts\r\n`;
 
 export const PACKAGED_DEMO_GAME_FILENAME = "PlasmonDemo.jsdos";
 export const DEMO_GAME_RESOURCE_NAME = "Plasmon Demo.jsdos";

@@ -19,7 +19,7 @@ async function activateFileManagerEntry(entry: Locator): Promise<void> {
 // is intentionally not an active r2 quarantine.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@issue-250", "@issue-123", "@issue-202"] },
+  { tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64", "@issue-124"] },
   async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -177,11 +177,59 @@ test(
     "js-dos must not emit the sandbox-denied storage-directory error",
   ).toEqual([]);
 
-  // The self-authored demo accepts SPACE as gameplay input. Browser automation
-  // does not OCR the emulator canvas; runtime readiness + rendered canvas + real
-  // keyboard delivery are the package/browser boundary this lane can prove.
+  // #64 owner-level persistence boundary: the self-authored demo creates
+  // SCORE.DAT and updates it on SPACE. A normal Process close must persist the
+  // engine-exported change set into canonical Plasmon filesystem state before
+  // the window is allowed to disappear. #124 captures the representative frame
+  // at this same save boundary without making screenshot bytes save authority.
   await player.click();
   await page.keyboard.press("Space");
+  await gameWindow.getByRole("button", { name: "Close" }).click();
+  await expect(gameWindow).not.toBeVisible({ timeout: 20_000 });
+
+  // #124 persisted-presentation boundary: reopen a fresh Explorer surface after
+  // the save completes. This proves the filesystem-backed preview survives the
+  // save/window lifetime without coupling #124 to live-list refresh timing.
+  await gamesExplorer.getByRole("button", { name: "Close" }).click();
+  await expect(gamesExplorer).not.toBeVisible({ timeout: 20_000 });
+  await activateFileManagerEntry(rootShortcut);
+  const savedRootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
+  await expect(savedRootExplorer).toBeVisible({ timeout: 20_000 });
+  const savedGames = savedRootExplorer.locator("[data-fm-node-id]", { hasText: "Games" }).first();
+  await expect(savedGames).toBeVisible();
+  await activateFileManagerEntry(savedGames);
+
+  const savedGamesExplorer = app.getByRole("dialog", { name: "Games" }).last();
+  await expect(savedGamesExplorer).toBeVisible({ timeout: 20_000 });
+  const savedDemo = savedGamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
+  await expect(savedDemo).toBeVisible({ timeout: 20_000 });
+  const savePreview = savedDemo.locator("img.plasmon-media-thumbnail").first();
+  await expect(savePreview).toHaveAttribute("src", /^blob:/, { timeout: 20_000 });
+  await expect.poll(
+    () => savePreview.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0),
+    { timeout: 20_000 },
+  ).toBeGreaterThan(0);
+
+  // Reopen the same stable filesystem game resource through the same generic
+  // FileManager -> AssociationRegistry/OpenService path. The new runtime must
+  // receive the authoritative filesystem-backed change set; screenshot bytes
+  // are presentation metadata and are not consulted for restoration.
+  await activateFileManagerEntry(savedDemo);
+  const reopenedWindow = app.getByRole("dialog", { name: "js-dos" }).last();
+  await expect(reopenedWindow).toBeVisible({ timeout: 20_000 });
+  const reopenedPlayer = reopenedWindow.getByLabel("DOS game");
+  await expect(reopenedPlayer).toHaveAttribute("data-jsdos-progress-restored", "true", { timeout: 60_000 });
+  await expect(reopenedPlayer).toHaveAttribute("data-jsdos-ready", "true", { timeout: 60_000 });
+  await expect(reopenedPlayer.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+
+  // The reopened runtime is still subject to #202's opaque-frame storage
+  // boundary; persistence must not regress into origin-backed storage errors.
+  expect(
+    consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'")),
+  ).toEqual([]);
+  expect(
+    consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed")),
+  ).toEqual([]);
 
   expect(pageErrors).toEqual([]);
   },
