@@ -5,7 +5,7 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "build": "bun monacoWorkerTransport.ts generate && bun build.ts && bun monacoWorkerTransport.ts prune && npm run mogen",
+    "build": "bun monacoWorkerTransport.ts generate && bun build.ts && npm run mogen",
     "dev": "bun monacoWorkerTransport.ts generate dev && bun build.ts dev",
     "mogen": "bun ../../packages/neutron-scripts/src/mogen.ts",
     "mopack": "bun ../../packages/neutron-scripts/src/mopack.ts",
