@@ -1,0 +1,28 @@
+name: Plasmon Train Snapshot v5.3
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-3
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-3.yml
+      - .github/plasmon-train-snapshot-trigger-v5-3.txt
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build transport probe
+        shell: bash
+        run: |
+          printf '%s\n' '{"schema":"plasmon-train-snapshot-v5.3-probe","ok":true}' > plasmon-train-snapshot-v5-3.json
+      - name: Upload snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot-v5-3
+          path: plasmon-train-snapshot-v5-3.json
+          retention-days: 1
