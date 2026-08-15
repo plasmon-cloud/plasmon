@@ -12,6 +12,7 @@ const chromiumLaunchOptions =
         ...(chromiumArgs.length > 0 ? { args: chromiumArgs } : {}),
       }
     : undefined;
+const includeFirefox = process.env.PLAYWRIGHT_FIREFOX === "1";
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -37,5 +38,13 @@ export default defineConfig({
           : {}),
       },
     },
+    ...(includeFirefox
+      ? [{
+          name: "firefox",
+          use: {
+            ...devices["Desktop Firefox"],
+          },
+        }]
+      : []),
   ],
 });
