@@ -50,9 +50,12 @@ test("#89 filesystem core ready reconciles one stable MonacoEditor Program Files
   assert.equal(second.id, first.id);
   assert.equal(second.metadata.keep, "runtime-owned");
   assert.equal(second.metadata[OWNERSHIP_METADATA_KEY], "system-required");
+  const preservedAfterReconcile = await raw.resolvePath(`${PROGRAM_FILES_PATH}/MonacoEditor/runtime-state.bin`);
+  assert.equal(preservedAfterReconcile?.id, preserved.id);
   assert.equal(
-    (await raw.resolvePath(`${PROGRAM_FILES_PATH}/MonacoEditor/runtime-state.bin`))?.id,
-    preserved.id,
+    new TextDecoder().decode(await raw.read(preserved.id)),
+    "preserve-me",
+    "runtime bytes must survive repeated filesystem-core reconciliation",
   );
   assert.equal(await raw.resolvePath("/System/MonacoEditor.sys"), null);
 
