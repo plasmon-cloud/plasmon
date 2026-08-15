@@ -2,21 +2,6 @@ name: Plasmon Packaged Smoke CI
 
 on:
   pull_request:
-    paths:
-      - "apps/plasmon/**"
-      - "apps/review/**"
-      - "apps/kernel/**"
-      - "packages/neutron-provision/**"
-      - "packages/neutron-tools/**"
-      - "test/e2e/plasmon-demo-environment.ts"
-      - "test/e2e/plasmon-browser-health.ts"
-      - "test/e2e/plasmon-refactor-smoke.spec.ts"
-      - "test/ci/*playwright-gate*"
-      - "playwright.config.ts"
-      - "plasmon-local.ndeploy.json"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-browser-smoke-ci.yml"
   workflow_dispatch:
 
 permissions:
@@ -35,6 +20,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Verify required-gate workflow contract
+        run: node test/ci/verify-required-browser-gates.mjs smoke
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -48,6 +38,7 @@ jobs:
             npm ci
             node test/ci/verify-playwright-gate.mjs
             npm run plasmon:demo:prepare
+            bun test apps/plasmon/test/package.test.ts
 
             npm run plasmon:demo:serve > /tmp/plasmon-pocketic-smoke.log 2>&1 &
             server_pid=$!

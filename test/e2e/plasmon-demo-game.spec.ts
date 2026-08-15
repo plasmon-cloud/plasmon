@@ -7,7 +7,13 @@ const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
 
-test("explicit packaged demo fixture opens through the normal js-dos desktop path", async ({ page, request }) => {
+// #250 preserves the prior fail-then-pass evidence from Packaged Browser #884.
+// This acceptance remains required under the serialized Specialist harness and
+// is intentionally not an active r2 quarantine.
+test(
+  "explicit packaged demo fixture opens through the normal js-dos desktop path",
+  { tag: ["@issue-250"] },
+  async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -143,7 +149,8 @@ test("explicit packaged demo fixture opens through the normal js-dos desktop pat
   await page.keyboard.press("Space");
 
   expect(pageErrors).toEqual([]);
-});
+  },
+);
 
 declare global {
   interface Window {
