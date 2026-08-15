@@ -1,16 +1,12 @@
 name: Issue 268 Apply Visible Titlebar Hit Test
 
-on:
-  push:
-    branches:
-      - ci/issue-268-normalization-drag-hit-target
+on: [push]
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'ci(#268): apply visible titlebar hit-test patch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -19,7 +15,7 @@ jobs:
           ref: ci/issue-268-normalization-drag-hit-target
           fetch-depth: 0
 
-      - name: Replace failed identity-bound targeting with visible titlebar hit testing
+      - name: Apply exact titlebar targeting replacement and remove helper
         shell: bash
         run: |
           python - <<'PY'
@@ -71,8 +67,9 @@ jobs:
   const normalDragStartX = normalTitlebarBox.x + normalDragPoint.x;
   const normalDragY = normalTitlebarBox.y + normalDragPoint.y;
 '''
-          if source.count(old) != 1:
-              raise SystemExit(f'expected one #268 targeting block, found {source.count(old)}')
+          count = source.count(old)
+          if count != 1:
+              raise SystemExit(f'expected one #268 targeting block, found {count}')
           path.write_text(source.replace(old, new))
           PY
 
