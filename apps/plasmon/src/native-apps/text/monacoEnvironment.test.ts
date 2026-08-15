@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
 import {
   installMonacoEnvironment,
-  MONACO_BROWSER_TRANSPORT_ROOT,
+  MONACO_BROWSER_TRANSPORT_PATH,
   MONACO_PROGRAM_FILES_RUNTIME_ROOT,
   monacoWorkerBootstrapSource,
-  monacoWorkerBrowserPath,
   monacoWorkerFile,
   monacoWorkerPath,
 } from "./monacoEnvironment.ts";
@@ -46,13 +45,13 @@ test("#89 Monaco workers are constructed from the canonical Program Files runtim
   expect(monacoWorkerFile("typescript")).toBe("ts.worker.js");
 });
 
-test("#89 Monaco keeps Program Files as authority and uses one URL-safe opaque-origin transport", () => {
+test("#89 Monaco keeps Program Files authority and uses one preloaded opaque-origin transport", () => {
   expect(MONACO_PROGRAM_FILES_RUNTIME_ROOT).toBe("./System/Program Files/MonacoEditor");
-  expect(MONACO_BROWSER_TRANSPORT_ROOT).toBe("./runtime/monaco");
+  expect(MONACO_BROWSER_TRANSPORT_PATH).toBe("./runtime/monaco/worker-sources.js");
   expect(monacoWorkerPath("typescript")).toBe("./System/Program Files/MonacoEditor/ts.worker.js");
   expect(monacoWorkerPath("json")).toBe("./System/Program Files/MonacoEditor/json.worker.js");
-  expect(monacoWorkerBrowserPath("typescript")).toBe("./runtime/monaco/ts.worker.js");
-  expect(monacoWorkerBootstrapSource("typescript", "https://example.test/app/plasmon/index.html")).toBe(
-    'import "https://example.test/app/plasmon/runtime/monaco/ts.worker.js";\n',
-  );
+  expect(monacoWorkerBootstrapSource("typescript", {
+    "ts.worker.js": "self.onmessage = () => {};\n",
+  })).toBe("self.onmessage = () => {};\n");
+  expect(() => monacoWorkerBootstrapSource("typescript", {})).toThrow("Missing packaged Monaco worker source: ts.worker.js");
 });
