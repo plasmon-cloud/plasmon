@@ -94,7 +94,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-result-${{ matrix.attempt }}
+          name: flake-probe-result-${{ github.run_attempt }}-${{ matrix.attempt }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
@@ -116,7 +116,7 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-diagnostics-${{ matrix.attempt }}
+          name: flake-probe-diagnostics-${{ github.run_attempt }}-${{ matrix.attempt }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
@@ -126,7 +126,7 @@ jobs:
         run: exit 1
 
   summary:
-    if: always() && (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci:flake-probe'))
+    if: always() && needs.probe.result != 'skipped'
     name: Flake probe summary
     needs: probe
     runs-on: ubuntu-latest
@@ -134,7 +134,7 @@ jobs:
       - name: Download attempt results
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-result-*
+          pattern: flake-probe-result-${{ github.run_attempt }}-*
           path: flake-probe-results
 
       - name: Summarize exact-head stability
