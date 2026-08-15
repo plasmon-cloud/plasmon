@@ -39,6 +39,9 @@ jobs:
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
 
+      - name: Verify flake-probe workflow contract
+        run: node test/ci/verify-flake-probe.mjs
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
