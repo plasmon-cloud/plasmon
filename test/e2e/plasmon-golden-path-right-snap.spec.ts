@@ -5,12 +5,13 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-// Quarantined from required r2 Specialist CI under #244. Keep this test in the
-// Specialist inventory so the debt remains executable; the required lane uses
-// --grep-invert @r2-quarantine until #244 proves deterministic restoration.
+// Issue #244 restores this real-browser snapped -> restore -> opposite-edge
+// contract to required serialized Specialist execution. Synchronize on the
+// production drag-session state before moving the top-level Playwright pointer
+// to an iframe edge; do not use sleeps, retries, or WindowManager test hooks.
 test(
   "packaged Plasmon restores a left-snapped native window and previews right snap",
-  { tag: ["@r2-quarantine", "@issue-244"] },
+  { tag: ["@issue-244"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -77,6 +78,7 @@ test(
       const y = box.y + offsetY;
       await page.mouse.move(x, y);
       await page.mouse.down();
+      await expect(dialog).toHaveAttribute("data-interacting", "drag");
       return { x, y, offsetX, offsetY };
     };
 
@@ -84,6 +86,7 @@ test(
     await page.mouse.move(workspace.x + 1, leftDrag.y, { steps: 5 });
     await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
     await page.mouse.up();
+    await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
     await expect(snapPreview).toHaveCount(0);
     await expect(dialog).toHaveAttribute("data-window-snap", "left");
 
@@ -109,6 +112,7 @@ test(
     expect(rightDragBounds.x + rightDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
     expect(rightDragBounds.y + rightDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
     await page.mouse.up();
+    await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
     await expect(snapPreview).toHaveCount(0);
     await expect(dialog).toHaveAttribute("data-window-snap", "right");
   },

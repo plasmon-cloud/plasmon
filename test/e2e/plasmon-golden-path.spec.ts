@@ -393,6 +393,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     const y = box.y + offsetY;
     await page.mouse.move(x, y);
     await page.mouse.down();
+    await expect(dialog).toHaveAttribute("data-interacting", "drag");
     return { x, y, offsetX, offsetY };
   };
 
@@ -416,14 +417,13 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(leftDragBounds.x + leftDragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
   expect(leftDragBounds.y + leftDragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
   await page.mouse.up();
+  await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
   await expect(snapPreview).toHaveCount(0);
   await expect(dialog).toHaveAttribute("data-window-snap", "left");
 
-  // Issue #244 tracks the quarantined snapped -> restore -> opposite-edge
-  // right-snap journey. That acceptance is isolated in
-  // plasmon-golden-path-right-snap.spec.ts and excluded only by the
-  // @r2-quarantine Specialist filter; the rest of this golden path remains
-  // required.
+  // Issue #244 restores the snapped -> restore -> opposite-edge right-snap
+  // journey in plasmon-golden-path-right-snap.spec.ts. Both snap journeys wait
+  // for the same production drag-session boundary before moving to an edge.
 
   // Issue #42 visible boundary: create/open a real filesystem document through
   // Explorer, dirty the packaged Monaco editor, and use the real native Close

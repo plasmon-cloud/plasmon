@@ -4,6 +4,7 @@ import type {
   HandlerDefinition,
   NativeAppDefinition,
 } from "../os/contracts/index.ts";
+import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../os/visual/assets.ts";
 import TextEditor, { type TextEditorProps } from "./text/TextEditor.tsx";
 import MarkdownEditor, { type MarkdownEditorProps } from "./markdown/MarkdownEditor.tsx";
 import type { PhotosProps } from "./photos/Photos.tsx";
@@ -12,17 +13,12 @@ import type { BrowserProps } from "./browser/Browser.tsx";
 import type { SettingsDependencies, SettingsHostProps } from "./settings/Settings.tsx";
 import { IMAGE_EXTENSIONS, IMAGE_MIME_TYPES } from "./photos/media.ts";
 
-const icon = (label: string, glyph: string, background = "#eef1f5", foreground = "#26313d"): string => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect x="4" y="4" width="56" height="56" rx="12" fill="${background}" stroke="#6a7482"/><text x="32" y="40" text-anchor="middle" font-family="system-ui,sans-serif" font-size="25" font-weight="700" fill="${foreground}" aria-label="${label}">${glyph}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-};
-
-export const textHandler: HandlerDefinition = { id: "native:text", kind: "native", name: "Text Editor", icon: icon("Text", "T", "#dfe7f5", "#253a5c"), capabilities: ["read", "write"] };
-export const markdownHandler: HandlerDefinition = { id: "native:markdown", kind: "native", name: "Markdown", icon: icon("Markdown", "M↓", "#e1e4ea", "#222a35"), capabilities: ["read", "write"] };
-export const photosHandler: HandlerDefinition = { id: "native:photos", kind: "native", name: "Photos", icon: icon("Photos", "▧", "#2d3542", "#f3d36d"), capabilities: ["read"] };
-export const videoHandler: HandlerDefinition = { id: "native:video", kind: "native", name: "Video Player", icon: icon("Video", "▶", "#252a31", "#f3f5f7"), capabilities: ["read", "url"] };
-export const browserHandler: HandlerDefinition = { id: "native:browser", kind: "native", name: "Browser", icon: icon("Browser", "↗", "#dce9f5", "#235078"), capabilities: ["read", "url"] };
-export const settingsHandler: HandlerDefinition = { id: "native:settings", kind: "native", name: "Settings", icon: icon("Settings", "⚙", "#dfe2e7", "#303742"), capabilities: [] };
+export const textHandler: HandlerDefinition = { id: "native:text", kind: "native", name: "Text Editor", icon: FILE_TYPE_ICON_ASSETS.text, capabilities: ["read", "write"] };
+export const markdownHandler: HandlerDefinition = { id: "native:markdown", kind: "native", name: "Markdown", icon: FILE_TYPE_ICON_ASSETS.markdown, capabilities: ["read", "write"] };
+export const photosHandler: HandlerDefinition = { id: "native:photos", kind: "native", name: "Photos", icon: SYSTEM_ICON_ASSETS.photos, capabilities: ["read"] };
+export const videoHandler: HandlerDefinition = { id: "native:video", kind: "native", name: "Video Player", icon: FILE_TYPE_ICON_ASSETS.video, capabilities: ["read", "url"] };
+export const browserHandler: HandlerDefinition = { id: "native:browser", kind: "native", name: "Browser", icon: SYSTEM_ICON_ASSETS.browser, capabilities: ["read", "url"] };
+export const settingsHandler: HandlerDefinition = { id: "native:settings", kind: "native", name: "Settings", icon: SYSTEM_ICON_ASSETS.settings, capabilities: [] };
 
 /** Metadata-only external routing target; Coordinator A owns OpenService execution. */
 export const externalUrlHandler: HandlerDefinition = { id: "external:url", kind: "external", name: "Open in browser tab", icon: browserHandler.icon, capabilities: ["url"] };

@@ -1,6 +1,6 @@
 # Required CI browser quarantines
 
-The r2 Specialist lane keeps its complete spec inventory present and filters only owner-authorized flaky acceptances. Quarantine is test-level and explicit; it is not a spec deletion, file-level removal, retry exception, or allow-failure policy.
+The r2 Specialist lane keeps its complete spec inventory present and filters only the remaining owner-authorized flaky acceptance below. Quarantine is test-level and explicit; it is not a spec deletion, file-level removal, retry exception, or allow-failure policy.
 
 Required Specialist runs serialized and uses Playwright filtering:
 
@@ -12,38 +12,36 @@ Only the following active `@r2-quarantine` tag is authorized:
 
 | Required-CI quarantine | Exact spec/test | Existing evidence | Restoration issue |
 | --- | --- | --- | --- |
-| Right-snap / snap-preview acceptance | `test/e2e/plasmon-golden-path-right-snap.spec.ts` — `packaged Plasmon restores a left-snapped native window and previews right snap` — tags `@r2-quarantine @issue-244` | PR #241 head `45f2d5f2d832d9e96b6011a538a46fd4d3d317a2`, Packaged Browser run #869 / Actions run `31843462863`, job `94905042903`; right snap-preview assertion timed out on the initial attempt and retry | [#244 — Restore quarantined r2 golden-path right-snap preview acceptance](https://github.com/plasmon-cloud/plasmon/issues/244) |
+| EmulatorJS packaged readiness acceptance | `test/e2e/plasmon-emulatorjs-proof.spec.ts` — `packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets` — tags `@r2-quarantine @issue-245` | PR #241 head `45f2d5f2d832d9e96b6011a538a46fd4d3d317a2`, Packaged Browser run #869 / Actions run `31843462863`, job `94905042903`; 180 s readiness timeout followed by a passing Playwright retry | [#245 — Restore quarantined r2 EmulatorJS packaged readiness acceptance](https://github.com/plasmon-cloud/plasmon/issues/245) |
 
-## Restored required acceptance — #245
+## #244 right-snap / snap-preview restoration
 
-`test/e2e/plasmon-emulatorjs-proof.spec.ts` — `packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets` — is restored to required Specialist execution under [#245](https://github.com/plasmon-cloud/plasmon/issues/245).
+Issue #244 restores `test/e2e/plasmon-golden-path-right-snap.spec.ts` — `packaged Plasmon restores a left-snapped native window and previews right snap` — to required serialized Specialist execution. It carries `@issue-244` and no longer carries `@r2-quarantine`.
 
-The historical failure was a Node-side polling-deadline race: the 180-second readiness poll timed out with its last sampled state at `loader-ready`, while the immediately captured diagnostic already showed the production runtime at `game-started` / `ready=true` with the required local assets served successfully and no runtime HTTP, failed-request, external-request, page, or console errors. The same attempt then passed on retry.
+The preserved failure was a browser pointer/session synchronization problem rather than evidence of a Windowing geometry/state defect:
 
-Restoration keeps the production readiness authority unchanged. The packaged child reports `EJS_onGameStart`; Plasmon translates that real runtime lifecycle event to `data-emulatorjs-phase="game-started"` and `data-emulatorjs-ready="true"`. Required acceptance now waits event-driven on that production phase instead of imposing a second independent 180-second Node polling deadline. The existing overall test safety bound remains unchanged.
+- the quarantined right-snap acceptance moved the top-level Playwright pointer toward an iframe edge immediately after `page.mouse.down()`;
+- PR #252 characterization added an observation of the production `data-interacting="drag"` state before edge movement and its Packaged Browser run #901 completed green;
+- PR #253 later reproduced the same boundary in the still-required golden-path left snap: the preview assertion failed before passing on retry while the #245 EmulatorJS acceptance itself passed;
+- the #244 restoration therefore synchronizes both authoritative snap journeys on the real rendered drag-session state before edge movement and waits for that state to clear after release;
+- no WindowManager product semantics, geometry authority, timeout values, sleeps, retry policy, or fail-on-flaky behavior are changed.
 
-The restored required test still proves:
-
-- legal generated NES fixture import through normal Files UI;
-- packaged/local EmulatorJS loader, JavaScript, CSS, and core assets;
-- production `game-started` runtime initialization;
-- visible non-zero canvas;
-- no EmulatorJS CDN/external runtime requests;
-- no runtime HTTP failures or failed runtime requests;
-- no page or console errors.
+The #244 restoration PR must still obtain clean exact-head required CI before integration; this document describes the proposed executable policy on that branch.
 
 ## Required Specialist inventory
 
-`npm run test:e2e:plasmon:specialist` keeps every Specialist spec present and excludes only the tagged #244 test above:
+`npm run test:e2e:plasmon:specialist` keeps every Specialist spec present and excludes only the explicitly tagged #245 readiness acceptance:
 
-- `test/e2e/plasmon-golden-path.spec.ts` — required.
-- `test/e2e/plasmon-golden-path-right-snap.spec.ts` — retained in the lane; its single #244 right-snap/snap-preview test is quarantined.
-- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — required under the serialized harness; #251 preserves historical failure evidence only and is closed.
+- `test/e2e/plasmon-golden-path.spec.ts` — required, including synchronized left-edge snap-preview proof.
+- `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
+- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — required under the serialized harness; #251 preserves prior failure evidence but is not an active CI quarantine.
 - `test/e2e/plasmon-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-review-demo.spec.ts` — required.
-- `test/e2e/plasmon-emulatorjs-proof.spec.ts` — both local-asset/network-safety and restored #245 readiness/canvas/core-start coverage are required.
-- `test/e2e/plasmon-demo-game.spec.ts` — required under the serialized harness; #250 preserves historical fail-then-pass evidence only and is closed.
+- `test/e2e/plasmon-emulatorjs-proof.spec.ts` — stable loader/local-asset/network-safety coverage remains required; only the #245 readiness/canvas/core-start test remains quarantined on this branch until #245 integrates.
+- `test/e2e/plasmon-demo-game.spec.ts` — required under the serialized harness; #250 was deterministically repaired and integrated by PR #263 after the serialized harness reproduced its activation race, and it carries no active quarantine.
 
 BrowserHealth, package/security validation, worker/asset validation, persistence, and fail-on-flaky behavior for every required test remain unchanged.
 
-A quarantined test may return to required CI only through its linked restoration Issue. Additional quarantines require new explicit owner authorization.
+#250 is resolved and integrated by PR #263; its historical fail-then-pass evidence remains useful, but the production acceptance is required and no quarantine is authorized. #251 remains historical evidence debt under the serialized policy and likewise does not authorize `@r2-quarantine`.
+
+#244 remains the canonical restoration Issue until its required exact-head evidence is clean and the restoration is integrated. #245 remains the only active quarantine represented by this branch's inventory policy. Additional quarantines require new explicit owner authorization.
