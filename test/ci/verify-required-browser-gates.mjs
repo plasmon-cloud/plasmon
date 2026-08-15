@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 
+const releaseBranch = "release/0.1.0-r2";
+
 const gates = [
   {
     id: "smoke",
@@ -19,6 +21,7 @@ const gates = [
       "run_packaged_smoke",
       "Detect packaged-smoke-relevant changes",
     ],
+    pushBranches: [releaseBranch],
   },
   {
     id: "browser",
@@ -39,27 +42,7 @@ const gates = [
     ],
     pushBranches: [
       "version-0.1.0-os",
-      "release/0.1.0-r2",
-    ],
-    pushPatterns: [
-      "apps/plasmon/**",
-      "apps/review/**",
-      "apps/kernel/**",
-      "packages/neutron-provision/**",
-      "packages/neutron-tools/**",
-      "test/e2e/plasmon-demo-environment.ts",
-      "test/e2e/plasmon-browser-health.ts",
-      "test/e2e/plasmon-refactor-smoke.spec.ts",
-      "test/e2e/plasmon-golden-path.spec.ts",
-      "test/e2e/plasmon-monaco-packaged.spec.ts",
-      "test/e2e/plasmon-review-demo.spec.ts",
-      "test/e2e/plasmon-emulatorjs-proof.spec.ts",
-      "test/e2e/plasmon-demo-game.spec.ts",
-      "playwright.config.ts",
-      "plasmon-local.ndeploy.json",
-      "package.json",
-      "package-lock.json",
-      ".github/workflows/plasmon-browser-ci.yml",
+      releaseBranch,
     ],
   },
   {
@@ -79,6 +62,7 @@ const gates = [
       "run_persistence",
       "Detect persistence-relevant changes",
     ],
+    pushBranches: [releaseBranch],
   },
 ];
 
@@ -134,6 +118,23 @@ function assertUnconditionalStep(step, label) {
   if (/^        if:/m.test(step)) {
     throw new Error(`${label} must run unconditionally on every PR`);
   }
+}
+
+function assertPushBranch(path, branch) {
+  const source = readFileSync(path, "utf8");
+  const push = eventSection(source.split(/\r?\n/), "push");
+  if (!push.includes(`      - ${branch}`)) {
+    throw new Error(`${path} direct-push coverage lost required branch ${branch}`);
+  }
+  return push;
+}
+
+function assertUnfilteredReleasePush(path) {
+  const push = assertPushBranch(path, releaseBranch);
+  if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
+    throw new Error(`${path} cannot path-filter ${releaseBranch} pushes; every release push must schedule this required gate`);
+  }
+  return push;
 }
 
 for (const gate of selectedGates) {
@@ -192,20 +193,23 @@ for (const gate of selectedGates) {
 
   if (gate.pushBranches) {
     const push = eventSection(lines, "push");
-    if (!push.includes("    paths:")) {
-      throw new Error(`${gate.context} must preserve the specialist direct-push path filter`);
-    }
     for (const branch of gate.pushBranches) {
       if (!push.includes(`      - ${branch}`)) {
         throw new Error(`${gate.context} direct-push coverage lost required branch ${branch}`);
       }
     }
-    for (const pattern of gate.pushPatterns) {
-      if (!push.some((line) => line.includes(`"${pattern}"`))) {
-        throw new Error(`${gate.context} direct-push path filter lost required path ${pattern}`);
-      }
-    }
   }
 }
 
-console.log(`Required r2 browser gate PR-always-run contract verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+const requiredReleasePushWorkflows = [
+  ".github/workflows/plasmon-ci.yml",
+  ".github/workflows/kernel-ci.yml",
+  ".github/workflows/plasmon-browser-smoke-ci.yml",
+  ".github/workflows/plasmon-browser-ci.yml",
+  ".github/workflows/plasmon-browser-persistence-ci.yml",
+];
+for (const path of requiredReleasePushWorkflows) {
+  assertUnfilteredReleasePush(path);
+}
+
+console.log(`Required r2 browser gate PR-always-run and unfiltered five-gate release-push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);

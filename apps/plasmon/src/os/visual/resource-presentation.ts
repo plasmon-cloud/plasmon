@@ -1,3 +1,4 @@
+import type { ResourceArtworkMetadata } from "../fs/resourceArtwork.ts";
 import type { ResourceClassification } from "../fs/resourcePolicy.ts";
 import type { ResourceIconPresentation } from "./primitives.tsx";
 
@@ -42,15 +43,25 @@ export function nativeHandlerResourcePresentation(
   return NATIVE_PRESENTATION_BY_HANDLER[handlerId] ?? applicationResourcePresentation();
 }
 
+export interface ResourcePresentationOptions {
+  nativeIcon?: string | null;
+  artwork?: ResourceArtworkMetadata | null;
+}
+
 /**
- * Maps an already-produced #189 classification to the shared Visual vocabulary.
- * This module never classifies resources, reads filesystem state, resolves
- * shortcuts, selects handlers, or inspects installation state.
+ * Maps already-produced resource semantics and validated presentation metadata
+ * to the shared Visual vocabulary. This module never reads filesystem state,
+ * classifies resources, resolves shortcuts, selects handlers, or inspects
+ * installation state.
  */
 export function resourcePresentationForClassification(
   classification: ResourceClassification,
-  options: { nativeIcon?: string | null } = {},
+  options: ResourcePresentationOptions = {},
 ): ResourceIconPresentation {
+  if (classification.kind === "ordinary-file" && options.artwork) {
+    return { kind: "thumbnail", src: options.artwork.src, mediaKind: "image" };
+  }
+
   switch (classification.kind) {
     case "directory":
       return { kind: "file-type", icon: "folder" };

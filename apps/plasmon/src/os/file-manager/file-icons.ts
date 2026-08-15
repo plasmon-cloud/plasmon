@@ -3,6 +3,7 @@ import {
   APPS_PATH,
   classifyResource,
   readNeutronAppMetadata,
+  readResourceArtworkMetadata,
   readSharedShortcut,
 } from "../fs/index.ts";
 import {
@@ -36,7 +37,9 @@ export function fileVisualKind(node: FsNode): FileVisualKind {
 
 /** Maps an already-classified filesystem resource onto shared Visual identity. */
 export function resourceIconPresentationForFile(node: FsNode): ResourceIconPresentation {
-  return resourcePresentationForClassification(classifyResource(node));
+  return resourcePresentationForClassification(classifyResource(node), {
+    artwork: readResourceArtworkMetadata(node),
+  });
 }
 
 export interface FileResourcePresentation {
@@ -56,7 +59,10 @@ export function directFileResourcePresentation(
   const nativeIcon = classification.systemApp
     ? associations?.getHandler(classification.systemApp.handlerId)?.icon
     : undefined;
-  return resourcePresentationForClassification(classification, { nativeIcon });
+  return resourcePresentationForClassification(classification, {
+    nativeIcon,
+    artwork: readResourceArtworkMetadata(node),
+  });
 }
 
 /** Safe synchronous presentation used immediately and whenever richer target lookup fails. */

@@ -22,13 +22,19 @@ test("kernel Motoko builds use vendored Wasm and never resolve a host moc", asyn
   const calls: Parameters<MopsCommandRunner>[] = [];
   const run: MopsCommandRunner = async (...args) => {
     calls.push(args);
-    if (args[0] !== "mops" || args[1].join(" ") !== "sources") {
+    if (args[0] !== "mops") {
       throw new Error(`Unexpected host command: ${args[0]} ${args[1].join(" ")}`);
     }
-    return {
-      stdout: "--package build-fixture packages/build-fixture\n",
-      stderr: "",
-    };
+    if (args[1].join(" ") === "install --lock update") {
+      return { stdout: "", stderr: "" };
+    }
+    if (args[1].join(" ") === "sources --no-install") {
+      return {
+        stdout: "--package build-fixture packages/build-fixture\n",
+        stderr: "",
+      };
+    }
+    throw new Error(`Unexpected host command: ${args[0]} ${args[1].join(" ")}`);
   };
 
   try {
@@ -68,7 +74,10 @@ test("kernel Motoko builds use vendored Wasm and never resolve a host moc", asyn
       run,
     });
 
-    expect(calls).toEqual([["mops", ["sources"], { cwd: root }]]);
+    expect(calls).toEqual([
+      ["mops", ["install", "--lock", "update"], { cwd: root }],
+      ["mops", ["sources", "--no-install"], { cwd: root }],
+    ]);
     expect(result).toEqual({
       wasmPath: path.join(root, "dist", "neutron"),
       candidPath: path.join(root, "dist", "neutron.did"),

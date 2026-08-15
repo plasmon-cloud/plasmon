@@ -5,18 +5,6 @@ on:
     branches:
       - version-0.1.0-os
       - release/0.1.0-r2
-    paths:
-      - "apps/plasmon/**"
-      - "packages/neutron-design-system/**"
-      - "packages/neutron-scripts/**"
-      - "packages/neutron-tools/**"
-      - "test/ci/plasmon-test-inventory.mjs"
-      - "test/ci/run-plasmon-fast-tests.mjs"
-      - "test/ci/verify-plasmon-test-inventory.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/plasmon-ci.yml"
-      - ".github/workflows/plasmon-browser-ci.yml"
   pull_request:
   workflow_dispatch:
 
