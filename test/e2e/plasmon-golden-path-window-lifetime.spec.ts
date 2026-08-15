@@ -66,11 +66,9 @@ test(
   "#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
   { tag: ["@issue-63"] },
   async ({ page }) => {
-    const runtime = resolveLocalNeutronRuntime();
-    const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
+    const { app, kernelUrl } = await openInstalledPlasmon(page);
     const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
     try {
-      const { app } = await openInstalledPlasmon(page);
       const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
       const initialWindowCount = await nativeWindows.count();
       const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
