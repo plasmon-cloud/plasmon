@@ -93,7 +93,7 @@ function mailElement(): ExternalElement {
   };
 }
 
-test("#174 RED — canonical .sys NodeId is the only visible native application Search identity", async () => {
+test("canonical .sys NodeId is the only visible native application Search identity", async () => {
   const projection = systemProjection();
   const settings = nativeSettings();
 
@@ -112,7 +112,7 @@ test("#174 RED — canonical .sys NodeId is the only visible native application 
   expect(registryOnly.results.filter((candidate) => candidate.category === "apps")).toHaveLength(0);
 });
 
-test("#174 RED — canonical .neutron NodeId is the only visible Element identity and runtime state is not Search presentation", async () => {
+test("canonical .neutron NodeId is the only visible Element identity and runtime state is not Search presentation", async () => {
   const projection = neutronProjection();
   const direct = mailElement();
 
