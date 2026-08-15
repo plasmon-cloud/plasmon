@@ -105,15 +105,6 @@ jobs:
             npm --workspace neutron-kernel run package
           '
 
-      - name: Emit canonical candidate binding diff
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
-        run: |
-          nix develop --command bash -lc '
-            set -euxo pipefail
-            npm --workspace neutron-kernel run certified-assets:candidate-binding:write
-            git diff -- apps/kernel/certified-assets-candidate-binding.json
-          '
-
       - name: Kernel tests
         if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
