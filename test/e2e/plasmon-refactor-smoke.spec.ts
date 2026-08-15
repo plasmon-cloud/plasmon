@@ -163,15 +163,65 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
     const viewport = page.viewportSize();
     if (!viewport) throw new Error("Packaged smoke requires a fixed Playwright viewport");
 
-    // Search is a projection over native/system authority. #175 owns its exact
-    // panel geometry. This broad refactor smoke permits the known ~22px right
-    // overflow while still catching gross off-screen regressions.
+    // Issue #175 browser boundary: Search owns one stable viewport-bounded
+    // frame. Category changes must not move its controls, and the results body
+    // must own overflow rather than resizing the panel around sparse content.
     await plasmon.getByRole("button", { name: "Search" }).click();
     const searchRegion = plasmon.getByRole("region", { name: "Search" });
     await expect(searchRegion).toBeVisible();
+    await searchRegion.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+    });
+
+    const plasmonBounds = await plasmonFrame.boundingBox();
     const searchBox = await searchRegion.boundingBox();
-    if (!searchBox) throw new Error("Search popup has no browser bounds");
-    expectInsideViewport(searchBox, viewport, "Search popup", 24);
+    const searchTabs = searchRegion.getByRole("tablist");
+    const tabsBox = await searchTabs.boundingBox();
+    const searchResults = searchRegion.locator(".plasmon-shell__results");
+    const resultsBox = await searchResults.boundingBox();
+    if (!plasmonBounds || !searchBox || !tabsBox || !resultsBox) {
+      throw new Error("Search geometry is unavailable in the packaged browser");
+    }
+
+    expect(searchBox.x).toBeGreaterThanOrEqual(plasmonBounds.x - 1);
+    expect(searchBox.y).toBeGreaterThanOrEqual(plasmonBounds.y - 1);
+    expect(searchBox.x + searchBox.width).toBeLessThanOrEqual(plasmonBounds.x + plasmonBounds.width + 1);
+    expect(searchBox.y + searchBox.height).toBeLessThanOrEqual(plasmonBounds.y + plasmonBounds.height + 1);
+
+    const searchOverflow = await searchRegion.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { overflowX: style.overflowX, overflowY: style.overflowY };
+    });
+    const resultsOverflow = await searchResults.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { overflowY: style.overflowY, minHeight: style.minHeight };
+    });
+    expect(searchOverflow).toEqual({ overflowX: "hidden", overflowY: "hidden" });
+    expect(resultsOverflow.overflowY).toBe("auto");
+    expect(resultsOverflow.minHeight).toBe("0px");
+
+    for (const tabName of ["Apps", "Documents", "Media", "Atoms"] as const) {
+      const tab = searchRegion.getByRole("tab", { name: tabName });
+      await tab.click();
+      await expect(tab).toHaveAttribute("aria-selected", "true");
+      const nextSearchBox = await searchRegion.boundingBox();
+      const nextTabsBox = await searchTabs.boundingBox();
+      const nextResultsBox = await searchResults.boundingBox();
+      if (!nextSearchBox || !nextTabsBox || !nextResultsBox) {
+        throw new Error(`Search geometry disappeared while selecting ${tabName}`);
+      }
+      expect(Math.abs(nextSearchBox.x - searchBox.x), `${tabName} panel x`).toBeLessThan(1.5);
+      expect(Math.abs(nextSearchBox.y - searchBox.y), `${tabName} panel y`).toBeLessThan(1.5);
+      expect(Math.abs(nextSearchBox.width - searchBox.width), `${tabName} panel width`).toBeLessThan(1.5);
+      expect(Math.abs(nextSearchBox.height - searchBox.height), `${tabName} panel height`).toBeLessThan(1.5);
+      expect(Math.abs(nextTabsBox.x - tabsBox.x), `${tabName} tabs x`).toBeLessThan(1.5);
+      expect(Math.abs(nextTabsBox.y - tabsBox.y), `${tabName} tabs y`).toBeLessThan(1.5);
+      expect(Math.abs(nextTabsBox.width - tabsBox.width), `${tabName} tabs width`).toBeLessThan(1.5);
+      expect(Math.abs(nextTabsBox.height - tabsBox.height), `${tabName} tabs height`).toBeLessThan(1.5);
+      expect(Math.abs(nextResultsBox.height - resultsBox.height), `${tabName} results height`).toBeLessThan(1.5);
+    }
+
+    await searchRegion.getByRole("tab", { name: "Apps" }).click();
     await plasmon.getByLabel("Search Plasmon").fill("Settings");
     const settingsResult = plasmon.locator("[data-search-result]", { hasText: "Settings" }).first();
     await expect(settingsResult).toBeVisible({ timeout: 15_000 });
