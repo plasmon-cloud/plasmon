@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import type {
   ExternalElement,
   FsEvent,
@@ -9,6 +9,12 @@ import type {
   JsonValue,
   NativeAppDefinition,
 } from "../contracts/index.ts";
+import {
+  resolveShellContextMenuPolicy,
+  shouldDismissAfterResultActivation,
+  shouldDismissShellFlyout,
+  taskbarPinAction,
+} from "./interactions.ts";
 import { LatestSearchController, SEARCH_CATEGORY_LIMITS, SEARCH_TOTAL_LIMIT, searchShell, subscribeSearchInvalidation } from "./search.ts";
 import { parseStartShortcut, reconcileStartMenu } from "./startMenu.ts";
 
@@ -195,29 +201,25 @@ test("stale async searches cannot overwrite newer query state", async () => {
 });
 
 test("successful result activation dismisses Search", () => {
-  let open = true;
-  const activate = () => { open = false; };
-  activate();
-  expect(open).toBe(false);
+  expect(shouldDismissAfterResultActivation(true)).toBe(true);
+  expect(shouldDismissAfterResultActivation(false)).toBe(false);
 });
 
 test("click-away closes flyouts while inside and toggle interactions do not fight dismissal", () => {
-  const shouldDismiss = (insideFlyout: boolean, insideToggle: boolean) => !insideFlyout && !insideToggle;
-  expect(shouldDismiss(false, false)).toBe(true);
-  expect(shouldDismiss(true, false)).toBe(false);
-  expect(shouldDismiss(false, true)).toBe(false);
+  expect(shouldDismissShellFlyout(true, { insideFlyout: false, insideToggle: false, insideContextMenu: false })).toBe(true);
+  expect(shouldDismissShellFlyout(true, { insideFlyout: true, insideToggle: false, insideContextMenu: false })).toBe(false);
+  expect(shouldDismissShellFlyout(true, { insideFlyout: false, insideToggle: true, insideContextMenu: false })).toBe(false);
+  expect(shouldDismissShellFlyout(false, { insideFlyout: false, insideToggle: false, insideContextMenu: false })).toBe(false);
 });
 
 test("Pin and Unpin state exposes exact taskbar tooltip labels", () => {
-  const label = (pinned: boolean) => pinned ? "Unpin from taskbar" : "Pin to taskbar";
-  expect(label(false)).toBe("Pin to taskbar");
-  expect(label(true)).toBe("Unpin from taskbar");
+  expect(taskbarPinAction(false)).toEqual({ pinned: false, nextPinned: true, label: "Pin to taskbar" });
+  expect(taskbarPinAction(true)).toEqual({ pinned: true, nextPinned: false, label: "Unpin from taskbar" });
 });
 
 test("Shell context-menu arbitration keeps app content free and specialized task menus win", () => {
-  const policy = (shellOwned: boolean, nativeTask: boolean, elementTask: boolean) => nativeTask ? "native" : elementTask ? "element" : shellOwned ? "shell" : "none";
-  expect(policy(false, false, false)).toBe("none");
-  expect(policy(true, false, false)).toBe("shell");
-  expect(policy(true, true, false)).toBe("native");
-  expect(policy(true, false, true)).toBe("element");
+  expect(resolveShellContextMenuPolicy({ shellOwned: false, nativeTask: false, elementTask: false })).toBe("none");
+  expect(resolveShellContextMenuPolicy({ shellOwned: true, nativeTask: false, elementTask: false })).toBe("generic");
+  expect(resolveShellContextMenuPolicy({ shellOwned: true, nativeTask: true, elementTask: false })).toBe("native-task");
+  expect(resolveShellContextMenuPolicy({ shellOwned: true, nativeTask: false, elementTask: true })).toBe("element-task");
 });
