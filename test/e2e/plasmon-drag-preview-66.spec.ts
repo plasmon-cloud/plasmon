@@ -85,23 +85,36 @@ test("#66 active multi-selection drag preview is above windows and transparent t
     await expect(preview).toHaveCount(0);
     await expect(files.locator(".is-dragging")).toHaveCount(0);
 
-    // A real drop on an Explorer directory must still reach that owner; the
-    // preview is not allowed to become the drop target.
-    const destination = explorerWindow.locator("[data-fm-node-id]").filter({ hasText: "Documents" }).first();
+    // The preview must not corrupt the existing directory-drop contract. Keep
+    // this proof inside one FileManager: cross-FileManager drag/drop is not part
+    // of #66 and would require a separate shared drag authority. Create a normal
+    // root document through Explorer, then move it into the existing Documents
+    // directory using that same Explorer FileManager's canonical pointer path.
+    const explorerFiles = explorerWindow.getByRole("listbox", { name: "Files" });
+    const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
+    await commandBar.getByRole("button", { name: "New Text Document" }).click();
+    const rename = explorerFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
+    await expect(rename).toBeVisible();
+    const createdName = await rename.inputValue();
+    await rename.press("Enter");
+
+    const dropSource = explorerFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
+    const destination = explorerFiles.locator('[data-fm-node-id][data-fm-kind="directory"]', { hasText: "Documents" }).first();
+    await expect(dropSource).toBeVisible();
     await expect(destination).toBeVisible();
+    const dropSourceId = await dropSource.getAttribute("data-fm-node-id");
+    if (!dropSourceId) throw new Error("Dragged source has no stable NodeId");
+    const dropSourceBox = await dropSource.boundingBox();
     const destinationBox = await destination.boundingBox();
-    if (!destinationBox) throw new Error("Explorer destination has no bounds");
-    const sourceId = await entries.nth(0).getAttribute("data-fm-node-id");
-    if (!sourceId) throw new Error("Dragged source has no stable NodeId");
-    const refreshedSource = await entries.nth(0).boundingBox();
-    if (!refreshedSource) throw new Error("Entry disappeared after cancel");
-    await page.mouse.move(refreshedSource.x + 20, refreshedSource.y + 20);
+    if (!dropSourceBox || !destinationBox) throw new Error("Explorer drop participants have no bounds");
+
+    await page.mouse.move(dropSourceBox.x + dropSourceBox.width / 2, dropSourceBox.y + dropSourceBox.height / 2);
     await page.mouse.down();
     await page.mouse.move(destinationBox.x + destinationBox.width / 2, destinationBox.y + destinationBox.height / 2, { steps: 8 });
     await expect(destination).toHaveClass(/is-drop-target/);
     await page.mouse.up();
     await expect(preview).toHaveCount(0);
-    await expect(files.locator(`[data-fm-node-id="${sourceId}"]`)).toHaveCount(0);
+    await expect(explorerFiles.locator(`[data-fm-node-id="${dropSourceId}"]`)).toHaveCount(0);
     health.assertClean();
   } finally {
     health.dispose();
