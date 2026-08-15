@@ -14,7 +14,7 @@ import {
   type SearchTab,
 } from "./search.ts";
 
-const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false };
+const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false, capped: false };
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
