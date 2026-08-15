@@ -100,7 +100,10 @@ export type ShellSearchResult =
 export interface SearchBatch {
   results: ShellSearchResult[];
   warnings: string[];
+  /** True only when filesystem traversal stopped before the searchable tree was exhausted. */
   truncated: boolean;
+  /** True when otherwise valid matches were omitted only by normal presentation caps. */
+  capped: boolean;
 }
 
 export interface FilesystemSearchOptions {
@@ -409,20 +412,20 @@ export async function searchFilesystem(
   return { results: [...appShortcuts, ...projections, ...directories, ...files], warnings, truncated: queue.length > 0 };
 }
 
-function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; truncated: boolean } {
+function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; capped: boolean } {
   const output: ShellSearchResult[] = [];
-  let truncated = false;
+  let capped = false;
   for (const category of ["apps", "documents", "media", "atoms"] as const) {
     const matchesCategory = results.filter((result) => result.category === category);
     const limit = SEARCH_CATEGORY_LIMITS[category];
     output.push(...matchesCategory.slice(0, limit));
-    if (matchesCategory.length > limit) truncated = true;
+    if (matchesCategory.length > limit) capped = true;
   }
   if (output.length > SEARCH_TOTAL_LIMIT) {
-    truncated = true;
-    return { results: output.slice(0, SEARCH_TOTAL_LIMIT), truncated };
+    capped = true;
+    return { results: output.slice(0, SEARCH_TOTAL_LIMIT), capped };
   }
-  return { results: output, truncated };
+  return { results: output, capped };
 }
 
 export async function searchShell(
@@ -472,7 +475,8 @@ export async function searchShell(
   return {
     results: limited.results,
     warnings: filesystem.warnings,
-    truncated: filesystem.truncated || limited.truncated,
+    truncated: filesystem.truncated,
+    capped: limited.capped,
   };
 }
 
