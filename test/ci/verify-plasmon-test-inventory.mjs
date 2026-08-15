@@ -13,7 +13,6 @@ import {
 const args = new Set(process.argv.slice(2));
 const activeQuarantineIssues = Object.freeze({
   'test/e2e/plasmon-golden-path-left-snap.spec.ts': '@issue-277',
-  'test/e2e/plasmon-emulatorjs-proof.spec.ts': '@issue-245',
 });
 
 function sameSet(actual, expected) {
