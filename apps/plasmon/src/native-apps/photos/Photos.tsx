@@ -3,19 +3,26 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
 import { exitFullscreenSafely, requestFullscreenSafely } from "./fullscreen.ts";
 import { adjacentImageNode, createImageObjectUrlLease, inferImageMime } from "./media.ts";
+import {
+  enterWorkspaceExpand,
+  exitWorkspaceExpand,
+  type WorkspaceExpandSession,
+  type WorkspaceWindowControl,
+} from "./workspaceExpand.ts";
 
 export interface PhotosProps {
   processId: ProcessId;
   target: OpenTarget;
   fs: FsService;
   process: ProcessController;
+  nativeWindow?: WorkspaceWindowControl;
 }
 
 type PhotoSource = { url: string; title: string; mime: string };
 type PanzoomInstance = ReturnType<typeof Panzoom>;
 type PanzoomChangeEvent = Event & { detail?: { scale?: number } };
 
-export default function Photos({ processId, target, fs, process }: PhotosProps) {
+export default function Photos({ processId, target, fs, process, nativeWindow }: PhotosProps) {
   const [source, setSource] = useState<PhotoSource | null>(null);
   const [loading, setLoading] = useState(Boolean(target.nodeId));
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +36,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const panzoomRef = useRef<PanzoomInstance | null>(null);
+  const workspaceExpandRef = useRef<WorkspaceExpandSession | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,7 +46,6 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
     setScale(1);
     setError(null);
     setDisplayNotice(null);
-    setExpanded(false);
 
     if (!target.nodeId) {
       setLoading(false);
@@ -114,6 +121,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
       const isFullscreen = document.fullscreenElement === rootRef.current;
       setFullscreen(isFullscreen);
       if (isFullscreen) {
+        workspaceExpandRef.current = null;
         setExpanded(false);
         setDisplayNotice(null);
       }
@@ -149,6 +157,8 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
     }
 
     if (expanded) {
+      exitWorkspaceExpand(nativeWindow, workspaceExpandRef.current);
+      workspaceExpandRef.current = null;
       setExpanded(false);
       setDisplayNotice(null);
       return;
@@ -156,6 +166,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
 
     const result = await requestFullscreenSafely(root, document);
     if (result.mode === "expanded") {
+      workspaceExpandRef.current = enterWorkspaceExpand(nativeWindow);
       setExpanded(true);
       setDisplayNotice(result.message);
     }
@@ -215,6 +226,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
       ref={rootRef}
       style={styles.root}
       aria-label="Photos"
+      data-photos-display-mode={fullscreen ? "fullscreen" : expanded ? "expanded" : "normal"}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
