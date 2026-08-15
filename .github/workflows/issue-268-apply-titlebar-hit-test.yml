@@ -1,0 +1,84 @@
+name: Issue 268 Apply Visible Titlebar Hit Test
+
+on:
+  push:
+    branches:
+      - ci/issue-268-normalization-drag-hit-target
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'ci(#268): apply visible titlebar hit-test patch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          ref: ci/issue-268-normalization-drag-hit-target
+          fetch-depth: 0
+
+      - name: Replace failed identity-bound targeting with visible titlebar hit testing
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('test/e2e/plasmon-golden-path.spec.ts')
+          source = path.read_text()
+          old = '''  // #268 follow-up: the whole visible titlebar includes controls whose
+  // pointerdown deliberately stops propagation. Start normalization from the
+  // rendered identity region so this remains the real production titlebar drag
+  // path while never sampling Minimize/Maximize/Close.
+  const normalDragSurface = dialog.locator(".plasmon-window__identity");
+  const normalDragSurfaceBox = await normalDragSurface.boundingBox();
+  if (!normalDragSurfaceBox) throw new Error("Restored native drag identity has no browser bounds");
+  const normalVisibleLeft = Math.max(workspace.x, normalDragSurfaceBox.x);
+  const normalVisibleRight = Math.min(
+    workspace.x + workspace.width,
+    normalDragSurfaceBox.x + normalDragSurfaceBox.width,
+  );
+  if (normalVisibleRight - normalVisibleLeft < 16) throw new Error("Restored drag identity lost its reachable segment");
+  const normalDragStartX = (normalVisibleLeft + normalVisibleRight) / 2;
+  const normalDragY = normalDragSurfaceBox.y + Math.min(16, normalDragSurfaceBox.height / 2);
+'''
+          new = '''  // #268 follow-up: the visible titlebar can be partially off-screen after
+  // the small-workspace pan, and its controls deliberately stop pointerdown
+  // propagation. Ask the browser for an actually exposed titlebar hit target
+  // that is not inside the control cluster, then keep the real top-level
+  // pointer path and production drag lifecycle assertions below.
+  const normalDragPoint = await titlebar.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const y = Math.min(16, Math.max(1, rect.height / 2));
+    const firstVisibleX = Math.max(1, Math.ceil(-rect.left) + 1);
+    const lastVisibleX = Math.min(
+      Math.floor(rect.width - 1),
+      Math.floor(window.innerWidth - rect.left - 1),
+    );
+
+    for (let x = firstVisibleX; x <= lastVisibleX; x += 8) {
+      const hit = document.elementFromPoint(rect.left + x, rect.top + y);
+      if (!(hit instanceof Element) || !element.contains(hit)) continue;
+      if (hit.closest(".plasmon-window__controls, button, input, textarea, select, a, [role='button'], [role='menuitem']")) continue;
+      return { x, y };
+    }
+    return null;
+  });
+  if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
+  const normalTitlebarBox = await titlebar.boundingBox();
+  if (!normalTitlebarBox) throw new Error("Restored native titlebar has no browser bounds");
+  const normalDragStartX = normalTitlebarBox.x + normalDragPoint.x;
+  const normalDragY = normalTitlebarBox.y + normalDragPoint.y;
+'''
+          if source.count(old) != 1:
+              raise SystemExit(f'expected one #268 targeting block, found {source.count(old)}')
+          path.write_text(source.replace(old, new))
+          PY
+
+          git rm .github/workflows/issue-268-apply-titlebar-hit-test.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add test/e2e/plasmon-golden-path.spec.ts
+          git commit -m "test(plasmon): hit-test visible titlebar for normalization drag"
+          git push origin HEAD:ci/issue-268-normalization-drag-hit-target
