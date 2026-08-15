@@ -18,15 +18,30 @@ Pinned js-dos 8.4.1 exposes a supported `fsChanges` contract with `urlToKey`, `p
 
 - `fsChanges.local` is always `false`, so js-dos browser-local progress is not a second source of truth;
 - the stable game `NodeId` is the progress key; mutable filename, path, and bundle Blob URL are not identity;
-- opaque js-dos change bytes are stored under the hidden Plasmon filesystem directory `/.jsdos-progress/`;
+- opaque js-dos change bytes are stored under the Plasmon filesystem directory `/.jsdos-progress/`;
 - each save record carries format/runtime/integrity metadata and is rejected safely when corrupt or incompatible;
 - rename or move keeps the same progress association because the game `NodeId` is unchanged;
 - copying a game creates a new `NodeId` and therefore does not silently inherit the original game's progress;
 - normal Process close defers while `player.save()` exports current changes. A bounded save timeout cancels that first close and lets the user close again explicitly rather than trapping the process indefinitely.
 
-The hidden progress directory is ordinary Plasmon filesystem state behind the normal durable filesystem service/repository boundary. It is not browser localStorage/IndexedDB/OPFS authority and is not a second emulator database.
+The progress directory is ordinary Plasmon filesystem state behind the normal durable filesystem service/repository boundary. It is not browser localStorage/IndexedDB/OPFS authority and is not a second emulator database.
 
-The progress file is the accepted durable save representation for the js-dos runtime. Presentation metadata such as future screenshot thumbnails may reference/extend that save record, but preview bytes must never become authoritative for save correctness.
+The `.changes` file is the accepted durable save representation for the js-dos runtime.
+
+## Save screenshot previews
+
+When a live js-dos canvas is available at the normal save-before-close boundary, `preview.ts` captures a bounded PNG frame while `player.save()` persists the authoritative change set. The screenshot is attached only after the save reports success.
+
+The preview lifecycle is deliberately presentation-only:
+
+- at most one sibling `<NodeId>.preview.png` image is retained per js-dos save; a later successful capture overwrites it instead of accumulating snapshots;
+- the preview image is a hidden filesystem resource and the canonical `.changes` save record references it through validated `plasmon.resourcePreview` metadata;
+- the reference uses the preview resource's stable `NodeId`, not a mutable path;
+- capture, canvas encoding, preview write, missing preview data, or image decoding failure never changes save validity or restore behavior;
+- FileManager resolves the reference through its existing shared thumbnail/Object-URL lifecycle and falls back normally when the preview cannot be loaded;
+- preview bytes are never inspected by `JsDosProgressStore.load()` and are not part of the save checksum/runtime compatibility contract.
+
+This is not a generic screenshot service and does not require every runtime to support capture. js-dos owns the actual canvas capture because it owns that browser/runtime surface; the filesystem/Visual layers own only the bounded preview reference and shared presentation mechanics.
 
 ## Refactor direction
 
@@ -34,4 +49,4 @@ Keep runtime loading/configuration independent of file association and process/w
 
 ## Testing
 
-Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, and deterministic helpers. Use package/browser tests for script/style asset presence, runtime global initialization, failure/retry, canvas/input behavior, real save-before-close, reopen/restore, and actual playable startup because those claims depend on a browser engine and packaged assets.
+Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, preview metadata/lifecycle, shared preview loading, and deterministic helpers. Use package/browser tests for script/style asset presence, runtime global initialization, failure/retry, canvas/input behavior, real save-before-close, screenshot capture/presentation, reopen/restore, and actual playable startup because those claims depend on a browser engine and packaged assets.
