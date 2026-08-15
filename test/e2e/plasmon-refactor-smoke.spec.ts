@@ -123,7 +123,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
 
     for (const path of [
       `/app/${PLASMON_APP_ID}/index.html`,
-      `/app/${PLASMON_APP_ID}/System/Program Files/MonacoEditor/editor.worker.js`,
+      `/app/${PLASMON_APP_ID}/runtime/monaco/editor.worker.js`,
       `/app/${PLASMON_APP_ID}/fixtures/PlasmonDemo.jsdos`,
       `/app/${REVIEW_APP_ID}/index.html`,
     ]) {
