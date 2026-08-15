@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { installMonacoEnvironment, monacoWorkerFile } from "./monacoEnvironment.ts";
+import {
+  installMonacoEnvironment,
+  MONACO_PROGRAM_FILES_RUNTIME_ROOT,
+  monacoWorkerBootstrapSource,
+  monacoWorkerFile,
+  monacoWorkerPath,
+} from "./monacoEnvironment.ts";
 
 test("#89 Monaco workers are constructed from the canonical Program Files runtime path", () => {
   const calls: Array<{ url: string; options?: WorkerOptions }> = [];
@@ -15,6 +21,7 @@ test("#89 Monaco workers are constructed from the canonical Program Files runtim
   } finally {
     if (previousWorker === undefined) delete (globalThis as typeof globalThis & { Worker?: unknown }).Worker;
     else (globalThis as typeof globalThis & { Worker: unknown }).Worker = previousWorker;
+    delete (globalThis as typeof globalThis & { MonacoEnvironment?: unknown }).MonacoEnvironment;
   }
   expect(calls).toHaveLength(6);
   expect(calls.map(({ url }) => url)).toEqual([
@@ -25,5 +32,23 @@ test("#89 Monaco workers are constructed from the canonical Program Files runtim
     expect.stringContaining("/System/Program Files/MonacoEditor/css.worker.js"),
     expect.stringContaining("/System/Program Files/MonacoEditor/html.worker.js"),
   ]);
+  expect(calls.every(({ options }) => options?.type === "module")).toBe(true);
+  expect(calls.map(({ options }) => options?.name)).toEqual([
+    "plasmon-monaco-editorWorkerService",
+    "plasmon-monaco-typescript",
+    "plasmon-monaco-javascript",
+    "plasmon-monaco-json",
+    "plasmon-monaco-css",
+    "plasmon-monaco-html",
+  ]);
   expect(monacoWorkerFile("typescript")).toBe("ts.worker.js");
+});
+
+test("#89 Monaco worker routing has one canonical runtime root and an opaque-origin module bootstrap", () => {
+  expect(MONACO_PROGRAM_FILES_RUNTIME_ROOT).toBe("./System/Program Files/MonacoEditor");
+  expect(monacoWorkerPath("typescript")).toBe("./System/Program Files/MonacoEditor/ts.worker.js");
+  expect(monacoWorkerPath("json")).toBe("./System/Program Files/MonacoEditor/json.worker.js");
+  expect(monacoWorkerBootstrapSource("typescript", "https://example.test/app/plasmon/index.html")).toBe(
+    'import "https://example.test/app/plasmon/System/Program%20Files/MonacoEditor/ts.worker.js";\n',
+  );
 });
