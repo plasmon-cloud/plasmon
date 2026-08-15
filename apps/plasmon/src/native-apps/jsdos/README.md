@@ -35,8 +35,10 @@ When a live js-dos canvas is available at the normal save-before-close boundary,
 The preview lifecycle is deliberately presentation-only:
 
 - at most one sibling `<NodeId>.preview.png` image is retained per js-dos save; a later successful capture overwrites it instead of accumulating snapshots;
-- the preview image is a hidden filesystem resource and the canonical `.changes` save record references it through validated `plasmon.resourcePreview` metadata;
-- the reference uses the preview resource's stable `NodeId`, not a mutable path;
+- the preview image remains private filesystem state and the canonical `.changes` save record references it through validated `plasmon.resourcePreview` metadata;
+- after that canonical reference is written, the same validated preview reference is projected onto the visible game resource so ordinary FileManager/resource surfaces can show the latest saved frame without exposing the progress directory or creating a second save resource;
+- both references use the preview resource's stable `NodeId`, not a mutable path;
+- failure to project presentation metadata onto the visible game resource is non-authoritative and cannot turn a successful progress save into a failed save;
 - capture, canvas encoding, preview write, missing preview data, or image decoding failure never changes save validity or restore behavior;
 - FileManager resolves the reference through its existing shared thumbnail/Object-URL lifecycle and falls back normally when the preview cannot be loaded;
 - preview bytes are never inspected by `JsDosProgressStore.load()` and are not part of the save checksum/runtime compatibility contract.
