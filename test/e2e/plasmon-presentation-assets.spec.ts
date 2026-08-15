@@ -5,12 +5,20 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
+const NATIVE_IDENTITY_ASSETS = [
+  "text.svg",
+  "markdown.svg",
+  "photos.svg",
+  "video.svg",
+  "browser.svg",
+  "settings.svg",
+] as const;
 
 function pathname(value: string): string {
   return new URL(value).pathname;
 }
 
-test("#190 installed Plasmon requests shared icon assets from its application mount", async ({ page }) => {
+test("#190 installed shared assets and #96 native identities resolve from the Plasmon application mount", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const iconRequests: string[] = [];
@@ -44,7 +52,7 @@ test("#190 installed Plasmon requests shared icon assets from its application mo
 
   await expect.poll(() => new Set(iconRequests).size, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
 
-  const requested = [...new Set(iconRequests)];
+  let requested = [...new Set(iconRequests)];
   expect(requested.every((path) => path.startsWith(ICON_PREFIX)), `shared icon requests: ${requested.join(", ")}`).toBe(true);
 
   for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
@@ -54,6 +62,31 @@ test("#190 installed Plasmon requests shared icon assets from its application mo
       () => iconResponses.get(path),
       { timeout: 15_000, message: `${path} should load successfully` },
     ).toBe(200);
+  }
+
+  // #96: exercise the canonical filesystem-backed Start projection rather than
+  // inventing a presentation-only app catalog. Settings is a direct Start root
+  // entry; the remaining five first-party apps are ordinary Accessories seeds.
+  await plasmon.getByRole("button", { name: "Start" }).click();
+  const start = plasmon.getByRole("region", { name: "Start menu" });
+  await expect(start).toBeVisible();
+  await expect(start.getByRole("button", { name: /Settings/u }).first()).toBeVisible();
+  await start.getByRole("button", { name: /Accessories/u }).first().click();
+
+  for (const name of ["Text Editor", "Markdown", "Photos", "Video Player", "Browser"] as const) {
+    await expect(start.getByRole("button", { name: new RegExp(name, "u") }).first()).toBeVisible();
+  }
+
+  await expect.poll(
+    () => NATIVE_IDENTITY_ASSETS.filter((name) => iconResponses.get(`${ICON_PREFIX}${name}`) === 200).length,
+    { timeout: 15_000, message: "all six canonical native identity assets should load from the installed package" },
+  ).toBe(NATIVE_IDENTITY_ASSETS.length);
+
+  requested = [...new Set(iconRequests)];
+  for (const name of NATIVE_IDENTITY_ASSETS) {
+    const path = `${ICON_PREFIX}${name}`;
+    expect(requested, `${path} should be requested by canonical Start presentation`).toContain(path);
+    expect(iconResponses.get(path), `${path} should stay offline/package-local and load successfully`).toBe(200);
   }
 });
 
