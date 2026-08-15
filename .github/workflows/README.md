@@ -12,21 +12,23 @@ CI may retain Playwright retries for traces, diagnostics, and classification, bu
 
 `test/ci/verify-playwright-gate.mjs` exercises those three exit-code cases through the shared configuration without launching a browser. Keep that contract proof in the Packaged Smoke path when changing shared Playwright gate semantics. Merge enforcement of packaged browser status contexts is a separate GitHub ruleset responsibility tracked by #227.
 
-## r2 complete Plasmon pull-request test contract
+## r2 complete Plasmon pull-request and release-integration test contract
 
 For `release/0.1.0-r2`, every eligible production Plasmon test that can honestly run in CI must execute on **every pull request**, independent of changed files. This rule exists for stacked-PR safety: a descendant PR contains ancestor behavior, so its exact PR head must exercise the complete Plasmon safety net rather than only tests guessed relevant to the child diff.
 
-The required PR ownership model is:
+After integration, a Plasmon-relevant push to `release/0.1.0-r2` must also schedule the same five required gate contexts used for PR merge evidence so the combined release tree is validated rather than relying only on separate pre-merge heads.
+
+The required ownership model is:
 
 - `Fast Bun tests` — automatically discovers ordinary production `*.test.*` / `*.spec.*` files under `apps/plasmon/src/**` and `apps/plasmon/test/**`, excluding the separately owned RTL/package classes, then runs the complete `apps/plasmon/test/rtl/**` Happy DOM/user-event lane;
 - `Packaged refactor smoke` — performs real package/provision preparation, runs `apps/plasmon/test/package.test.ts` against the produced package output, proves #226 fail-on-flaky behavior, then runs the complete Smoke Playwright group;
-- `Packaged Playwright specialist acceptance` — performs real package/provision preparation and runs the complete Specialist spec inventory with `--workers=1 --grep-invert @r2-quarantine`; only the #244 right-snap/snap-preview acceptance and #245 EmulatorJS readiness/canvas/core-start acceptance may carry the active `@r2-quarantine` tag. The serialized harness keeps #250 demo-game and #251 sibling-window lifetime coverage required;
+- `Packaged Playwright specialist acceptance` — performs real package/provision preparation and runs the complete Specialist spec inventory with `--workers=1 --grep-invert @r2-quarantine`; only repository-authorized active quarantine debt may carry `@r2-quarantine`;
 - `Packaged browser persistence` — performs real package/provision preparation and runs the retained-profile persistence spec;
 - `kernel` — remains a required repository context and is not weakened by the Plasmon inventory work.
 
-No Plasmon PR lane may use `pull_request.paths`, PR base/head changed-file selection, relevance outputs, or step/job guards to avoid its real workload. Direct-push applicability is separate and may retain explicit branch/path filters where already part of the maintained release contract.
+No Plasmon PR lane may use `pull_request.paths`, PR base/head changed-file selection, relevance outputs, or step/job guards to avoid its real workload. Direct release-push coverage must preserve all five required contexts. Existing Fast/Specialist release-push path filters may remain where they describe Plasmon-relevant integration changes, but Smoke, Persistence, and Kernel must not disappear after those merges.
 
-`test/ci/plasmon-test-inventory.mjs` is the source-controlled classification for the Plasmon production test inventory. `test/ci/verify-plasmon-test-inventory.mjs` recursively discovers application tests plus every Playwright `*.spec.*` under `test/e2e/**`, proves every Plasmon browser spec belongs to a required Smoke/Specialist/Persistence lane, requires every neighboring browser spec to have an explicit non-Plasmon owner, verifies the required workflows really execute those owners, protects the serialized Specialist state boundary and narrow #244/#245 quarantine contract, and fails on any unclassified browser spec. Fast CI also runs the verifier with `--self-test-orphan`; that self-test classifies and injects a synthetic **nested** Playwright orphan and must reject it so neither a new filename nor a new subdirectory can silently evade the guard.
+`test/ci/plasmon-test-inventory.mjs` is the source-controlled classification for the Plasmon production test inventory. `test/ci/verify-plasmon-test-inventory.mjs` recursively discovers application tests plus every Playwright `*.spec.*` under `test/e2e/**`, proves every Plasmon browser spec belongs to a required Smoke/Specialist/Persistence lane, requires every neighboring browser spec to have an explicit non-Plasmon owner, verifies the required workflows really execute those owners, protects the serialized Specialist state boundary and narrow quarantine contract, and fails on any unclassified browser spec. Fast CI also runs the verifier with `--self-test-orphan`; that self-test classifies and injects a synthetic **nested** Playwright orphan and must reject it so neither a new filename nor a new subdirectory can silently evade the guard.
 
 Explicit non-production boundaries are narrow:
 
@@ -48,6 +50,6 @@ The repository ruleset `Require checks` (ruleset ID `20729255`) is the merge-enf
 
 For r2 pull requests, each required Plasmon browser workflow schedules on every PR and **always runs its real package/browser workload**. Do not add `pull_request.paths`, PR base/head changed-file detectors, relevance outputs, or step/job guards that can turn a required browser context green without executing its real workload.
 
-Direct-push applicability is separate from PR validation. Existing explicit push branches/path filters may remain where they are part of the maintained release contract; in particular, the specialist workflow preserves direct-push coverage for `version-0.1.0-os` and `release/0.1.0-r2` with its existing path filter.
+For post-merge r2 validation, a Plasmon-relevant push to `release/0.1.0-r2` must produce all five required contexts: `kernel`, `Fast Bun tests`, `Packaged refactor smoke`, `Packaged Playwright specialist acceptance`, and `Packaged browser persistence`. The release branch is the combined integration artifact, so a green set of separate PR heads is not a substitute for validating that integrated tree.
 
-`test/ci/verify-required-browser-gates.mjs` protects this PR-always-run contract, the stable context names, the real gate commands, #225 direct-push behavior, and #226 fail-on-flaky proof. Do not mask failures with `continue-on-error` and do not add a ruleset bypass as a substitute for a passing real gate.
+`test/ci/verify-required-browser-gates.mjs` protects the PR-always-run contract, stable context names, real gate commands, direct-push coverage, and #226 fail-on-flaky proof. It also verifies that all five required workflow definitions retain `release/0.1.0-r2` push coverage. Do not mask failures with `continue-on-error` and do not add a ruleset bypass as a substitute for a passing real gate.
