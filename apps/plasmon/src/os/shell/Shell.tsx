@@ -59,10 +59,7 @@ import {
   type ShellThemeId,
 } from "./preferences.ts";
 import { SearchSurface } from "./SearchSurface.tsx";
-import {
-  subscribeSearchInvalidation,
-  type ShellSearchResult,
-} from "./search.ts";
+import type { ShellSearchResult } from "./search.ts";
 import type { StartItemPresentation } from "./StartSurface.tsx";
 import { StartSurfaceController } from "./StartSurfaceController.tsx";
 import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
@@ -186,7 +183,7 @@ export function Shell({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [clock, setClock] = useState(() => now());
   const [calendarAnchor, setCalendarAnchor] = useState(() => startOfCalendarMonth(now()));
-  const [fsEpoch, setFsEpoch] = useState(0);
+  const [startFsRevision, setStartFsRevision] = useState(0);
   const { processes, windowStates, focusedWindowId } = useNativeSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElements(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
@@ -211,7 +208,7 @@ export function Shell({
   const searchController = useSearchSurfaceController({
     open: flyout === "search",
     fs,
-    revision: fsEpoch,
+    fsEvents,
     nativeApps: nativeDefinitions,
     elements,
     pinnedNative: effectivePreferences.pinnedNative,
@@ -241,7 +238,10 @@ export function Shell({
     if (openTaskbarGroupHandlerId && !openTaskbarGroup) setOpenTaskbarGroupHandlerId(null);
   }, [openTaskbarGroup, openTaskbarGroupHandlerId]);
 
-  useEffect(() => subscribeSearchInvalidation(fsEvents, () => setFsEpoch((value) => value + 1)), [fsEvents]);
+  useEffect(
+    () => fsEvents?.subscribe(() => setStartFsRevision((value) => value + 1)) ?? (() => undefined),
+    [fsEvents],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -529,7 +529,7 @@ export function Shell({
       active={flyout === "start"}
       fs={fs}
       reconciliation={startMenu}
-      fsRevision={fsEpoch}
+      fsRevision={startFsRevision}
       busyId={busyId}
       preferencesReady={preferencesReady}
       presentItem={presentStartItem}
