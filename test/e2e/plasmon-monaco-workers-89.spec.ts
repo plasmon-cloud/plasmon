@@ -17,6 +17,22 @@ type WorkerProbeRecord = {
   errors: number;
 };
 
+function workflowCommandValue(value: string): string {
+  return value
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A");
+}
+
+test.afterEach(async ({ browserName }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  if (testInfo.retry < testInfo.project.retries) return;
+  const failure = testInfo.error?.message ?? `status=${testInfo.status}`;
+  console.log(
+    `::error title=#89 ${browserName} Monaco worker acceptance::${workflowCommandValue(failure)}`,
+  );
+});
+
 test("#89 packaged Monaco workers run from Program Files through the opaque-origin adapter", async ({
   page,
   request,
