@@ -81,12 +81,7 @@ class MemoryFileHandle {
   constructor(readonly name: string) {}
 
   async getFile(): Promise<File> {
-    const blob = new Blob([this.bytes.slice()]);
-    return Object.assign(blob, {
-      name: this.name,
-      lastModified: 0,
-      webkitRelativePath: "",
-    }) as unknown as File;
+    return new File([this.bytes.slice()], this.name, { lastModified: 0 });
   }
 
   async createWritable(): Promise<FileSystemWritableFileStream> {
