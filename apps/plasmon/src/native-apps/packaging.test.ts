@@ -36,11 +36,11 @@ function goodMetafile(): BuildMetafileLike {
         },
       },
       "dist/web/main.bundle.css": { inputs: { "node_modules/monaco-editor/esm/vs/editor/editor.all.css": {} } },
-      "dist/web/monaco-workers/editor.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/json.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/css.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/html.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/ts.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/editor.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/json.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/css.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/html.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/ts.worker.js": { inputs: {} },
     },
   };
 }
@@ -83,10 +83,18 @@ test("package guard rejects a stylesheet without Monaco engine CSS", () => {
   expect(() => assertMatureNativeAppBundle(broken)).toThrow("Monaco editor CSS");
 });
 
-test("package guard rejects missing Monaco worker output", () => {
+test("#89 package guard requires canonical Monaco Program Files worker outputs", () => {
   const broken = goodMetafile();
-  delete broken.outputs["dist/web/monaco-workers/ts.worker.js"];
-  expect(() => assertMatureNativeAppBundle(broken)).toThrow("ts.worker.js");
+  delete broken.outputs["dist/web/System/Program Files/MonacoEditor/ts.worker.js"];
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow(
+    "/dist/web/System/Program Files/MonacoEditor/ts.worker.js",
+  );
+});
+
+test("#89 package guard rejects the retired top-level Monaco worker path", () => {
+  const broken = goodMetafile();
+  broken.outputs["dist/web/monaco-workers/editor.worker.js"] = { inputs: {} };
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow("legacy top-level Monaco worker path");
 });
 
 test("entry asset fingerprint replaces stale query values deterministically", () => {
