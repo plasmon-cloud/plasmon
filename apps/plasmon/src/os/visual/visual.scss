@@ -125,6 +125,100 @@
     width: 100%;
   }
 
+  .plasmon-native-app-surface {
+    background: var(--plasmon-window-background);
+    color: var(--plasmon-text-primary);
+    font-family: var(--plasmon-font-ui);
+    font-size: var(--plasmon-font-size-ui);
+    line-height: var(--plasmon-line-height-ui);
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .plasmon-native-app-toolbar {
+    align-items: center;
+    background: var(--plasmon-panel-background);
+    border-bottom: 1px solid var(--plasmon-border-subtle);
+    color: var(--plasmon-text-primary);
+    display: flex;
+    gap: 8px;
+    min-height: 46px;
+    padding: 8px;
+  }
+
+  .plasmon-native-app-button {
+    appearance: none;
+    background: var(--plasmon-panel-elevated);
+    border: 1px solid var(--plasmon-border-strong);
+    border-radius: var(--plasmon-radius-control);
+    color: var(--plasmon-text-primary);
+    font-family: var(--plasmon-font-ui);
+    font-size: var(--plasmon-font-size-small);
+    font-weight: 600;
+    line-height: 1.2;
+    min-height: 30px;
+    padding: 5px 10px;
+    transition:
+      background var(--plasmon-motion-fast) ease,
+      border-color var(--plasmon-motion-fast) ease;
+  }
+
+  .plasmon-native-app-button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--plasmon-panel-elevated) 84%, var(--plasmon-accent) 16%);
+    border-color: var(--plasmon-selection-border);
+  }
+
+  .plasmon-native-app-button:focus-visible {
+    outline: 2px solid var(--plasmon-focus-ring);
+    outline-offset: 1px;
+  }
+
+  .plasmon-native-app-button:disabled {
+    background: color-mix(in srgb, var(--plasmon-panel-elevated) 72%, transparent);
+    border-color: var(--plasmon-border-subtle);
+    color: var(--plasmon-text-disabled);
+    cursor: default;
+  }
+
+  .plasmon-native-app-status {
+    align-items: center;
+    background: var(--plasmon-panel-background);
+    border-top: 1px solid var(--plasmon-border-subtle);
+    color: var(--plasmon-text-secondary);
+    display: flex;
+    font-family: var(--plasmon-font-ui);
+    font-size: var(--plasmon-font-size-small);
+    gap: 14px;
+    min-height: 27px;
+    padding: 5px 10px;
+  }
+
+  .plasmon-native-app-state {
+    align-items: center;
+    color: var(--plasmon-text-secondary);
+    display: grid;
+    flex: 1;
+    justify-items: center;
+    min-height: 0;
+    padding: 24px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .plasmon-native-app-state--error {
+    background: color-mix(in srgb, var(--plasmon-danger) 8%, var(--plasmon-window-background));
+    color: var(--plasmon-danger);
+  }
+
+  .plasmon-native-app-panel {
+    background: var(--plasmon-panel-elevated);
+    border: 1px solid var(--plasmon-border-subtle);
+    border-radius: var(--plasmon-radius-panel);
+    color: var(--plasmon-text-secondary);
+    padding: 14px 16px;
+  }
+
   .plasmon-wallpaper {
     background-color: var(--plasmon-desktop-background);
     background-position: center;
