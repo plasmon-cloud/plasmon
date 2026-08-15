@@ -73,38 +73,28 @@ test("#190 installed Plasmon requests shared assets and #171 bounds installed El
   }
 
   // Review is an independently installed Neutron package in the canonical demo
-  // deployment. Kernel apps.describe currently omits icon metadata, so one
-  // documented package-local fallback may try the two established Neutron app
-  // origins sequentially. A successful candidate is then consumed by the shared
-  // ResourceIcon <img>; that consumer request is not another resolver probe.
-  // Bound distinct candidate URLs and per-URL multiplicity so normal rendering
-  // cannot be mistaken for extension/path fan-out while request storms still fail.
+  // deployment. Kernel apps.describe currently omits icon metadata, so the one
+  // documented legacy package-local SVG compatibility path may use at most the
+  // two established Neutron app origins. It must not fan out across extensions,
+  // repeat an identical candidate request, or turn normal presentation into a
+  // request storm.
   await expect.poll(
     () => reviewIconRequests.length,
     { timeout: 15_000, message: "installed Review icon should be resolved during Element discovery" },
   ).toBeGreaterThanOrEqual(1);
 
-  const distinctReviewUrls = [...new Set(reviewIconRequests)];
-  expect(
-    distinctReviewUrls.length,
-    `Review icon candidates: ${distinctReviewUrls.join(", ")}`,
-  ).toBeLessThanOrEqual(2);
   expect(
     reviewIconRequests.length,
-    `Review icon requests: ${reviewIconRequests.join(", ")}`,
-  ).toBeLessThanOrEqual(3);
+    `Review icon requests: ${reviewIconRequests.join(", ")}; responses: ${JSON.stringify(reviewIconResponses)}; failures: ${reviewIconFailures.join(", ")}`,
+  ).toBeLessThanOrEqual(2);
   expect(
-    distinctReviewUrls.every((url) => pathname(url) === REVIEW_ICON_PATH),
-    `Review icon candidates: ${distinctReviewUrls.join(", ")}`,
+    new Set(reviewIconRequests).size,
+    `Review icon requests must not repeat: ${reviewIconRequests.join(", ")}`,
+  ).toBe(reviewIconRequests.length);
+  expect(
+    reviewIconRequests.every((url) => pathname(url) === REVIEW_ICON_PATH),
+    `Review icon requests: ${reviewIconRequests.join(", ")}`,
   ).toBe(true);
-
-  for (const url of distinctReviewUrls) {
-    expect(
-      reviewIconRequests.filter((candidate) => candidate === url).length,
-      `Review icon request multiplicity for ${url}: ${reviewIconRequests.join(", ")}`,
-    ).toBeLessThanOrEqual(2);
-  }
-
   expect(
     reviewIconResponses.some(({ status }) => status === 200),
     `Review icon responses: ${JSON.stringify(reviewIconResponses)}`,
