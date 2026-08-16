@@ -6,13 +6,17 @@ Text is the Plasmon native text/code editor built around a packaged Monaco edito
 
 Filesystem persistence and document conflict semantics must remain independent of Monaco engine lifecycle so they can be tested without a browser. Ordinary close remains Process-owned: the document model only decides whether an accepted Process request may proceed, must remain deferred, or is cancelled.
 
-For a dirty close, autosave is suspended while the decision is pending. Save completes the deferred request only after the current edits persist successfully; failed save or conflict leaves the document open. Discard suppresses the pending autosave and dispose-time flush for that close. Cancel resumes normal autosave behavior and keeps the dirty process/window alive.
+Text and Markdown use explicit-save document sessions by default. Autosave is an explicit shared `DocumentSession`/`useDocumentSession` opt-in (`autosave: true`), not something implied by configuring the debounce duration. There is no accepted persistent editor-preference store yet, so the current product contract is the documented shared session default OFF; Settings/localStorage must not become a parallel preference or document authority. When autosave is enabled, it still routes through the same conflict-aware `save()` path.
+
+For a dirty close, autosave is suspended while the decision is pending. Save completes the deferred request only after the current edits persist successfully; failed save or conflict leaves the document open. Discard suppresses the pending autosave and dispose-time flush for that close. Cancel resumes autosave only when that session explicitly opted in and keeps the dirty process/window alive.
 
 ## Refactor direction
 
 Continue sharing document-session, close-decision, command, status, and editor-chrome infrastructure with Markdown/other document apps. Keep Monaco-specific adapters isolated from generic document semantics and expose mature editor capabilities through reusable command models/UI rather than app-specific shortcuts only.
 
 Shared language/type metadata should come from common association/content metadata rather than a Text-only extension table when other OS surfaces need the same answer.
+
+When a typed shared preference store becomes an accepted OS capability, editor autosave preference persistence should be injected through that authority rather than added as Text/Markdown-private storage.
 
 ## Testing
 

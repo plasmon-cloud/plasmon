@@ -348,11 +348,13 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  // #268 follow-up: the visible titlebar can be partially off-screen after
-  // the small-workspace pan, and its controls deliberately stop pointerdown
-  // propagation. Ask the browser for an actually exposed titlebar hit target
-  // that is not inside the control cluster, then keep the real top-level
-  // pointer path and production drag lifecycle assertions below.
+  // #268 residual recurrence: the probe trace showed that a titlebar-relative
+  // hit point sampled before Playwright's actionability check can become stale
+  // while post-viewport ResizeObserver geometry is still settling. First let a
+  // positionless hover establish a stable, receives-events titlebar; only then
+  // derive the concrete exposed non-control point from that settled geometry.
+  await titlebar.hover();
+
   const normalDragPoint = await titlebar.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const y = Math.min(16, Math.max(1, rect.height / 2));
@@ -371,11 +373,9 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     return null;
   });
   if (!normalDragPoint) throw new Error("Restored titlebar has no exposed draggable browser point");
-  // The hit-test above runs inside the Plasmon iframe, while Locator.boundingBox()
-  // reports main-frame coordinates. After a viewport restore the WindowLayer ResizeObserver
-  // can still reconcile native geometry between those two observations. Let Playwright
-  // re-resolve the same rendered titlebar point through its stable/receives-events
-  // actionability boundary, then keep the real top-level pointerdown/drag path below.
+  // Preserve the browser hit-test, Playwright receives-events check, real
+  // top-level pointer path, and production drag lifecycle. The position is now
+  // sampled only after Playwright has observed the rendered titlebar as stable.
   await titlebar.hover({ position: normalDragPoint });
   await page.mouse.down();
   await expect(dialog).toHaveAttribute("data-interacting", "drag");
