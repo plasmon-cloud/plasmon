@@ -13,10 +13,10 @@ import {
   NativeAppStatusStrip,
   NativeAppToolbar,
 } from "../../os/visual/index.ts";
+import { MonacoEditorHost, monacoEngineStatus, type MonacoCursorState } from "../shared/monaco/MonacoEditorHost.tsx";
+import { editorLanguageForResource } from "../shared/monaco/editorModel.ts";
 import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
 import { controlInputStyle, editorErrorStyle } from "./editorChrome.ts";
-import { editorLanguageForResource } from "./editorModel.ts";
-import { MonacoEditorSurface, monacoEngineStatus, type MonacoCursorState } from "./MonacoEditorSurface.tsx";
 import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
@@ -123,7 +123,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <NativeAppStateSurface tone="error" role="alert">{snapshot.error}</NativeAppStateSurface>
       ) : (
         <div style={styles.editorPane}>
-          <MonacoEditorSurface
+          <MonacoEditorHost
             modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}`}
             value={snapshot.text}
             language={editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined)}
