@@ -1,0 +1,64 @@
+import { describe, expect, test } from "bun:test";
+import {
+  createEditorSurfaceModelOwner,
+  editorLanguageForResource,
+  editorModelUri,
+  syncEditorModelValue,
+} from "./editorModel.ts";
+import {
+  MONACO_PROGRAM_FILES_RUNTIME_ROOT,
+  monacoWorkerBootstrapSource,
+  monacoWorkerFile,
+  monacoWorkerPath,
+} from "./monacoEnvironment.ts";
+
+describe("#200 shared Monaco editor-host policy", () => {
+  test("live surfaces get distinct model ownership even for one semantic document", () => {
+    const disposed: string[] = [];
+    const create = (uri: string) => ({ uri, dispose: () => disposed.push(uri) });
+    const first = createEditorSurfaceModelOwner("document:42", create);
+    const second = createEditorSurfaceModelOwner("document:42", create);
+
+    expect(first.uri).not.toBe(second.uri);
+    expect(first.uri).toContain(encodeURIComponent("document:42"));
+    expect(second.uri).toContain(encodeURIComponent("document:42"));
+    first.dispose();
+    first.dispose();
+    expect(disposed).toEqual([first.uri]);
+    second.dispose();
+    expect(disposed).toEqual([first.uri, second.uri]);
+  });
+
+  test("semantic model URIs remain deterministic for an explicit surface identity", () => {
+    expect(editorModelUri("text:node-7", 3)).toBe("inmemory://plasmon/text%3Anode-7?surface=3");
+  });
+
+  test("external value synchronization does not write unchanged content", () => {
+    let value = "same";
+    let writes = 0;
+    const model = {
+      getValue: () => value,
+      setValue: (next: string) => { value = next; writes += 1; },
+    };
+    expect(syncEditorModelValue(model, "same")).toBe(false);
+    expect(syncEditorModelValue(model, "next")).toBe(true);
+    expect(writes).toBe(1);
+  });
+
+  test("language selection consumes canonical resource classification", () => {
+    expect(editorLanguageForResource("notes.md", "text/markdown")).toBe("markdown");
+    expect(editorLanguageForResource("plain.unknown")).toBe("plaintext");
+  });
+
+  test("worker routing stays on #89 canonical Program Files authority", () => {
+    expect(monacoWorkerFile("typescript")).toBe("ts.worker.js");
+    expect(monacoWorkerPath("typescript")).toBe(`${MONACO_PROGRAM_FILES_RUNTIME_ROOT}/ts.worker.js`);
+    expect(monacoWorkerFile("unknown")).toBe("editor.worker.js");
+  });
+
+  test("opaque-origin bootstrap fails explicitly when packaged worker bytes are missing", () => {
+    expect(monacoWorkerBootstrapSource("json", { "json.worker.js": "self.onmessage = () => {};" }))
+      .toContain("self.onmessage");
+    expect(() => monacoWorkerBootstrapSource("json", {})).toThrow("Missing packaged Monaco worker source: json.worker.js");
+  });
+});
