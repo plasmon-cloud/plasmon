@@ -1,11 +1,15 @@
 import { readFileSync } from "node:fs";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
+const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
 const runnerPath = "test/ci/run-plasmon-flake-probe.sh";
+const specialistRunnerPath = "test/ci/run-plasmon-specialist.mjs";
 const packagePath = "package.json";
 
 const workflow = readFileSync(workflowPath, "utf8");
+const labelWorkflow = readFileSync(labelWorkflowPath, "utf8");
 const runner = readFileSync(runnerPath, "utf8");
+const specialistRunner = readFileSync(specialistRunnerPath, "utf8");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 
 function requireFragment(source, fragment, label) {
@@ -22,9 +26,12 @@ function forbidFragment(source, fragment, label) {
 
 const workflowFragments = [
   "name: Plasmon Flake Probe",
-  "types: [labeled, synchronize, reopened]",
+  "types: [opened, synchronize, reopened]",
+  "paths:",
+  "apps/plasmon/test/**",
+  "test/e2e/**",
+  "test/ci/**",
   "workflow_dispatch:",
-  "contains(github.event.pull_request.labels.*.name, 'ci:flake-probe')",
   "group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}",
   "cancel-in-progress: true",
   "fail-fast: false",
@@ -65,7 +72,21 @@ for (const fragment of workflowFragments) {
   requireFragment(workflow, fragment, "flake-probe workflow");
 }
 
+for (const fragment of [
+  "name: Plasmon Flake Probe Label Trigger",
+  "types: [labeled]",
+  "actions: write",
+  "ci:flake-probe",
+  "createWorkflowDispatch",
+  "workflow_id: 'plasmon-flake-probe.yml'",
+  "ref: headSha",
+  "target: 'all'",
+]) {
+  requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
+}
+
 for (const option of [
+  "all",
   "specialist",
   "right-snap",
   "left-snap",
@@ -79,6 +100,11 @@ for (const option of [
 
 const runnerFragments = [
   "npm ci",
+  "all)",
+  "node test/ci/verify-flake-probe.mjs",
+  "node test/ci/verify-plasmon-test-inventory.mjs",
+  "npm --workspace neutron-plasmon test",
+  "npm --workspace neutron-plasmon run test:package",
   "npm run plasmon:demo:prepare",
   "npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &",
   "npm run plasmon:demo:status",
@@ -101,15 +127,21 @@ const specialistScript = packageJson.scripts?.["test:e2e:plasmon:specialist"];
 if (typeof specialistScript !== "string") {
   throw new Error("package.json lost test:e2e:plasmon:specialist");
 }
-for (const fragment of ["--workers=1", "--grep-invert @r2-quarantine"]) {
-  requireFragment(specialistScript, fragment, "required Specialist npm script");
+requireFragment(specialistScript, "test/ci/run-plasmon-specialist.mjs", "required Specialist npm script");
+for (const fragment of [
+  "discoverPlasmonTests",
+  "lane === 'specialist'",
+  "--workers=1",
+  "--grep-invert",
+  "@r2-quarantine",
+]) {
+  requireFragment(specialistRunner, fragment, "automatic Specialist runner");
 }
 
 for (const fragment of [
   "--repeat-each",
   "--pass-with-no-tests",
   "git diff --name-only",
-  "pull_request.paths",
   "paths-ignore",
   "pull_request_target",
   "run: exit 1",
@@ -134,9 +166,11 @@ if (retryZeroCount < 2) {
   throw new Error("flake-probe runner must disable retries for full and targeted probes");
 }
 
-const workerOneCount = runner.split("--workers=1").length - 1;
-if (workerOneCount < 1 || !specialistScript.includes("--workers=1")) {
+const workerOneCount =
+  runner.split("--workers=1").length - 1 +
+  specialistRunner.split("--workers=1").length - 1;
+if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
-console.log("Flake-probe label, ten-fresh-run, exact-head, retry-zero, target-selection, artifact-identity, failure-reporting, and aggregate-summary contracts verified");
+console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, failure-reporting, and aggregate-summary contracts verified");

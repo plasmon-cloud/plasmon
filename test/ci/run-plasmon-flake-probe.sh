@@ -4,7 +4,7 @@ set -euo pipefail
 target="${1:-specialist}"
 
 case "$target" in
-  specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
+  all|specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
     ;;
   *)
     echo "Unsupported flake-probe target: $target" >&2
@@ -61,6 +61,13 @@ run_one() {
 }
 
 case "$target" in
+  all)
+    node test/ci/verify-flake-probe.mjs
+    node test/ci/verify-plasmon-test-inventory.mjs
+    npm --workspace neutron-plasmon test
+    npm --workspace neutron-plasmon run test:package
+    npm run test:e2e:plasmon:specialist -- --retries=0
+    ;;
   specialist)
     npm run test:e2e:plasmon:specialist -- --retries=0
     ;;
