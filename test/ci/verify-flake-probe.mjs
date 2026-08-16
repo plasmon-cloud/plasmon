@@ -2,13 +2,17 @@ import { readFileSync } from "node:fs";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
 const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
+const fastWorkflowPath = ".github/workflows/plasmon-ci.yml";
 const runnerPath = "test/ci/run-plasmon-flake-probe.sh";
+const fastRunnerPath = "test/ci/run-plasmon-fast-tests.sh";
 const specialistRunnerPath = "test/ci/run-plasmon-specialist.mjs";
 const packagePath = "package.json";
 
 const workflow = readFileSync(workflowPath, "utf8");
 const labelWorkflow = readFileSync(labelWorkflowPath, "utf8");
+const fastWorkflow = readFileSync(fastWorkflowPath, "utf8");
 const runner = readFileSync(runnerPath, "utf8");
+const fastRunner = readFileSync(fastRunnerPath, "utf8");
 const specialistRunner = readFileSync(specialistRunnerPath, "utf8");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 
@@ -103,7 +107,7 @@ const runnerFragments = [
   "all)",
   "node test/ci/verify-flake-probe.mjs",
   "node test/ci/verify-plasmon-test-inventory.mjs",
-  "npm --workspace neutron-plasmon test",
+  "bash test/ci/run-plasmon-fast-tests.sh",
   "npm --workspace neutron-plasmon run test:package",
   "npm run plasmon:demo:prepare",
   "npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &",
@@ -122,6 +126,20 @@ const runnerFragments = [
 for (const fragment of runnerFragments) {
   requireFragment(runner, fragment, "flake-probe runner");
 }
+
+requireFragment(fastWorkflow, "bash test/ci/run-plasmon-fast-tests.sh", "required Fast CI workflow");
+for (const fragment of [
+  "PLASMON_FAST_TEST_TIMEOUT_SECONDS:-60",
+  "timeout --signal=TERM --kill-after=5s \"${timeout_seconds}s\"",
+  "npm --workspace neutron-plasmon test",
+  "status=$?",
+  "[ \"$status\" -eq 124 ]",
+  "Fast Bun tests exceeded ${timeout_seconds} seconds",
+  "exit 124",
+]) {
+  requireFragment(fastRunner, fragment, "bounded fast-test runner");
+}
+forbidFragment(runner, "npm --workspace neutron-plasmon test", "flake-probe runner");
 
 const specialistScript = packageJson.scripts?.["test:e2e:plasmon:specialist"];
 if (typeof specialistScript !== "string") {
@@ -173,4 +191,4 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
-console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, failure-reporting, and aggregate-summary contracts verified");
+console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, failure-reporting, bounded-fast-test, and aggregate-summary contracts verified");
