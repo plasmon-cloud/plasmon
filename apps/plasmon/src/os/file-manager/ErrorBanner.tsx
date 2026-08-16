@@ -7,7 +7,7 @@ export interface ErrorBannerProps {
 export function ErrorBanner({ message, onDismiss, onRetry }: ErrorBannerProps) {
   return (
     <div className="fm-error-banner" role="alert">
-      <span>{message}</span>
+      <span style={{ userSelect: "text", cursor: "text" }}>{message}</span>
       <div className="fm-error-banner__actions">
         <button type="button" onClick={onDismiss}>Dismiss</button>
         {onRetry ? <button type="button" onClick={onRetry}>Retry</button> : null}
