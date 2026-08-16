@@ -88,13 +88,14 @@ test("#86 diagnostic text selects without stealing FileEntry drag", async ({ pag
     await nestedRename.press("Enter");
     await expect(nestedRename).toHaveCount(0);
 
-    await address.fill("/");
-    await address.press("Enter");
-    // `fill("/")` updates the address control before navigation completes, and
-    // the nested collision file deliberately has the same name as the root
-    // source. Wait for Explorer's actual root-location state so stale nested
-    // FileManager content cannot masquerade as successful navigation.
-    await expect(explorerWindow.getByRole("button", { name: "Up one level" })).toBeDisabled();
+    const upOneLevel = explorerWindow.getByRole("button", { name: "Up one level" });
+    await expect(upOneLevel).toBeEnabled();
+    await upOneLevel.click();
+    // Return through Explorer's real navigation command instead of relying on
+    // address-submit timing. Prove both the visible address and the command
+    // state reached the root before resolving same-named collision entries.
+    await expect(address).toHaveValue("/");
+    await expect(upOneLevel).toBeDisabled();
     const targetFolder = fileManager.locator("[data-fm-node-id]", { hasText: collisionFolderName }).first();
     const sourceEntry = fileManager.locator("[data-fm-node-id]", { hasText: sourceDocumentName }).first();
     await expect(targetFolder).toBeVisible();
