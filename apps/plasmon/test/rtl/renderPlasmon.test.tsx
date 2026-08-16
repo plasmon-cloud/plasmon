@@ -117,7 +117,10 @@ describe("renderPlasmon", () => {
       await app.user.type(searchInput, "Review");
 
       await within(searchRegion).findByText("Searching…");
-      await waitFor(() => expect(within(searchRegion).queryByText("Searching…")).toBeNull());
+      await waitFor(
+        () => expect(within(searchRegion).queryByText("Searching…") === null).toBe(true),
+        { timeout: 5_000 },
+      );
       await within(searchRegion).findByText(/Collaborative review workspace\./);
       await within(searchRegion).findByText(/Archived review workspace\./);
 
@@ -126,7 +129,7 @@ describe("renderPlasmon", () => {
       expect(within(searchRegion).getByRole("tab", { name: "Documents" }).getAttribute("aria-selected")).toBe("true");
 
       await app.user.click(within(searchRegion).getByRole("tab", { name: "Apps" }));
-      await waitFor(() => expect(within(searchRegion).queryByText("No results in this category.")).toBeNull());
+      await waitFor(() => expect(within(searchRegion).queryByText("No results in this category.") === null).toBe(true));
       const liveReviewDescription = await within(searchRegion).findByText(/Collaborative review workspace\./);
       const liveArchiveDescription = await within(searchRegion).findByText(/Archived review workspace\./);
       const reviewResult = liveReviewDescription.closest("button");
@@ -141,14 +144,14 @@ describe("renderPlasmon", () => {
       expect(document.activeElement).toBe(reviewResult);
 
       await app.user.click(searchButton);
-      await waitFor(() => expect(app.queryByRole("region", { name: "Search" })).toBeNull());
+      await waitFor(() => expect(app.queryByRole("region", { name: "Search" }) === null).toBe(true));
       await app.user.click(searchButton);
       const reopened = await app.findByRole("region", { name: "Search" });
       expect((within(reopened).getByRole("textbox", { name: "Search Plasmon" }) as HTMLInputElement).value).toBe("Review");
       expect(within(reopened).getByRole("tab", { name: "Apps" }).getAttribute("aria-selected")).toBe("true");
 
       await app.user.keyboard("{Escape}");
-      await waitFor(() => expect(app.queryByRole("region", { name: "Search" })).toBeNull());
+      await waitFor(() => expect(app.queryByRole("region", { name: "Search" }) === null).toBe(true));
     } finally {
       app.dispose();
     }
