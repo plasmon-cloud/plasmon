@@ -6,7 +6,7 @@ import {
   monacoWorkerBootstrapSource,
   monacoWorkerFile,
   monacoWorkerPath,
-} from "./monacoEnvironment.ts";
+} from "../shared/monaco/monacoEnvironment.ts";
 
 test("#89 Monaco workers are constructed from the canonical Program Files runtime path", () => {
   const calls: Array<{ url: string; options?: WorkerOptions }> = [];
