@@ -54,14 +54,16 @@ For post-merge r2 validation, a Plasmon-relevant push to `release/0.1.0-r2` must
 
 `test/ci/verify-required-browser-gates.mjs` protects the PR-always-run contract, stable context names, real gate commands, direct-push coverage, and #226 fail-on-flaky proof. It also verifies that all five required workflow definitions retain `release/0.1.0-r2` push coverage. Do not mask failures with `continue-on-error` and do not add a ruleset bypass as a substitute for a passing real gate.
 
-## Opt-in r2 flake probing
+## Automatic r2 flake probing
 
-`Plasmon Flake Probe` is a diagnostic workflow for deliberately stress-testing a suspected unstable browser acceptance boundary. It is **not** one of the five required r2 release gates and must not replace, cheap-green, bypass, or weaken those gates.
+`Plasmon Flake Probe` is a diagnostic workflow for stress-testing test boundaries. It is **not** one of the five required r2 release gates and must not replace, cheap-green, bypass, or weaken those gates.
 
-Adding the `ci:flake-probe` label to an r2 pull request schedules ten independent matrix attempts against that pull request's exact head. Each attempt gets a fresh hosted runner and fresh package/PocketIC environment, runs serialized with `--workers=1`, and disables Playwright retries with `--retries=0` so every observed failure remains evidence. A new commit while the label remains present starts a new exact-head probe; removing the label prevents future automatic probes. Do not close/reopen a PR merely to trigger this diagnostic workflow.
+The workflow is path-triggered only when Plasmon tests or their test infrastructure change: ordinary Plasmon test files, root Playwright specs, the test harness, package/toolchain configuration, or the workflow itself. Unrelated PRs do not create a skipped flake-probe check. A suspected flake caused only by production changes remains manually dispatchable through `workflow_dispatch`.
 
-The label-triggered path intentionally probes the complete Specialist inventory rather than selecting tests by changed files. `workflow_dispatch` additionally provides bounded named targets for known flaky boundaries such as right snap, left snap, Monaco, EmulatorJS, or window lifetime. The diagnostic result is reported as first-attempt passes out of ten, with failed-attempt artifacts retained for classification.
+Automatic test-change probes run the combined `all` target: ten independent attempts, each on a fresh hosted runner and fresh package/PocketIC environment. The target runs the Plasmon fast Bun/RTL suite and the automatically discovered Specialist browser inventory. Browser execution remains serialized with `--workers=1`, and Playwright retries remain disabled with `--retries=0` so every observed failure remains evidence. Manual dispatch additionally provides bounded named targets for known flaky boundaries such as right snap, left snap, Monaco, EmulatorJS, or window lifetime.
+
+New `test/e2e/plasmon-*.spec.*` files default to the Specialist inventory. Existing Smoke, Persistence, and explicitly quarantined ownership remains declared in `test/ci/plasmon-test-inventory.mjs`; the inventory verifier fails if a browser spec is otherwise unclassified. This prevents a new test from silently escaping the probe.
 
 A `10/10` probe means stability was observed for that exact head; it is not mathematical proof that a test can never flake. A result below `10/10` is positive evidence of an intermittent, deterministic, or infrastructure failure and must be classified by the CI owner. Product agents should change product code only when exact evidence establishes product ownership.
 
-`test/ci/verify-flake-probe.mjs` protects the label trigger, exact-head checkout, ten-fresh-run matrix, retry-zero/worker-one execution, real package/provision path, and aggregate summary contract.
+`test/ci/verify-flake-probe.mjs` protects the path trigger, exact-head checkout, ten-fresh-run matrix, retry-zero/worker-one execution, automatic Specialist discovery, real package/provision path, and aggregate summary contract.
