@@ -39,13 +39,14 @@ const workflowFragments = [
   "attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
   "name: Flake probe ${{ matrix.attempt }}/10",
   "ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}",
-  "continue-on-error: true",
   "bash test/ci/run-plasmon-flake-probe.sh \"$PROBE_TARGET\"",
+  "2>&1 | tee flake-probe-output.log",
   "run_id=${{ github.run_id }}",
   "run_attempt=${{ github.run_attempt }}",
   "name: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
   "name: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
   "cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt",
+  "cp flake-probe-output.log flake-probe-diagnostics/probe-output.log",
   "name: Report observed probe failure",
   "context_file=\"$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)\"",
   "Attempt: ${{ matrix.attempt }}/10",
@@ -53,16 +54,22 @@ const workflowFragments = [
   "Target: \\`${PROBE_TARGET:-unknown}\\`",
   "Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
   "Diagnostic artifact: \\`$diagnostic_artifact\\`",
+  "The failing command is the \\`Run fresh Plasmon probe\\` step above",
   "sed -n '1,120p' \"$context_file\"",
-  "diagnostics are available in artifact",
+  "No Playwright error-context.md was produced.",
+  "probe-output.log",
   "uses: actions/upload-artifact@v4",
   "uses: actions/download-artifact@v4",
   "pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*",
+  "failed_attempts=()",
   "declare -A seen_attempts=()",
   "declare -A seen_shas=()",
   "declare -A seen_targets=()",
+  "failed_attempts+=(\"$attempt\")",
   "Fresh attempts reported: $total/10",
   "First-attempt passes: $passed/10",
+  "Failed attempts: $failed_list",
+  "the summary is the ten-attempt aggregate/integrity check.",
   "STABILITY OBSERVED: 10/10 fresh attempts passed.",
   "FLAKE/FAILURE OBSERVED:",
   "} | tee -a \"$GITHUB_STEP_SUMMARY\"",
@@ -71,6 +78,23 @@ const workflowFragments = [
 for (const fragment of workflowFragments) {
   requireFragment(workflow, fragment, "flake-probe workflow");
 }
+
+forbidFragment(
+  workflow,
+  "continue-on-error: true",
+  "flake-probe workflow must let the real probe step own the job failure",
+);
+const reportStart = workflow.indexOf("      - name: Report observed probe failure");
+const summaryStart = workflow.indexOf("\n  summary:", reportStart);
+if (reportStart === -1 || summaryStart === -1) {
+  throw new Error("flake-probe workflow lost the failure-report/summary boundary");
+}
+const reportBlock = workflow.slice(reportStart, summaryStart);
+forbidFragment(
+  reportBlock,
+  "exit 1",
+  "flake-probe failure reporter must remain informational after the probe step fails",
+);
 
 for (const fragment of [
   "name: Plasmon Flake Probe Label Trigger",
@@ -173,4 +197,4 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
-console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, failure-reporting, and aggregate-summary contracts verified");
+console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, source-step failure-reporting, and aggregate-summary contracts verified");

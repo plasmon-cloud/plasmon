@@ -86,12 +86,12 @@ jobs:
 
       - name: Run fresh Plasmon probe
         id: probe
-        continue-on-error: true
         run: |
+          set -o pipefail
           nix develop --command bash -lc '
             set -euxo pipefail
             bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET"
-          '
+          ' 2>&1 | tee flake-probe-output.log
 
       - name: Record attempt result
         if: always()
@@ -122,6 +122,7 @@ jobs:
           set -u
           mkdir -p flake-probe-diagnostics
           cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt 2>/dev/null || true
+          cp flake-probe-output.log flake-probe-diagnostics/probe-output.log 2>/dev/null || true
           cp /tmp/plasmon-pocketic.log flake-probe-diagnostics/pocketic.log 2>/dev/null || true
           if [ -d playwright-report ]; then
             cp -R playwright-report flake-probe-diagnostics/playwright-report
@@ -155,16 +156,18 @@ jobs:
             echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
             echo
+            echo "The failing command is the \`Run fresh Plasmon probe\` step above; expand it for the original stdout/stderr."
+            echo
             if [ -n "$context_file" ]; then
               echo "### First Playwright error context"
               echo
               sed -n '1,120p' "$context_file"
             else
-              echo "No test-results error-context.md was found; diagnostics are available in artifact \`$diagnostic_artifact\`."
+              echo "No Playwright error-context.md was produced. The failure may have occurred before Playwright; use the failed probe step for the original error."
             fi
+            echo
+            echo "The diagnostic artifact also includes \`probe-output.log\` when probe output was produced."
           } | tee -a "$GITHUB_STEP_SUMMARY"
-
-          exit 1
 
   summary:
     if: always() && needs.probe.result != 'skipped'
@@ -186,6 +189,7 @@ jobs:
           passed=0
           sha=unknown
           target=unknown
+          failed_attempts=()
           declare -A seen_attempts=()
           declare -A seen_shas=()
           declare -A seen_targets=()
@@ -214,6 +218,8 @@ jobs:
 
             if grep -q '^outcome=success$' "$result_file"; then
               passed=$((passed + 1))
+            else
+              failed_attempts+=("$attempt")
             fi
             if [ "$sha" = unknown ]; then
               sha=$current_sha
@@ -234,6 +240,13 @@ jobs:
             exit 1
           fi
 
+          if [ "${#failed_attempts[@]}" -eq 0 ]; then
+            failed_list=none
+          else
+            failed_list="$(printf '%s, ' "${failed_attempts[@]}")"
+            failed_list="${failed_list%, }"
+          fi
+
           {
             echo "## Plasmon flake probe"
             echo
@@ -241,6 +254,9 @@ jobs:
             echo "- Target: \`$target\`"
             echo "- Fresh attempts reported: $total/10"
             echo "- First-attempt passes: $passed/10"
+            echo "- Failed attempts: $failed_list"
+            echo
+            echo "For failure detail, open a failed matrix job and expand \`Run fresh Plasmon probe\`; the summary is the ten-attempt aggregate/integrity check."
             echo
             if [ "$passed" -eq 10 ]; then
               echo "**STABILITY OBSERVED: 10/10 fresh attempts passed.**"
