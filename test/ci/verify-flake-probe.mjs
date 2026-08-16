@@ -39,6 +39,15 @@ const workflowFragments = [
   "name: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
   "name: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
   "cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt",
+  "name: Report observed probe failure",
+  "context_file=\"$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)\"",
+  "Attempt: ${{ matrix.attempt }}/10",
+  "Exact SHA: \\`${PROBE_SHA:-unknown}\\`",
+  "Target: \\`${PROBE_TARGET:-unknown}\\`",
+  "Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+  "Diagnostic artifact: \\`$diagnostic_artifact\\`",
+  "sed -n '1,120p' \"$context_file\"",
+  "diagnostics are available in artifact",
   "uses: actions/upload-artifact@v4",
   "uses: actions/download-artifact@v4",
   "pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*",
@@ -103,6 +112,7 @@ for (const fragment of [
   "pull_request.paths",
   "paths-ignore",
   "pull_request_target",
+  "run: exit 1",
 ]) {
   forbidFragment(workflow, fragment, "flake-probe workflow");
   forbidFragment(runner, fragment, "flake-probe runner");
@@ -129,4 +139,4 @@ if (workerOneCount < 1 || !specialistScript.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
-console.log("Flake-probe label, ten-fresh-run, exact-head, retry-zero, target-selection, artifact-identity, and aggregate-summary contracts verified");
+console.log("Flake-probe label, ten-fresh-run, exact-head, retry-zero, target-selection, artifact-identity, failure-reporting, and aggregate-summary contracts verified");
