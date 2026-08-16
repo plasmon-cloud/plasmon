@@ -64,7 +64,7 @@ case "$target" in
   all)
     node test/ci/verify-flake-probe.mjs
     node test/ci/verify-plasmon-test-inventory.mjs
-    bash test/ci/run-plasmon-fast-tests.sh
+    npm --workspace neutron-plasmon test
     npm --workspace neutron-plasmon run test:package
     npm run test:e2e:plasmon:specialist -- --retries=0
     ;;

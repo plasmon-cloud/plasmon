@@ -58,4 +58,5 @@ jobs:
         run: npm ci
 
       - name: Plasmon fast tests
-        run: bash test/ci/run-plasmon-fast-tests.sh
+        timeout-minutes: 1
+        run: npm --workspace neutron-plasmon test

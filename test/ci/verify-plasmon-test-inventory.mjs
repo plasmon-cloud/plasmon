@@ -144,15 +144,11 @@ async function verify(inventory) {
   }
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
-  const fastRunner = await readFile(resolve(repoRoot, 'test/ci/run-plasmon-fast-tests.sh'), 'utf8');
   assertAlwaysRunPrWorkflow(fastWorkflow, 'Fast Bun tests');
   assert(fastWorkflow.includes('name: Fast Bun tests'), 'Fast CI must preserve required context Fast Bun tests');
   assert(fastWorkflow.includes('node test/ci/verify-plasmon-test-inventory.mjs'), 'Fast CI must run the no-orphan inventory guard');
   assert(fastWorkflow.includes('node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan'), 'Fast CI must prove the inventory guard rejects an orphan');
-  assert(fastWorkflow.includes('bash test/ci/run-plasmon-fast-tests.sh'), 'Fast CI must use the bounded Plasmon fast-test runner');
-  assert(fastRunner.includes('npm --workspace neutron-plasmon test'), 'Fast runner must execute the complete Plasmon Bun/RTL suite');
-  assert(fastRunner.includes('PLASMON_FAST_TEST_TIMEOUT_SECONDS:-60'), 'Fast runner must default to the 60-second watchdog');
-  assert(fastRunner.includes('timeout --signal=TERM --kill-after=5s'), 'Fast runner must terminate over-budget tests and bound cleanup');
+  assert(fastWorkflow.includes('npm --workspace neutron-plasmon test'), 'Fast CI must run the complete Plasmon Bun/RTL suite');
 
   const smokeWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-browser-smoke-ci.yml'), 'utf8');
   const browserWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-browser-ci.yml'), 'utf8');
