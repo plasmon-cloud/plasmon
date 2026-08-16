@@ -21,6 +21,7 @@ on:
           - window-lifetime
           - monaco
           - emulatorjs
+          - saved-preview
 
 permissions:
   contents: read
