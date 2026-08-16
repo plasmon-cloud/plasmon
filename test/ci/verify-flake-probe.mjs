@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
+const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
 const runnerPath = "test/ci/run-plasmon-flake-probe.sh";
 const specialistRunnerPath = "test/ci/run-plasmon-specialist.mjs";
 const packagePath = "package.json";
 
 const workflow = readFileSync(workflowPath, "utf8");
+const labelWorkflow = readFileSync(labelWorkflowPath, "utf8");
 const runner = readFileSync(runnerPath, "utf8");
 const specialistRunner = readFileSync(specialistRunnerPath, "utf8");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
@@ -68,6 +70,19 @@ const workflowFragments = [
 ];
 for (const fragment of workflowFragments) {
   requireFragment(workflow, fragment, "flake-probe workflow");
+}
+
+for (const fragment of [
+  "name: Plasmon Flake Probe Label Trigger",
+  "types: [labeled]",
+  "actions: write",
+  "ci:flake-probe",
+  "createWorkflowDispatch",
+  "workflow_id: 'plasmon-flake-probe.yml'",
+  "ref: headSha",
+  "target: 'all'",
+]) {
+  requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
 
 for (const option of [
