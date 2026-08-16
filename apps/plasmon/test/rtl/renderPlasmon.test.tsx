@@ -124,9 +124,9 @@ describe("renderPlasmon", () => {
       await within(searchRegion).findByText(/Collaborative review workspace\./);
       await within(searchRegion).findByText(/Archived review workspace\./);
 
-      await app.user.click(within(searchRegion).getByRole("tab", { name: "Documents" }));
+      await app.user.click(within(searchRegion).getByRole("tab", { name: "Media" }));
       await within(searchRegion).findByText("No results in this category.");
-      expect(within(searchRegion).getByRole("tab", { name: "Documents" }).getAttribute("aria-selected")).toBe("true");
+      expect(within(searchRegion).getByRole("tab", { name: "Media" }).getAttribute("aria-selected")).toBe("true");
 
       await app.user.click(within(searchRegion).getByRole("tab", { name: "Apps" }));
       await waitFor(() => expect(within(searchRegion).queryByText("No results in this category.") === null).toBe(true));
