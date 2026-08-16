@@ -503,7 +503,7 @@
   },
   "runner": {
     "fingerprint_schema": "neutron.kernel.certified-assets-qualification-runner.v2",
-    "source_set_sha256": "9c167ea080f24a46486f1edda14948196d8c06aa0f773c70377263931f217f48",
+    "source_set_sha256": "01e5b0af43a0f4618a76d748a1a2461f86a1a5a118223d3be6d143295f946b22",
     "sources": [
       {
         "bytes": 19779,
@@ -621,9 +621,9 @@
         "sha256": "678a097122c417e10f0870a035d4d52cb8a52ac4d63e490f464b77281085c4d7"
       },
       {
-        "bytes": 2230,
+        "bytes": 2480,
         "path": "flake.nix",
-        "sha256": "f9c00871ceb9ea625f7a33f315995e9509d0640d3a8269090f9575a59df68562"
+        "sha256": "73ac2a67832ece344842efbeacf4d493aae6c5ebacb2e34fe299ae66484ef79c"
       },
       {
         "bytes": 760,

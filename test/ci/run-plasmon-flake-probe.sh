@@ -4,7 +4,7 @@ set -euo pipefail
 target="${1:-specialist}"
 
 case "$target" in
-  specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs)
+  specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
     ;;
   *)
     echo "Unsupported flake-probe target: $target" >&2
@@ -57,7 +57,7 @@ run_one() {
     npx playwright test \
       --workers=1 \
       --retries=0 \
-      "$1"
+      "$@"
 }
 
 case "$target" in
@@ -78,5 +78,8 @@ case "$target" in
     ;;
   emulatorjs)
     run_one test/e2e/plasmon-emulatorjs-proof.spec.ts
+    ;;
+  saved-preview)
+    run_one test/e2e/plasmon-demo-game.spec.ts --grep @issue-304
     ;;
 esac
