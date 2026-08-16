@@ -6,7 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-test("#86 diagnostic text selects without stealing FileEntry drag", async ({ page }) => {
+test("#86 diagnostic text selects without stealing FileEntry drag", { tag: ["@r2-quarantine", "@issue-86"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
