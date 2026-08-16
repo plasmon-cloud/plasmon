@@ -90,11 +90,15 @@ test("#86 diagnostic text selects without stealing FileEntry drag", async ({ pag
 
     await address.fill("/");
     await address.press("Enter");
-    await expect(address).toHaveValue("/");
-    const sourceEntry = fileManager.locator("[data-fm-node-id]", { hasText: sourceDocumentName }).first();
+    // `fill("/")` updates the address control before navigation completes, and
+    // the nested collision file deliberately has the same name as the root
+    // source. Wait for Explorer's actual root-location state so stale nested
+    // FileManager content cannot masquerade as successful navigation.
+    await expect(explorerWindow.getByRole("button", { name: "Up one level" })).toBeDisabled();
     const targetFolder = fileManager.locator("[data-fm-node-id]", { hasText: collisionFolderName }).first();
-    await expect(sourceEntry).toBeVisible();
+    const sourceEntry = fileManager.locator("[data-fm-node-id]", { hasText: sourceDocumentName }).first();
     await expect(targetFolder).toBeVisible();
+    await expect(sourceEntry).toBeVisible();
     const sourceBox = await sourceEntry.boundingBox();
     const targetBox = await targetFolder.boundingBox();
     if (!sourceBox || !targetBox) throw new Error("Move-collision entries have no bounds");
