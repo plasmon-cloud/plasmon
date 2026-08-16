@@ -18,6 +18,7 @@ const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-review-demo.spec.ts': { count: 1, issues: ['@issue-303'] },
   'test/e2e/plasmon-emulatorjs-proof.spec.ts': { count: 1, issues: ['@issue-245'] },
   'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
+  'test/e2e/plasmon-drag-preview-66.spec.ts': { count: 1, issues: ['@issue-66', '@issue-320'] },
 });
 
 function sameSet(actual, expected) {
@@ -138,7 +139,7 @@ async function verify(inventory) {
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
   assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
   assert(quarantineDoc.includes('#277') && quarantineDoc.includes('#279'), 'Quarantine documentation must retain #277 quarantine and #279 restoration ownership');
-  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308']) {
+  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308', '#320']) {
     assert(quarantineDoc.includes(issue), `Quarantine documentation must preserve ${issue} disposition`);
   }
 
