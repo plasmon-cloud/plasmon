@@ -21,6 +21,7 @@ on:
           - window-lifetime
           - monaco
           - emulatorjs
+          - saved-preview
 
 permissions:
   contents: read
@@ -126,9 +127,32 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Fail observed probe failure
+      - name: Report observed probe failure
         if: always() && steps.probe.outcome != 'success'
-        run: exit 1
+        run: |
+          set -u
+          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}"
+          context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
+
+          {
+            echo "## Plasmon flake probe attempt failure"
+            echo
+            echo "- Attempt: ${{ matrix.attempt }}/10"
+            echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
+            echo "- Target: \`${PROBE_TARGET:-unknown}\`"
+            echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
+            echo
+            if [ -n "$context_file" ]; then
+              echo "### First Playwright error context"
+              echo
+              sed -n '1,120p' "$context_file"
+            else
+              echo "No test-results error-context.md was found; diagnostics are available in artifact \`$diagnostic_artifact\`."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          exit 1
 
   summary:
     if: always() && needs.probe.result != 'skipped'
@@ -211,7 +235,7 @@ jobs:
             else
               echo "**FLAKE/FAILURE OBSERVED: only $passed/10 fresh attempts passed ($total/10 reported).**"
             fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
           if [ "$passed" -ne 10 ]; then
             exit 1

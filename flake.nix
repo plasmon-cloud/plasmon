@@ -30,6 +30,11 @@
           linuxPackages = pkgs.lib.optionals pkgs.stdenv.isLinux [
             pkgs.chromium
           ];
+          fontsConf = pkgs.makeFontsConf {
+            fontDirectories = [
+              pkgs.dejavu_fonts
+            ];
+          };
 
           # Mops is distributed through npm rather than nixpkgs. Expose a
           # mops command inside the development shell so CI and local
@@ -47,12 +52,16 @@
               pkgs.curl
               pkgs.bitcoin
               pkgs.wasmtime
+              pkgs.fontconfig
+              pkgs.dejavu_fonts
               mops
             ] ++ linuxPackages;
 
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
             shellHook = ''
+              export FONTCONFIG_FILE="${fontsConf}"
+
               if command -v chromium >/dev/null 2>&1; then
                 export PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v chromium)"
               fi
