@@ -211,7 +211,7 @@ jobs:
             else
               echo "**FLAKE/FAILURE OBSERVED: only $passed/10 fresh attempts passed ($total/10 reported).**"
             fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
           if [ "$passed" -ne 10 ]; then
             exit 1

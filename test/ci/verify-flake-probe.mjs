@@ -49,6 +49,7 @@ const workflowFragments = [
   "First-attempt passes: $passed/10",
   "STABILITY OBSERVED: 10/10 fresh attempts passed.",
   "FLAKE/FAILURE OBSERVED:",
+  "} | tee -a \"$GITHUB_STEP_SUMMARY\"",
   "if [ \"$passed\" -ne 10 ]; then",
 ];
 for (const fragment of workflowFragments) {
