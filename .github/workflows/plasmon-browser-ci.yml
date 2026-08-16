@@ -75,7 +75,7 @@ jobs:
               echo "::error title=#89 Chromium specialist::Packaged Chromium specialist acceptance failed; inspect test annotations for the failing spec"
               exit 1
             fi
-            if ! NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json PLAYWRIGHT_FIREFOX=1 playwright test --workers=1 --project=firefox test/e2e/plasmon-monaco-workers-89.spec.ts; then
+            if ! NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json PLAYWRIGHT_FIREFOX=1 npx playwright test --workers=1 --project=firefox test/e2e/plasmon-monaco-workers-89.spec.ts; then
               echo "::error title=#89 Firefox worker acceptance::Packaged Firefox Monaco worker acceptance failed"
               exit 1
             fi
