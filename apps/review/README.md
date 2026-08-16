@@ -25,7 +25,8 @@ The UI reports persistence truthfully:
 
 - completed actions show **Saved** after the provider accepts them;
 - edits to Desired / Effort / Owner / Work show **Unsaved changes** until **Save details** is chosen;
-- failed actions show an explicit error and are not presented as saved.
+- failed actions show an explicit error and are not presented as saved;
+- pending item/evidence input and restore confirmation are kept after a failed provider action so the user can retry; success cleanup runs only after provider acceptance.
 
 Current state is normalized into Atom metadata, item records, and comment records. Every accepted semantic mutation appends one revision/event journal record. Initial creation, every twentieth revision, and restore create checkpoints used for historical reconstruction.
 
@@ -33,7 +34,7 @@ Current state is normalized into Atom metadata, item records, and comment record
 
 Each accepted semantic transaction creates one logical `RevisionId`. History shows those revisions as user-readable activity rather than exposing storage encoding.
 
-Restore is deliberately a two-step action. Restoring a prior logical revision changes the current state by creating a **new** logical revision, keeps the same `AtomId`, and preserves the existing history.
+Restore is deliberately a two-step action. Restoring a prior logical revision changes the current state by creating a **new** logical revision, keeps the same `AtomId`, and preserves the existing history. If the provider rejects the restore, Review keeps the confirmation visible instead of implying the restore completed.
 
 ### Sharing
 
@@ -62,6 +63,7 @@ Ordinary small-field edits write only changed records plus revision/receipt meta
 ## Package shape
 
 - `src/index.tsx` — human Review tile and first-demo workflow.
+- `src/action_outcome.ts` — deterministic action outcome and retry-safe draft cleanup rules.
 - `src/presentation.ts` — deterministic user-facing vocabulary and draft/presentation helpers.
 - `src/style.scss` — light/dark Review presentation tokens and responsive desktop layout.
 - `src/service.ts` — persistent background and Review-specific agent tools.
@@ -75,6 +77,8 @@ Ordinary small-field edits write only changed records plus revision/receipt meta
 ```sh
 npm --workspace neutron-review test
 ```
+
+The semantic suite includes the failure-path contract: rejected provider actions surface an explicit failed outcome, preserve submitted drafts, and never clear newer input accidentally.
 
 The Review CI package/browser lane additionally provisions vanilla Neutron and checks installed package bytes plus Playwright acceptance for:
 
