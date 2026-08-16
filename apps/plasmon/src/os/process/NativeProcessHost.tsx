@@ -5,10 +5,12 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type ErrorInfo,
   type ReactNode,
 } from "react";
 import type { FsService, ProcessController, ProcessId } from "../contracts/index.ts";
+import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
 import type { NativeApplicationRegistry } from "./registry.ts";
 import type { NativeAppWindowControl } from "./runtime.ts";
 
@@ -33,6 +35,11 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   error: unknown | null;
+}
+
+interface ContextMenuFallbackState {
+  x: number;
+  y: number;
 }
 
 class NativeHostErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -63,6 +70,25 @@ class NativeHostErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
   }
 }
 
+const contextMenuStyle = {
+  position: "fixed",
+  minWidth: 170,
+  padding: 8,
+  border: "1px solid rgba(255,255,255,.18)",
+  borderRadius: 8,
+  background: "#20242a",
+  color: "#edf1f5",
+  boxShadow: "0 10px 28px rgba(0,0,0,.35)",
+  zIndex: 100000,
+} as const;
+
+const contextMenuItemStyle = {
+  display: "block",
+  padding: "6px 8px",
+  font: "12px/1.3 system-ui, sans-serif",
+  opacity: 0.72,
+} as const;
+
 /**
  * React-only adapter that renders a process record without leaking React into
  * NativeAppDefinition or ProcessController contracts.
@@ -79,7 +105,22 @@ export function NativeProcessHost({
   onError,
 }: NativeProcessHostProps) {
   const [, forceRender] = useReducer((value: number) => value + 1, 0);
+  const [contextMenu, setContextMenu] = useState<ContextMenuFallbackState | null>(null);
   useEffect(() => process.subscribe(forceRender), [process]);
+
+  useEffect(() => {
+    if (!contextMenu || typeof document === "undefined" || typeof window === "undefined") return undefined;
+    const dismiss = () => setContextMenu(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
+    };
+    document.addEventListener("pointerdown", dismiss, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [contextMenu]);
 
   const record = process.list().find((item) => item.id === processId) ?? null;
   const appId = record?.appId ?? null;
@@ -96,15 +137,36 @@ export function NativeProcessHost({
       fallback={errorFallback}
       {...(onError ? { onError } : {})}
     >
-      <Suspense fallback={fallback}>
-        <HostedApplication
-          processId={record.id}
-          target={record.target}
-          fs={fs}
-          process={process}
-          {...(nativeWindow ? { nativeWindow } : {})}
-        />
-      </Suspense>
+      <div
+        data-plasmon-owned-surface
+        style={{ display: "contents" }}
+        onContextMenu={(event) => {
+          if (!claimFirstPartyContextMenu(event)) return;
+          event.stopPropagation();
+          setContextMenu({ x: event.clientX, y: event.clientY });
+        }}
+      >
+        <Suspense fallback={fallback}>
+          <HostedApplication
+            processId={record.id}
+            target={record.target}
+            fs={fs}
+            process={process}
+            {...(nativeWindow ? { nativeWindow } : {})}
+          />
+        </Suspense>
+        {contextMenu ? (
+          <div
+            role="menu"
+            aria-label="Application context menu"
+            style={{ ...contextMenuStyle, left: contextMenu.x, top: contextMenu.y }}
+          >
+            <span role="menuitem" aria-disabled="true" style={contextMenuItemStyle}>
+              No actions available
+            </span>
+          </div>
+        ) : null}
+      </div>
     </NativeHostErrorBoundary>
   );
 }
