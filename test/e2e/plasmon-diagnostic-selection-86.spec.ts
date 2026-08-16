@@ -41,26 +41,36 @@ test("#86 diagnostic text selects without stealing FileEntry drag", async ({ pag
     // address-navigation boundary, so using it here would make #86 depend on an
     // unrelated namespace contract. Capture generated names so retries remain
     // independent of filesystem state left by an earlier attempt.
-    const rootFilesBox = await fileManager.boundingBox();
-    if (!rootFilesBox) throw new Error("Root FileManager has no bounds");
-    const openRootMenu = async () => {
-      await fileManager.click({
-        button: "right",
-        position: {
-          x: Math.max(8, rootFilesBox.width - 16),
-          y: Math.max(8, rootFilesBox.height - 16),
-        },
+    const openFileManagerMenu = async () => {
+      const position = await fileManager.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const maxY = Math.min(rect.height - 16, Math.max(48, rect.height * 0.4));
+        for (let y = 24; y <= maxY; y += 16) {
+          for (let x = Math.max(16, rect.width - 16); x >= 16; x -= 16) {
+            const hit = document.elementFromPoint(rect.left + x, rect.top + y);
+            if (!(hit instanceof Element) || !element.contains(hit)) continue;
+            if (hit.closest(
+              "[data-fm-node-id], button, input, textarea, select, a, [role='button'], [role='menuitem']",
+            )) continue;
+            return { x, y };
+          }
+        }
+        return null;
       });
-      return explorerWindow.getByRole("menu").last();
+      if (!position) throw new Error("FileManager has no exposed background point for context menu");
+      await fileManager.click({ button: "right", position });
+      const menu = explorerWindow.getByRole("menu").last();
+      await expect(menu).toBeVisible();
+      return menu;
     };
 
-    await (await openRootMenu()).getByRole("menuitem", { name: "New Text Document" }).click();
+    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Text Document" }).click();
     const sourceRename = explorerWindow.getByRole("textbox", { name: /^Rename New Text Document(?: \(\d+\))?\.txt$/ }).last();
     await expect(sourceRename).toBeVisible();
     const sourceDocumentName = await sourceRename.inputValue();
     await sourceRename.press("Escape");
 
-    await (await openRootMenu()).getByRole("menuitem", { name: "New Folder" }).click();
+    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Folder" }).click();
     const folderRename = explorerWindow.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(folderRename).toBeVisible();
     const collisionFolderName = await folderRename.inputValue();
@@ -71,16 +81,7 @@ test("#86 diagnostic text selects without stealing FileEntry drag", async ({ pag
     await collisionFolder.dblclick();
     await expect(address).toHaveValue(`/${collisionFolderName}`);
 
-    const collisionFolderBox = await fileManager.boundingBox();
-    if (!collisionFolderBox) throw new Error("Collision folder FileManager has no bounds");
-    await fileManager.click({
-      button: "right",
-      position: {
-        x: Math.max(8, collisionFolderBox.width - 16),
-        y: Math.max(8, collisionFolderBox.height - 16),
-      },
-    });
-    await explorerWindow.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Text Document" }).click();
     const nestedRename = explorerWindow.getByRole("textbox", { name: /^Rename New Text Document(?: \(\d+\))?\.txt$/ }).last();
     await expect(nestedRename).toBeVisible();
     await nestedRename.fill(sourceDocumentName);
