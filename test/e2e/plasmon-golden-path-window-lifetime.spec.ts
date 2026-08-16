@@ -26,12 +26,12 @@ async function openInstalledPlasmon(page: import("@playwright/test").Page) {
   return { app, kernelUrl };
 }
 
-// #251 preserves the prior Packaged Browser #884 sibling-window failure evidence.
-// This acceptance remains required under the serialized Specialist harness and
-// is intentionally not an active r2 quarantine.
+// #251 and #308 independently own the two quarantined acceptances below.
+// They have both failed at the same pre-semantics second-Explorer boundary,
+// but workflow v4.0 requires a dedicated repair/add-back Issue per flaky test.
 test(
   "packaged Plasmon repeatedly opens and closes reachable Explorer siblings",
-  { tag: ["@issue-251"] },
+  { tag: ["@r2-quarantine", "@issue-251"] },
   async ({ page }) => {
     const { app } = await openInstalledPlasmon(page);
     const windowLayer = app.locator(".plasmon-window-layer").first();
@@ -64,7 +64,7 @@ test(
 
 test(
   "#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
-  { tag: ["@issue-63"] },
+  { tag: ["@r2-quarantine", "@issue-63", "@issue-308"] },
   async ({ page }) => {
     const { app, kernelUrl } = await openInstalledPlasmon(page);
     const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });

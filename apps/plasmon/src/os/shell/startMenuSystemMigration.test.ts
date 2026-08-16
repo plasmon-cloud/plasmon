@@ -120,26 +120,62 @@ test("fresh reconciliation keeps retired System applications at Start root witho
   }
 });
 
-test("uncustomized legacy managed System defaults migrate by stable NodeId without duplicate shortcuts", async () => {
+test("unmarked legacy System defaults are preserved when directory ownership cannot be proven", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
     const legacy = await createLegacyManagedSystemState(environment.services.fs);
+    const revisionBefore = await environment.services.fs.revision();
     const result = await reconcileStartMenu(environment.services.fs, retiredSystemApps, []);
 
     expect(result.created).toBe(0);
     expect(result.preserved).toBe(retiredSystemApps.length);
-    expect(await environment.node(`${START_MENU_PATH}/System`)).toBeNull();
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(legacy.system.id);
 
     const shortcuts = await allShortcuts(environment.services.fs);
     expect(shortcuts).toHaveLength(retiredSystemApps.length);
     for (const app of retiredSystemApps) {
       const identity = nativeIdentity(app);
-      const migrated = shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === identity);
-      expect(migrated).toHaveLength(1);
-      expect(migrated[0]?.node.id).toBe(legacy.shortcuts.get(identity)?.id);
-      expect(await environment.services.fs.pathOf(migrated[0]!.node.id)).toBe(`${START_MENU_PATH}/${app.name}`);
+      const preserved = shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === identity);
+      expect(preserved).toHaveLength(1);
+      expect(preserved[0]?.node.id).toBe(legacy.shortcuts.get(identity)?.id);
+      expect(await environment.services.fs.pathOf(preserved[0]!.node.id)).toBe(
+        `${START_MENU_PATH}/System/${app.name}`,
+      );
     }
+    expect(await environment.services.fs.revision()).toBe(revisionBefore);
+  } finally {
+    environment.dispose();
+  }
+});
+
+test("user-created replacement System folder is never mistaken for the retired managed directory", async () => {
+  const environment = createHeadlessPlasmonEnvironment();
+  try {
+    await environment.ready;
+    const legacy = await createLegacyManagedSystemState(environment.services.fs);
+    const fs = environment.services.fs;
+
+    await fs.rename(legacy.system.id, "Legacy System");
+    const replacement = await fs.mkdir(legacy.root.id, "System");
+    for (const shortcut of legacy.shortcuts.values()) {
+      await fs.move(shortcut.id, replacement.id);
+    }
+
+    const revisionBefore = await fs.revision();
+    const result = await reconcileStartMenu(fs, retiredSystemApps, []);
+
+    expect(result.created).toBe(0);
+    expect(result.preserved).toBe(retiredSystemApps.length);
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(replacement.id);
+    expect((await environment.node(`${START_MENU_PATH}/Legacy System`))?.id).toBe(legacy.system.id);
+
+    for (const app of retiredSystemApps) {
+      const identity = nativeIdentity(app);
+      const shortcut = legacy.shortcuts.get(identity)!;
+      expect(await fs.pathOf(shortcut.id)).toBe(`${START_MENU_PATH}/System/${app.name}`);
+    }
+    expect(await fs.revision()).toBe(revisionBefore);
   } finally {
     environment.dispose();
   }
@@ -183,14 +219,14 @@ test("legacy customization preserves renamed moved and deleted defaults and neve
   }
 });
 
-test("legacy migration is idempotent after the managed folder is retired", async () => {
+test("preserving an unowned legacy System folder remains idempotent", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
     await createLegacyManagedSystemState(environment.services.fs);
     await reconcileStartMenu(environment.services.fs, retiredSystemApps, []);
-    const revisionAfterMigration = await environment.services.fs.revision();
-    const pathsAfterMigration = await Promise.all(
+    const revisionAfterFirstPass = await environment.services.fs.revision();
+    const pathsAfterFirstPass = await Promise.all(
       (await allShortcuts(environment.services.fs)).map((shortcut) => environment.services.fs.pathOf(shortcut.node.id)),
     );
 
@@ -198,10 +234,10 @@ test("legacy migration is idempotent after the managed folder is retired", async
     expect(second.created).toBe(0);
     expect(second.preserved).toBe(retiredSystemApps.length);
     expect(second.skippedDeleted).toBe(0);
-    expect(await environment.services.fs.revision()).toBe(revisionAfterMigration);
+    expect(await environment.services.fs.revision()).toBe(revisionAfterFirstPass);
     expect(await Promise.all(
       (await allShortcuts(environment.services.fs)).map((shortcut) => environment.services.fs.pathOf(shortcut.node.id)),
-    )).toEqual(pathsAfterMigration);
+    )).toEqual(pathsAfterFirstPass);
   } finally {
     environment.dispose();
   }
