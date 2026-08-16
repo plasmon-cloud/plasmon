@@ -1,0 +1,322 @@
+name: Plasmon Train Snapshot v5.6
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-6
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-6.yml
+      - .github/plasmon-train-snapshot-trigger-v5-6.txt
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build compact r2 train snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: plasmon-cloud/plasmon
+          TARGET: release/0.1.0-r2
+          MILESTONE_TITLE: 0.1.0-r2
+          CLAIM_ASSIGNEE: 3E4B54
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import time
+          import urllib.parse
+          import urllib.request
+
+          REPO = os.environ["REPO"]
+          TARGET = os.environ["TARGET"]
+          MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
+          CLAIM_ASSIGNEE = os.environ["CLAIM_ASSIGNEE"]
+          TOKEN = os.environ["GH_TOKEN"]
+          BASE = f"https://api.github.com/repos/{REPO}"
+          API_VERSION = "2026-03-10"
+
+          def api(path):
+              url = path if path.startswith("https://") else BASE + path
+              req = urllib.request.Request(url, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.6",
+              })
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          def pages(path):
+              out = []
+              page = 1
+              sep = "&" if "?" in path else "?"
+              while True:
+                  rows = api(f"{path}{sep}per_page=100&page={page}")
+                  if not isinstance(rows, list):
+                      raise RuntimeError(f"expected list from {path}")
+                  out.extend(rows)
+                  if len(rows) < 100:
+                      return out
+                  page += 1
+
+          def gh_json(args):
+              env = dict(os.environ); env["GH_TOKEN"] = TOKEN
+              proc = subprocess.run(["gh", *args], text=True, capture_output=True, env=env)
+              if proc.returncode != 0:
+                  return None
+              try: return json.loads(proc.stdout) if proc.stdout.strip() else None
+              except json.JSONDecodeError: return None
+
+          _reachability = {}
+          def commit_reachable(ancestor_sha, descendant_sha):
+              if not ancestor_sha or not descendant_sha:
+                  return False
+              key = (str(ancestor_sha), str(descendant_sha))
+              if key in _reachability:
+                  return _reachability[key]
+              if key[0] == key[1]:
+                  _reachability[key] = True
+                  return True
+              comparison = api(f"/compare/{key[0]}...{key[1]}")
+              merge_base = ((comparison.get("merge_base_commit") or {}).get("sha"))
+              result = merge_base == key[0] or str(comparison.get("status") or "").lower() in {"ahead", "identical"}
+              _reachability[key] = result
+              return result
+
+          def labels_of(issue):
+              return sorted({str(x.get("name") if isinstance(x, dict) else x) for x in issue.get("labels") or [] if x})
+
+          def assignees_of(issue):
+              return sorted({str(x.get("login")) for x in issue.get("assignees") or [] if isinstance(x, dict) and x.get("login")})
+
+          def field_value(issue, name):
+              for item in issue.get("issue_field_values") or []:
+                  if item.get("issue_field_name") == name:
+                      return (item.get("single_select_option") or {}).get("name")
+              return None
+
+          def product(labels, area, title):
+              if any(label.startswith("ci:") for label in labels): return False
+              if str(title).startswith("[r2 CI]"): return False
+              if area == "Testing" and ("needs-verification" in labels or "ci:flaky" in labels): return False
+              return True
+
+          def mapped_issue(pr, lane_numbers):
+              body = str(pr.get("body") or "")
+              title = str(pr.get("title") or "")
+              for pattern, source in (
+                  (r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b", body),
+                  (r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b", body),
+                  (r"^#(\d+)\b", title),
+              ):
+                  m = re.search(pattern, source)
+                  if m and int(m.group(1)) in lane_numbers:
+                      return int(m.group(1))
+              return None
+
+          milestones = pages("/milestones?state=all")
+          milestone = next((m for m in milestones if m.get("title") == MILESTONE_TITLE), None)
+          if milestone is None: raise RuntimeError(f"milestone {MILESTONE_TITLE!r} not found")
+          milestone_number = int(milestone["number"])
+          before = (int(milestone.get("open_issues") or 0), int(milestone.get("closed_issues") or 0))
+
+          raw_issues = [x for x in pages(f"/issues?milestone={milestone_number}&state=all") if "pull_request" not in x]
+          if len(raw_issues) != sum(before):
+              raise RuntimeError(f"incomplete lane: milestone says {sum(before)}, fetched {len(raw_issues)}")
+
+          rows, by_num = [], {}
+          for raw in raw_issues:
+              number = int(raw["number"])
+              open_state = str(raw.get("state", "open")).lower() == "open"
+              labels = labels_of(raw)
+              assignees = assignees_of(raw)
+              area = field_value(raw, "Area")
+              deps, dep_states = [], {}
+              if open_state:
+                  summary = raw.get("issue_dependencies_summary") or {}
+                  expected = int(summary.get("blocked_by") or summary.get("total_blocked_by") or 0)
+                  if expected:
+                      blocked = pages(f"/issues/{number}/dependencies/blocked_by")
+                      for dep in blocked:
+                          dep_num = int(dep["number"]); deps.append(dep_num); dep_states[str(dep_num)] = str(dep.get("state", "unknown"))
+                      if len(set(deps)) < expected:
+                          raise RuntimeError(f"#{number} dependency summary says {expected}, fetched {len(set(deps))}")
+              issue_type = raw.get("type")
+              if isinstance(issue_type, dict): issue_type = issue_type.get("name")
+              row = {
+                  "issue": number, "title": str(raw.get("title") or ""), "open": open_state,
+                  "product": product(labels, area, raw.get("title") or ""),
+                  "assignees": assignees, "claimed": CLAIM_ASSIGNEE in assignees,
+                  "pr": None, "pr_branch": None, "pr_base": None,
+                  "integrated_pr": None, "carried_by_pr": None, "target_integrated": False, "merged": False,
+                  "desire": field_value(raw, "Desire"), "effort": field_value(raw, "Effort"),
+                  "area": area, "type": issue_type, "labels": labels,
+                  "dependencies": sorted(set(deps)), "dependency_states": dep_states,
+                  "active": CLAIM_ASSIGNEE in assignees, "completed": not open_state,
+                  "url": raw.get("html_url") or raw.get("url"),
+              }
+              rows.append(row); by_num[number] = row
+
+          branch_ref = api("/git/ref/heads/" + urllib.parse.quote(TARGET, safe=""))
+          target_sha = ((branch_ref.get("object") or {}).get("sha"))
+          if not target_sha: raise RuntimeError("could not resolve release target SHA")
+
+          all_pulls = pages("/pulls?state=all")
+          lane_numbers = set(by_num)
+          mapped = []
+          for pr in all_pulls:
+              issue_num = mapped_issue(pr, lane_numbers)
+              if issue_num is None: continue
+              mapped.append({
+                  "number": int(pr["number"]), "issue": issue_num,
+                  "state": str(pr.get("state") or "").lower(), "merged_at": pr.get("merged_at"),
+                  "head": (pr.get("head") or {}).get("ref"), "base": (pr.get("base") or {}).get("ref"),
+                  "merge_commit_sha": pr.get("merge_commit_sha"), "created_at": pr.get("created_at"),
+              })
+
+          for rec in mapped:
+              if rec["state"] != "closed" or not rec["merged_at"] or rec.get("merge_commit_sha"):
+                  continue
+              if not by_num[rec["issue"]]["open"]:
+                  continue
+              detail = api(f"/pulls/{rec['number']}")
+              rec["merge_commit_sha"] = detail.get("merge_commit_sha")
+              rec["merged_at"] = detail.get("merged_at") or rec["merged_at"]
+              rec["head"] = ((detail.get("head") or {}).get("ref")) or rec["head"]
+              rec["base"] = ((detail.get("base") or {}).get("ref")) or rec["base"]
+              if not rec.get("merge_commit_sha"):
+                  gh_detail = gh_json(["pr", "view", str(rec["number"]), "--repo", REPO, "--json", "mergeCommit,mergedAt,headRefName,baseRefName"]) or {}
+                  merge_commit = gh_detail.get("mergeCommit") or {}
+                  if isinstance(merge_commit, dict):
+                      rec["merge_commit_sha"] = merge_commit.get("oid")
+                  rec["merged_at"] = gh_detail.get("mergedAt") or rec["merged_at"]
+                  rec["head"] = gh_detail.get("headRefName") or rec["head"]
+                  rec["base"] = gh_detail.get("baseRefName") or rec["base"]
+              if by_num[rec["issue"]]["claimed"] and not rec.get("merge_commit_sha"):
+                  raise RuntimeError(f"claimed Issue #{rec['issue']} historical PR #{rec['number']} merge commit unresolved")
+
+          for rec in mapped:
+              if rec["state"] != "open": continue
+              row = by_num[rec["issue"]]
+              if row["pr"] is not None and row["pr"] != rec["number"]:
+                  raise RuntimeError(f"Issue #{rec['issue']} maps to multiple open PRs")
+              row["pr"] = rec["number"]; row["pr_branch"] = rec["head"]; row["pr_base"] = rec["base"]; row["active"] = True
+
+          head_records = {}
+          for rec in mapped:
+              if rec["head"]:
+                  head_records.setdefault(rec["head"], []).append(rec)
+          integrated = set()
+          for rec in mapped:
+              if not rec["merged_at"] or not by_num[rec["issue"]]["open"]:
+                  continue
+              if rec.get("base") == TARGET:
+                  integrated.add(rec["number"])
+                  continue
+              if commit_reachable(rec.get("merge_commit_sha"), target_sha):
+                  integrated.add(rec["number"])
+          carrier = {}
+          changed = True
+          while changed:
+              changed = False
+              for rec in mapped:
+                  if not rec["merged_at"] or rec["number"] in integrated: continue
+                  parents = head_records.get(rec["base"], [])
+                  if any(p["number"] in integrated for p in parents):
+                      integrated.add(rec["number"]); carrier.pop(rec["number"], None); changed = True; continue
+                  open_parent = next((p for p in parents if p["state"] == "open"), None)
+                  if open_parent and carrier.get(rec["number"]) != open_parent["number"]:
+                      carrier[rec["number"]] = open_parent["number"]; changed = True; continue
+                  inherited = next((carrier.get(p["number"]) for p in parents if carrier.get(p["number"]) is not None), None)
+                  if inherited is not None and carrier.get(rec["number"]) != inherited:
+                      carrier[rec["number"]] = inherited; changed = True
+
+          by_issue_history = {}
+          for rec in mapped: by_issue_history.setdefault(rec["issue"], []).append(rec)
+          for issue_num, history in by_issue_history.items():
+              row = by_num[issue_num]
+              integrated_recs = [r for r in history if r["number"] in integrated]
+              if integrated_recs:
+                  winner = sorted(integrated_recs, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                  row["integrated_pr"] = winner["number"]; row["target_integrated"] = True; row["merged"] = True; row["completed"] = True
+                  row["carried_by_pr"] = None
+              elif row["pr"] is None:
+                  carried = [r for r in history if carrier.get(r["number"]) is not None]
+                  if carried:
+                      winner = sorted(carried, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                      row["carried_by_pr"] = carrier[winner["number"]]; row["active"] = True
+
+          recoveries = [r for r in rows if r["product"] and r["open"] and r["claimed"] and r["pr"] is None and r["carried_by_pr"] is None and not r["target_integrated"]]
+          if len(recoveries) > 1:
+              raise RuntimeError("multiple assigned no-PR Product recoveries: " + ", ".join(f"#{r['issue']}" for r in recoveries))
+
+          captured = int(time.time())
+          observations = {}
+
+          for row in rows:
+              pr_num = row.get("pr")
+              if pr_num is None or not row.get("open") or not row.get("product"): continue
+              detail = gh_json(["pr","view",str(pr_num),"--repo",REPO,"--json","mergeable,reviewDecision,reviewRequests,isDraft,headRefOid,headRefName,baseRefName"]) or {}
+              checks = gh_json(["pr","checks",str(pr_num),"--repo",REPO,"--required","--json","name,state,bucket,workflow,link"]) or []
+              if not isinstance(checks, list): checks = []
+              passed = running = failed = 0
+              for check in checks:
+                  bucket = str(check.get("bucket") or check.get("state") or "unknown").lower()
+                  if bucket in {"pass","success","skipping","skipped"}: passed += 1
+                  elif bucket in {"pending","queued","running","in_progress","in-progress"}: running += 1
+                  else: failed += 1
+              ci = "running" if running else "failed" if failed else "success" if checks and passed == len(checks) else "unknown"
+              decision = str(detail.get("reviewDecision") or "unknown").lower()
+              review = "changes_requested" if decision == "changes_requested" else "approved" if decision == "approved" else "pending" if decision in {"review_required","review_requested"} else "unknown"
+              mr = str(detail.get("mergeable") or "unknown").lower()
+              mergeable = "true" if mr == "mergeable" else "false" if mr == "conflicting" else "unknown"
+              observations[str(pr_num)] = {
+                  "head": detail.get("headRefOid"), "branch": detail.get("headRefName") or row.get("pr_branch"), "base": detail.get("baseRefName") or row.get("pr_base"),
+                  "ci": ci, "review": review, "mergeable": mergeable, "draft": "true" if detail.get("isDraft") else "false",
+                  "check_passed": passed, "check_running": running, "check_failed": failed, "check_total": len(checks),
+                  "review_requests": [x.get("login") or x.get("name") for x in detail.get("reviewRequests") or [] if isinstance(x, dict)],
+                  "observed_at": captured,
+              }
+
+          milestone_after = api(f"/milestones/{milestone_number}")
+          after = (int(milestone_after.get("open_issues") or 0), int(milestone_after.get("closed_issues") or 0))
+          if after != before: raise RuntimeError(f"lane changed during snapshot: before={before}, after={after}")
+
+          missing = []
+          for row in [r for r in rows if r["open"]]:
+              absent = []
+              if row["type"] not in {"Bug","Feature","Task"}: absent.append("Type")
+              if row["desire"] not in {"High","Medium","Low"}: absent.append("Desire")
+              if row["effort"] not in {"High","Medium","Low"}: absent.append("Effort")
+              if not row["area"]: absent.append("Area")
+              if absent: missing.append(f"#{row['issue']}: {','.join(absent)}")
+          if missing: raise RuntimeError("open r2 metadata incomplete: " + "; ".join(missing))
+
+          snapshot = {
+              "schema": "plasmon-train-snapshot-v5.6", "lane_complete": True, "repo": REPO,
+              "target": TARGET, "milestone": MILESTONE_TITLE, "claim_assignee": CLAIM_ASSIGNEE,
+              "captured_at": captured, "target_sha": target_sha,
+              "lane_counts": {"open": before[0], "closed": before[1], "total": sum(before)},
+              "issues": rows, "observations": observations,
+          }
+          with open("plasmon-train-snapshot-v5-6.json", "w", encoding="utf-8") as f:
+              json.dump(snapshot, f, indent=2); f.write("\n")
+          print(f"snapshot PASS lane={len(rows)} open={before[0]} closed={before[1]} prs={sum(1 for r in rows if r['product'] and r['pr'] is not None)} recoveries={len(recoveries)} target={target_sha}")
+          PY
+
+      - name: Upload train snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot-v5-6
+          path: plasmon-train-snapshot-v5-6.json
+          retention-days: 1
+          if-no-files-found: error
