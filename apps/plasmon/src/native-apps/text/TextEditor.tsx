@@ -13,10 +13,15 @@ import {
   NativeAppStatusStrip,
   NativeAppToolbar,
 } from "../../os/visual/index.ts";
-import { MonacoEditorHost, monacoEngineStatus, type MonacoCursorState } from "../shared/monaco/MonacoEditorHost.tsx";
+import {
+  MonacoEditorHost,
+  type MonacoCursorState,
+  type MonacoEditorCommandApi,
+} from "../shared/monaco/MonacoEditorHost.tsx";
 import { editorLanguageForResource } from "../shared/monaco/editorModel.ts";
 import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
 import { controlInputStyle, editorErrorStyle } from "./editorChrome.ts";
+import { editorLanguageDisplayName, textEditorWindowTitle } from "./editorPresentation.ts";
 import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
@@ -32,12 +37,16 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
+  const [commandApi, setCommandApi] = useState<MonacoEditorCommandApi | null>(null);
+  const [minimap, setMinimap] = useState(true);
+  const [wordWrap, setWordWrap] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
   const readOnly = target.readOnly === true;
+  const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
 
   useEffect(() => {
-    process.setTitle(processId, snapshot.name || "Text Editor");
+    process.setTitle(processId, textEditorWindowTitle(snapshot.name));
   }, [process, processId, snapshot.name]);
 
   const save = () => {
@@ -64,6 +73,10 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
     }
   };
 
+  const runEditorCommand = (command: "find" | "replace" | "goToLine") => {
+    commandApi?.run(command);
+  };
+
   if (!target.nodeId) {
     return (
       <NativeAppContentSurface style={styles.root} aria-label="Text editor">
@@ -75,12 +88,12 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const saveDisabled = readOnly || !snapshot.dirty || snapshot.status === "saving";
   const saveAsDisabled = !saveAsName.trim();
   const loadingDocument = snapshot.status === "idle" || snapshot.status === "loading";
+  const editorCommandsDisabled = !monacoReady || commandApi === null;
 
   return (
     <NativeAppContentSurface style={styles.root} aria-label="Text editor" onKeyDownCapture={captureSave}>
       <style>{`.plasmon-native-input::placeholder { color: var(--plasmon-text-disabled); opacity: 1; }`}</style>
-      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Text file controls">
-        <span style={styles.engineBadge} role="status">{monacoEngineStatus(monacoReady)}</span>
+      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Text editor controls">
         <NativeAppButton type="button" onClick={save} disabled={saveDisabled}>Save</NativeAppButton>
         <label style={styles.saveAsLabel}>
           <span style={styles.label}>Save as</span>
@@ -100,6 +113,12 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         >
           Create copy
         </NativeAppButton>
+        <span style={styles.toolbarDivider} aria-hidden="true" />
+        <NativeAppButton type="button" onClick={() => runEditorCommand("find")} disabled={editorCommandsDisabled}>Find</NativeAppButton>
+        <NativeAppButton type="button" onClick={() => runEditorCommand("replace")} disabled={editorCommandsDisabled}>Replace</NativeAppButton>
+        <NativeAppButton type="button" onClick={() => runEditorCommand("goToLine")} disabled={editorCommandsDisabled}>Go to line</NativeAppButton>
+        <NativeAppButton type="button" aria-pressed={wordWrap} onClick={() => setWordWrap((current) => !current)}>Word wrap</NativeAppButton>
+        <NativeAppButton type="button" aria-pressed={minimap} onClick={() => setMinimap((current) => !current)}>Minimap</NativeAppButton>
         {readOnly && <span style={styles.readOnly}>Read only</span>}
         {snapshot.status === "conflict" && (
           <>
@@ -126,12 +145,15 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
           <MonacoEditorHost
             modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}`}
             value={snapshot.text}
-            language={editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined)}
+            language={language}
             readOnly={readOnly}
+            minimap={minimap}
+            wordWrap={wordWrap}
             ariaLabel="Text content"
             onChange={(value) => sessionRef.current?.edit(value)}
             onCursorChange={setCursor}
             onReadyChange={setMonacoReady}
+            onCommandApiChange={setCommandApi}
           />
         </div>
       )}
@@ -140,6 +162,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <div style={editorErrorStyle} role="alert">{saveAsError ?? snapshot.error}</div>
       )}
       <NativeAppStatusStrip style={styles.status}>
+        <span>{editorLanguageDisplayName(language)}</span>
         <span>UTF-8</span>
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
@@ -168,13 +191,11 @@ const styles: Record<string, CSSProperties> = {
   toolbar: {
     flexWrap: "wrap",
   },
-  engineBadge: {
-    padding: "4px 7px",
-    border: "1px solid var(--plasmon-border-subtle)",
-    borderRadius: "var(--plasmon-radius-control)",
-    background: "var(--plasmon-window-background)",
-    color: "var(--plasmon-accent-hover)",
-    font: "600 var(--plasmon-font-size-small)/1.2 var(--plasmon-font-ui)",
+  toolbarDivider: {
+    alignSelf: "stretch",
+    width: 1,
+    minHeight: 24,
+    background: "var(--plasmon-border-subtle)",
   },
   saveAsLabel: {
     display: "flex",
