@@ -63,6 +63,7 @@ for (const option of [
   "window-lifetime",
   "monaco",
   "emulatorjs",
+  "saved-preview",
 ]) {
   requireFragment(workflow, `          - ${option}`, "flake-probe dispatch target choices");
 }
@@ -81,6 +82,7 @@ const runnerFragments = [
   "run_one test/e2e/plasmon-golden-path-window-lifetime.spec.ts",
   "run_one test/e2e/plasmon-monaco-packaged.spec.ts",
   "run_one test/e2e/plasmon-emulatorjs-proof.spec.ts",
+  "run_one test/e2e/plasmon-demo-game.spec.ts --grep @issue-304",
 ];
 for (const fragment of runnerFragments) {
   requireFragment(runner, fragment, "flake-probe runner");
