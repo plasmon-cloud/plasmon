@@ -17,6 +17,7 @@ const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 2, issues: ['@issue-251', '@issue-308'] },
   'test/e2e/plasmon-review-demo.spec.ts': { count: 1, issues: ['@issue-303'] },
   'test/e2e/plasmon-emulatorjs-proof.spec.ts': { count: 1, issues: ['@issue-245'] },
+  'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
 });
 
 function sameSet(actual, expected) {
@@ -111,6 +112,20 @@ async function verify(inventory) {
       assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
     }
   }
+
+  const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
+  assert(
+    demoGame.includes('{ tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] }'),
+    'Broad demo-game acceptance must remain required for #250/#123/#202/#64 without @r2-quarantine',
+  );
+  assert(
+    demoGame.includes('{ tag: ["@r2-quarantine", "@issue-124", "@issue-304"] }'),
+    '#304 quarantine must remain isolated to the dedicated #124 saved-preview acceptance',
+  );
+  assert(
+    demoGame.includes('toHaveAttribute("src", /^blob:/'),
+    '#304 executable debt must retain the required blob-backed preview assertion',
+  );
 
   const browserHealth = await readFile(resolve(repoRoot, 'test/e2e/plasmon-browser-health.ts'), 'utf8');
   assert(browserHealth.includes('#305'), 'BrowserHealth exact warning quarantine must remain linked to #305');
