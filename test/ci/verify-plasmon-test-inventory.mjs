@@ -92,10 +92,13 @@ async function verify(inventory) {
 
   const rootPackage = JSON.parse(await readFile(resolve(repoRoot, 'package.json'), 'utf8'));
   verifyBrowserScript(rootPackage.scripts, 'test:e2e:plasmon:smoke', browserLanes.smoke);
-  verifyBrowserScript(rootPackage.scripts, 'test:e2e:plasmon:specialist', browserLanes.specialist);
   const specialistScript = rootPackage.scripts['test:e2e:plasmon:specialist'] ?? '';
-  assert(specialistScript.includes('playwright test --workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistScript.includes('--grep-invert @r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
+  assert(specialistScript.includes('test/ci/run-plasmon-specialist.mjs'), 'Specialist acceptance must use automatic inventory discovery');
+  const specialistRunner = await readFile(resolve(repoRoot, 'test/ci/run-plasmon-specialist.mjs'), 'utf8');
+  assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
+  assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
+  assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
+  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
   for (const path of browserLanes.specialist) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
