@@ -17,6 +17,7 @@ const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 2, issues: ['@issue-251', '@issue-308'] },
   'test/e2e/plasmon-review-demo.spec.ts': { count: 1, issues: ['@issue-303'] },
   'test/e2e/plasmon-emulatorjs-proof.spec.ts': { count: 1, issues: ['@issue-245'] },
+  'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
 });
 
 function sameSet(actual, expected) {
@@ -93,10 +94,13 @@ async function verify(inventory) {
 
   const rootPackage = JSON.parse(await readFile(resolve(repoRoot, 'package.json'), 'utf8'));
   verifyBrowserScript(rootPackage.scripts, 'test:e2e:plasmon:smoke', browserLanes.smoke);
-  verifyBrowserScript(rootPackage.scripts, 'test:e2e:plasmon:specialist', browserLanes.specialist);
   const specialistScript = rootPackage.scripts['test:e2e:plasmon:specialist'] ?? '';
-  assert(specialistScript.includes('playwright test --workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistScript.includes('--grep-invert @r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
+  assert(specialistScript.includes('test/ci/run-plasmon-specialist.mjs'), 'Specialist acceptance must use automatic inventory discovery');
+  const specialistRunner = await readFile(resolve(repoRoot, 'test/ci/run-plasmon-specialist.mjs'), 'utf8');
+  assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
+  assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
+  assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
+  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
   for (const path of browserLanes.specialist) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
@@ -111,6 +115,20 @@ async function verify(inventory) {
       assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
     }
   }
+
+  const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
+  assert(
+    demoGame.includes('{ tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] }'),
+    'Broad demo-game acceptance must remain required for #250/#123/#202/#64 without @r2-quarantine',
+  );
+  assert(
+    demoGame.includes('{ tag: ["@r2-quarantine", "@issue-124", "@issue-304"] }'),
+    '#304 quarantine must remain isolated to the dedicated #124 saved-preview acceptance',
+  );
+  assert(
+    demoGame.includes('toHaveAttribute("src", /^blob:/'),
+    '#304 executable debt must retain the required blob-backed preview assertion',
+  );
 
   const browserHealth = await readFile(resolve(repoRoot, 'test/e2e/plasmon-browser-health.ts'), 'utf8');
   assert(browserHealth.includes('#305'), 'BrowserHealth exact warning quarantine must remain linked to #305');

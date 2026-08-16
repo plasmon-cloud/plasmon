@@ -1,8 +1,23 @@
 name: Plasmon Flake Probe
 
 on:
+  # This diagnostic workflow is intentionally absent from unrelated PRs.
+  # Any new/changed Plasmon test or test harness change schedules the probe;
+  # suspected flakes caused only by production changes remain manually dispatchable.
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "apps/plasmon/src/**/*.test.*"
+      - "apps/plasmon/src/**/*.spec.*"
+      - "apps/plasmon/test/**"
+      - "test/e2e/**"
+      - "test/ci/**"
+      - "playwright.config.ts"
+      - "package.json"
+      - "package-lock.json"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/plasmon-flake-probe.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -10,17 +25,19 @@ on:
         required: false
         type: string
       target:
-        description: Specialist boundary to probe
+        description: Test boundary to probe
         required: true
         default: specialist
         type: choice
         options:
+          - all
           - specialist
           - right-snap
           - left-snap
           - window-lifetime
           - monaco
           - emulatorjs
+          - saved-preview
 
 permissions:
   contents: read
@@ -31,12 +48,6 @@ concurrency:
 
 jobs:
   probe:
-    if: >-
-      ${{
-        github.event_name == 'workflow_dispatch' ||
-        (github.event.pull_request.base.ref == 'release/0.1.0-r2' &&
-          contains(github.event.pull_request.labels.*.name, 'ci:flake-probe'))
-      }}
     name: Flake probe ${{ matrix.attempt }}/10
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -47,7 +58,9 @@ jobs:
         attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     env:
-      PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'specialist' }}
+      # Automatic test-change probes cover both the fast and packaged browser
+      # boundaries. Manual dispatch remains available for a single boundary.
+      PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'all' }}
 
     steps:
       - name: Checkout exact probe ref
@@ -71,7 +84,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run fresh packaged Specialist probe
+      - name: Run fresh Plasmon probe
         id: probe
         continue-on-error: true
         run: |
@@ -126,9 +139,32 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Fail observed probe failure
+      - name: Report observed probe failure
         if: always() && steps.probe.outcome != 'success'
-        run: exit 1
+        run: |
+          set -u
+          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}"
+          context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
+
+          {
+            echo "## Plasmon flake probe attempt failure"
+            echo
+            echo "- Attempt: ${{ matrix.attempt }}/10"
+            echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
+            echo "- Target: \`${PROBE_TARGET:-unknown}\`"
+            echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
+            echo
+            if [ -n "$context_file" ]; then
+              echo "### First Playwright error context"
+              echo
+              sed -n '1,120p' "$context_file"
+            else
+              echo "No test-results error-context.md was found; diagnostics are available in artifact \`$diagnostic_artifact\`."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          exit 1
 
   summary:
     if: always() && needs.probe.result != 'skipped'
@@ -211,7 +247,7 @@ jobs:
             else
               echo "**FLAKE/FAILURE OBSERVED: only $passed/10 fresh attempts passed ($total/10 reported).**"
             fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
           if [ "$passed" -ne 10 ]; then
             exit 1

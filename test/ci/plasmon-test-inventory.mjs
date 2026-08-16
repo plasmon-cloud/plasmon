@@ -18,6 +18,7 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-right-snap.spec.ts',
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
+    'test/e2e/plasmon-drag-preview-66.spec.ts',
     'test/e2e/plasmon-monaco-packaged.spec.ts',
     'test/e2e/plasmon-review-demo.spec.ts',
     'test/e2e/plasmon-emulatorjs-proof.spec.ts',
@@ -78,6 +79,10 @@ export function classifyPlasmonTest(path) {
     for (const [lane, paths] of Object.entries(browserLanes)) {
       if (paths.includes(path)) return { layer: 'browser', lane };
     }
+    // New Plasmon browser specs are Specialist by default. Existing smoke,
+    // persistence, and quarantined ownership remains explicit above; this
+    // prevents a newly added Plasmon spec from silently escaping the probe.
+    if (path.startsWith('test/e2e/plasmon-')) return { layer: 'browser', lane: 'specialist' };
     const owner = nonPlasmonBrowserSpecs[path];
     if (owner) return { layer: 'non-plasmon-browser', owner };
     return { layer: 'unclassified-browser' };

@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type Dispatch,
@@ -54,6 +55,14 @@ interface EntryDragState {
   ids: NodeId[];
   moved: boolean;
   releaseSelection: SelectionState | null;
+  captureElement: HTMLDivElement;
+}
+
+interface DragPendingVisual {
+  dx: number;
+  dy: number;
+  clientX: number;
+  clientY: number;
 }
 
 interface MarqueePointerState {
@@ -72,6 +81,27 @@ interface MarqueePointerState {
 
 function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+function styleDragPreview(element: HTMLDivElement): void {
+  Object.assign(element.style, {
+    position: "fixed",
+    zIndex: "2147483646",
+    minWidth: "88px",
+    minHeight: "48px",
+    display: "grid",
+    placeItems: "center",
+    pointerEvents: "none",
+    padding: "8px 12px",
+    border: "1px solid rgba(169, 200, 255, .7)",
+    borderRadius: "9px",
+    background: "rgba(20, 32, 52, .92)",
+    boxShadow: "0 12px 30px rgba(0, 0, 0, .42)",
+    color: "#f4f8ff",
+    fontSize: "12px",
+    fontWeight: "650",
+    whiteSpace: "nowrap",
+  });
 }
 
 export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapterOptions) {
@@ -93,9 +123,17 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   const rootRef = useRef<HTMLDivElement | null>(null);
   const entriesRef = useRef(new Map<NodeId, HTMLDivElement>());
   const dragFrameRef = useRef<number | null>(null);
-  const dragPendingRef = useRef({ dx: 0, dy: 0 });
+  const dragPendingRef = useRef<DragPendingVisual>({
+    dx: 0,
+    dy: 0,
+    clientX: 0,
+    clientY: 0,
+  });
   const dropTargetRef = useRef<NodeId | null>(null);
   const dragRef = useRef<EntryDragState | null>(null);
+  const dragPreviewRef = useRef<HTMLDivElement | null>(null);
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
   const marqueeFrameRef = useRef<number | null>(null);
   const marqueePointerRef = useRef<MarqueePointerState | null>(null);
   const [marquee, setMarquee] = useState<MarqueeVisual | null>(null);
@@ -130,26 +168,99 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
 
   const clearDropTarget = () => setActiveDropTarget(null);
 
-  const applyDragTransform = (dx: number, dy: number) => {
-    const active = dragRef.current;
-    if (!active) return;
-    for (const id of active.ids) {
-      const element = entriesRef.current.get(id);
-      if (element) element.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+  const removeDragPreview = () => {
+    dragPreviewRef.current?.remove();
+    dragPreviewRef.current = null;
+  };
+
+  const updateDragPreview = (clientX: number, clientY: number, ids: readonly NodeId[]) => {
+    let preview = dragPreviewRef.current;
+    if (!preview) {
+      preview = document.createElement("div");
+      preview.className = "fm-drag-preview";
+      preview.dataset.fmDragPreview = "true";
+      preview.setAttribute("aria-hidden", "true");
+      styleDragPreview(preview);
+      document.body.append(preview);
+      dragPreviewRef.current = preview;
     }
+
+    preview.dataset.fmDragCount = String(ids.length);
+    const firstName = nodes.find((node) => node.id === ids[0])?.name;
+    preview.textContent = ids.length === 1
+      ? firstName ?? "1 item"
+      : `${ids.length} items`;
+    preview.style.left = `${clientX - 24}px`;
+    preview.style.top = `${clientY - 16}px`;
+  };
+
+  const applyDragVisual = () => {
+    const active = dragRef.current;
+    if (!active?.moved) return;
+    updateDragPreview(
+      dragPendingRef.current.clientX,
+      dragPendingRef.current.clientY,
+      active.ids,
+    );
   };
 
   const clearDragVisual = () => {
     const active = dragRef.current;
-    if (!active) return;
-    for (const id of active.ids) {
-      const element = entriesRef.current.get(id);
-      if (!element) continue;
-      element.style.transform = "";
-      element.style.pointerEvents = "";
-      element.classList.remove("is-dragging");
+    if (active) {
+      for (const id of active.ids) {
+        const element = entriesRef.current.get(id);
+        if (!element) continue;
+        element.style.transform = "";
+        element.style.pointerEvents = "";
+        element.classList.remove("is-dragging");
+      }
+    }
+    removeDragPreview();
+  };
+
+  const resetDragFrame = () => {
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    dragFrameRef.current = null;
+  };
+
+  const resetDragPending = () => {
+    dragPendingRef.current = { dx: 0, dy: 0, clientX: 0, clientY: 0 };
+  };
+
+  const releaseDragCapture = (active: EntryDragState) => {
+    if (active.captureElement.hasPointerCapture(active.pointerId)) {
+      active.captureElement.releasePointerCapture(active.pointerId);
     }
   };
+
+  const cancelActiveEntryDrag = (): boolean => {
+    const active = dragRef.current;
+    if (!active) return false;
+    const outcome = finishEntryDragGesture(active, selectionRef.current, true);
+    resetDragFrame();
+    clearDropTarget();
+    clearDragVisual();
+    dragRef.current = null;
+    resetDragPending();
+    releaseDragCapture(active);
+    setSelection(outcome.selection);
+    return true;
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !cancelActiveEntryDrag()) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  });
+
+  useEffect(() => () => {
+    resetDragFrame();
+    removeDragPreview();
+  }, []);
 
   const dragTargetAtPoint = (clientX: number, clientY: number): NodeId | null => {
     const active = dragRef.current;
@@ -167,6 +278,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     if (event.button !== 0 || renameNodeId === node.id) return;
     closeContextMenu();
     clearDropTarget();
+    clearDragVisual();
     rootRef.current?.focus({ preventScroll: true });
     const decision = decideEntryPointerSelection(selection, orderedIds, node.id, {
       additive: event.ctrlKey || event.metaKey,
@@ -180,6 +292,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       ids: [...decision.dragIds],
       moved: false,
       releaseSelection: decision.releaseSelection,
+      captureElement: event.currentTarget,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -201,11 +314,16 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       }
     }
     setActiveDropTarget(dragTargetAtPoint(event.clientX, event.clientY));
-    dragPendingRef.current = { dx, dy };
+    dragPendingRef.current = {
+      dx,
+      dy,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
     if (dragFrameRef.current !== null) return;
     dragFrameRef.current = requestAnimationFrame(() => {
       dragFrameRef.current = null;
-      applyDragTransform(dragPendingRef.current.dx, dragPendingRef.current.dy);
+      applyDragVisual();
     });
   };
 
@@ -213,17 +331,14 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const active = dragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
     const { dx, dy } = dragPendingRef.current;
-    const outcome = finishEntryDragGesture(active, selection, false);
+    const outcome = finishEntryDragGesture(active, selectionRef.current, false);
     const targetId = dragTargetAtPoint(event.clientX, event.clientY);
-    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
-    dragFrameRef.current = null;
+    resetDragFrame();
     clearDropTarget();
     clearDragVisual();
     dragRef.current = null;
-    dragPendingRef.current = { dx: 0, dy: 0 };
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
+    resetDragPending();
+    releaseDragCapture(active);
     if (!outcome.shouldDrop) {
       setSelection(outcome.selection);
       return;
@@ -279,17 +394,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   const handleEntryPointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
     const active = dragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
-    const outcome = finishEntryDragGesture(active, selection, true);
-    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
-    dragFrameRef.current = null;
-    clearDropTarget();
-    clearDragVisual();
-    dragRef.current = null;
-    dragPendingRef.current = { dx: 0, dy: 0 };
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setSelection(outcome.selection);
+    cancelActiveEntryDrag();
   };
 
   const processMarquee = () => {
