@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
 import { tryParseInternetShortcut } from "../../os/associations/shortcut.ts";
 import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppStateSurface,
+  NativeAppStatusStrip,
+} from "../../os/visual/index.ts";
+import {
   createObjectUrlLease,
   inferVideoMime,
   nativeVideoSupportForMime,
@@ -157,10 +163,14 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
   };
 
   return (
-    <section style={styles.root} aria-label="Video player" tabIndex={0} onKeyDown={keyDown}>
-      {loading && <div style={styles.message} role="status">Loading video bytes…</div>}
-      {error && <div style={styles.error} role="alert">{error}</div>}
-      {unsupported && <div style={styles.unsupported} role="alert">{unsupported}</div>}
+    <NativeAppContentSurface style={styles.root} aria-label="Video player" tabIndex={0} onKeyDown={keyDown}>
+      {loading && <NativeAppStateSurface role="status">Loading video bytes…</NativeAppStateSurface>}
+      {error && <NativeAppStateSurface tone="error" role="alert">{error}</NativeAppStateSurface>}
+      {unsupported && (
+        <NativeAppStateSurface style={styles.unsupported} role="alert">
+          {unsupported}
+        </NativeAppStateSurface>
+      )}
 
       {source?.kind === "video" && !unsupported && (
         <video
@@ -190,25 +200,52 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
             referrerPolicy="strict-origin-when-cross-origin"
             style={styles.video}
           />
-          <button type="button" style={styles.external} onClick={() => openExternal(source.externalUrl)}>Open externally</button>
+          <NativeAppButton type="button" style={styles.external} onClick={() => openExternal(source.externalUrl)}>
+            Open externally
+          </NativeAppButton>
         </>
       )}
 
       {source?.kind === "video" && !source.local && (
-        <button type="button" style={styles.external} onClick={() => openExternal(source.url)}>Open externally</button>
+        <NativeAppButton type="button" style={styles.external} onClick={() => openExternal(source.url)}>
+          Open externally
+        </NativeAppButton>
       )}
 
-      <div style={styles.help}>Space/K play-pause · ←/→ seek · ↑/↓ volume · F fullscreen</div>
-    </section>
+      <NativeAppStatusStrip style={styles.help}>
+        Space/K play-pause · ←/→ seek · ↑/↓ volume · F fullscreen
+      </NativeAppStatusStrip>
+    </NativeAppContentSurface>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  root: { position: "relative", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", background: "#111", color: "#eee", outline: "none" },
-  video: { flex: 1, minHeight: 0, width: "100%", border: 0, background: "#000" },
-  message: { flex: 1, display: "grid", placeItems: "center", color: "#ccc" },
-  error: { padding: 12, background: "#3a1717", color: "#ffdada", textAlign: "center" },
-  unsupported: { flex: 1, display: "grid", placeItems: "center", padding: 28, background: "#161616", color: "#e8e8e8", textAlign: "center", lineHeight: 1.5 },
-  external: { position: "absolute", top: 10, right: 10, zIndex: 2 },
-  help: { padding: "6px 10px", fontSize: 12, color: "#b7bbc2", background: "#191919", textAlign: "center" },
+  root: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    justifyContent: "center",
+    outline: "none",
+  },
+  video: {
+    flex: 1,
+    minHeight: 0,
+    width: "100%",
+    border: 0,
+    background: "#000",
+  },
+  unsupported: {
+    lineHeight: 1.5,
+  },
+  external: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 2,
+  },
+  help: {
+    justifyContent: "center",
+    textAlign: "center",
+  },
 };
