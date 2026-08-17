@@ -44,7 +44,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   for (const path of [
     `/app/${APP_ID}/index.html`,
-    `/app/${APP_ID}/monaco-workers/editor.worker.js`,
+    `/app/${APP_ID}/runtime/monaco/editor.worker.js`,
   ]) {
     const response = await request.get(new URL(path, kernelUrl).href);
     expect(response.ok(), `${path} should be served from the installed package`).toBe(true);

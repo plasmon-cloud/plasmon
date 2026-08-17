@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFile, readdir } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 import {
   generateAppMethodSchemaArtifact,
   validateAppMethodArgs,
@@ -37,6 +38,15 @@ const emulatorBrowserCoreUrl = new URL("../dist/web/runtime/emulatorjs/data/core
 const emulatorBrowserLegacyCoreUrl = new URL("../dist/web/runtime/emulatorjs/data/cores/fceumm-legacy-wasm.data", import.meta.url);
 const emulatorBrowserExtract7zUrl = new URL("../dist/web/runtime/emulatorjs/data/compression/extract7z.js", import.meta.url);
 const emulatorFixtureUrl = new URL("../dist/web/Games/Test ROMs/PlasmonTest.nes", import.meta.url);
+const monacoBrowserTransportUrl = new URL("../dist/web/runtime/monaco/worker-sources.js", import.meta.url);
+const monacoBrowserTransportDirectoryUrl = new URL("../dist/web/runtime/monaco/", import.meta.url);
+const monacoWorkers = [
+  "editor.worker.js",
+  "json.worker.js",
+  "css.worker.js",
+  "html.worker.js",
+  "ts.worker.js",
+] as const;
 
 async function readManifest(): Promise<NeutronManifest> {
   return JSON.parse(await readFile(manifestUrl, "utf8")) as NeutronManifest;
@@ -217,6 +227,29 @@ test("plasmon packages EmulatorJS authority, URL-safe browser assets, NES core, 
   expect(browserExtract7z).toEqual(extract7z);
   expect(fixture.length).toBe(16 + 16_384 + 8_192);
   expect([...fixture.subarray(0, 8)]).toEqual([0x4e, 0x45, 0x53, 0x1a, 0x01, 0x01, 0x00, 0x00]);
+});
+
+test("#89 Monaco browser transports remain byte-identical to Program Files authority", async () => {
+  const transportScript = await readFile(monacoBrowserTransportUrl, "utf8");
+  const transportScope: Record<string, unknown> = {};
+  runInNewContext(transportScript, transportScope);
+  const sources = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string> | undefined;
+
+  expect(sources).toBeDefined();
+  for (const worker of monacoWorkers) {
+    const [canonical, httpMirror] = await Promise.all([
+      readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url)),
+      readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url)),
+    ]);
+    const transported = Buffer.from(sources?.[worker] ?? "", "utf8");
+    expect(canonical.length, `${worker} canonical worker must contain runtime bytes`).toBeGreaterThan(100);
+    expect(httpMirror, `${worker} URL-safe mirror must be byte-identical to Program Files`).toEqual(canonical);
+    expect(transported, `${worker} opaque preload must be byte-identical to Program Files`).toEqual(canonical);
+  }
+
+  expect((await readdir(monacoBrowserTransportDirectoryUrl)).sort()).toEqual(
+    [...monacoWorkers, "worker-sources.js"].sort(),
+  );
 });
 
 test("plasmon package contains the deterministic redistributable js-dos demo fixture", async () => {

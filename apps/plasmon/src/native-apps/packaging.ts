@@ -40,14 +40,15 @@ const REQUIRED_ENGINE_INPUT_FRAGMENTS = [
   "/node_modules/dompurify/",
 ] as const;
 
+const MONACO_PROGRAM_FILES_OUTPUT_ROOT = "/dist/web/System/Program Files/MonacoEditor/";
 const REQUIRED_OUTPUT_SUFFIXES = [
   "/dist/web/main.js",
   "/dist/web/main.bundle.css",
-  "/dist/web/monaco-workers/editor.worker.js",
-  "/dist/web/monaco-workers/json.worker.js",
-  "/dist/web/monaco-workers/css.worker.js",
-  "/dist/web/monaco-workers/html.worker.js",
-  "/dist/web/monaco-workers/ts.worker.js",
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}json.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}css.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}html.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}ts.worker.js`,
 ] as const;
 
 function normalized(value: string): string {
@@ -98,6 +99,10 @@ export function assertMatureNativeAppBundle(metafile: BuildMetafileLike): void {
     if (!hasSuffix(outputPaths, suffix)) {
       throw new Error(`Native app package build is missing required output ${suffix}`);
     }
+  }
+
+  if (outputPaths.some((path) => normalized(path).includes("/dist/web/monaco-workers/"))) {
+    throw new Error("Native app package build still emits the legacy top-level Monaco worker path");
   }
 }
 

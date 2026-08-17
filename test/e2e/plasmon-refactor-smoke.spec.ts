@@ -52,18 +52,6 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
         reason: "Same tracked product URL-resolution defect #190; aborted icon requests are a consequence of the wrong Kernel-root path",
       },
       {
-        kind: "console.warn",
-        messageIncludes: "Could not create web worker(s). Falling back to loading web worker code in main thread",
-        urlPathPrefix: "/app/plasmon/main.js",
-        reason: "Tracked packaged Monaco worker defect #67/#200",
-      },
-      {
-        kind: "console.warn",
-        messageIncludes: "cannot be accessed from origin 'null'",
-        urlPathPrefix: "/app/plasmon/main.js",
-        reason: "Tracked opaque-origin Monaco worker defect #67/#200",
-      },
-      {
         kind: "console.error",
         messageIncludes: "Failed to execute 'estimate' on 'StorageManager'",
         reason: "Tracked packaged js-dos sandbox/storage defect #202",
@@ -135,7 +123,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
 
     for (const path of [
       `/app/${PLASMON_APP_ID}/index.html`,
-      `/app/${PLASMON_APP_ID}/monaco-workers/editor.worker.js`,
+      `/app/${PLASMON_APP_ID}/runtime/monaco/editor.worker.js`,
       `/app/${PLASMON_APP_ID}/fixtures/PlasmonDemo.jsdos`,
       `/app/${REVIEW_APP_ID}/index.html`,
     ]) {
@@ -204,8 +192,8 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
 
     // Create and open one ordinary document through Desktop/FileManager. The
     // browser assertion protects the packaged editor boundary; association/open
-    // semantics remain covered in the deterministic guard. Worker startup
-    // failures remain owned by #67/#200 until that product fix lands.
+    // semantics remain covered in the deterministic guard. #89 now owns the
+    // canonical worker path and keeps worker fallback/security warnings fatal.
     const desktopFiles = plasmon.getByRole("listbox", { name: "Files" }).first();
     const desktopBounds = await desktopFiles.boundingBox();
     if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");
