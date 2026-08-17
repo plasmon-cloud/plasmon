@@ -58,6 +58,7 @@ function cleanTitle(value) {
   return stripAnsi(value)
     .replace(/\s+\(\d+(?:\.\d+)?(?:ms|s)\)\s*$/, "")
     .replace(/\s+\[[\d.]+(?:ms|s)\]\s*$/, "")
+    .replace(/\s+[─━═]{3,}\s*$/, "")
     .trim();
 }
 
@@ -76,11 +77,31 @@ function extractFailures(output) {
       continue;
     }
 
-    const playwright = line.match(
-      /((?:apps\/plasmon\/|test\/)[^\s:]+\.(?:test|spec)\.[A-Za-z0-9]+):\d+:\d+\s+›\s+(.+)$/,
+    // Playwright's list reporter prints every completed test with the same
+    // file:line › title shape. Only lines carrying an actual failure marker
+    // are failures; matching the common shape alone would count every ✓ pass.
+    const playwrightRunFailure = line.match(
+      /^\s*[✘×]\s+\d+\s+\[[^\]]+\]\s+›\s+((?:apps\/plasmon\/|test\/)[^\s:]+\.(?:test|spec)\.[A-Za-z0-9]+):\d+:\d+\s+›\s+(.+)$/u,
     );
-    if (playwright) {
-      found.push({ file: playwright[1], title: cleanTitle(playwright[2]) });
+    if (playwrightRunFailure) {
+      found.push({
+        file: playwrightRunFailure[1],
+        title: cleanTitle(playwrightRunFailure[2]),
+      });
+      continue;
+    }
+
+    // The same Playwright failure is repeated later as a numbered detail
+    // heading. Parse it as a fallback, normalize the rule decoration, and let
+    // the per-attempt de-duplication below collapse it with the run line.
+    const playwrightDetailFailure = line.match(
+      /^\s*\d+\)\s+\[[^\]]+\]\s+›\s+((?:apps\/plasmon\/|test\/)[^\s:]+\.(?:test|spec)\.[A-Za-z0-9]+):\d+:\d+\s+›\s+(.+)$/,
+    );
+    if (playwrightDetailFailure) {
+      found.push({
+        file: playwrightDetailFailure[1],
+        title: cleanTitle(playwrightDetailFailure[2]),
+      });
       continue;
     }
 
