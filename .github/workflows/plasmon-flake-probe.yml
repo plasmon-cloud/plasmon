@@ -100,10 +100,13 @@ jobs:
       - name: Upload applicability evidence
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}
+          # Stable for this workflow run so a summary re-run can consume the
+          # original detector output when the successful detector is not rerun.
+          name: flake-probe-applicability-${{ github.run_id }}
           path: flake-probe-applicability/changed-files.txt
           if-no-files-found: error
           retention-days: 7
+          overwrite: true
 
   probe:
     if: needs.applicability.outputs.applicable == 'true'
@@ -171,10 +174,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}
+          # One logical artifact per matrix slot. Re-running a failed slot
+          # replaces only that slot while the other nine remain available.
+          name: flake-probe-result-${{ github.run_id }}-${{ matrix.attempt }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
+          overwrite: true
 
       - name: Collect failed-attempt diagnostics
         if: always() && steps.probe.outcome != 'success'
@@ -195,16 +201,17 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}
+          name: flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
+          overwrite: true
 
       - name: Report observed probe failure
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
-          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}"
+          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}"
           context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
 
           {
@@ -256,20 +263,20 @@ jobs:
       - name: Download applicability evidence
         uses: actions/download-artifact@v4
         with:
-          name: flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}
+          name: flake-probe-applicability-${{ github.run_id }}
           path: flake-probe-applicability
 
       - name: Download attempt results
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*
+          pattern: flake-probe-result-${{ github.run_id }}-*
           path: flake-probe-results
 
       - name: Download failed-attempt diagnostics
         if: needs.probe.result != 'success'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-*
+          pattern: flake-probe-diagnostics-${{ github.run_id }}-*
           path: flake-probe-diagnostics
 
       - name: Summarize exact-head stability
