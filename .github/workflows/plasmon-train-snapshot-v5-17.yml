@@ -1,0 +1,44 @@
+name: Plasmon Train Snapshot v5.17
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-17
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-17.yml
+      - .github/plasmon-train-snapshot-trigger-v5-17.txt
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact helper branch
+        uses: actions/checkout@v4
+
+      - name: Build compact r2 train snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: plasmon-cloud/plasmon
+          TARGET: release/0.1.0-r2
+          MILESTONE_TITLE: 0.1.0-r2
+          CLAIM_ASSIGNEE: 3E4B54
+          HELPER_SHA: ${{ github.sha }}
+          TRIGGER_PATH: .github/plasmon-train-snapshot-trigger-v5-17.txt
+        shell: bash
+        run: |
+          cat .github/plasmon-train-v5-17/chunk-*.pyfrag > /tmp/plasmon-train-snapshot-v5-17.py
+          python3 /tmp/plasmon-train-snapshot-v5-17.py
+
+      - name: Upload train snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot-v5-17
+          path: plasmon-train-snapshot-v5-17.json
+          retention-days: 1
+          if-no-files-found: error
