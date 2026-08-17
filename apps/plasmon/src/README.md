@@ -24,6 +24,14 @@ Always verify reachability from this path before treating old source as active p
 
 The prior GUI experiment and parallel platform compatibility layer have been retired from the active source tree. Git history remains the recovery source for those experiments; new work must not recreate either as an alternate OS/runtime authority.
 
+## Retired presentation boundaries
+
+The former parallel frontend trees `gui2/` and `platform/` are intentionally absent. Their useful behavior has either migrated into the canonical OS/native-application graph or remains available only through Git history for reference. Active source must not import or recreate those trees as compatibility shortcuts.
+
+`issue-201-presentation-retirement.test.ts` mechanically preserves that retirement in the normal fast Bun lane. New shared presentation belongs in `os/visual/` only when multiple active consumers demonstrate common presentation meaning; semantic filesystem, process, association, windowing, and application behavior stays with its owning subsystem.
+
+A repository-wide dead-code/export dependency is intentionally not added merely to satisfy a tooling checkbox. For the known retired frontend boundaries, the actionable evidence is stronger and deterministic: the directories are absent and active source imports are guarded. Add broader dead-code tooling only after evaluating it against the current active source graph and demonstrating a low-noise signal that finds actionable production leftovers.
+
 ## Convergence direction
 
 New product behavior should normally land in `os/**` or `native-apps/**`. When historical code contains behavior worth keeping, migrate that behavior into the owning canonical subsystem and add verification before removing the old path.
