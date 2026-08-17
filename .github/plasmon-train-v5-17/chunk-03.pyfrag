@@ -1,0 +1,110 @@
+def flake_summary_evidence(head, check):
+    """Best-effort bridge from the landed enhanced summary into train evidence.
+
+    Failure to parse diagnostic detail is never a snapshot-fatal condition.
+    Required check conclusion remains the CI authority; this only saves the
+    operator from redoing summary archaeology after DIAGNOSE_TERMINAL_RED.
+    """
+    evidence = {}
+    try:
+        link = str((check or {}).get("link") or "")
+        run_id = job_id = None
+        match = re.search(r"/actions/runs/(\d+)(?:/job/(\d+))?", link)
+        if match:
+            run_id = int(match.group(1))
+            job_id = int(match.group(2)) if match.group(2) else None
+
+        if job_id is None and head:
+            check_runs = api(f"/commits/{head}/check-runs?per_page=100")
+            for row in check_runs.get("check_runs") or []:
+                if str(row.get("name") or "") != FLAKE_SUMMARY_CHECK_NAME:
+                    continue
+                details = str(row.get("details_url") or row.get("html_url") or "")
+                found = re.search(r"/actions/runs/(\d+)/job/(\d+)", details)
+                if found:
+                    run_id = int(found.group(1)); job_id = int(found.group(2)); link = details
+                    break
+
+        if run_id is not None:
+            evidence["workflow_run_id"] = run_id
+            try:
+                run = api(f"/actions/runs/{run_id}")
+                if run.get("run_attempt") is not None:
+                    evidence["workflow_run_attempt"] = int(run.get("run_attempt"))
+            except Exception:
+                pass
+        if job_id is not None:
+            evidence["summary_job_id"] = job_id
+        if link:
+            evidence["summary_check_link"] = link
+        if job_id is None:
+            return evidence
+
+        log = api_text(f"/actions/jobs/{job_id}/logs")
+        # The summary renderer writes these exact stable labels to stdout and
+        # GITHUB_STEP_SUMMARY. Actions logs may prefix timestamps, so search
+        # rather than requiring line starts.
+        patterns = {
+            "exact_sha": r"Exact SHA:\s+`([0-9a-f]{40})`",
+            "fresh_attempts_reported": r"Fresh attempts reported:\s+(\d+)/10",
+            "passed_count": r"First-attempt passes:\s+(\d+)/10",
+            "failure_occurrences": r"Failure occurrences parsed:\s+(\d+)",
+            "unique_failing_tests": r"Unique failing tests parsed:\s+(\d+)",
+        }
+        for key, pattern in patterns.items():
+            found = re.search(pattern, log)
+            if found:
+                value = found.group(1)
+                evidence[key] = int(value) if key != "exact_sha" else value
+        failed = re.search(r"Failed attempts:\s+([^\r\n]+)", log)
+        if failed:
+            raw_failed = failed.group(1).strip().split()[0] if failed.group(1).strip() == "none" else failed.group(1).strip()
+            if raw_failed == "none":
+                evidence["failed_attempts"] = []
+            else:
+                evidence["failed_attempts"] = [int(x) for x in re.findall(r"\d+", raw_failed)]
+        if evidence.get("passed_count") is not None:
+            evidence["failed_count"] = 10 - int(evidence["passed_count"])
+
+        failures = []
+        current = None
+        for line in log.splitlines():
+            file_match = re.search(r"\*\*\((\d+) failure occurrence\(s\)\) `([^`]+)` — ([A-Z ]+)\*\*", line)
+            if file_match:
+                current = {
+                    "file": file_match.group(2),
+                    "relation": file_match.group(3).strip().replace(" ", "_"),
+                    "occurrences": int(file_match.group(1)),
+                    "tests": [],
+                }
+                failures.append(current)
+                continue
+            test_match = re.search(r"[├└]─ `([^`]+)` — (\d+) occurrence\(s\), attempt\(s\) ([0-9, ]+)", line)
+            if test_match and current is not None:
+                current["tests"].append({
+                    "title": test_match.group(1),
+                    "occurrences": int(test_match.group(2)),
+                    "attempts": [int(x) for x in re.findall(r"\d+", test_match.group(3))],
+                })
+        if failures:
+            evidence["failures"] = failures
+
+        unparsed = []
+        for match in re.finditer(r"Attempt (\d+): inspect diagnostic artifact `([^`]+)`", log):
+            unparsed.append({"attempt": int(match.group(1)), "diagnostic_artifact": match.group(2)})
+        if unparsed:
+            evidence["unparsed_failed_attempts"] = unparsed
+    except Exception:
+        # Evidence enrichment must never make the authoritative lane snapshot
+        # unavailable. The check conclusion itself is still present.
+        return evidence
+    return evidence
+
+helper_operation = trigger_directive()
+if helper_operation.get("kind") == "rerun":
+    run_id = int(helper_operation["run_id"])
+    api_post(f"/actions/runs/{run_id}/rerun", {})
+    helper_operation = {**helper_operation, "status": "requested"}
+    print(f"Requested whole-workflow rerun for Actions run {run_id}")
+
+milestones = pages("/milestones?state=all")
