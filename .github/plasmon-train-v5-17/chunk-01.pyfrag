@@ -1,0 +1,110 @@
+import base64
+import json
+import os
+import re
+import subprocess
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+REPO = os.environ["REPO"]
+TARGET = os.environ["TARGET"]
+MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
+CLAIM_ASSIGNEE = os.environ["CLAIM_ASSIGNEE"]
+TOKEN = os.environ["GH_TOKEN"]
+BASE = f"https://api.github.com/repos/{REPO}"
+API_VERSION = "2026-03-10"
+# GENERATED MIRROR of train-v5-17.py R2_TRAIN_GATE_POLICY.
+# The Python scheduler is canonical; its self-test asserts this helper carries
+# the same complete typed r2 policy so transport and scheduling cannot drift.
+TRAIN_GATE_POLICY = {
+    200: {89: "READY_SIGNAL"},
+    113: {200: "READY_SIGNAL"},
+    114: {113: "READY_SIGNAL"},
+    91: {193: "READY_SIGNAL"},
+    175: {91: "READY_SIGNAL"},
+    201: {197: "READY_SIGNAL", 200: "READY_SIGNAL"},
+    124: {64: "READY_SIGNAL"},
+}
+FLAKE_SUMMARY_CHECK_NAME = "Flake probe summary"
+# r2 release-train required contexts. These are GitHub Check Run *job names*,
+# not workflow display names and not the current PR base branch's ruleset view.
+R2_REQUIRED_CHECKS = {
+    "fast": ("Fast Bun tests",),
+    "browser_persistence": ("Packaged browser persistence",),
+    "packaged_smoke": ("Packaged refactor smoke",),
+    "kernel": ("kernel",),
+    "packaged_browser": ("Packaged Playwright specialist acceptance",),
+    "flake_summary": (FLAKE_SUMMARY_CHECK_NAME,),
+}
+
+def api(path):
+    url = path if path.startswith("https://") else BASE + path
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": API_VERSION,
+        "User-Agent": "plasmon-train-snapshot-v5.17",
+    })
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return json.load(response)
+
+def api_text(path):
+    url = path if path.startswith("https://") else BASE + path
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": API_VERSION,
+        "User-Agent": "plasmon-train-snapshot-v5.17",
+    })
+    with urllib.request.urlopen(req, timeout=30) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+def api_post(path, payload=None):
+    url = path if path.startswith("https://") else BASE + path
+    data = json.dumps(payload or {}).encode("utf-8")
+    req = urllib.request.Request(url, data=data, method="POST", headers={
+        "Authorization": f"Bearer {TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": API_VERSION,
+        "User-Agent": "plasmon-train-snapshot-v5.17",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return {"status": int(response.status), "body": body}
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"POST {path} failed HTTP {exc.code}: {body[:500]}") from exc
+
+def trigger_directive():
+    sha = os.environ.get("HELPER_SHA")
+    path = os.environ.get("TRIGGER_PATH")
+    if not sha or not path:
+        return {"kind": "snapshot"}
+    row = api("/contents/" + urllib.parse.quote(path, safe="/") + "?ref=" + urllib.parse.quote(sha, safe=""))
+    encoded = str(row.get("content") or "").replace("\n", "")
+    if not encoded:
+        return {"kind": "snapshot"}
+    text = base64.b64decode(encoded).decode("utf-8", errors="replace").strip()
+    match = re.fullmatch(r"rerun:(\d+):([0-9A-Za-z._-]+)", text)
+    if match:
+        return {"kind": "rerun", "run_id": int(match.group(1)), "token": match.group(2), "raw": text}
+    return {"kind": "snapshot", "raw": text}
+
+def check_bucket(check):
+    status = str((check or {}).get("status") or "").lower()
+    conclusion = str((check or {}).get("conclusion") or "").lower()
+    if status != "completed":
+        return "pending"
+    if conclusion in {"success", "skipped", "neutral"}:
+        return "pass" if conclusion == "success" else "skipping"
+    if conclusion in {"failure", "cancelled", "timed_out", "action_required", "startup_failure", "stale"}:
+        return "fail"
+    return "pending"
+
+def exact_head_required_checks(head):
+    payload = api(f"/commits/{head}/check-runs?filter=latest&per_page=100") if head else {}
+    raw_runs = payload.get("check_runs") or []
