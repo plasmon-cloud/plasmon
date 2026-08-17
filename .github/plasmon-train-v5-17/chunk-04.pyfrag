@@ -1,0 +1,110 @@
+milestone = next((m for m in milestones if m.get("title") == MILESTONE_TITLE), None)
+if milestone is None: raise RuntimeError(f"milestone {MILESTONE_TITLE!r} not found")
+milestone_number = int(milestone["number"])
+before = (int(milestone.get("open_issues") or 0), int(milestone.get("closed_issues") or 0))
+
+raw_issues = [x for x in pages(f"/issues?milestone={milestone_number}&state=all") if "pull_request" not in x]
+if len(raw_issues) != sum(before):
+    raise RuntimeError(f"incomplete lane: milestone says {sum(before)}, fetched {len(raw_issues)}")
+
+rows, by_num = [], {}
+for raw in raw_issues:
+    number = int(raw["number"])
+    open_state = str(raw.get("state", "open")).lower() == "open"
+    labels = labels_of(raw)
+    assignees = assignees_of(raw)
+    area = field_value(raw, "Area")
+    deps, dep_states = [], {}
+    if open_state:
+        summary = raw.get("issue_dependencies_summary") or {}
+        expected = int(summary.get("blocked_by") or summary.get("total_blocked_by") or 0)
+        if expected:
+            blocked = pages(f"/issues/{number}/dependencies/blocked_by")
+            for dep in blocked:
+                dep_num = int(dep["number"]); deps.append(dep_num); dep_states[str(dep_num)] = str(dep.get("state", "unknown"))
+            if len(set(deps)) < expected:
+                raise RuntimeError(f"#{number} dependency summary says {expected}, fetched {len(set(deps))}")
+    issue_type = raw.get("type")
+    if isinstance(issue_type, dict): issue_type = issue_type.get("name")
+    row = {
+        "issue": number, "title": str(raw.get("title") or ""), "open": open_state,
+        "product": product(labels, area, raw.get("title") or ""),
+        "assignees": assignees, "claimed": CLAIM_ASSIGNEE in assignees,
+        "pr": None, "pr_branch": None, "pr_base": None,
+        "integrated_pr": None, "integrated_branch": None, "carried_by_pr": None, "target_integrated": False, "merged": False,
+        "desire": field_value(raw, "Desire"), "effort": field_value(raw, "Effort"),
+        "area": area, "type": issue_type, "labels": labels,
+        "dependencies": sorted(set(deps)), "dependency_states": dep_states,
+        "train_dependencies": sorted(TRAIN_GATE_POLICY.get(number, {}).keys()),
+        "train_dependency_states": {},
+        "train_dependency_gates": {str(dep): gate for dep, gate in TRAIN_GATE_POLICY.get(number, {}).items()},
+        "active": CLAIM_ASSIGNEE in assignees, "completed": not open_state,
+        "url": raw.get("html_url") or raw.get("url"),
+    }
+    rows.append(row); by_num[number] = row
+
+for row in rows:
+    for dep_num in row.get("train_dependencies", []):
+        parent = by_num.get(dep_num)
+        if parent is not None:
+            row["train_dependency_states"][str(dep_num)] = "open" if parent["open"] else "closed"
+
+branch_ref = api("/git/ref/heads/" + urllib.parse.quote(TARGET, safe=""))
+target_sha = ((branch_ref.get("object") or {}).get("sha"))
+if not target_sha: raise RuntimeError("could not resolve release target SHA")
+
+all_pulls = pages("/pulls?state=all")
+lane_numbers = set(by_num)
+mapped = []
+for pr in all_pulls:
+    issue_num = mapped_issue(pr, lane_numbers)
+    if issue_num is None: continue
+    mapped.append({
+        "number": int(pr["number"]), "issue": issue_num,
+        "state": str(pr.get("state") or "").lower(), "merged_at": pr.get("merged_at"),
+        "head": (pr.get("head") or {}).get("ref"), "base": (pr.get("base") or {}).get("ref"),
+        "merge_commit_sha": pr.get("merge_commit_sha"), "created_at": pr.get("created_at"),
+    })
+
+# The collection endpoint can omit merge_commit_sha for closed PRs. Enrich
+# only merged history attached to still-open lane Issues, because that is the
+# history needed to distinguish a durable claim from an orphaned claim.
+for rec in mapped:
+    if rec["state"] != "closed" or not rec["merged_at"] or rec.get("merge_commit_sha"):
+        continue
+    if not by_num[rec["issue"]]["open"]:
+        continue
+    # A merged PR whose base is TARGET is integrated by construction under
+    # this helper's own model. Do not make its historical merge SHA an
+    # availability dependency (#319 cold-run failure in v5.15).
+    if rec.get("base") == TARGET:
+        continue
+    detail = api(f"/pulls/{rec['number']}")
+    rec["merge_commit_sha"] = detail.get("merge_commit_sha")
+    rec["merged_at"] = detail.get("merged_at") or rec["merged_at"]
+    rec["head"] = ((detail.get("head") or {}).get("ref")) or rec["head"]
+    rec["base"] = ((detail.get("base") or {}).get("ref")) or rec["base"]
+    if not rec.get("merge_commit_sha"):
+        gh_detail = gh_json(["pr", "view", str(rec["number"]), "--repo", REPO, "--json", "mergeCommit,mergedAt,headRefName,baseRefName"]) or {}
+        merge_commit = gh_detail.get("mergeCommit") or {}
+        if isinstance(merge_commit, dict):
+            rec["merge_commit_sha"] = merge_commit.get("oid")
+        rec["merged_at"] = gh_detail.get("mergedAt") or rec["merged_at"]
+        rec["head"] = gh_detail.get("headRefName") or rec["head"]
+        rec["base"] = gh_detail.get("baseRefName") or rec["base"]
+    if by_num[rec["issue"]]["claimed"] and rec.get("base") != TARGET and not rec.get("merge_commit_sha"):
+        raise RuntimeError(f"claimed Issue #{rec['issue']} historical non-target PR #{rec['number']} merge commit unresolved")
+
+# Open PR mapping is authoritative and must be unique per Issue.
+for rec in mapped:
+    if rec["state"] != "open": continue
+    row = by_num[rec["issue"]]
+    if row["pr"] is not None and row["pr"] != rec["number"]:
+        raise RuntimeError(f"Issue #{rec['issue']} maps to multiple open PRs")
+    row["pr"] = rec["number"]; row["pr_branch"] = rec["head"]; row["pr_base"] = rec["base"]; row["active"] = True
+
+# Resolve merged stack history. Direct release merges are integrated. A merged
+# child of an open parent is carried by that parent. If that parent later
+# integrates, the child becomes integrated too.
+head_records = {}
+for rec in mapped:
