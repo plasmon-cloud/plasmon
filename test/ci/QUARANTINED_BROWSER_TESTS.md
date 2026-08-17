@@ -21,12 +21,15 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | EmulatorJS packaged readiness acceptance | `test/e2e/plasmon-emulatorjs-proof.spec.ts` — `packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets` — tags `@r2-quarantine @issue-245` | readiness timeout followed by passing retry | #245 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
 | #66 drag-preview / directory-drop completion | `test/e2e/plasmon-drag-preview-66.spec.ts` — `#66 active multi-selection drag preview is above windows and transparent to hit testing` — tags `@r2-quarantine @issue-66 @issue-320` | independent retry-free probes `31926388328` attempt 9/10 and `31950894639` attempt 8/10: final Explorer directory-drop source expected count 0, received 1 | #320 |
+| #86 diagnostic-selection / New Folder rename readiness | `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — `#86 diagnostic text selects without stealing FileEntry drag` — tags `@r2-quarantine @issue-86 @issue-330` | unrelated PR #328 flake probe `31976275024`, attempt 1/10: after `New Folder`, expected rename textbox never appears within 20s; Specialist result 1 failed / 8 passed | #330 |
 
 The #251 and #308 tests currently exhibit the same second-Explorer setup signature, but workflow v4.0 tracks their quarantine removal independently because each confirmed flaky test has its own dedicated repair Issue.
 
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
 The #320 quarantine is limited to the single #66 acceptance. The spec stays in Specialist inventory; only the tagged test is filtered. The two observed failures occur after the preview stacking/hit-testing checks, at the final canonical Explorer directory-drop completion assertion. Product Issue #66 remains the canonical behavior owner while #320 owns CI stability and restoration.
+
+The #330 quarantine is limited to the single #86 acceptance introduced by #274. The spec stays in Specialist inventory; only the tagged test is filtered. The archived unrelated-PR failure occurs during FileManager setup after choosing `New Folder`, before the diagnostic text-selection and post-dismissal drag contracts are reached. Product Issue #86 remains the canonical behavior owner while #330 owns CI stability and restoration.
 
 ## #244 right-snap / snap-preview restoration
 
@@ -65,6 +68,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — retained; only the #245 readiness/canvas/core-start acceptance is quarantined.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
 - `test/e2e/plasmon-drag-preview-66.spec.ts` — retained; its single #66/#320 acceptance is quarantined pending restoration proof.
+- `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — retained; its single #86/#330 acceptance is quarantined pending restoration proof.
 - `test/e2e/plasmon-first-demo.spec.ts` — required.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
@@ -78,5 +82,7 @@ A quarantined acceptance returns to required CI through its linked repair/restor
 For #304 specifically, the dedicated saved-preview acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the required `blob:` preview contract before this quarantine is removed. Static artwork remains a failure for that acceptance.
 
 For #320 specifically, the exact #66 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the final canonical Explorer directory-drop assertion before this quarantine is removed.
+
+For #330 specifically, the exact #86 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the diagnostic text-selection, no-stolen-drag-state, and post-dismissal FileEntry drag assertions before this quarantine is removed.
 
 No new quarantine is implied by a failed run. Preserve the evidence, classify it in #295, create/reuse the dedicated repair Issue, and add an explicit narrow quarantine change only when authorized.
