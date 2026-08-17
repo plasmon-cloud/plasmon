@@ -7,6 +7,14 @@ const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "first-demo";
 
+test("flake-summary example failure one", async () => {
+  expect("actual-one").toBe("expected-one");
+});
+
+test("flake-summary example failure two", async () => {
+  expect("actual-two").toBe("expected-two");
+});
+
 test("explicit first-demo fixtures are discoverable through packaged FileManager, Search, and native apps", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
