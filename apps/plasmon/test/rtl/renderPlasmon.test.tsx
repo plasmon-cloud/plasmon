@@ -14,6 +14,16 @@ const reviewElement: ExternalElement = {
   running: "no",
 };
 
+const reviewArchiveElement: ExternalElement = {
+  id: "review-archive",
+  name: "Review Archive",
+  description: "Archived review workspace.",
+  version: 1,
+  icon: "/app/review-archive/icon.svg",
+  tiles: [{ id: "review-archive", title: "Review Archive" }],
+  running: "no",
+};
+
 async function requireDesktop(app: Awaited<ReturnType<typeof renderPlasmon>>): Promise<FsNode> {
   const desktop = await app.environment.node("/Desktop");
   if (!desktop || desktop.kind !== "directory") throw new Error("Desktop was not bootstrapped");
@@ -91,6 +101,57 @@ describe("renderPlasmon", () => {
       await app.user.keyboard("{Escape}");
       await waitFor(() => expect(app.queryByRole("region", { name: "Start menu" })).toBeNull());
       expect(startButton.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      app.dispose();
+    }
+  });
+
+  test("keeps Search query, category, and semantic keyboard focus stable across the isolated surface", async () => {
+    const app = await renderPlasmon({ elements: [reviewElement, reviewArchiveElement] });
+
+    try {
+      const searchButton = app.getByRole("button", { name: "Search" });
+      await app.user.click(searchButton);
+      const searchRegion = await app.findByRole("region", { name: "Search" });
+      const searchInput = within(searchRegion).getByRole("textbox", { name: "Search Plasmon" });
+      await app.user.type(searchInput, "Review");
+
+      await within(searchRegion).findByText("Searching…");
+      await waitFor(
+        () => expect(within(searchRegion).queryByText("Searching…") === null).toBe(true),
+        { timeout: 5_000 },
+      );
+      await within(searchRegion).findByText(/Collaborative review workspace\./);
+      await within(searchRegion).findByText(/Archived review workspace\./);
+
+      await app.user.click(within(searchRegion).getByRole("tab", { name: "Media" }));
+      await within(searchRegion).findByText("No results in this category.");
+      expect(within(searchRegion).getByRole("tab", { name: "Media" }).getAttribute("aria-selected")).toBe("true");
+
+      await app.user.click(within(searchRegion).getByRole("tab", { name: "Apps" }));
+      await waitFor(() => expect(within(searchRegion).queryByText("No results in this category.") === null).toBe(true));
+      const liveReviewDescription = await within(searchRegion).findByText(/Collaborative review workspace\./);
+      const liveArchiveDescription = await within(searchRegion).findByText(/Archived review workspace\./);
+      const reviewResult = liveReviewDescription.closest("button");
+      const archiveResult = liveArchiveDescription.closest("button");
+      if (!reviewResult || !archiveResult) throw new Error("Expected two live Search result buttons");
+
+      reviewResult.focus();
+      expect(document.activeElement).toBe(reviewResult);
+      await app.user.keyboard("{ArrowDown}");
+      expect(document.activeElement).toBe(archiveResult);
+      await app.user.keyboard("{ArrowUp}");
+      expect(document.activeElement).toBe(reviewResult);
+
+      await app.user.click(searchButton);
+      await waitFor(() => expect(app.queryByRole("region", { name: "Search" }) === null).toBe(true));
+      await app.user.click(searchButton);
+      const reopened = await app.findByRole("region", { name: "Search" });
+      expect((within(reopened).getByRole("textbox", { name: "Search Plasmon" }) as HTMLInputElement).value).toBe("Review");
+      expect(within(reopened).getByRole("tab", { name: "Apps" }).getAttribute("aria-selected")).toBe("true");
+
+      await app.user.keyboard("{Escape}");
+      await waitFor(() => expect(app.queryByRole("region", { name: "Search" }) === null).toBe(true));
     } finally {
       app.dispose();
     }

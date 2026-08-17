@@ -20,13 +20,16 @@ The directory already separates a number of deterministic concerns:
 - `AltTabBoundary.tsx` — global Alt-Tab keyboard/presentation adapter that owns only ephemeral switcher selection;
 - `model.ts` — non-taskbar Start/tray/general Shell modeling plus compatibility re-exports during the taskbar migration;
 - `preferences.ts` — persisted shell preferences;
-- `search.ts` — search/query inventory, classification, limits, and invalidation;
+- `search.ts` — canonical Search inventory/query, projection/classification consumption, limits, filtering, cancellation helper, and invalidation adapter;
+- `search-surface-state.ts` — deterministic projection of canonical Search batches into explicit loading/error/warning/empty/result presentation state;
+- `use-search-surface-controller.ts` — transient Search query/category/request lifecycle over `searchShell`; it does not discover applications, classify resources, or launch results;
+- `SearchSurface.tsx` — rendered Search presentation and semantic result-list keyboard/focus translation;
 - `startMenu.ts` — Start inventory, reconciliation, and shortcut presentation metadata;
 - `interactions.ts` — shared Shell dismissal/context-ownership decisions plus compatibility re-exports of taskbar interaction policy;
 - `subscriptions.ts` — derived-state invalidation;
 - `calendar.ts` — date/calendar calculations.
 
-`Shell.tsx` composes those models with DOM/browser lifecycle, flyouts, keyboard/pointer events, and rendering. Focused Shell adapters may live beside it when their gesture/presentation boundary is independently testable; taskbar compatibility re-exports do not retain taskbar state, and the taskbar implementation/authority translation remains in `taskbar.ts`.
+`Shell.tsx` composes those models with Shell-global flyout exclusivity, Escape/outside dismissal, canonical activation callbacks, DOM/browser lifecycle, and rendering. Focused Shell adapters may live beside it when their gesture/presentation boundary is independently testable; taskbar compatibility re-exports do not retain taskbar state, and the taskbar implementation/authority translation remains in `taskbar.ts`. Search query/category/request state and Search result JSX are not duplicated in `Shell.tsx` after the Search surface cutover.
 
 ### Resource presentation
 
@@ -56,4 +59,4 @@ Feature-completeness work should use mature desktop conventions for discoverabil
 
 ## Testing
 
-Use fast tests for taskbar projection/actions/menu policy, Alt-Tab MRU/cycle/reconciliation policy, pin/preferences semantics, search classification/query ordering, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
+Use fast tests for taskbar projection/actions/menu policy, Alt-Tab MRU/cycle/reconciliation policy, pin/preferences semantics, canonical Search classification/query ordering plus deterministic Search surface state, Start reconciliation/models, calendar, click-away/context decisions, subscription invalidation, canonical filesystem activation adapters, and shared presentation adapters. Use RTL for Search query/category/result semantics and keyboard/focus behavior that does not depend on browser layout. Use the shared headless Plasmon environment for cross-authority activation semantics. Use real-browser tests for global keyboard shortcuts, focus movement, flyout/context-menu pointer routing, taskbar visible state, lifecycle events, and other DOM-dependent behavior. Installed Neutron checks are appropriate when the claim specifically involves a real Kernel application/tile; packaged-browser coverage is required for Plasmon-owned asset mount behavior.
