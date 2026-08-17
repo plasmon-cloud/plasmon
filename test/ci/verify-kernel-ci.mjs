@@ -48,7 +48,9 @@ function jobSection(jobId) {
 
 const pullRequest = eventSection("pull_request");
 if (pullRequest.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
-  throw new Error("Kernel CI cannot use pull_request path filtering; the required kernel check must always be instantiated");
+  throw new Error(
+    "Kernel CI cannot use pull_request path filtering; the required kernel check must always be instantiated",
+  );
 }
 
 const push = eventSection("push");
@@ -61,12 +63,12 @@ if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
   throw new Error("Kernel CI cannot path-filter direct pushes");
 }
 
-const scopeJob = jobSection("kernel_scope");
+forbidFragment("  kernel_scope:\n", "Kernel CI must expose only the required kernel job in the checks UI");
+
+const kernelJob = jobSection("kernel");
 for (const fragment of [
-  "name: Determine Kernel CI applicability",
-  "timeout-minutes: 5",
-  "run_kernel: ${{ steps.kernel_scope.outputs.run_kernel }}",
-  "name: Verify Kernel CI skip contract",
+  "name: kernel",
+  "name: Verify Kernel CI scope contract",
   "run: node test/ci/verify-kernel-ci.mjs",
   "name: Detect kernel-relevant changes",
   "id: kernel_scope",
@@ -77,20 +79,6 @@ for (const fragment of [
   "! kernel_relevant \"apps/plasmon/src/index.tsx\"",
   "kernel_relevant \"apps/kernel/package.json\"",
   "kernel_relevant \".github/workflows/kernel-ci.yml\"",
-]) {
-  if (!scopeJob.includes(fragment)) {
-    throw new Error(`Kernel CI applicability job lost required fragment: ${fragment}`);
-  }
-}
-
-const kernelJob = jobSection("kernel");
-for (const fragment of [
-  "name: kernel",
-  "needs: kernel_scope",
-  "if: ${{ always() && (needs.kernel_scope.result != 'success' || needs.kernel_scope.outputs.run_kernel == 'true') }}",
-  "name: Fail if applicability detection failed",
-  "if: ${{ needs.kernel_scope.result != 'success' }}",
-  "exit 1",
   "uses: cachix/install-nix-action@v31",
   "npm ci",
   "npm --workspace neutron-kernel run package",
@@ -101,19 +89,27 @@ for (const fragment of [
   }
 }
 
-for (const expensiveStep of ["Install Nix", "Show toolchain", "Install dependencies", "Kernel package", "Kernel tests"]) {
+for (const expensiveStep of [
+  "Install Nix",
+  "Show toolchain",
+  "Install dependencies",
+  "Kernel package",
+  "Kernel tests",
+]) {
   const marker = `      - name: ${expensiveStep}`;
   const start = kernelJob.indexOf(marker);
   if (start < 0) throw new Error(`Kernel required job lost ${expensiveStep}`);
   const next = kernelJob.indexOf("\n      - name:", start + marker.length);
   const step = kernelJob.slice(start, next < 0 ? kernelJob.length : next);
-  if (/^        if:/m.test(step)) {
-    throw new Error(`${expensiveStep} must not carry the old step-level scope conditional`);
+  if (!step.includes("if: steps.kernel_scope.outputs.run_kernel == 'true'")) {
+    throw new Error(`${expensiveStep} must be gated by the in-job Kernel scope detector`);
   }
 }
 
-forbidFragment("if: steps.kernel_scope.outputs.run_kernel == 'true'", "Kernel CI old green-noop contract");
-forbidFragment("satisfying required Kernel CI without full kernel build", "Kernel CI old green-noop messaging");
+forbidFragment("needs: kernel_scope", "Kernel CI separate applicability-job dependency");
+forbidFragment("Determine Kernel CI applicability", "Kernel CI noisy applicability check name");
 forbidFragment("continue-on-error: true");
 
-console.log("Kernel CI always-instantiated, job-level skip, fail-closed detector, stable kernel context, and full-lane contracts verified");
+console.log(
+  "Kernel CI always-instantiated, single-check UI, in-job cheap scope detection, stable kernel context, and conditional full-lane contracts verified",
+);
