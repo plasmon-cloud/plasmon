@@ -10,6 +10,8 @@ The packaged path starts at `index.tsx` and renders `os/PlasmonOS.tsx`. Treat `o
 
 Legacy/compatibility trees are migration sources, not alternate authorities. Do not add new product behavior there merely because an older implementation already contains a similar feature.
 
+The former parallel frontend trees `src/gui2/**` and `src/platform/**` are retired and physically absent from the active source tree. Do not recreate or import them as compatibility shortcuts. Git history is the recovery source for any behavior that still needs to be understood; migrate only accepted behavior into the owning `os/**` or `native-apps/**` authority.
+
 ## Boundaries
 
 - OS-wide state and services belong under `os/**`.
@@ -33,8 +35,12 @@ When retiring legacy source:
 
 Track concrete migrations and deletions in Issues rather than freezing them into this file.
 
+For repository-wide dead-code/export analysis, prefer a demonstrated low-noise signal over installing a general dependency speculatively. A focused deterministic boundary guard is preferable when the architectural retirement is already known and the broad tool has not demonstrated actionable findings on the current active source graph.
+
 ## Validation
 
 Use deterministic tests for production models/services/controllers. Use browser/package coverage when the behavior depends on the DOM, focus/pointer events, browser runtime APIs, packaged assets, or installed Neutron behavior.
+
+Architecture-retirement guards should run in the normal fast Bun lane. `issue-201-presentation-retirement.test.ts` protects the retired parallel frontend boundaries from being recreated or imported by active source.
 
 Do not declare a UI migration complete because a new component exists in the source graph; prove that the packaged entrypoint exercises the intended path when packaging is part of the claim.
