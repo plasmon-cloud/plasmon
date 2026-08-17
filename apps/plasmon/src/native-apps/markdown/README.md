@@ -1,8 +1,8 @@
 # Markdown editor
 
-Markdown is a Plasmon native document application built on the shared Monaco editor surface/document session from `../text/` plus a sanitized rendered preview.
+Markdown is a Plasmon native document application built on the shared Monaco browser-runtime host in `../shared/monaco/`, the shared document session from `../text/`, and a sanitized rendered preview.
 
-`MarkdownEditor.tsx` coordinates edit/split/preview presentation. `MarkdownPreview.tsx` and `render.ts` own rendered Markdown presentation/sanitization. Loading, dirty state, save/conflict behavior, persistence, and dirty-close decisions reuse the shared Text document infrastructure, including the same deterministic close model and Save / Discard / Cancel prompt.
+`MarkdownEditor.tsx` coordinates edit/split/preview presentation. `MarkdownPreview.tsx` and `render.ts` own rendered Markdown presentation/sanitization. Loading, dirty state, save/conflict behavior, persistence, and dirty-close decisions reuse the shared Text document infrastructure, including the same deterministic close model and Save / Discard / Cancel prompt. Monaco editor/model/worker lifecycle is not Text- or Markdown-owned; both apps consume `MonacoEditorHost`.
 
 Markdown does not own a second lifecycle or autosave policy. Like Text, it uses the shared document-session default of explicit Save with autosave OFF. Any future autosave opt-in must continue to come through the shared document-session/preference authority rather than Markdown-private persistence, and it must retain the same conflict/error and dirty-close semantics.
 
@@ -10,12 +10,12 @@ Ordinary close remains Process-owned; Markdown supplies only the same document d
 
 ## Refactor direction
 
-Keep Markdown-specific concerns limited to Markdown modes/rendering and commands. Editor engine lifecycle, filesystem document persistence, conflict handling, dirty-close behavior, and common editor chrome should stay shared with Text/other document applications.
+Keep Markdown-specific concerns limited to Markdown modes/rendering and commands. Editor browser lifecycle stays in `../shared/monaco/`; filesystem document persistence, conflict handling, and dirty-close behavior remain in shared document infrastructure rather than the editor host.
 
 If formatting or richer Markdown tooling is added, expose it through reusable command models rather than embedding one-off keyboard/UI logic throughout the component.
 
 ## Testing
 
-Use fast tests for rendering/sanitization, mode visibility, Markdown commands, and shared document/close semantics. Use real-browser/package tests for Monaco/workers, the actual rendered dirty-close interaction, split-pane focus/layout, editor commands, and rendered-link/browser behavior where DOM/engine behavior matters.
+Use fast tests for rendering/sanitization, mode visibility, Markdown commands, shared document/close semantics, and shared Monaco host policy. Use real-browser/package tests for Monaco/workers, the actual rendered dirty-close interaction, split-pane focus/layout, editor commands, and rendered-link/browser behavior where DOM/engine behavior matters.
 
 The packaged golden-path acceptance creates a real `.md` document through Explorer, opens it through normal filesystem association/process/window routing, waits for the shared semantic Monaco readiness contract (`data-editor-engine="monaco"`, `data-editor-ready="true"`, and the `Markdown source` editor label), edits and saves through the production document session, then closes/reopens and verifies the persisted source from the rendered Monaco model. Keep deterministic Markdown/session behavior in fast tests rather than duplicating it in Playwright.

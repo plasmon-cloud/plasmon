@@ -1,8 +1,8 @@
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import { MonacoEditorHost, monacoEngineStatus, type MonacoCursorState } from "../shared/monaco/MonacoEditorHost.tsx";
 import { DocumentClosePrompt } from "../text/DocumentClosePrompt.tsx";
 import { controlButtonStyle, editorChrome, editorErrorStyle, editorStatusStyle } from "../text/editorChrome.ts";
-import { MonacoEditorSurface, monacoEngineStatus, type MonacoCursorState } from "../text/MonacoEditorSurface.tsx";
 import { useDocumentCloseProtection } from "../text/useDocumentCloseProtection.ts";
 import { useDocumentSession } from "../text/useDocumentSession.ts";
 import { MarkdownPreview } from "./MarkdownPreview.tsx";
@@ -90,7 +90,7 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
               borderRight: mode === "split" ? `1px solid ${editorChrome.border}` : "none",
             }}
           >
-            <MonacoEditorSurface
+            <MonacoEditorHost
               modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}:markdown`}
               value={snapshot.text}
               language="markdown"

@@ -5,7 +5,7 @@ export interface BuildMetafileLike {
 const REQUIRED_MAIN_INPUT_SUFFIXES = [
   "/src/native-apps/content-apps.ts",
   "/src/native-apps/text/TextEditor.tsx",
-  "/src/native-apps/text/MonacoEditorSurface.tsx",
+  "/src/native-apps/shared/monaco/MonacoEditorHost.tsx",
   "/src/native-apps/markdown/MarkdownEditor.tsx",
   "/src/native-apps/markdown/MarkdownPreview.tsx",
 ] as const;

@@ -14,7 +14,7 @@ function goodMetafile(): BuildMetafileLike {
           "src/index.tsx": {},
           "src/native-apps/content-apps.ts": {},
           "src/native-apps/text/TextEditor.tsx": {},
-          "src/native-apps/text/MonacoEditorSurface.tsx": {},
+          "src/native-apps/shared/monaco/MonacoEditorHost.tsx": {},
           "src/native-apps/markdown/MarkdownEditor.tsx": {},
           "src/native-apps/markdown/MarkdownPreview.tsx": {},
           "node_modules/monaco-editor/esm/vs/editor/editor.main.js": {},
@@ -55,8 +55,8 @@ function deleteInput(metafile: BuildMetafileLike, suffix: string): void {
 test("package guard requires mature Text/Markdown engines and Monaco workers", () => {
   expect(() => assertMatureNativeAppBundle(goodMetafile())).not.toThrow();
   const broken = goodMetafile();
-  delete broken.outputs["dist/web/main.js"]!.inputs!["src/native-apps/text/MonacoEditorSurface.tsx"];
-  expect(() => assertMatureNativeAppBundle(broken)).toThrow("MonacoEditorSurface");
+  delete broken.outputs["dist/web/main.js"]!.inputs!["src/native-apps/shared/monaco/MonacoEditorHost.tsx"];
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow("MonacoEditorHost");
 });
 
 test("package guard requires every launchable first-party native app somewhere in the build graph", () => {

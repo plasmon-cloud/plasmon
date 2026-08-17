@@ -6,7 +6,7 @@ import { friendlyKind } from "../../../src/os/file-manager/properties.tsx";
 import { classifyResource, NEUTRON_APP_MIME, SYSTEM_APP_MIME, systemAppMetadata, neutronAppMetadata } from "../../../src/os/fs/index.ts";
 import { categorizeFsNode } from "../../../src/os/shell/search.ts";
 import { inferImageMime } from "../../../src/native-apps/photos/media.ts";
-import { editorLanguageForResource } from "../../../src/native-apps/text/editorModel.ts";
+import { editorLanguageForResource } from "../../../src/native-apps/shared/monaco/editorModel.ts";
 import { inferVideoMime } from "../../../src/native-apps/video/media.ts";
 
 const node = (name: string, input: Partial<FsNode> = {}): FsNode => ({

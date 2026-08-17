@@ -12,13 +12,19 @@ export function monacoEngineStatus(ready: boolean): string {
   return ready ? `${MONACO_ENGINE_NAME} ready` : `Loading ${MONACO_ENGINE_NAME}…`;
 }
 
+export type MonacoHostPhase = "loading" | "ready" | "error";
+export interface MonacoHostState {
+  phase: MonacoHostPhase;
+  error: string | null;
+}
+
 export interface MonacoCursorState {
   line: number;
   column: number;
   selected: number;
 }
 
-export interface MonacoEditorSurfaceProps {
+export interface MonacoEditorHostProps {
   modelKey: string;
   value: string;
   language: string;
@@ -28,6 +34,7 @@ export interface MonacoEditorSurfaceProps {
   onChange: (value: string) => void;
   onCursorChange?: (state: MonacoCursorState) => void;
   onReadyChange?: (ready: boolean) => void;
+  onStateChange?: (state: MonacoHostState) => void;
 }
 
 type MonacoApi = typeof import("monaco-editor");
@@ -35,8 +42,12 @@ type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
 type MonacoModel = import("monaco-editor").editor.ITextModel;
 type MonacoDisposable = import("monaco-editor").IDisposable;
 
-/** Thin React lifecycle adapter around Monaco. Each live surface owns its model. */
-export function MonacoEditorSurface({
+/**
+ * Shared browser-runtime adapter for Text and Markdown. The host owns only the
+ * concrete Monaco editor/model lifecycle. Filesystem/document/save/close policy
+ * remains with the calling native application.
+ */
+export function MonacoEditorHost({
   modelKey,
   value,
   language,
@@ -46,7 +57,8 @@ export function MonacoEditorSurface({
   onChange,
   onCursorChange,
   onReadyChange,
-}: MonacoEditorSurfaceProps) {
+  onStateChange,
+}: MonacoEditorHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<MonacoEditor | null>(null);
   const modelRef = useRef<MonacoModel | null>(null);
@@ -55,12 +67,14 @@ export function MonacoEditorSurface({
   const onChangeRef = useRef(onChange);
   const onCursorChangeRef = useRef(onCursorChange);
   const onReadyChangeRef = useRef(onReadyChange);
+  const onStateChangeRef = useRef(onStateChange);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCursorChangeRef.current = onCursorChange; }, [onCursorChange]);
   useEffect(() => { onReadyChangeRef.current = onReadyChange; }, [onReadyChange]);
+  useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +84,7 @@ export function MonacoEditorSurface({
     setLoading(true);
     setError(null);
     onReadyChangeRef.current?.(false);
+    onStateChangeRef.current?.({ phase: "loading", error: null });
     installMonacoEnvironment();
 
     void import("monaco-editor")
@@ -119,14 +134,17 @@ export function MonacoEditorSurface({
         );
         setLoading(false);
         onReadyChangeRef.current?.(true);
+        onStateChangeRef.current?.({ phase: "ready", error: null });
         onCursorChangeRef.current?.({ line: 1, column: 1, selected: 0 });
         requestAnimationFrame(() => createdEditor.focus());
       })
       .catch((reason: unknown) => {
         if (!cancelled) {
+          const message = reason instanceof Error ? reason.message : String(reason);
           setLoading(false);
           onReadyChangeRef.current?.(false);
-          setError(reason instanceof Error ? reason.message : String(reason));
+          onStateChangeRef.current?.({ phase: "error", error: message });
+          setError(message);
         }
       });
 
@@ -168,6 +186,7 @@ export function MonacoEditorSurface({
       aria-label={ariaLabel}
       data-editor-engine="monaco"
       data-editor-ready={loading || error ? "false" : "true"}
+      data-editor-state={error ? "error" : loading ? "loading" : "ready"}
     >
       <div ref={containerRef} style={styles.editor} />
       {loading && <div style={styles.overlay} role="status">Loading editor…</div>}
