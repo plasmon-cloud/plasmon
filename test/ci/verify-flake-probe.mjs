@@ -1,4 +1,13 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
 const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
@@ -204,6 +213,8 @@ for (const fragment of [
   "FLAKE/FAILURE OBSERVED:",
   "process.exitCode = 1",
   "extractFailures",
+  "playwrightRunFailure",
+  "playwrightDetailFailure",
 ]) {
   requireFragment(summarizer, fragment, "flake-probe aggregate summarizer");
 }
@@ -256,6 +267,97 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   );
 }
 
+function verifySummaryParserBehavior() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-summary-"));
+  try {
+    const resultsRoot = join(fixtureRoot, "results");
+    const diagnosticsRoot = join(fixtureRoot, "diagnostics");
+    const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    mkdirSync(resultsRoot, { recursive: true });
+    mkdirSync(diagnosticsRoot, { recursive: true });
+    writeFileSync(changedFilesPath, "test/e2e/changed.spec.ts\n");
+
+    const playwrightOutput = [
+      "Running 3 tests using 1 worker",
+      "  ✓   1 [chromium] › test/e2e/unchanged.spec.ts:10:1 › passing test must not be reported (1.0s)",
+      "  ✘   2 [chromium] › test/e2e/changed.spec.ts:20:1 › failure one (5ms)",
+      "  ✘   3 [chromium] › test/e2e/changed.spec.ts:30:1 › failure two (8ms)",
+      "",
+      "  1) [chromium] › test/e2e/changed.spec.ts:20:1 › failure one ─────",
+      "  2) [chromium] › test/e2e/changed.spec.ts:30:1 › failure two ─────",
+      "",
+      "  2 failed",
+      "    [chromium] › test/e2e/changed.spec.ts:20:1 › failure one ──────",
+      "    [chromium] › test/e2e/changed.spec.ts:30:1 › failure two ──────",
+      "  1 passed",
+      "",
+    ].join("\n");
+
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      const result = `attempt=${attempt}\noutcome=failure\nsha=fixture-sha\ntarget=all\n`;
+      const resultDirectory = join(resultsRoot, `attempt-${attempt}`);
+      const diagnosticDirectory = join(
+        diagnosticsRoot,
+        `flake-probe-diagnostics-fixture-${attempt}`,
+      );
+      mkdirSync(resultDirectory, { recursive: true });
+      mkdirSync(diagnosticDirectory, { recursive: true });
+      writeFileSync(join(resultDirectory, "result.txt"), result);
+      writeFileSync(join(diagnosticDirectory, "result.txt"), result);
+      writeFileSync(
+        join(diagnosticDirectory, "probe-output.log"),
+        playwrightOutput,
+      );
+    }
+
+    const summaryRun = spawnSync(
+      process.execPath,
+      [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, GITHUB_EVENT_NAME: "pull_request" },
+        encoding: "utf8",
+      },
+    );
+    if (summaryRun.status !== 1) {
+      throw new Error(
+        `flake-probe summary parser fixture must exit 1 for observed failures; got ${summaryRun.status}: ${summaryRun.stderr}`,
+      );
+    }
+
+    const summaryOutput = summaryRun.stdout;
+    for (const fragment of [
+      "Failure occurrences parsed: 20",
+      "Unique failing tests parsed: 2",
+      "**(20 failure occurrence(s)) `test/e2e/changed.spec.ts` — MODIFIED IN PR**",
+      "`failure one` — 10 occurrence(s), attempt(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
+      "`failure two` — 10 occurrence(s), attempt(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
+    ]) {
+      requireFragment(
+        summaryOutput,
+        fragment,
+        "flake-probe Playwright summary parser fixture",
+      );
+    }
+    for (const fragment of [
+      "passing test must not be reported",
+      "failure one ─",
+      "failure two ─",
+      "test/e2e/unchanged.spec.ts",
+    ]) {
+      forbidFragment(
+        summaryOutput,
+        fragment,
+        "flake-probe Playwright summary parser fixture",
+      );
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+verifySummaryParserBehavior();
+
 console.log(
-  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, diagnostic aggregation, failure-identity summary, and changed-file annotation contracts verified",
+  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
 );
