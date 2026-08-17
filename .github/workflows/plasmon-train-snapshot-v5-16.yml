@@ -1,0 +1,600 @@
+name: Plasmon Train Snapshot v5.16
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-16
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-16.yml
+      - .github/plasmon-train-snapshot-trigger-v5-16.txt
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build compact r2 train snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: plasmon-cloud/plasmon
+          TARGET: release/0.1.0-r2
+          MILESTONE_TITLE: 0.1.0-r2
+          CLAIM_ASSIGNEE: 3E4B54
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import time
+          import urllib.parse
+          import urllib.request
+
+          REPO = os.environ["REPO"]
+          TARGET = os.environ["TARGET"]
+          MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
+          CLAIM_ASSIGNEE = os.environ["CLAIM_ASSIGNEE"]
+          TOKEN = os.environ["GH_TOKEN"]
+          BASE = f"https://api.github.com/repos/{REPO}"
+          API_VERSION = "2026-03-10"
+          # GENERATED MIRROR of train-v5-16.py R2_TRAIN_GATE_POLICY.
+          # The Python scheduler is canonical; its self-test asserts this helper carries
+          # the same complete typed r2 policy so transport and scheduling cannot drift.
+          TRAIN_GATE_POLICY = {
+              200: {89: "READY_SIGNAL"},
+              113: {200: "READY_SIGNAL"},
+              114: {113: "READY_SIGNAL"},
+              91: {193: "READY_SIGNAL"},
+              175: {91: "READY_SIGNAL"},
+              201: {197: "READY_SIGNAL", 200: "READY_SIGNAL"},
+              124: {64: "READY_SIGNAL"},
+          }
+          FLAKE_SUMMARY_CHECK_NAME = "Flake probe summary"
+
+          def api(path):
+              url = path if path.startswith("https://") else BASE + path
+              req = urllib.request.Request(url, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.16",
+              })
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          def api_text(path):
+              url = path if path.startswith("https://") else BASE + path
+              req = urllib.request.Request(url, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.16",
+              })
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return response.read().decode("utf-8", errors="replace")
+
+          def pages(path):
+              out = []
+              page = 1
+              sep = "&" if "?" in path else "?"
+              while True:
+                  rows = api(f"{path}{sep}per_page=100&page={page}")
+                  if not isinstance(rows, list):
+                      raise RuntimeError(f"expected list from {path}")
+                  out.extend(rows)
+                  if len(rows) < 100:
+                      return out
+                  page += 1
+
+          def gh_json(args):
+              env = dict(os.environ); env["GH_TOKEN"] = TOKEN
+              proc = subprocess.run(["gh", *args], text=True, capture_output=True, env=env)
+              if proc.returncode != 0:
+                  return None
+              try: return json.loads(proc.stdout) if proc.stdout.strip() else None
+              except json.JSONDecodeError: return None
+
+          _reachability = {}
+          def commit_reachable(ancestor_sha, descendant_sha):
+              if not ancestor_sha or not descendant_sha:
+                  return False
+              key = (str(ancestor_sha), str(descendant_sha))
+              if key in _reachability:
+                  return _reachability[key]
+              if key[0] == key[1]:
+                  _reachability[key] = True
+                  return True
+              comparison = api(f"/compare/{key[0]}...{key[1]}")
+              merge_base = ((comparison.get("merge_base_commit") or {}).get("sha"))
+              result = merge_base == key[0] or str(comparison.get("status") or "").lower() in {"ahead", "identical"}
+              _reachability[key] = result
+              return result
+
+          def labels_of(issue):
+              return sorted({str(x.get("name") if isinstance(x, dict) else x) for x in issue.get("labels") or [] if x})
+
+          def assignees_of(issue):
+              return sorted({str(x.get("login")) for x in issue.get("assignees") or [] if isinstance(x, dict) and x.get("login")})
+
+          def field_value(issue, name):
+              for item in issue.get("issue_field_values") or []:
+                  if item.get("issue_field_name") == name:
+                      return (item.get("single_select_option") or {}).get("name")
+              return None
+
+          def product(labels, area, title):
+              if any(label.startswith("ci:") for label in labels): return False
+              if str(title).startswith("[r2 CI]"): return False
+              if area == "Testing" and ("needs-verification" in labels or "ci:flaky" in labels): return False
+              return True
+
+          def mapped_issue(pr, lane_numbers):
+              body = str(pr.get("body") or "")
+              title = str(pr.get("title") or "")
+              for pattern, source in (
+                  (r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b", body),
+                  (r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b", body),
+                  (r"^#(\d+)\b", title),
+              ):
+                  m = re.search(pattern, source)
+                  if m and int(m.group(1)) in lane_numbers:
+                      return int(m.group(1))
+              return None
+
+          def declared_base_from_body(body):
+              body = str(body or "")
+              match = re.search(r"(?im)^\s*(?:Stack-Parent|Parent branch)\s*:\s*(.+?)\s*$", body)
+              if not match:
+                  return None
+              line = match.group(1)
+              tick = re.search(r"`([^`]+)`", line)
+              if tick:
+                  return tick.group(1)
+              if TARGET in line:
+                  return TARGET
+              branchish = re.search(r"(?:^|/\s*)([A-Za-z0-9._-]+/[A-Za-z0-9._/-]+)\s*$", line)
+              return branchish.group(1) if branchish else None
+
+          def flake_summary_evidence(head, check):
+              """Best-effort bridge from the landed enhanced summary into train evidence.
+
+              Failure to parse diagnostic detail is never a snapshot-fatal condition.
+              Required check conclusion remains the CI authority; this only saves the
+              operator from redoing summary archaeology after DIAGNOSE_TERMINAL_RED.
+              """
+              evidence = {}
+              try:
+                  link = str((check or {}).get("link") or "")
+                  run_id = job_id = None
+                  match = re.search(r"/actions/runs/(\d+)(?:/job/(\d+))?", link)
+                  if match:
+                      run_id = int(match.group(1))
+                      job_id = int(match.group(2)) if match.group(2) else None
+
+                  if job_id is None and head:
+                      check_runs = api(f"/commits/{head}/check-runs?per_page=100")
+                      for row in check_runs.get("check_runs") or []:
+                          if str(row.get("name") or "") != FLAKE_SUMMARY_CHECK_NAME:
+                              continue
+                          details = str(row.get("details_url") or row.get("html_url") or "")
+                          found = re.search(r"/actions/runs/(\d+)/job/(\d+)", details)
+                          if found:
+                              run_id = int(found.group(1)); job_id = int(found.group(2)); link = details
+                              break
+
+                  if run_id is not None:
+                      evidence["workflow_run_id"] = run_id
+                      try:
+                          run = api(f"/actions/runs/{run_id}")
+                          if run.get("run_attempt") is not None:
+                              evidence["workflow_run_attempt"] = int(run.get("run_attempt"))
+                      except Exception:
+                          pass
+                  if job_id is not None:
+                      evidence["summary_job_id"] = job_id
+                  if link:
+                      evidence["summary_check_link"] = link
+                  if job_id is None:
+                      return evidence
+
+                  log = api_text(f"/actions/jobs/{job_id}/logs")
+                  # The summary renderer writes these exact stable labels to stdout and
+                  # GITHUB_STEP_SUMMARY. Actions logs may prefix timestamps, so search
+                  # rather than requiring line starts.
+                  patterns = {
+                      "exact_sha": r"Exact SHA:\s+`([0-9a-f]{40})`",
+                      "fresh_attempts_reported": r"Fresh attempts reported:\s+(\d+)/10",
+                      "passed_count": r"First-attempt passes:\s+(\d+)/10",
+                      "failure_occurrences": r"Failure occurrences parsed:\s+(\d+)",
+                      "unique_failing_tests": r"Unique failing tests parsed:\s+(\d+)",
+                  }
+                  for key, pattern in patterns.items():
+                      found = re.search(pattern, log)
+                      if found:
+                          value = found.group(1)
+                          evidence[key] = int(value) if key != "exact_sha" else value
+                  failed = re.search(r"Failed attempts:\s+([^\r\n]+)", log)
+                  if failed:
+                      raw_failed = failed.group(1).strip().split()[0] if failed.group(1).strip() == "none" else failed.group(1).strip()
+                      if raw_failed == "none":
+                          evidence["failed_attempts"] = []
+                      else:
+                          evidence["failed_attempts"] = [int(x) for x in re.findall(r"\d+", raw_failed)]
+                  if evidence.get("passed_count") is not None:
+                      evidence["failed_count"] = 10 - int(evidence["passed_count"])
+
+                  failures = []
+                  current = None
+                  for line in log.splitlines():
+                      file_match = re.search(r"\*\*\((\d+) failure occurrence\(s\)\) `([^`]+)` — ([A-Z ]+)\*\*", line)
+                      if file_match:
+                          current = {
+                              "file": file_match.group(2),
+                              "relation": file_match.group(3).strip().replace(" ", "_"),
+                              "occurrences": int(file_match.group(1)),
+                              "tests": [],
+                          }
+                          failures.append(current)
+                          continue
+                      test_match = re.search(r"[├└]─ `([^`]+)` — (\d+) occurrence\(s\), attempt\(s\) ([0-9, ]+)", line)
+                      if test_match and current is not None:
+                          current["tests"].append({
+                              "title": test_match.group(1),
+                              "occurrences": int(test_match.group(2)),
+                              "attempts": [int(x) for x in re.findall(r"\d+", test_match.group(3))],
+                          })
+                  if failures:
+                      evidence["failures"] = failures
+
+                  unparsed = []
+                  for match in re.finditer(r"Attempt (\d+): inspect diagnostic artifact `([^`]+)`", log):
+                      unparsed.append({"attempt": int(match.group(1)), "diagnostic_artifact": match.group(2)})
+                  if unparsed:
+                      evidence["unparsed_failed_attempts"] = unparsed
+              except Exception:
+                  # Evidence enrichment must never make the authoritative lane snapshot
+                  # unavailable. The check conclusion itself is still present.
+                  return evidence
+              return evidence
+
+          milestones = pages("/milestones?state=all")
+          milestone = next((m for m in milestones if m.get("title") == MILESTONE_TITLE), None)
+          if milestone is None: raise RuntimeError(f"milestone {MILESTONE_TITLE!r} not found")
+          milestone_number = int(milestone["number"])
+          before = (int(milestone.get("open_issues") or 0), int(milestone.get("closed_issues") or 0))
+
+          raw_issues = [x for x in pages(f"/issues?milestone={milestone_number}&state=all") if "pull_request" not in x]
+          if len(raw_issues) != sum(before):
+              raise RuntimeError(f"incomplete lane: milestone says {sum(before)}, fetched {len(raw_issues)}")
+
+          rows, by_num = [], {}
+          for raw in raw_issues:
+              number = int(raw["number"])
+              open_state = str(raw.get("state", "open")).lower() == "open"
+              labels = labels_of(raw)
+              assignees = assignees_of(raw)
+              area = field_value(raw, "Area")
+              deps, dep_states = [], {}
+              if open_state:
+                  summary = raw.get("issue_dependencies_summary") or {}
+                  expected = int(summary.get("blocked_by") or summary.get("total_blocked_by") or 0)
+                  if expected:
+                      blocked = pages(f"/issues/{number}/dependencies/blocked_by")
+                      for dep in blocked:
+                          dep_num = int(dep["number"]); deps.append(dep_num); dep_states[str(dep_num)] = str(dep.get("state", "unknown"))
+                      if len(set(deps)) < expected:
+                          raise RuntimeError(f"#{number} dependency summary says {expected}, fetched {len(set(deps))}")
+              issue_type = raw.get("type")
+              if isinstance(issue_type, dict): issue_type = issue_type.get("name")
+              row = {
+                  "issue": number, "title": str(raw.get("title") or ""), "open": open_state,
+                  "product": product(labels, area, raw.get("title") or ""),
+                  "assignees": assignees, "claimed": CLAIM_ASSIGNEE in assignees,
+                  "pr": None, "pr_branch": None, "pr_base": None,
+                  "integrated_pr": None, "carried_by_pr": None, "target_integrated": False, "merged": False,
+                  "desire": field_value(raw, "Desire"), "effort": field_value(raw, "Effort"),
+                  "area": area, "type": issue_type, "labels": labels,
+                  "dependencies": sorted(set(deps)), "dependency_states": dep_states,
+                  "train_dependencies": sorted(TRAIN_GATE_POLICY.get(number, {}).keys()),
+                  "train_dependency_states": {},
+                  "train_dependency_gates": {str(dep): gate for dep, gate in TRAIN_GATE_POLICY.get(number, {}).items()},
+                  "active": CLAIM_ASSIGNEE in assignees, "completed": not open_state,
+                  "url": raw.get("html_url") or raw.get("url"),
+              }
+              rows.append(row); by_num[number] = row
+
+          for row in rows:
+              for dep_num in row.get("train_dependencies", []):
+                  parent = by_num.get(dep_num)
+                  if parent is not None:
+                      row["train_dependency_states"][str(dep_num)] = "open" if parent["open"] else "closed"
+
+          branch_ref = api("/git/ref/heads/" + urllib.parse.quote(TARGET, safe=""))
+          target_sha = ((branch_ref.get("object") or {}).get("sha"))
+          if not target_sha: raise RuntimeError("could not resolve release target SHA")
+
+          all_pulls = pages("/pulls?state=all")
+          lane_numbers = set(by_num)
+          mapped = []
+          for pr in all_pulls:
+              issue_num = mapped_issue(pr, lane_numbers)
+              if issue_num is None: continue
+              mapped.append({
+                  "number": int(pr["number"]), "issue": issue_num,
+                  "state": str(pr.get("state") or "").lower(), "merged_at": pr.get("merged_at"),
+                  "head": (pr.get("head") or {}).get("ref"), "base": (pr.get("base") or {}).get("ref"),
+                  "merge_commit_sha": pr.get("merge_commit_sha"), "created_at": pr.get("created_at"),
+              })
+
+          # The collection endpoint can omit merge_commit_sha for closed PRs. Enrich
+          # only merged history attached to still-open lane Issues, because that is the
+          # history needed to distinguish a durable claim from an orphaned claim.
+          for rec in mapped:
+              if rec["state"] != "closed" or not rec["merged_at"] or rec.get("merge_commit_sha"):
+                  continue
+              if not by_num[rec["issue"]]["open"]:
+                  continue
+              # A merged PR whose base is TARGET is integrated by construction under
+              # this helper's own model. Do not make its historical merge SHA an
+              # availability dependency (#319 cold-run failure in v5.15).
+              if rec.get("base") == TARGET:
+                  continue
+              detail = api(f"/pulls/{rec['number']}")
+              rec["merge_commit_sha"] = detail.get("merge_commit_sha")
+              rec["merged_at"] = detail.get("merged_at") or rec["merged_at"]
+              rec["head"] = ((detail.get("head") or {}).get("ref")) or rec["head"]
+              rec["base"] = ((detail.get("base") or {}).get("ref")) or rec["base"]
+              if not rec.get("merge_commit_sha"):
+                  gh_detail = gh_json(["pr", "view", str(rec["number"]), "--repo", REPO, "--json", "mergeCommit,mergedAt,headRefName,baseRefName"]) or {}
+                  merge_commit = gh_detail.get("mergeCommit") or {}
+                  if isinstance(merge_commit, dict):
+                      rec["merge_commit_sha"] = merge_commit.get("oid")
+                  rec["merged_at"] = gh_detail.get("mergedAt") or rec["merged_at"]
+                  rec["head"] = gh_detail.get("headRefName") or rec["head"]
+                  rec["base"] = gh_detail.get("baseRefName") or rec["base"]
+              if by_num[rec["issue"]]["claimed"] and rec.get("base") != TARGET and not rec.get("merge_commit_sha"):
+                  raise RuntimeError(f"claimed Issue #{rec['issue']} historical non-target PR #{rec['number']} merge commit unresolved")
+
+          # Open PR mapping is authoritative and must be unique per Issue.
+          for rec in mapped:
+              if rec["state"] != "open": continue
+              row = by_num[rec["issue"]]
+              if row["pr"] is not None and row["pr"] != rec["number"]:
+                  raise RuntimeError(f"Issue #{rec['issue']} maps to multiple open PRs")
+              row["pr"] = rec["number"]; row["pr_branch"] = rec["head"]; row["pr_base"] = rec["base"]; row["active"] = True
+
+          # Resolve merged stack history. Direct release merges are integrated. A merged
+          # child of an open parent is carried by that parent. If that parent later
+          # integrates, the child becomes integrated too.
+          head_records = {}
+          for rec in mapped:
+              if rec["head"]:
+                  head_records.setdefault(rec["head"], []).append(rec)
+          # Closed lane Issues are already complete and need no reachability work.
+          # For still-open Issues, direct TARGET merges are integrated by construction;
+          # only historical/stack merges require the more expensive reachability check.
+          integrated = set()
+          for rec in mapped:
+              if not rec["merged_at"] or not by_num[rec["issue"]]["open"]:
+                  continue
+              if rec.get("base") == TARGET:
+                  integrated.add(rec["number"])
+                  continue
+              if commit_reachable(rec.get("merge_commit_sha"), target_sha):
+                  integrated.add(rec["number"])
+          carrier = {}
+          changed = True
+          while changed:
+              changed = False
+              for rec in mapped:
+                  if not rec["merged_at"] or rec["number"] in integrated: continue
+                  parents = head_records.get(rec["base"], [])
+                  if any(p["number"] in integrated for p in parents):
+                      integrated.add(rec["number"]); carrier.pop(rec["number"], None); changed = True; continue
+                  open_parent = next((p for p in parents if p["state"] == "open"), None)
+                  if open_parent and carrier.get(rec["number"]) != open_parent["number"]:
+                      carrier[rec["number"]] = open_parent["number"]; changed = True; continue
+                  inherited = next((carrier.get(p["number"]) for p in parents if carrier.get(p["number"]) is not None), None)
+                  if inherited is not None and carrier.get(rec["number"]) != inherited:
+                      carrier[rec["number"]] = inherited; changed = True
+
+          by_issue_history = {}
+          for rec in mapped: by_issue_history.setdefault(rec["issue"], []).append(rec)
+          for issue_num, history in by_issue_history.items():
+              row = by_num[issue_num]
+              integrated_recs = [r for r in history if r["number"] in integrated]
+              if integrated_recs:
+                  winner = sorted(integrated_recs, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                  row["integrated_pr"] = winner["number"]; row["target_integrated"] = True; row["merged"] = True; row["completed"] = True
+                  row["carried_by_pr"] = None
+              elif row["pr"] is None:
+                  carried = [r for r in history if carrier.get(r["number"]) is not None]
+                  if carried:
+                      winner = sorted(carried, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                      row["carried_by_pr"] = carrier[winner["number"]]; row["active"] = True
+
+          # Assignment is only the active no-PR coding lease. Existing/open Product
+          # PRs may be unassigned; they remain normal PR-service work.
+          recoveries = [r for r in rows if r["product"] and r["open"] and r["claimed"] and r["pr"] is None and r["carried_by_pr"] is None and not r["target_integrated"]]
+          if len(recoveries) > 1:
+              raise RuntimeError("multiple assigned no-PR Product recoveries: " + ", ".join(f"#{r['issue']}" for r in recoveries))
+
+          captured = int(time.time())
+          observations = {}
+
+          for row in rows:
+              pr_num = row.get("pr")
+              if pr_num is None or not row.get("open") or not row.get("product"): continue
+              detail = gh_json([
+                  "pr","view",str(pr_num),"--repo",REPO,
+                  "--json","mergeable,mergeStateStatus,isDraft,headRefOid,headRefName,baseRefName,body",
+              ]) or {}
+              head = detail.get("headRefOid")
+              actual_base = detail.get("baseRefName") or row.get("pr_base")
+              base_head_sha = None
+              compare_status = "unknown"
+              ahead_by = behind_by = None
+              merge_base_sha = None
+              if actual_base and head:
+                  base_ref = api("/git/ref/heads/" + urllib.parse.quote(str(actual_base), safe=""))
+                  base_head_sha = ((base_ref.get("object") or {}).get("sha"))
+                  if base_head_sha:
+                      comparison = api(f"/compare/{base_head_sha}...{head}")
+                      compare_status = str(comparison.get("status") or "unknown").lower()
+                      ahead_by = int(comparison.get("ahead_by") or 0)
+                      behind_by = int(comparison.get("behind_by") or 0)
+                      merge_base_sha = ((comparison.get("merge_base_commit") or {}).get("sha"))
+              checks = gh_json(["pr","checks",str(pr_num),"--repo",REPO,"--required","--json","name,state,bucket,workflow,link"]) or []
+              if not isinstance(checks, list): checks = []
+              passed = running = failed = 0
+              for check in checks:
+                  bucket = str(check.get("bucket") or check.get("state") or "unknown").lower()
+                  if bucket in {"pass","success","skipping","skipped"}: passed += 1
+                  elif bucket in {"pending","queued","running","in_progress","in-progress"}: running += 1
+                  else: failed += 1
+
+              flake_summary = next((check for check in checks if str(check.get("name") or "") == FLAKE_SUMMARY_CHECK_NAME), None)
+              required_flake_summary_missing = flake_summary is None
+              if flake_summary is None:
+                  # Required context absent is never green. The v5.16 Flake workflow
+                  # should always create this job; this protects against regressions.
+                  flake_probe_state = "missing"
+                  running += 1
+              else:
+                  bucket = str(flake_summary.get("bucket") or flake_summary.get("state") or "unknown").lower()
+                  if bucket in {"skipping", "skipped"}: flake_probe_state = "skipped"
+                  elif bucket in {"pass", "success"}: flake_probe_state = "success"
+                  elif bucket in {"pending", "queued", "running", "in_progress", "in-progress"}: flake_probe_state = "running"
+                  else: flake_probe_state = "failed"
+
+              required_failures = []
+              for check in checks:
+                  bucket = str(check.get("bucket") or check.get("state") or "unknown").lower()
+                  if bucket not in {"pass","success","skipping","skipped","pending","queued","running","in_progress","in-progress"}:
+                      required_failures.append({
+                          key: check.get(key)
+                          for key in ("name", "workflow", "state", "bucket", "link")
+                          if check.get(key) is not None
+                      })
+              diagnostic_evidence = {}
+              if required_failures:
+                  diagnostic_evidence["required_failures"] = required_failures[:10]
+              if flake_probe_state == "failed" and flake_summary is not None:
+                  flake_evidence = flake_summary_evidence(head, flake_summary)
+                  if flake_evidence:
+                      diagnostic_evidence["flake_summary"] = flake_evidence
+
+              ci = "running" if running else "failed" if failed else "success" if checks and passed == len(checks) else "unknown"
+
+              reviews = pages(f"/pulls/{pr_num}/reviews")
+              bot_reviews = [
+                  review for review in reviews
+                  if str(((review.get("user") or {}).get("login") or "")) in {"plasmon-code-reviewer", "plasmon-code-reviewer[bot]"}
+                  and str(review.get("state") or "").upper() in {"APPROVED", "CHANGES_REQUESTED"}
+              ]
+              bot_reviews.sort(key=lambda review: (str(review.get("submitted_at") or ""), int(review.get("id") or 0)))
+              latest_review = bot_reviews[-1] if bot_reviews else None
+              exact_review = next((review for review in reversed(bot_reviews) if review.get("commit_id") == head), None)
+              review_state = str(exact_review.get("state") or "").upper() if exact_review else ""
+              review = (
+                  "changes_requested" if review_state == "CHANGES_REQUESTED"
+                  else "approved" if review_state == "APPROVED"
+                  else "pending"
+              )
+              blocking = latest_review if latest_review and str(latest_review.get("state") or "").upper() == "CHANGES_REQUESTED" else None
+
+              mr = str(detail.get("mergeable") or "unknown").lower()
+              mergeable = "true" if mr == "mergeable" else "false" if mr == "conflicting" else "unknown"
+              declared_base = declared_base_from_body(detail.get("body"))
+              observations[str(pr_num)] = {
+                  "head": head,
+                  "branch": detail.get("headRefName") or row.get("pr_branch"),
+                  "base": actual_base,
+                  "base_head_sha": base_head_sha,
+                  "merge_base_sha": merge_base_sha,
+                  "compare_status": compare_status,
+                  "ahead_by": ahead_by,
+                  "behind_by": behind_by,
+                  "merge_state_status": str(detail.get("mergeStateStatus") or "unknown").lower(),
+                  "declared_base": declared_base,
+                  "base_mismatch": bool(declared_base and actual_base != declared_base),
+                  "ci": ci,
+                  "ci_diagnosis": "unknown",
+                  "flake_probe_state": flake_probe_state,
+                  "required_flake_summary_missing": required_flake_summary_missing,
+                  "review": review,
+                  "review_head": exact_review.get("commit_id") if exact_review else None,
+                  "review_id": str(exact_review.get("node_id") or exact_review.get("id")) if exact_review else None,
+                  "blocking_review_state": "changes_requested" if blocking else "none",
+                  "blocking_review_id": str(blocking.get("node_id") or blocking.get("id")) if blocking else None,
+                  "blocking_review_head": blocking.get("commit_id") if blocking else None,
+                  "blocking_review_body": blocking.get("body") if blocking else None,
+                  "review_applicability": "unknown" if blocking else "none",
+                  "mergeable": mergeable,
+                  "conflict_confirmed": "true" if mr == "conflicting" else "false",
+                  "draft": "true" if detail.get("isDraft") else "false",
+                  "check_passed": passed, "check_running": running, "check_failed": failed, "check_total": len(checks) + (1 if required_flake_summary_missing else 0),
+                  "diagnostic_evidence": diagnostic_evidence,
+                  "observed_at": captured,
+              }
+
+          milestone_after = api(f"/milestones/{milestone_number}")
+          after = (int(milestone_after.get("open_issues") or 0), int(milestone_after.get("closed_issues") or 0))
+          # GitHub milestone open/closed summary counters can lag individual Issue
+          # state. They are only a coarse cardinality guard in v5.16.
+          if sum(after) != len(rows):
+              raise RuntimeError(f"lane cardinality changed during snapshot: rows={len(rows)} milestone_after={sum(after)}")
+
+          missing = []
+          for row in [r for r in rows if r["open"] and r["product"]]:
+              absent = []
+              if row["type"] not in {"Bug","Feature","Task"}: absent.append("Type")
+              if row["desire"] not in {"High","Medium","Low"}: absent.append("Desire")
+              if row["effort"] not in {"High","Medium","Low"}: absent.append("Effort")
+              if not row["area"]: absent.append("Area")
+              if absent: missing.append(f"#{row['issue']}: {','.join(absent)}")
+          if missing: raise RuntimeError("open r2 metadata incomplete: " + "; ".join(missing))
+
+          derived_open = sum(1 for row in rows if row["open"])
+          derived_closed = len(rows) - derived_open
+          snapshot = {
+              "schema": "plasmon-train-snapshot-v5.16", "lane_complete": True, "repo": REPO,
+              "target": TARGET, "milestone": MILESTONE_TITLE, "claim_assignee": CLAIM_ASSIGNEE,
+              "captured_at": captured, "target_sha": target_sha,
+              "provenance": {
+                  "kind": "github-actions",
+                  "fixture": False,
+                  "repository": os.environ.get("GITHUB_REPOSITORY"),
+                  "target": TARGET,
+                  "run_id": os.environ.get("GITHUB_RUN_ID"),
+                  "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+                  "workflow_ref": os.environ.get("GITHUB_WORKFLOW_REF"),
+                  "workflow_sha": os.environ.get("GITHUB_SHA"),
+                  "event_name": os.environ.get("GITHUB_EVENT_NAME"),
+                  "ref": os.environ.get("GITHUB_REF"),
+              },
+              "lane_counts": {"open": derived_open, "closed": derived_closed, "total": len(rows)},
+              "milestone_summary_counts": {
+                  "before": {"open": before[0], "closed": before[1], "total": sum(before)},
+                  "after": {"open": after[0], "closed": after[1], "total": sum(after)},
+              },
+              "issues": rows, "observations": observations,
+          }
+          with open("plasmon-train-snapshot-v5-16.json", "w", encoding="utf-8") as f:
+              json.dump(snapshot, f, indent=2); f.write("\n")
+          print(f"snapshot PASS lane={len(rows)} open={derived_open} closed={derived_closed} milestone_summary={before[0]}/{before[1]}->{after[0]}/{after[1]} prs={sum(1 for r in rows if r['product'] and r['pr'] is not None)} recoveries={len(recoveries)} target={target_sha}")
+          PY
+
+      - name: Upload train snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot-v5-16
+          path: plasmon-train-snapshot-v5-16.json
+          retention-days: 1
+          if-no-files-found: error
