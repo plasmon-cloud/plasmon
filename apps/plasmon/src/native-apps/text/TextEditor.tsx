@@ -93,7 +93,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   return (
     <NativeAppContentSurface style={styles.root} aria-label="Text editor" onKeyDownCapture={captureSave}>
       <style>{`.plasmon-native-input::placeholder { color: var(--plasmon-text-disabled); opacity: 1; }`}</style>
-      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Text editor controls">
+      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Text file controls">
         <NativeAppButton type="button" onClick={save} disabled={saveDisabled}>Save</NativeAppButton>
         <label style={styles.saveAsLabel}>
           <span style={styles.label}>Save as</span>
