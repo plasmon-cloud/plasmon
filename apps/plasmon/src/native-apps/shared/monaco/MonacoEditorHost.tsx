@@ -4,6 +4,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { monacoActionId, type MonacoEditorCommand } from "./editorCommands.ts";
 import { createEditorSurfaceModelOwner, syncEditorModelValue, type OwnedEditorModel } from "./editorModel.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 
@@ -24,6 +25,11 @@ export interface MonacoCursorState {
   selected: number;
 }
 
+export interface MonacoEditorCommandApi {
+  run(command: MonacoEditorCommand): void;
+  focus(): void;
+}
+
 export interface MonacoEditorHostProps {
   modelKey: string;
   value: string;
@@ -31,10 +37,13 @@ export interface MonacoEditorHostProps {
   readOnly?: boolean;
   visible?: boolean;
   ariaLabel: string;
+  minimap?: boolean;
+  wordWrap?: boolean;
   onChange: (value: string) => void;
   onCursorChange?: (state: MonacoCursorState) => void;
   onReadyChange?: (ready: boolean) => void;
   onStateChange?: (state: MonacoHostState) => void;
+  onCommandApiChange?: (api: MonacoEditorCommandApi | null) => void;
 }
 
 type MonacoApi = typeof import("monaco-editor");
@@ -54,10 +63,13 @@ export function MonacoEditorHost({
   readOnly = false,
   visible = true,
   ariaLabel,
+  minimap = false,
+  wordWrap = false,
   onChange,
   onCursorChange,
   onReadyChange,
   onStateChange,
+  onCommandApiChange,
 }: MonacoEditorHostProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<MonacoEditor | null>(null);
@@ -68,6 +80,7 @@ export function MonacoEditorHost({
   const onCursorChangeRef = useRef(onCursorChange);
   const onReadyChangeRef = useRef(onReadyChange);
   const onStateChangeRef = useRef(onStateChange);
+  const onCommandApiChangeRef = useRef(onCommandApiChange);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,6 +88,7 @@ export function MonacoEditorHost({
   useEffect(() => { onCursorChangeRef.current = onCursorChange; }, [onCursorChange]);
   useEffect(() => { onReadyChangeRef.current = onReadyChange; }, [onReadyChange]);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
+  useEffect(() => { onCommandApiChangeRef.current = onCommandApiChange; }, [onCommandApiChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +98,7 @@ export function MonacoEditorHost({
     setLoading(true);
     setError(null);
     onReadyChangeRef.current?.(false);
+    onCommandApiChangeRef.current?.(null);
     onStateChangeRef.current?.({ phase: "loading", error: null });
     installMonacoEnvironment();
 
@@ -106,7 +121,7 @@ export function MonacoEditorHost({
           fontSize: 14,
           lineHeight: 21,
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-          minimap: { enabled: false },
+          minimap: { enabled: minimap },
           lineNumbers: "on",
           glyphMargin: true,
           folding: true,
@@ -114,7 +129,7 @@ export function MonacoEditorHost({
           padding: { top: 10, bottom: 10 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
-          wordWrap: "off",
+          wordWrap: wordWrap ? "on" : "off",
         });
         ownedModel = created;
         editor = createdEditor;
@@ -132,6 +147,15 @@ export function MonacoEditorHost({
             });
           }),
         );
+        onCommandApiChangeRef.current?.({
+          run(command) {
+            const action = createdEditor.getAction(monacoActionId(command));
+            if (action) void action.run();
+          },
+          focus() {
+            createdEditor.focus();
+          },
+        });
         setLoading(false);
         onReadyChangeRef.current?.(true);
         onStateChangeRef.current?.({ phase: "ready", error: null });
@@ -143,6 +167,7 @@ export function MonacoEditorHost({
           const message = reason instanceof Error ? reason.message : String(reason);
           setLoading(false);
           onReadyChangeRef.current?.(false);
+          onCommandApiChangeRef.current?.(null);
           onStateChangeRef.current?.({ phase: "error", error: message });
           setError(message);
         }
@@ -151,6 +176,7 @@ export function MonacoEditorHost({
     return () => {
       cancelled = true;
       onReadyChangeRef.current?.(false);
+      onCommandApiChangeRef.current?.(null);
       for (const disposable of disposables) disposable.dispose();
       editor?.dispose();
       ownedModel?.dispose();
@@ -173,7 +199,15 @@ export function MonacoEditorHost({
     if (monaco && model && model.getLanguageId() !== language) monaco.editor.setModelLanguage(model, language);
   }, [language]);
 
-  useEffect(() => { editorRef.current?.updateOptions({ readOnly, ariaLabel }); }, [ariaLabel, readOnly]);
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      readOnly,
+      ariaLabel,
+      minimap: { enabled: minimap },
+      wordWrap: wordWrap ? "on" : "off",
+    });
+  }, [ariaLabel, minimap, readOnly, wordWrap]);
+
   useEffect(() => {
     if (!visible) return;
     const frame = requestAnimationFrame(() => editorRef.current?.layout());
