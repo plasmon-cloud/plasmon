@@ -4,12 +4,14 @@ const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
 const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
 const runnerPath = "test/ci/run-plasmon-flake-probe.sh";
 const specialistRunnerPath = "test/ci/run-plasmon-specialist.mjs";
+const summarizerPath = "test/ci/summarize-flake-probe.mjs";
 const packagePath = "package.json";
 
 const workflow = readFileSync(workflowPath, "utf8");
 const labelWorkflow = readFileSync(labelWorkflowPath, "utf8");
 const runner = readFileSync(runnerPath, "utf8");
 const specialistRunner = readFileSync(specialistRunnerPath, "utf8");
+const summarizer = readFileSync(summarizerPath, "utf8");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 
 function requireFragment(source, fragment, label) {
@@ -27,13 +29,28 @@ function forbidFragment(source, fragment, label) {
 const workflowFragments = [
   "name: Plasmon Flake Probe",
   "types: [opened, synchronize, reopened]",
-  "paths:",
-  "apps/plasmon/test/**",
-  "test/e2e/**",
-  "test/ci/**",
   "workflow_dispatch:",
   "group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}",
   "cancel-in-progress: true",
+  "applicability:",
+  "name: Determine flake probe applicability",
+  "fetch-depth: 0",
+  "git diff --name-only \"$BASE_SHA\" \"$HEAD_SHA\"",
+  "apps/plasmon/src/*.test.*",
+  "apps/plasmon/src/*.spec.*",
+  "apps/plasmon/test/*",
+  "test/e2e/*",
+  "test/ci/*",
+  "playwright.config.ts",
+  "package.json",
+  "package-lock.json",
+  "flake.nix",
+  "flake.lock",
+  ".github/workflows/plasmon-flake-probe.yml",
+  "echo \"applicable=$applicable\" >> \"$GITHUB_OUTPUT\"",
+  "name: flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}",
+  "if: needs.applicability.outputs.applicable == 'true'",
+  "needs: applicability",
   "fail-fast: false",
   "max-parallel: 10",
   "attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
@@ -54,26 +71,20 @@ const workflowFragments = [
   "Target: \\`${PROBE_TARGET:-unknown}\\`",
   "Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
   "Diagnostic artifact: \\`$diagnostic_artifact\\`",
-  "The failing command is the \\`Run fresh Plasmon probe\\` step above",
-  "sed -n '1,120p' \"$context_file\"",
-  "No Playwright error-context.md was produced.",
-  "probe-output.log",
   "uses: actions/upload-artifact@v4",
-  "uses: actions/download-artifact@v4",
+  "summary:",
+  "if: ${{ always() && (needs.applicability.result != 'success' || needs.applicability.outputs.applicable == 'true') }}",
+  "name: Flake probe summary",
+  "needs: [applicability, probe]",
+  "name: Require successful applicability detection",
+  "name: Download applicability evidence",
+  "name: Download attempt results",
   "pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*",
-  "failed_attempts=()",
-  "declare -A seen_attempts=()",
-  "declare -A seen_shas=()",
-  "declare -A seen_targets=()",
-  "failed_attempts+=(\"$attempt\")",
-  "Fresh attempts reported: $total/10",
-  "First-attempt passes: $passed/10",
-  "Failed attempts: $failed_list",
-  "the summary is the ten-attempt aggregate/integrity check.",
-  "STABILITY OBSERVED: 10/10 fresh attempts passed.",
-  "FLAKE/FAILURE OBSERVED:",
-  "} | tee -a \"$GITHUB_STEP_SUMMARY\"",
-  "if [ \"$passed\" -ne 10 ]; then",
+  "name: Download failed-attempt diagnostics",
+  "if: needs.probe.result != 'success'",
+  "pattern: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-*",
+  "node test/ci/summarize-flake-probe.mjs",
+  "| tee -a \"$GITHUB_STEP_SUMMARY\"",
 ];
 for (const fragment of workflowFragments) {
   requireFragment(workflow, fragment, "flake-probe workflow");
@@ -81,9 +92,15 @@ for (const fragment of workflowFragments) {
 
 forbidFragment(
   workflow,
+  "    paths:",
+  "flake-probe pull_request trigger must instantiate the required summary for every PR",
+);
+forbidFragment(
+  workflow,
   "continue-on-error: true",
   "flake-probe workflow must let the real probe step own the job failure",
 );
+
 const reportStart = workflow.indexOf("      - name: Report observed probe failure");
 const summaryStart = workflow.indexOf("\n  summary:", reportStart);
 if (reportStart === -1 || summaryStart === -1) {
@@ -119,7 +136,11 @@ for (const option of [
   "emulatorjs",
   "saved-preview",
 ]) {
-  requireFragment(workflow, `          - ${option}`, "flake-probe dispatch target choices");
+  requireFragment(
+    workflow,
+    `          - ${option}`,
+    "flake-probe dispatch target choices",
+  );
 }
 
 const runnerFragments = [
@@ -151,7 +172,11 @@ const specialistScript = packageJson.scripts?.["test:e2e:plasmon:specialist"];
 if (typeof specialistScript !== "string") {
   throw new Error("package.json lost test:e2e:plasmon:specialist");
 }
-requireFragment(specialistScript, "test/ci/run-plasmon-specialist.mjs", "required Specialist npm script");
+requireFragment(
+  specialistScript,
+  "test/ci/run-plasmon-specialist.mjs",
+  "required Specialist npm script",
+);
 for (const fragment of [
   "discoverPlasmonTests",
   "lane === 'specialist'",
@@ -159,13 +184,33 @@ for (const fragment of [
   "--grep-invert",
   "@r2-quarantine",
 ]) {
-  requireFragment(specialistRunner, fragment, "automatic Specialist runner");
+  requireFragment(
+    specialistRunner,
+    fragment,
+    "automatic Specialist runner",
+  );
+}
+
+for (const fragment of [
+  "Failure summary",
+  "failure occurrence(s)",
+  "Unique failing tests parsed",
+  "MODIFIED IN PR",
+  "UNCHANGED IN PR",
+  "attempt(s)",
+  "Failed attempts without a parsed test identity",
+  "SUMMARY INTEGRITY FAILURE",
+  "STABILITY OBSERVED: 10/10 fresh attempts passed.",
+  "FLAKE/FAILURE OBSERVED:",
+  "process.exitCode = 1",
+  "extractFailures",
+]) {
+  requireFragment(summarizer, fragment, "flake-probe aggregate summarizer");
 }
 
 for (const fragment of [
   "--repeat-each",
   "--pass-with-no-tests",
-  "git diff --name-only",
   "paths-ignore",
   "pull_request_target",
   "run: exit 1",
@@ -176,25 +221,41 @@ for (const fragment of [
 
 // Targeted probes deliberately execute the named acceptance even while that
 // boundary is quarantined from the normal required Specialist inventory.
-forbidFragment(runner, "--grep-invert @r2-quarantine", "targeted flake-probe runner");
+forbidFragment(
+  runner,
+  "--grep-invert @r2-quarantine",
+  "targeted flake-probe runner",
+);
 
 const attempts = workflow.match(/attempt: \[([^\]]+)\]/)?.[1]
   ?.split(",")
   .map((value) => Number(value.trim()));
-if (!attempts || attempts.length !== 10 || attempts.some((value, index) => value !== index + 1)) {
-  throw new Error("flake-probe workflow must define exactly ten numbered fresh attempts");
+if (
+  !attempts ||
+  attempts.length !== 10 ||
+  attempts.some((value, index) => value !== index + 1)
+) {
+  throw new Error(
+    "flake-probe workflow must define exactly ten numbered fresh attempts",
+  );
 }
 
 const retryZeroCount = runner.split("--retries=0").length - 1;
 if (retryZeroCount < 2) {
-  throw new Error("flake-probe runner must disable retries for full and targeted probes");
+  throw new Error(
+    "flake-probe runner must disable retries for full and targeted probes",
+  );
 }
 
 const workerOneCount =
   runner.split("--workers=1").length - 1 +
   specialistRunner.split("--workers=1").length - 1;
 if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
-  throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
+  throw new Error(
+    "flake-probe runner must serialize both targeted and Specialist probes",
+  );
 }
 
-console.log("Flake-probe path-trigger, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, artifact-identity, source-step failure-reporting, and aggregate-summary contracts verified");
+console.log(
+  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, diagnostic aggregation, failure-identity summary, and changed-file annotation contracts verified",
+);
