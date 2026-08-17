@@ -57,7 +57,7 @@ const workflowFragments = [
   "flake.lock",
   ".github/workflows/plasmon-flake-probe.yml",
   "echo \"applicable=$applicable\" >> \"$GITHUB_OUTPUT\"",
-  "name: flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}",
+  "name: flake-probe-applicability-${{ github.run_id }}",
   "if: needs.applicability.outputs.applicable == 'true'",
   "needs: applicability",
   "fail-fast: false",
@@ -69,8 +69,8 @@ const workflowFragments = [
   "2>&1 | tee flake-probe-output.log",
   "run_id=${{ github.run_id }}",
   "run_attempt=${{ github.run_attempt }}",
-  "name: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
-  "name: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.attempt }}",
+  "name: flake-probe-result-${{ github.run_id }}-${{ matrix.attempt }}",
+  "name: flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}",
   "cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt",
   "cp flake-probe-output.log flake-probe-diagnostics/probe-output.log",
   "name: Report observed probe failure",
@@ -81,6 +81,7 @@ const workflowFragments = [
   "Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
   "Diagnostic artifact: \\`$diagnostic_artifact\\`",
   "uses: actions/upload-artifact@v4",
+  "overwrite: true",
   "summary:",
   "if: ${{ always() && (needs.applicability.result != 'success' || needs.applicability.outputs.applicable == 'true') }}",
   "name: Flake probe summary",
@@ -88,10 +89,10 @@ const workflowFragments = [
   "name: Require successful applicability detection",
   "name: Download applicability evidence",
   "name: Download attempt results",
-  "pattern: flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-*",
+  "pattern: flake-probe-result-${{ github.run_id }}-*",
   "name: Download failed-attempt diagnostics",
   "if: needs.probe.result != 'success'",
-  "pattern: flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-*",
+  "pattern: flake-probe-diagnostics-${{ github.run_id }}-*",
   "node test/ci/summarize-flake-probe.mjs",
   "| tee -a \"$GITHUB_STEP_SUMMARY\"",
 ];
@@ -109,6 +110,25 @@ forbidFragment(
   "continue-on-error: true",
   "flake-probe workflow must let the real probe step own the job failure",
 );
+
+for (const fragment of [
+  "flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}",
+  "flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-",
+  "flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-",
+]) {
+  forbidFragment(
+    workflow,
+    fragment,
+    "flake-probe artifacts must survive partial failed-job reruns by using stable logical-slot names",
+  );
+}
+
+const overwriteCount = workflow.split("overwrite: true").length - 1;
+if (overwriteCount < 3) {
+  throw new Error(
+    "flake-probe applicability, result, and diagnostic artifacts must be overwrite-safe for workflow reruns",
+  );
+}
 
 const reportStart = workflow.indexOf("      - name: Report observed probe failure");
 const summaryStart = workflow.indexOf("\n  summary:", reportStart);
@@ -359,5 +379,5 @@ function verifySummaryParserBehavior() {
 verifySummaryParserBehavior();
 
 console.log(
-  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
+  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, rerun-safe logical-slot artifacts, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
 );
