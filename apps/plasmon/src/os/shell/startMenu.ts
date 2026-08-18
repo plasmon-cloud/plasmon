@@ -16,6 +16,7 @@ export const START_MENU_PATH = "/System/Start Menu";
 export const START_MENU_NAME = "Start Menu";
 export const START_SHORTCUT_METADATA_KEY = "plasmon.shortcut";
 export const START_SEEDED_IDENTITIES_KEY = "plasmon.shell.start.seeded.v1";
+export const START_MANAGED_FOLDER_METADATA_KEY = "plasmon.shell.start.managed-folder.v1";
 
 const RETIRED_SYSTEM_NATIVE_HANDLERS = new Set<HandlerId>([
   "native:settings",
@@ -88,17 +89,29 @@ async function ensureStartRoot(fs: FsService): Promise<FsNode> {
   return fs.mkdir(system.id, START_MENU_NAME);
 }
 
+function hasExactManagedFolderProvenance(node: FsNode, name: string): boolean {
+  if (node.kind !== "directory" || node.name !== name) return false;
+  const metadataKeys = Object.keys(node.metadata);
+  return metadataKeys.length === 1
+    && metadataKeys[0] === START_MANAGED_FOLDER_METADATA_KEY
+    && node.metadata[START_MANAGED_FOLDER_METADATA_KEY] === name;
+}
+
 /**
  * Resolve a canonical managed Start category without claiming ownership of an
- * ambiguous same-name resource. A non-directory collision is preserved and
- * represented as a blocked placement for this reconciliation pass; callers may
- * continue reconciling independent categories without mutating or relabeling it.
+ * ambiguous same-name resource. Newly created managed categories receive durable
+ * ownership provenance. Existing same-name directories are never adopted or
+ * tagged, so user-created folders remain distinguishable from Shell-created ones.
+ * A non-directory collision is preserved and represented as a blocked placement
+ * for this reconciliation pass; callers may continue reconciling independent
+ * categories without mutating or relabeling it.
  */
 async function resolveChildDirectory(fs: FsService, parent: FsNode, name: string): Promise<FsNode | null> {
   const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
   const existing = children.find((node) => node.name === name);
   if (existing) return existing.kind === "directory" ? existing : null;
-  return fs.mkdir(parent.id, name);
+  const created = await fs.mkdir(parent.id, name);
+  return fs.setMetadata(created.id, { [START_MANAGED_FOLDER_METADATA_KEY]: name });
 }
 
 async function uniqueChildName(fs: FsService, parentId: string, preferred: string): Promise<string> {
@@ -176,6 +189,43 @@ function isExactManagedSeed(node: FsNode, spec: SeedSpec): boolean {
 }
 
 /**
+ * Retire the former managed Start `System` category only when durable directory
+ * provenance proves Shell ownership and the folder is still the untouched
+ * canonical legacy default. Folder name/shape and the v1 shortcut ledger are not
+ * sufficient proof by themselves. Customized or ambiguous folders fail closed.
+ */
+async function migrateProvablyManagedRetiredSystemFolder(
+  fs: FsService,
+  root: FsNode,
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+): Promise<void> {
+  const specs = nativeApps
+    .filter((app) => app.runtimeOnly !== true && RETIRED_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
+    .map(nativeSeedSpec);
+  if (specs.length !== RETIRED_SYSTEM_NATIVE_HANDLERS.size) return;
+
+  const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const system = rootChildren.find((node) => node.name === "System");
+  if (!system || !hasExactManagedFolderProvenance(system, "System")) return;
+  if (specs.some((spec) => !seeded.has(spec.identity))) return;
+  if (specs.some((spec) => rootChildren.some((node) => node.id !== system.id && node.name === spec.name))) return;
+
+  const systemChildren = await fs.list(system.id, { includeHidden: true, sort: "name" });
+  if (systemChildren.length !== specs.length) return;
+
+  const candidates: FsNode[] = [];
+  for (const spec of specs) {
+    const candidate = systemChildren.find((node) => node.name === spec.name);
+    if (!candidate || !isExactManagedSeed(candidate, spec)) return;
+    candidates.push(candidate);
+  }
+
+  for (const candidate of candidates) await fs.move(candidate.id, root.id);
+  await fs.remove(system.id);
+}
+
+/**
  * Runtime hosts used to be seeded because Start projected every Process
  * definition. Retire only an exact old managed default: the durable seed ledger
  * must prove that identity was seeded, and the shortcut must still have its
@@ -218,8 +268,10 @@ async function retireManagedRuntimeOnlySeeds(
  * intentional deletion and is not recreated. Newly discovered identities are
  * seeded exactly once. Exact previously-managed defaults that are now classified
  * runtime-only are retired without weakening those user-customization semantics.
- * Ambiguous same-name category resources block only the seeds that require that
- * category; they are never mutated or treated as managed merely by name.
+ * Managed category ownership is recorded only when Shell creates a category;
+ * existing same-name directories are never adopted. The retired `System` folder
+ * migrates only when that durable directory provenance is present and the legacy
+ * contents remain exact; pre-provenance folders continue to fail closed.
  */
 export async function reconcileStartMenu(
   fs: FsService,
@@ -228,9 +280,7 @@ export async function reconcileStartMenu(
 ): Promise<StartSeedResult> {
   const root = await ensureStartRoot(fs);
   const seeded = stringList(root.metadata[START_SEEDED_IDENTITIES_KEY]);
-  // The v1 seed ledger records shortcut identities, not the NodeId of the old
-  // `System` directory. Shape alone cannot prove directory ownership, so legacy
-  // folders are scanned in place and never moved/deleted by reconciliation.
+  await migrateProvablyManagedRetiredSystemFolder(fs, root, nativeApps, seeded);
   await retireManagedRuntimeOnlySeeds(fs, root, nativeApps, seeded);
   const existing = await scanStartTree(fs, root);
   let created = 0;
