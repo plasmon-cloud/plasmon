@@ -113,39 +113,39 @@ npm --workspace neutron-plasmon run test:all
 
 Do not run package work after every small UI/model edit merely because the behavior eventually ships in a package.
 
-## 5. Real installed demo environment
+## 5. Plasmon deployment command families
 
-`plasmon-local.ndeploy.json` is the explicit source of truth for the local/CI Plasmon acceptance deployment. Do not maintain a second hand-written package list in shell commands or CI.
+Plasmon has two manifest-specific deployment families. The command namespace identifies the deployment manifest and must not be treated as interchangeable.
 
 The repository-owned coordinator is:
 
 ```text
-test/e2e/plasmon-demo-environment.ts
+test/e2e/plasmon-deployment-environment.ts
 ```
 
-It reads the manifest, resolves each inline `.neutron` archive to its owning workspace, runs only that workspace's production `package` command, verifies every required archive exists, and delegates PocketIC/Neutron lifecycle operations to the existing `neutron-provision` command.
+It requires an explicit `local` or `demo` scope, reads that scope's manifest, resolves every inline `.neutron` archive to its owning workspace, runs each required workspace's production `package` command once, verifies every declared archive exists, and delegates PocketIC/Neutron lifecycle operations to the existing `neutron-provision` command. Do not maintain a second hand-written package list in shell commands or CI.
 
-The current manifest resolves to exactly:
+### Bounded Plasmon local/E2E fixture
+
+`plasmon-local.ndeploy.json` is the source of truth for the bounded local/CI Plasmon acceptance deployment. It currently declares exactly:
 
 - Kernel;
 - Plasmon;
 - independently installed Review.
 
-When the acceptance manifest changes, preparation follows that manifest instead of requiring a second package-list edit.
-
-Available root commands:
+Use:
 
 ```sh
-npm run plasmon:demo:prepare
-npm run plasmon:demo:serve
-npm run plasmon:demo:status
-npm run plasmon:demo:reinstall
+npm run plasmon:local:prepare
+npm run plasmon:local:serve
+npm run plasmon:local:status
+npm run plasmon:local:reinstall
 ```
 
 For a clean local acceptance environment, start the server in one terminal:
 
 ```sh
-npm run plasmon:demo:serve
+npm run plasmon:local:serve
 ```
 
 Then in another terminal run:
@@ -154,9 +154,28 @@ Then in another terminal run:
 npm run test:e2e:plasmon:fresh
 ```
 
-The fresh command packages the manifest-derived artifacts, performs a clean reinstall through `neutron-provision`, and runs the packaged Plasmon browser suite. Use `npm run test:e2e:plasmon` to rerun only browser specs against an already matching installation.
+The fresh command packages only the artifacts declared by `plasmon-local.ndeploy.json`, performs a clean reinstall through `neutron-provision`, and runs the packaged Plasmon browser suite. Use `npm run test:e2e:plasmon` to rerun only browser specs against an already matching installation.
 
-This testing harness must preserve the real boundary:
+Required Plasmon packaged CI and the flake probe use this `plasmon:local:*` family. They must not switch to `plasmon:demo:*`, because doing so would silently expand CI to the fuller demo deployment.
+
+### Full Plasmon demo deployment
+
+`plasmon.ndeploy.json` is the source of truth for the fuller Plasmon demo deployment and its larger application set. Use:
+
+```sh
+npm run plasmon:demo:prepare
+npm run plasmon:demo:serve
+npm run plasmon:demo:status
+npm run plasmon:demo:reinstall
+```
+
+`npm run plasmon:demo:prepare` packages and verifies **every artifact declared by `plasmon.ndeploy.json`**. The other `plasmon:demo:*` lifecycle commands likewise target that same manifest. This family is not the bounded E2E fixture.
+
+### Generic repository `local:*` commands
+
+The existing root `local:authorize`, `local:start`, `local:deploy`, and `local:status` commands are a separate Neutron repository development surface. They operate on `local.ndeploy.json`; they are not aliases for the Plasmon-specific `plasmon:local:*` family and are intentionally unchanged.
+
+The Plasmon testing harness must preserve the real boundary:
 
 ```text
 production package command
@@ -169,6 +188,14 @@ production package command
 ```
 
 Do not add a second PocketIC implementation, test-only product behavior, fabricated packages, or direct Review launch shortcuts.
+
+The focused command/manifest regression is:
+
+```sh
+npm run test:plasmon:deployment-commands
+```
+
+It proves the local and demo command scopes resolve different canonical manifests and that each preparation plan includes every artifact declared by its selected manifest.
 
 ## 6. Browser / Playwright lane
 
@@ -221,9 +248,9 @@ npm --workspace neutron-plasmon test
 
 Direct-push applicability may retain its explicit branch/path filters; that does not change the complete-PR execution contract.
 
-It installs the test dependencies but intentionally avoids Kernel packaging, Motoko/Nix, and Playwright.
+It installs the test dependencies but intentionally avoids Kernel packaging, Motoko/Nix, and Playwright. Fast CI also executes the focused deployment command/manifest regression so the `demo` and `local` namespaces cannot silently converge again.
 
-`.github/workflows/plasmon-browser-ci.yml` is the separate installed-package/browser gate. It consumes the same manifest-driven `plasmon:demo:*` preparation/provision path used locally instead of maintaining its own Kernel/Plasmon/Review package list.
+`.github/workflows/plasmon-browser-ci.yml`, `.github/workflows/plasmon-browser-smoke-ci.yml`, and `.github/workflows/plasmon-browser-persistence-ci.yml` are installed-package/browser gates. They consume the manifest-driven `plasmon:local:*` preparation/provision path because the bounded `plasmon-local.ndeploy.json` fixture is their explicit source of truth.
 
 If an agent environment cannot run Bun locally, push the Issue branch and use Plasmon Fast CI as the feedback loop. `Tests not run` is not a complete handoff when CI is available.
 
