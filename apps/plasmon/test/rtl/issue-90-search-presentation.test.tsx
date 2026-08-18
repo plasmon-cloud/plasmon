@@ -36,14 +36,14 @@ function controller(results: SearchSurfaceController["view"]["results"]): Search
   };
 }
 
-test("#90 SearchSurface renders canonical Neutron application presentation without raw runtime/package tokens", () => {
+test("#90 SearchSurface renders canonical Neutron application presentation without runtime/package tokens", () => {
   const node = projectionNode();
   const projection: NeutronProjectionSearchResult = {
     kind: "neutron-projection",
     id: "element:review",
     category: "apps",
     title: "Review",
-    subtitle: "Collaborative reviews · Runtime status unavailable",
+    subtitle: "Collaborative reviews",
     elementId: "review",
     node,
   };
@@ -61,10 +61,9 @@ test("#90 SearchSurface renders canonical Neutron application presentation witho
   try {
     const result = view.getByRole("button", { name: /Review/i });
     expect(result.textContent).toContain("Review");
-    expect(result.textContent).toContain("Collaborative reviews · Runtime status unavailable");
+    expect(result.textContent).toContain("Collaborative reviews");
     expect(result.textContent).not.toContain("Review.neutron");
-    expect(result.textContent).not.toMatch(/running\s+(yes|no|unknown)/iu);
-    expect(result.textContent?.toLocaleLowerCase()).not.toContain("not running");
+    expect(result.textContent).not.toMatch(/running|runtime status|stopped/iu);
 
     // The application remains accessible by canonical identity even with no supplied icon.
     expect(result.getAttribute("aria-label")).toBeNull();
@@ -75,7 +74,7 @@ test("#90 SearchSurface renders canonical Neutron application presentation witho
   }
 });
 
-test("#90 SearchSurface keeps direct Element and projection presentation consistent", () => {
+test("#90 SearchSurface keeps direct Element and projection presentation consistent without runtime state", () => {
   const element: ExternalElement = {
     id: "mail",
     name: "Mail",
@@ -89,7 +88,7 @@ test("#90 SearchSurface keeps direct Element and projection presentation consist
     id: "element:mail",
     category: "apps" as const,
     title: "Mail",
-    subtitle: "Canonical Neutron Mail · Running",
+    subtitle: "Canonical Neutron Mail",
     element,
   };
   const projection: NeutronProjectionSearchResult = {
@@ -122,8 +121,8 @@ test("#90 SearchSurface keeps direct Element and projection presentation consist
     expect(results).toHaveLength(2);
     for (const result of results) {
       expect(result.textContent).toContain("Mail");
-      expect(result.textContent).toContain("Canonical Neutron Mail · Running");
-      expect(result.textContent).not.toMatch(/running\s+(yes|no|unknown)/iu);
+      expect(result.textContent).toContain("Canonical Neutron Mail");
+      expect(result.textContent).not.toMatch(/running|runtime status|stopped/iu);
       expect(result.textContent).not.toContain(".neutron");
     }
   } finally {
