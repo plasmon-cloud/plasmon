@@ -1,0 +1,35 @@
+name: Install Plasmon Train Snapshot v5.22
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-22
+    paths:
+      - .github/train-helper-v5-22-bootstrap-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/train-snapshot-v5-22
+          fetch-depth: 1
+      - name: Reconstruct exact v5.22 helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/train-helper-v5-22.parts/part-*.b64 | tr -d '\r\n' | base64 -d > /tmp/plasmon-train-snapshot-v5-22.yml
+          actual="$(sha256sum /tmp/plasmon-train-snapshot-v5-22.yml | awk '{print $1}')"
+          expected="eff2c935b5beaf2661f39fe42ad4f168cca74523a02b23adb34ff2cbd5361bf7"
+          test "$actual" = "$expected"
+          mkdir -p .github/workflows
+          mv /tmp/plasmon-train-snapshot-v5-22.yml .github/workflows/plasmon-train-snapshot-v5-22.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/plasmon-train-snapshot-v5-22.yml
+          git commit -m 'install exact Plasmon train snapshot v5.22 helper'
+          git push origin HEAD:automation/train-snapshot-v5-22
