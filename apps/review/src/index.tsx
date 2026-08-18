@@ -16,6 +16,7 @@ import type {
 } from "./model.ts";
 import { draftAfterReviewAction, settleReviewAction } from "./action_outcome.ts";
 import { formatReviewTime } from "./presentation.ts";
+import type { ReviewSubmission } from "./submission.ts";
 import "./style.scss";
 
 const STATE_TOPIC = "review.state";
@@ -39,16 +40,19 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [updatesQueued, setUpdatesQueued] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [submittedRevisions, setSubmittedRevisions] = useState<Record<string, string>>({});
+  const [submission, setSubmission] = useState<ReviewSubmission | null>(null);
   const [restoreRevision, setRestoreRevision] = useState<ReviewRevision | null>(null);
 
   const readAtom = useCallback(async (atomId: string) => {
-    const [next, revisions] = await Promise.all([
+    const [next, revisions, submissionState] = await Promise.all([
       call<ReviewAtomState>(target, "review_atom", { atomId }),
       call<{ revisions: ReviewRevision[] }>(target, "review_history", { atomId }),
+      call<{ submission: ReviewSubmission | null }>(target, "review_submission", { atomId }),
     ]);
     setAtom(next);
     setHistory(revisions.revisions);
+    setSubmission(submissionState.submission);
+    setSubmitPath(submissionState.submission?.path ?? DEFAULT_SUBMIT_PATH);
     setAtoms((current) => current.map((entry) => entry.atomId === atomId ? next.meta : entry));
     setLastSavedAt(next.meta.updatedAt);
     setUpdatesQueued(false);
@@ -61,6 +65,8 @@ export function App() {
     if (!atomId) {
       setAtom(null);
       setHistory([]);
+      setSubmission(null);
+      setSubmitPath(DEFAULT_SUBMIT_PATH);
       return;
     }
     await readAtom(atomId);
@@ -165,19 +171,20 @@ export function App() {
   const submitReview = () => {
     if (!atom || busy) return;
     void perform(async () => {
-      await call(target, "review_file", {
+      const result = await call<{ submission: ReviewSubmission }>(target, "review_file", {
         action: "export",
         atomId: atom.meta.atomId,
         expectedRevision: atom.meta.currentRevision,
         path: submitPath.trim(),
       });
-      setSubmittedRevisions((current) => ({ ...current, [atom.meta.atomId]: atom.meta.currentRevision }));
-      setNotice(`Submitted revision r${atom.meta.currentSequence} to ${submitPath.trim()}. This snapshot is ready to give to an AI for issue triage.`);
+      setSubmission(result.submission);
+      setSubmitPath(result.submission.path);
+      setNotice(`Submitted revision r${atom.meta.currentSequence} to ${result.submission.path}. This snapshot is ready to give to an AI for issue triage.`);
     });
   };
 
   const progress = atom ? reviewProgress(atom) : null;
-  const lastSubmittedRevision = atom ? submittedRevisions[atom.meta.atomId] ?? null : null;
+  const lastSubmittedRevision = submission?.revisionId ?? null;
   const hasUnsubmittedChanges = !!atom && lastSubmittedRevision !== atom.meta.currentRevision;
 
   return <main className="review-app">
@@ -266,10 +273,10 @@ export function App() {
       <aside className="review-inspector" aria-label="Review context and submission">
         <section className="side-panel submit-panel">
           <span className="section-kicker">Publish</span><h2>Submit review</h2>
-          <p className="section-help">Your local progress is saved continuously. The AI-facing snapshot changes only when you choose Submit.</p>
+          <p className="section-help">Recorded results are saved immediately. The AI-facing snapshot changes only when you choose Submit.</p>
           {atom && <div className={hasUnsubmittedChanges ? "submission-state pending" : "submission-state current"}>
             <strong>{hasUnsubmittedChanges ? "Changes not submitted" : "Submitted snapshot is current"}</strong>
-            <span>{lastSubmittedRevision ? `Last submitted ${lastSubmittedRevision}` : "Nothing has been submitted yet."}</span>
+            <span>{submission ? `Last submitted ${submission.revisionId} · ${formatReviewTime(submission.submittedAt)}` : "Nothing has been submitted yet."}</span>
           </div>}
           <label className="control-label" htmlFor="submit-path">Submission file</label>
           <input id="submit-path" value={submitPath} onChange={(event) => setSubmitPath(event.target.value)} />
