@@ -10,7 +10,7 @@ The packaged path starts at `index.tsx` and renders `os/PlasmonOS.tsx`. Treat `o
 
 Legacy/compatibility trees are migration sources, not alternate authorities. Do not add new product behavior there merely because an older implementation already contains a similar feature.
 
-The former parallel frontend trees `src/gui2/**` and `src/platform/**` are retired and physically absent from the active source tree. Do not recreate or import them as compatibility shortcuts. Git history is the recovery source for any behavior that still needs to be understood; migrate only accepted behavior into the owning `os/**` or `native-apps/**` authority.
+The former parallel frontend `gui2/**` and `platform/**` siblings under this source root are retired and physically absent from the active source tree. Do not recreate or import them as compatibility shortcuts. Git history is the recovery source for any behavior that still needs to be understood; migrate only accepted behavior into the owning `os/**` or `native-apps/**` authority.
 
 ## Boundaries
 
