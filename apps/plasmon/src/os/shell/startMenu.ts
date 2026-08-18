@@ -241,6 +241,7 @@ async function migrateProvablyManagedRetiredSystemFolder(
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
   const system = rootChildren.find((node) => node.name === "System");
   if (!system || system.kind !== "directory" || managedFolderIds.get("System") !== system.id) return;
+  if (Object.keys(system.metadata).length !== 0) return;
   if (specs.some((spec) => !seeded.has(spec.identity))) return;
   if (specs.some((spec) => rootChildren.some((node) =>
     node.id !== system.id && sameFilesystemName(node.name, spec.name),
