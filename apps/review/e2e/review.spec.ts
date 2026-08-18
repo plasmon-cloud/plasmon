@@ -47,9 +47,9 @@ test("packaged Review saves human results locally and submits only on explicit S
   await expect(card.getByRole("button", { name: "× Fail" })).toBeEnabled();
   await card.getByRole("button", { name: "× Fail" }).click();
   await expect(card.getByText("Fail", { exact: true }).first()).toBeVisible();
-  await expect(harness.review.getByText("0 Pass")).toBeVisible();
-  await expect(harness.review.getByText("1 Fail")).toBeVisible();
-  await expect(harness.review.getByText("0 Remaining")).toBeVisible();
+  await expect(harness.review.getByText("0 Pass", { exact: true })).toBeVisible();
+  await expect(harness.review.getByText("1 Fail", { exact: true })).toBeVisible();
+  await expect(harness.review.getByText("0 Remaining", { exact: true })).toBeVisible();
   await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
   await attachBrowserScreenshot(page, testInfo, "recorded-human-failure");
 
