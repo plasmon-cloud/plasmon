@@ -1,0 +1,42 @@
+name: Plasmon Train Snapshot v5.19
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-19
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-19.yml
+      - .github/plasmon-train-snapshot-trigger-v5-19.txt
+      - .github/plasmon-train-v5-19/**
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build compact r2 train snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: plasmon-cloud/plasmon
+          TARGET: release/0.1.0-r2
+          MILESTONE_TITLE: 0.1.0-r2
+          CLAIM_ASSIGNEE: 3E4B54
+          HELPER_SHA: ${{ github.sha }}
+          TRIGGER_PATH: .github/plasmon-train-snapshot-trigger-v5-19.txt
+        shell: bash
+        run: |
+          cat .github/plasmon-train-v5-19/chunk-01.pyfrag .github/plasmon-train-v5-19/chunk-02.pyfrag .github/plasmon-train-v5-19/chunk-03.pyfrag .github/plasmon-train-v5-19/chunk-04.pyfrag .github/plasmon-train-v5-19/chunk-05.pyfrag .github/plasmon-train-v5-19/chunk-06.pyfrag > /tmp/plasmon-train-snapshot-v5-19.py
+          python3 /tmp/plasmon-train-snapshot-v5-19.py
+      - name: Upload train snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot-v5-19
+          path: plasmon-train-snapshot-v5-19.json
+          retention-days: 1
+          if-no-files-found: error
