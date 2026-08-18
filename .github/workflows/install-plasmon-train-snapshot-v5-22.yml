@@ -45,10 +45,9 @@ jobs:
           expected="eff2c935b5beaf2661f39fe42ad4f168cca74523a02b23adb34ff2cbd5361bf7"
           echo "helper_sha256=$actual"
           test "$actual" = "$expected"
-          mkdir -p .github/workflows
-          mv /tmp/plasmon-train-snapshot-v5-22.yml .github/workflows/plasmon-train-snapshot-v5-22.yml
+          cp /tmp/plasmon-train-snapshot-v5-22.yml .github/plasmon-train-snapshot-v5-22.exact.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/plasmon-train-snapshot-v5-22.yml
-          git commit -m 'install exact Plasmon train snapshot v5.22 helper'
+          git add .github/plasmon-train-snapshot-v5-22.exact.yml
+          git commit -m 'stage exact Plasmon train snapshot v5.22 helper blob'
           git push origin HEAD:automation/train-snapshot-v5-22
