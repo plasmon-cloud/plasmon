@@ -1,0 +1,2 @@
+    json.dump(snapshot, f, indent=2); f.write("\n")
+print(f"snapshot PASS lane={len(rows)} open={derived_open} closed={derived_closed} milestone_summary={before[0]}/{before[1]}->{after[0]}/{after[1]} prs={sum(1 for r in rows if r['product'] and r['pr'] is not None)} claimed_no_pr={len(claimed_no_pr)} target={target_sha}")
