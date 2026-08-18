@@ -1,7 +1,7 @@
 name: Install Plasmon Train Snapshot v5.22
 
 on:
-  push:
+  pull_request:
     branches:
       - automation/train-snapshot-v5-22
     paths:
