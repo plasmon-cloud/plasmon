@@ -56,7 +56,7 @@ test("packaged Review saves human results locally and submits only on explicit S
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);
   harness = await openReview(page);
-  const reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  let reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
   await expect(reopenedCard).toBeVisible();
   await expect(reopenedCard.getByText("Fail", { exact: true }).first()).toBeVisible();
   await expect(reopenedCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of the previous folder.");
@@ -68,10 +68,23 @@ test("packaged Review saves human results locally and submits only on explicit S
   await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
 
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await login(page);
+  harness = await openReview(page);
+  reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  await expect(reopenedCard).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  await expect(harness.review.getByLabel("Submission file")).toHaveValue(submissionPath);
+
   await reopenedCard.getByLabel("What happened?").fill("");
   await reopenedCard.getByRole("button", { name: "✓ Pass" }).click();
   await expect(reopenedCard.getByText("Pass", { exact: true }).first()).toBeVisible();
   await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
+
+  await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
+  await approveFilesToolIfNeeded(page, "writeBinary");
+  await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
 
   await expect(harness.review.getByRole("button", { name: "Refresh" })).toBeVisible();
   await expect(harness.review.getByText(/Other reviewers' queued changes appear only after Refresh/)).toBeVisible();
@@ -81,6 +94,12 @@ test("packaged Review saves human results locally and submits only on explicit S
   expect(populatedNarrow.scrollWidth).toBeLessThanOrEqual(populatedNarrow.clientWidth + 1);
   await attachBrowserScreenshot(page, testInfo, "human-review-narrow");
 });
+
+async function approveFilesToolIfNeeded(page: Page, tool: "readBinary" | "writeBinary"): Promise<void> {
+  const dialog = page.locator('[data-tid="frontend-tool-dialog"]');
+  const appeared = await dialog.waitFor({ state: "visible", timeout: 750 }).then(() => true).catch(() => false);
+  if (appeared) await approveFilesTool(page, tool);
+}
 
 async function expectReadable(locator: Locator, minimumRatio: number): Promise<void> {
   const colors = await locator.evaluate((element) => {
