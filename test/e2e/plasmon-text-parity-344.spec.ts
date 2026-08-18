@@ -56,7 +56,8 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
   const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(appSelector)).toBeVisible();
   const app = page.frameLocator(appSelector);
-  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+  const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+  await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
   // Reach Text through the real filesystem and association path used by the
   // existing packaged Monaco acceptance; this test owns parity presentation,
@@ -120,6 +121,14 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
     await goToLine.click();
     await expect(notesWindow.locator(".monaco-editor .quick-input-widget")).toBeVisible();
     await page.keyboard.press("Escape");
+
+    // Return focus to the real running Explorer through the taskbar before
+    // using its browser file-import control; Monaco currently owns the active
+    // window and otherwise legitimately intercepts pointer input.
+    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    await expect(filesTask).toBeVisible();
+    await filesTask.click();
+    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
 
     // Import a representative JavaScript resource through normal Explorer UI so
     // the packaged Text window proves shared resource classification drives the
