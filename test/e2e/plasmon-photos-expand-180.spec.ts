@@ -4,6 +4,17 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const SVG_FIXTURE = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64"><rect width="96" height="64" fill="#4969d8"/><circle cx="48" cy="32" r="18" fill="#f2f4ff"/></svg>`;
+const GEOMETRY_TOLERANCE_PX = 1;
+
+function geometryMatches(
+  actual: { x: number; y: number; width: number; height: number },
+  expected: { x: number; y: number; width: number; height: number },
+): boolean {
+  return Math.abs(actual.x - expected.x) <= GEOMETRY_TOLERANCE_PX
+    && Math.abs(actual.y - expected.y) <= GEOMETRY_TOLERANCE_PX
+    && Math.abs(actual.width - expected.width) <= GEOMETRY_TOLERANCE_PX
+    && Math.abs(actual.height - expected.height) <= GEOMETRY_TOLERANCE_PX;
+}
 
 test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
@@ -99,24 +110,31 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     );
     expect(await photos.evaluate(() => document.fullscreenElement)).toBeNull();
 
+    // NativeWindow intentionally animates geometry. Wait on the actual geometry
+    // contract instead of sampling a frame in the middle of the CSS transition.
+    await expect.poll(async () => {
+      const workspace = await windowLayer.boundingBox();
+      const expanded = await photosWindow.boundingBox();
+      return !!workspace && !!expanded && geometryMatches(expanded, workspace);
+    }).toBe(true);
+
     const workspaceExpanded = await windowLayer.boundingBox();
     const expanded = await photosWindow.boundingBox();
     if (!workspaceExpanded || !expanded) throw new Error("Expanded Photos has no packaged workspace geometry");
-    expect(Math.abs(expanded.x - workspaceExpanded.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(expanded.y - workspaceExpanded.y)).toBeLessThanOrEqual(1);
-    expect(Math.abs(expanded.width - workspaceExpanded.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(expanded.height - workspaceExpanded.height)).toBeLessThanOrEqual(1);
+    expect(geometryMatches(expanded, workspaceExpanded)).toBe(true);
 
     await photosWindow.getByRole("button", { name: "Exit expanded" }).click();
     await expect(photos).toHaveAttribute("data-photos-display-mode", "normal");
     await expect(photosWindow).not.toHaveClass(/plasmon-window--maximized/);
 
+    await expect.poll(async () => {
+      const restored = await photosWindow.boundingBox();
+      return !!restored && geometryMatches(restored, floatingBefore);
+    }).toBe(true);
+
     const restored = await photosWindow.boundingBox();
     if (!restored) throw new Error("Restored Photos has no packaged window geometry");
-    expect(Math.abs(restored.x - floatingBefore.x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(restored.y - floatingBefore.y)).toBeLessThanOrEqual(1);
-    expect(Math.abs(restored.width - floatingBefore.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(restored.height - floatingBefore.height)).toBeLessThanOrEqual(1);
+    expect(geometryMatches(restored, floatingBefore)).toBe(true);
 
     health.assertClean();
   } finally {
