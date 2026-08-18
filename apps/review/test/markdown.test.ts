@@ -63,10 +63,10 @@ test("submitted Markdown carries independent human results and failure evidence"
   });
   const itemId = (await engine.getAtom(created.atomId)).items[0]!.itemId;
 
-  await engine.apply({
+  const first = await engine.apply({
     atomId: created.atomId,
     expectedRevision: created.revisionId,
-    commandId: "result",
+    commandId: "result-local",
     actor,
     operation: {
       type: "review.set_result",
@@ -76,12 +76,28 @@ test("submitted Markdown carries independent human results and failure evidence"
     },
   });
 
+  await engine.apply({
+    atomId: created.atomId,
+    expectedRevision: first.revisionId,
+    commandId: "result-second-human",
+    actor: { key: "human:reviewer-2", type: "human", displayName: "Second reviewer" },
+    operation: {
+      type: "review.set_result",
+      itemId,
+      result: "working",
+      note: "Passed from a fresh session.",
+    },
+  });
+
   const output = exportReviewMarkdown(await engine.getAtom(created.atomId));
   expect(output).toContain("# r2 acceptance");
   expect(output).toContain("- [ ] Explorer Back works");
   expect(output).toContain("How to test / expected behavior");
+  expect(output).toContain("Review status: mixed");
   expect(output).toContain("human:local: FAIL");
+  expect(output).toContain("human:reviewer-2: PASS");
   expect(output).toContain("Back jumped to the desktop instead of Documents.");
+  expect(output).toContain("Passed from a fresh session.");
   expect(output).not.toContain("Desired:");
   expect(output).not.toContain("Effort:");
   expect(output).not.toContain("Owner:");
