@@ -108,11 +108,12 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(firstShortcutName).not.toBe(targetName);
     expect(firstShortcutName.startsWith(targetName)).toBe(true);
 
-    const firstShortcut = files.locator('[data-fm-kind="shortcut"]', { hasText: firstShortcutName }).first();
+    const firstShortcut = files.locator('[data-fm-kind="shortcut"]', { has: firstRename }).first();
     await expect(firstShortcut).toBeVisible();
     await expect(firstShortcut).toHaveAttribute("aria-selected", "true");
     await expect(firstShortcut.locator(".fm-entry__icon")).toBeVisible();
     await firstRename.press("Escape");
+    await expect(firstShortcut).toContainText(firstShortcutName);
 
     // Item-context-menu discoverability runs the same production command seam.
     // A second creation also proves canonical collision naming is visible through
@@ -133,11 +134,12 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(secondShortcutName).not.toBe(firstShortcutName);
     expect(secondShortcutName.startsWith(targetName)).toBe(true);
 
-    const secondShortcut = files.locator('[data-fm-kind="shortcut"]', { hasText: secondShortcutName }).first();
+    const secondShortcut = files.locator('[data-fm-kind="shortcut"]', { has: secondRename }).first();
     await expect(secondShortcut).toBeVisible();
     await expect(secondShortcut).toHaveAttribute("aria-selected", "true");
     await expect(secondShortcut.locator(".fm-entry__icon")).toBeVisible();
     await secondRename.press("Escape");
+    await expect(secondShortcut).toContainText(secondShortcutName);
 
     // Activate the first shortcut through normal FileEntry double-click. The
     // canonical dispatcher resolves it to the directory target, and Explorer's
