@@ -130,7 +130,7 @@ test("projection presentation falls back to canonical Element identity instead o
   expect(result.node.name).toBe("Internal-Package.neutron");
 });
 
-test("direct Element Search state uses user-facing vocabulary and preserves unknown uncertainty", async () => {
+test("direct Element Search presentation omits runtime state for yes, no, and unknown observations", async () => {
   const running = element("review", "yes", { name: "Review", description: "Collaborative reviews" });
   const stopped = element("mail", "no", { name: "Mail" });
   const unknown = element("calendar", "unknown", { name: "Calendar", description: "Calendar" });
@@ -140,15 +140,16 @@ test("direct Element Search state uses user-facing vocabulary and preserves unkn
     (result) => result.kind === "element" && result.element.id === id,
   );
 
-  expect(resultFor("review")?.subtitle).toBe("Collaborative reviews · Running");
-  expect(resultFor("mail")?.subtitle).toBe("Neutron application · Not running");
-  expect(resultFor("calendar")?.subtitle).toBe("Calendar · Runtime status unavailable");
-  expect(resultFor("calendar")?.subtitle.toLocaleLowerCase()).not.toContain("not running");
-  expect(resultFor("calendar")?.subtitle.toLocaleLowerCase()).not.toContain("stopped");
+  expect(resultFor("review")?.subtitle).toBe("Collaborative reviews");
+  expect(resultFor("mail")?.subtitle).toBe("Neutron application");
+  expect(resultFor("calendar")?.subtitle).toBe("Calendar");
 
   for (const result of batch.results) {
-    expect(result.subtitle).not.toMatch(/running\s+(yes|no|unknown)/iu);
+    expect(result.subtitle).not.toMatch(/running|runtime status|stopped/iu);
   }
+
+  const runtimeTokenQuery = await searchShell(staticSearchFs([]), [], [running, stopped, unknown], "unknown");
+  expect(runtimeTokenQuery.results).toHaveLength(0);
 });
 
 test("Search de-duplicates a projection against direct Element discovery while retaining canonical opening identity and presentation", async () => {
@@ -192,7 +193,7 @@ test("Search de-duplicates a projection against direct Element discovery while r
   expect(mail.node.name).toBe(projection.name);
   expect(mail.elementId).toBe(direct.id);
   expect(mail.title).toBe(direct.name);
-  expect(mail.subtitle).toBe("Canonical Neutron Mail · Running");
+  expect(mail.subtitle).toBe("Canonical Neutron Mail");
   expect(mail.icon).toBe(direct.icon);
   expect(searchApplicationIcon(mail)).toBe(direct.icon);
 
@@ -208,5 +209,5 @@ test("Search de-duplicates a projection against direct Element discovery while r
     (result) => result.kind === "element" && result.element.id === directOnly.id,
   );
   expect(calendar?.kind).toBe("element");
-  expect(calendar?.subtitle).toBe("Canonical Neutron Calendar · Runtime status unavailable");
+  expect(calendar?.subtitle).toBe("Canonical Neutron Calendar");
 });
