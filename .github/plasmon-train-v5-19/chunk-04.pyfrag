@@ -1,0 +1,121 @@
+    if rec["state"] != "open": continue
+    row = by_num[rec["issue"]]
+    if row["pr"] is not None and row["pr"] != rec["number"]:
+        raise RuntimeError(f"Issue #{rec['issue']} maps to multiple open PRs")
+    row["pr"] = rec["number"]; row["pr_branch"] = rec["head"]; row["pr_base"] = rec["base"]; row["active"] = True
+
+# Resolve merged stack history as mechanical PR evidence only. Direct
+# release merges are release-reachable PRs; they do NOT complete an OPEN
+# Issue. A merged child of an open parent may still be carried by that
+# parent so the train avoids duplicate implementation while the carrier lives.
+head_records = {}
+for rec in mapped:
+    if rec["head"]:
+        head_records.setdefault(rec["head"], []).append(rec)
+# Closed lane Issues are already complete by GitHub Issue state. For open
+# Issues, reachability exists only to describe historical implementation
+# evidence and live stack carriers. It never implies semantic completion.
+release_reachable_prs = set()
+for rec in mapped:
+    if not rec["merged_at"] or not by_num[rec["issue"]]["open"]:
+        continue
+    if rec.get("base") == TARGET:
+        release_reachable_prs.add(rec["number"])
+        continue
+    if commit_reachable(rec.get("merge_commit_sha"), target_sha):
+        release_reachable_prs.add(rec["number"])
+carrier = {}
+changed = True
+while changed:
+    changed = False
+    for rec in mapped:
+        if not rec["merged_at"] or rec["number"] in release_reachable_prs: continue
+        parents = head_records.get(rec["base"], [])
+        if any(p["number"] in release_reachable_prs for p in parents):
+            release_reachable_prs.add(rec["number"]); carrier.pop(rec["number"], None); changed = True; continue
+        open_parent = next((p for p in parents if p["state"] == "open"), None)
+        if open_parent and carrier.get(rec["number"]) != open_parent["number"]:
+            carrier[rec["number"]] = open_parent["number"]; changed = True; continue
+        inherited = next((carrier.get(p["number"]) for p in parents if carrier.get(p["number"]) is not None), None)
+        if inherited is not None and carrier.get(rec["number"]) != inherited:
+            carrier[rec["number"]] = inherited; changed = True
+
+by_issue_history = {}
+for rec in mapped: by_issue_history.setdefault(rec["issue"], []).append(rec)
+for issue_num, history in by_issue_history.items():
+    row = by_num[issue_num]
+    # v5.19: merged/reachable PRs are evidence, never semantic completion.
+    # Keep the full mapped history so prune.py can inspect it Issue-by-Issue.
+    row["historical_prs"] = sorted(
+        [dict(r) for r in history],
+        key=lambda r: (r.get("created_at") or "", r["number"]),
+    )
+    release_evidence = [r for r in history if r["number"] in release_reachable_prs]
+    if not row["open"]:
+        # GitHub Issue closure is the completion authority. Historical PR
+        # ancestry only identifies likely implementation evidence/branch.
+        if release_evidence:
+            winner = sorted(release_evidence, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+            row["integrated_pr"] = winner["number"]
+            row["integrated_branch"] = winner.get("head")
+            row["merged"] = True
+        row["target_integrated"] = True
+        row["completed"] = True
+        row["carried_by_pr"] = None
+    elif row["pr"] is None:
+        # A merged child whose current code is still carried by an OPEN
+        # parent PR is active mechanical evidence, not completion. Avoid
+        # opening duplicate implementation while that carrier is live.
+        carried = [r for r in history if carrier.get(r["number"]) is not None]
+        if carried:
+            winner = sorted(carried, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+            row["carried_by_pr"] = carrier[winner["number"]]; row["active"] = True
+
+# v5.19 bootstrap deliberately mass-assigns every open Product Issue.
+# Assignment remains the Product-claim fact, but the snapshot must not infer
+# that every assigned/no-PR Issue is the train runtime's one active coder slot.
+# train.current_issue distinguishes the train-owned implementation claim; the
+# remaining assigned/no-PR Issues are frozen prune claims until audited.
+claimed_no_pr = [r for r in rows if r["product"] and r["open"] and r["claimed"] and r["pr"] is None and r["carried_by_pr"] is None]
+
+captured = int(time.time())
+observations = {}
+
+for row in rows:
+    pr_num = row.get("pr")
+    if pr_num is None or not row.get("open") or not row.get("product"): continue
+    detail = gh_json([
+        "pr","view",str(pr_num),"--repo",REPO,
+        "--json","mergeable,mergeStateStatus,isDraft,headRefOid,headRefName,baseRefName,body",
+    ]) or {}
+    head = detail.get("headRefOid")
+    actual_base = detail.get("baseRefName") or row.get("pr_base")
+    base_head_sha = None
+    compare_status = "unknown"
+    ahead_by = behind_by = None
+    merge_base_sha = None
+    if actual_base and head:
+        base_ref = api("/git/ref/heads/" + urllib.parse.quote(str(actual_base), safe=""))
+        base_head_sha = ((base_ref.get("object") or {}).get("sha"))
+        if base_head_sha:
+            comparison = api(f"/compare/{base_head_sha}...{head}")
+            compare_status = str(comparison.get("status") or "unknown").lower()
+            ahead_by = int(comparison.get("ahead_by") or 0)
+            behind_by = int(comparison.get("behind_by") or 0)
+            merge_base_sha = ((comparison.get("merge_base_commit") or {}).get("sha"))
+    checks, required_check_states = exact_head_required_checks(head)
+    passed = running = failed = 0
+    for check in checks:
+        bucket = str(check.get("bucket") or "pending").lower()
+        if bucket in {"pass", "success", "skipping", "skipped"}: passed += 1
+        elif bucket in {"pending", "queued", "running", "in_progress", "in-progress"}: running += 1
+        else: failed += 1
+
+    flake_summary = next((check for check in checks if check.get("lane") == "flake_summary"), None)
+    required_flake_summary_missing = flake_summary is None or str(flake_summary.get("state") or "").lower() == "missing"
+    if required_flake_summary_missing:
+        flake_probe_state = "missing"
+    else:
+        bucket = str(flake_summary.get("bucket") or "pending").lower()
+        if bucket in {"skipping", "skipped"}: flake_probe_state = "skipped"
+        elif bucket in {"pass", "success"}: flake_probe_state = "success"
