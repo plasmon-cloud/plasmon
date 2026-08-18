@@ -11,7 +11,7 @@ Review sits between an acceptance plan and engineering work:
 1. An engineer or AI prepares a list of things that humans should verify in the real Plasmon OS.
 2. Each acceptance check explains what should be tested and, when available, how to perform the real UI workflow and what successful behavior looks like.
 3. Human reviewers perform those checks and independently record **Pass** or **Fail** plus observations/evidence.
-4. Reviewers can leave and return later. Recorded local progress remains durable.
+4. Reviewers can leave and return later. Recorded results and observations remain durable.
 5. Shared/provider updates do not interrupt the visible review. Review only pulls queued reviewer changes when the user chooses **Refresh**.
 6. Ordinary local saves do not publish a new AI-facing result. **Submit** writes an explicit completed-review snapshot for downstream AI or engineering triage.
 7. A downstream AI may consume that submitted human evidence to propose engineering Issues. The AI is not a human reviewer in the 0.1 workflow.
@@ -38,7 +38,7 @@ New reviewer actions use the existing semantic transaction engine:
 - Result notes are part of that participant result rather than being confused with general discussion.
 - Existing comments/history remain available as shared context.
 
-The provider persists accepted local actions immediately. Text being drafted in the observation box is also retained locally so a reviewer can leave and resume without losing an in-progress explanation.
+The provider persists each accepted Pass/Fail result and its observation immediately. Recorded review progress therefore survives closing and reopening Review. Text that has only been typed into the observation box but has not yet been recorded with Pass or Fail is a UI draft and is not promised durable across reopening.
 
 ## Refresh boundary
 
@@ -50,9 +50,10 @@ This is intentional preparation for shared Review Atoms: a remote update should 
 
 Submit is distinct from persistence.
 
-- Local reviewer progress is saved during normal review work.
+- Local reviewer results and observations are saved during normal review work.
 - Submit writes the current revision to the configured submission Markdown path.
-- The UI records which Review revision was last submitted and indicates when newer local changes have not been submitted.
+- During the current Review session, the UI indicates whether changes are newer than the last successful Submit.
+- The submitted snapshot itself records the exact Review revision, so downstream consumers know which evidence they received.
 - Submit does not grant an AI live access and does not imply MCP/tool integration.
 
 The intended 0.1 bridge is explicit file/copy-and-paste interchange. Automated AI production/consumption belongs to later work.
@@ -78,7 +79,7 @@ Import remains portability rather than identity: importing a file creates a new 
 
 MTN-backed live sharing is not yet wired in the standalone build. The current application nevertheless establishes the intended shared-review interaction:
 
-- local progress is durable;
+- recorded local progress is durable;
 - independent participant results are already part of the Atom model;
 - queued external changes require explicit Refresh;
 - AI-facing publication requires explicit Submit.
@@ -102,4 +103,4 @@ Actual two-human MTN sharing and identity/revocation remain separate platform in
 npm --workspace neutron-review test
 ```
 
-Semantic tests cover the Atom/revision invariants and acceptance-plan interchange. Packaged browser acceptance should verify the human workflow, durable resume behavior, explicit Refresh semantics, deliberate Submit behavior, history/restore, and import/export portability.
+Semantic tests cover the Atom/revision invariants and acceptance-plan interchange. Packaged browser acceptance verifies the human workflow, durable recorded results across reopen, deliberate Submit behavior, history/restore, and import/export portability. The explicit Refresh interaction is implemented now; real cross-identity MTN sharing remains the integration needed to exercise remote reviewer delivery end to end.
