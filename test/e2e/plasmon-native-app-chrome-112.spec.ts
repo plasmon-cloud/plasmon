@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type FrameLocator, type Locator, type Route } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -20,11 +20,10 @@ async function redirectToFirstDemo(route: Route): Promise<void> {
   await route.fulfill({ status: 307, headers: { location: url.href, "cache-control": "no-store" } });
 }
 
-async function openSearchResult(app: ReturnType<Parameters<typeof test>[0]["page"]["frameLocator"]>, query: string): Promise<void> {
+async function openSearchResult(app: FrameLocator, query: string): Promise<void> {
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByRole("region", { name: "Search" });
-  const input = search.getByRole("textbox", { name: "Search Plasmon" });
-  await input.fill(query);
+  await search.getByRole("textbox", { name: "Search Plasmon" }).fill(query);
   const result = search.locator("[data-search-result]", { hasText: query }).first();
   await expect(result).toBeVisible({ timeout: 15_000 });
   await result.click();
@@ -42,7 +41,6 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const fixtureRoute = `**/app/${APP_ID}/**`;
   await page.route(fixtureRoute, redirectToFirstDemo);
-
   await page.goto(kernelUrl);
   await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
   await page.evaluate((seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed), runtime.developerIdentitySeed);
@@ -65,7 +63,8 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
   const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(appSelector)).toBeVisible();
   const app = page.frameLocator(appSelector);
-  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+  const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+  await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
   const health = installPlasmonBrowserHealth(page, {
     firstPartyOrigins: [kernelUrl],
@@ -88,8 +87,6 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
   let theme: Locator | null = null;
   let originalTheme: string | null = null;
   try {
-    // Utility/system representative: Settings owns its semantics while consuming
-    // the shared content surface/panel vocabulary.
     await openSearchResult(app, "Settings");
     const settings = app.getByRole("dialog", { name: "Settings" }).last();
     await expect(settings).toBeVisible({ timeout: 20_000 });
@@ -97,39 +94,26 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(settingsSurface).toBeVisible();
     await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(4);
     theme = settings.getByLabel("Theme");
-    await expect(theme).toBeVisible();
     originalTheme = await theme.inputValue();
 
     await theme.selectOption("light");
-    const lightPalette = await surfacePalette(settingsSurface);
-    await testInfo.attach("112-settings-light.png", {
-      body: await settings.screenshot(),
-      contentType: "image/png",
-    });
-
+    const light = await surfacePalette(settingsSurface);
+    await testInfo.attach("112-settings-light.png", { body: await settings.screenshot(), contentType: "image/png" });
     await theme.selectOption("dark");
-    const darkPalette = await surfacePalette(settingsSurface);
-    expect(darkPalette.background).not.toBe(lightPalette.background);
-    expect(darkPalette.color).not.toBe(lightPalette.color);
-    expect(darkPalette.font).toBe(lightPalette.font);
-    await testInfo.attach("112-settings-dark.png", {
-      body: await settings.screenshot(),
-      contentType: "image/png",
-    });
+    const dark = await surfacePalette(settingsSurface);
+    expect(dark.background).not.toBe(light.background);
+    expect(dark.color).not.toBe(light.color);
+    expect(dark.font).toBe(light.font);
+    await testInfo.attach("112-settings-dark.png", { body: await settings.screenshot(), contentType: "image/png" });
 
-    // Editor representative: open the canonical first-demo Text document through
-    // the real filesystem/association/process/window path.
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
     await rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
     const documents = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documents).toBeVisible({ timeout: 20_000 });
-    const notes = documents.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
-    await expect(notes).toBeVisible();
-    await notes.dblclick();
+    await documents.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first().dblclick();
 
     const text = app.getByRole("dialog", { name: "First Demo Notes.txt - Monaco Editor" }).last();
     await expect(text).toBeVisible({ timeout: 20_000 });
@@ -137,18 +121,10 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(textSurface).toBeVisible();
     await expect(text.locator(".plasmon-native-app-toolbar")).toBeVisible();
     await expect(text.locator(".plasmon-native-app-status")).toBeVisible();
-    const textPalette = await surfacePalette(textSurface);
-    expect(textPalette.background).toBe(darkPalette.background);
-    expect(textPalette.color).toBe(darkPalette.color);
-    expect(textPalette.font).toBe(darkPalette.font);
-    await testInfo.attach("112-text-dark.png", {
-      body: await text.screenshot(),
-      contentType: "image/png",
-    });
+    expect(await surfacePalette(textSurface)).toEqual(dark);
+    await testInfo.attach("112-text-dark.png", { body: await text.screenshot(), contentType: "image/png" });
 
-    // Media representative: import a real SVG through Explorer and open it via
-    // canonical association dispatch into Photos.
-    const filesTask = app.getByRole("navigation", { name: "Taskbar" }).getByRole("button", { name: /^Files;/ }).first();
+    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await filesTask.click();
     await expect(documents).toHaveClass(/plasmon-window--active/);
     const fixtureName = `native-app-chrome-${Date.now()}.svg`;
@@ -166,23 +142,13 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(photosSurface).toBeVisible();
     await expect(photos.locator(".plasmon-native-app-toolbar")).toBeVisible();
     await expect(photos.locator(".plasmon-native-app-status")).toBeVisible();
-    const photosPalette = await surfacePalette(photosSurface);
-    expect(photosPalette.background).toBe(darkPalette.background);
-    expect(photosPalette.color).toBe(darkPalette.color);
-    expect(photosPalette.font).toBe(darkPalette.font);
-    await testInfo.attach("112-photos-dark.png", {
-      body: await photos.screenshot(),
-      contentType: "image/png",
-    });
+    expect(await surfacePalette(photosSurface)).toEqual(dark);
+    await testInfo.attach("112-photos-dark.png", { body: await photos.screenshot(), contentType: "image/png" });
 
     health.assertClean();
   } finally {
     if (theme && originalTheme) {
-      try {
-        await theme.selectOption(originalTheme);
-      } catch {
-        // Preserve the primary test failure if Settings became unavailable.
-      }
+      try { await theme.selectOption(originalTheme); } catch { /* keep the primary failure */ }
     }
     health.dispose();
   }
