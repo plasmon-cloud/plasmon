@@ -1,0 +1,238 @@
+name: Plasmon Train Snapshot v5.24
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot-v5-24
+    paths:
+      - .github/workflows/plasmon-train-snapshot-v5-24.yml
+      - .github/plasmon-train-snapshot-trigger-v5-24.txt
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build compact r2 train snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: plasmon-cloud/plasmon
+          TARGET: release/0.1.0-r2
+          MILESTONE_TITLE: 0.1.0-r2
+          CLAIM_ASSIGNEE: 3E4B54
+          HELPER_SHA: ${{ github.sha }}
+          HELPER_BRANCH: automation/train-snapshot-v5-24
+          TRIGGER_PATH: .github/plasmon-train-snapshot-trigger-v5-24.txt
+          PUBLISH_PREFIX: .github/train-snapshots/v5-24
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import re
+          import subprocess
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          REPO = os.environ["REPO"]
+          TARGET = os.environ["TARGET"]
+          MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
+          CLAIM_ASSIGNEE = os.environ["CLAIM_ASSIGNEE"]
+          TOKEN = os.environ["GH_TOKEN"]
+          BASE = f"https://api.github.com/repos/{REPO}"
+          API_VERSION = "2026-03-10"
+          # GENERATED MIRROR of train-v5-24.py R2_TRAIN_GATE_POLICY.
+          # The Python scheduler is canonical; its self-test asserts this helper carries
+          # the same complete typed r2 policy so transport and scheduling cannot drift.
+          TRAIN_GATE_POLICY = {
+              200: {89: "READY_SIGNAL"},
+              113: {200: "READY_SIGNAL"},
+              114: {113: "READY_SIGNAL"},
+              91: {193: "READY_SIGNAL"},
+              175: {91: "READY_SIGNAL"},
+              197: {193: "TARGET_REACHABLE", 194: "TARGET_REACHABLE"},
+              201: {197: "TARGET_REACHABLE", 200: "TARGET_REACHABLE"},
+              124: {64: "READY_SIGNAL"},
+          }
+          FLAKE_SUMMARY_CHECK_NAME = "Flake probe summary"
+          # r2 release-train required contexts. These are GitHub Check Run *job names*,
+          # not workflow display names and not the current PR base branch's ruleset view.
+          R2_REQUIRED_CHECKS = {
+              "fast": ("Fast Bun tests",),
+              "browser_persistence": ("Packaged browser persistence",),
+              "packaged_smoke": ("Packaged refactor smoke",),
+              "kernel": ("kernel",),
+              "packaged_browser": ("Packaged Playwright specialist acceptance",),
+              "flake_summary": (FLAKE_SUMMARY_CHECK_NAME,),
+          }
+
+          def api(path):
+              url = path if path.startswith("https://") else BASE + path
+              req = urllib.request.Request(url, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.24",
+              })
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          def api_text(path):
+              url = path if path.startswith("https://") else BASE + path
+              req = urllib.request.Request(url, headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.24",
+              })
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return response.read().decode("utf-8", errors="replace")
+
+          def api_post(path, payload=None):
+              url = path if path.startswith("https://") else BASE + path
+              data = json.dumps(payload or {}).encode("utf-8")
+              req = urllib.request.Request(url, data=data, method="POST", headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json",
+                  "X-GitHub-Api-Version": API_VERSION,
+                  "User-Agent": "plasmon-train-snapshot-v5.24",
+              })
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      body = response.read().decode("utf-8", errors="replace")
+                      return {"status": int(response.status), "body": body}
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  raise RuntimeError(f"POST {path} failed HTTP {exc.code}: {body[:500]}") from exc
+
+          def api_put(path, payload):
+              url = path if path.startswith("https://") else BASE + path
+              data = json.dumps(payload).encode("utf-8")
+              for attempt in range(1, 4):
+                  req = urllib.request.Request(url, data=data, method="PUT", headers={
+                      "Authorization": f"Bearer {TOKEN}",
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": API_VERSION,
+                      "User-Agent": "plasmon-train-snapshot-v5.24",
+                  })
+                  try:
+                      with urllib.request.urlopen(req, timeout=30) as response:
+                          body = response.read().decode("utf-8", errors="replace")
+                          return json.loads(body) if body else {}
+                  except urllib.error.HTTPError as exc:
+                      body = exc.read().decode("utf-8", errors="replace")
+                      if exc.code in {409, 422} and attempt < 3:
+                          time.sleep(attempt)
+                          continue
+                      raise RuntimeError(f"PUT {path} failed HTTP {exc.code}: {body[:500]}") from exc
+              raise RuntimeError(f"PUT {path} exhausted publication retries")
+
+          def trigger_directive():
+              sha = os.environ.get("HELPER_SHA")
+              path = os.environ.get("TRIGGER_PATH")
+              if not sha or not path:
+                  return {"kind": "snapshot"}
+              row = api("/contents/" + urllib.parse.quote(path, safe="/") + "?ref=" + urllib.parse.quote(sha, safe=""))
+              encoded = str(row.get("content") or "").replace("\n", "")
+              if not encoded:
+                  return {"kind": "snapshot"}
+              text = base64.b64decode(encoded).decode("utf-8", errors="replace").strip()
+              match = re.fullmatch(r"rerun:(\d+):([0-9A-Za-z._-]+)", text)
+              if match:
+                  return {"kind": "rerun", "run_id": int(match.group(1)), "token": match.group(2), "raw": text}
+              return {"kind": "snapshot", "raw": text}
+
+          def check_bucket(check):
+              status = str((check or {}).get("status") or "").lower()
+              conclusion = str((check or {}).get("conclusion") or "").lower()
+              if status != "completed":
+                  return "pending"
+              if conclusion in {"success", "skipped", "neutral"}:
+                  return "pass" if conclusion == "success" else "skipping"
+              if conclusion in {"failure", "cancelled", "timed_out", "action_required", "startup_failure", "stale"}:
+                  return "fail"
+              return "pending"
+
+          def exact_head_required_checks(head):
+              payload = api(f"/commits/{head}/check-runs?filter=latest&per_page=100") if head else {}
+              raw_runs = payload.get("check_runs") or []
+              by_name = {}
+              for run in raw_runs:
+                  name = str(run.get("name") or "")
+                  old = by_name.get(name)
+                  if old is None or int(run.get("id") or 0) > int(old.get("id") or 0):
+                      by_name[name] = run
+              rows = []
+              states = {}
+              for lane, aliases in R2_REQUIRED_CHECKS.items():
+                  run = next((by_name.get(alias) for alias in aliases if by_name.get(alias) is not None), None)
+                  if run is None:
+                      row = {"lane": lane, "name": aliases[0], "state": "missing", "bucket": "pending", "link": None}
+                  else:
+                      bucket = check_bucket(run)
+                      row = {
+                          "lane": lane,
+                          "name": str(run.get("name") or aliases[0]),
+                          "state": str(run.get("conclusion") or run.get("status") or "unknown").lower(),
+                          "bucket": bucket,
+                          "link": run.get("details_url") or run.get("html_url"),
+                          "check_run_id": run.get("id"),
+                          "started_at": run.get("started_at"),
+                          "completed_at": run.get("completed_at"),
+                      }
+                  rows.append(row)
+                  states[lane] = {k: row.get(k) for k in ("name", "state", "bucket", "link", "check_run_id", "completed_at")}
+              return rows, states
+
+          def pages(path):
+              out = []
+              page = 1
+              sep = "&" if "?" in path else "?"
+              while True:
+                  rows = api(f"{path}{sep}per_page=100&page={page}")
+                  if not isinstance(rows, list):
+                      raise RuntimeError(f"expected list from {path}")
+                  out.extend(rows)
+                  if len(rows) < 100:
+                      return out
+                  page += 1
+
+          def gh_json(args):
+              env = dict(os.environ); env["GH_TOKEN"] = TOKEN
+              proc = subprocess.run(["gh", *args], text=True, capture_output=True, env=env)
+              if proc.returncode != 0:
+                  return None
+              try: return json.loads(proc.stdout) if proc.stdout.strip() else None
+              except json.JSONDecodeError: return None
+
+          _reachability = {}
+          def commit_reachable(ancestor_sha, descendant_sha):
+              if not ancestor_sha or not descendant_sha:
+                  return False
+              key = (str(ancestor_sha), str(descendant_sha))
+              if key in _reachability:
+                  return _reachability[key]
+              if key[0] == key[1]:
+                  _reachability[key] = True
+                  return True
+              comparison = api(f"/compare/{key[0]}...{key[1]}")
+              merge_base = ((comparison.get("merge_base_commit") or {}).get("sha"))
+              result = merge_base == key[0] or str(comparison.get("status") or "").lower() in {"ahead", "identical"}
+              _reachability[key] = result
+              return result
+
+          def labels_of(issue):
+              return sorted({str(x.get("name") if isinstance(x, dict) else x) for x in issue.get("labels") or [] if x})
+
+          def assignees_of(issue):
+              return sorted({str(x.get("login")) for x in issue

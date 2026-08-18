@@ -1,0 +1,191 @@
+   "url": raw.get("html_url") or raw.get("url"),
+              }
+              rows.append(row); by_num[number] = row
+
+          for row in rows:
+              for dep_num in row.get("train_dependencies", []):
+                  parent = by_num.get(dep_num)
+                  if parent is not None:
+                      row["train_dependency_states"][str(dep_num)] = "open" if parent["open"] else "closed"
+
+          branch_ref = api("/git/ref/heads/" + urllib.parse.quote(TARGET, safe=""))
+          target_sha = ((branch_ref.get("object") or {}).get("sha"))
+          if not target_sha: raise RuntimeError("could not resolve release target SHA")
+
+          all_pulls = pages("/pulls?state=all")
+          lane_numbers = set(by_num)
+          mapped = []
+          for pr in all_pulls:
+              issue_num = mapped_issue(pr, lane_numbers)
+              if issue_num is None: continue
+              mapped.append({
+                  "number": int(pr["number"]), "issue": issue_num,
+                  "state": str(pr.get("state") or "").lower(), "merged_at": pr.get("merged_at"),
+                  "head": (pr.get("head") or {}).get("ref"), "head_sha": (pr.get("head") or {}).get("sha"),
+                  "base": (pr.get("base") or {}).get("ref"),
+                  "merge_commit_sha": pr.get("merge_commit_sha"), "created_at": pr.get("created_at"),
+              })
+
+          # The collection endpoint can omit merge_commit_sha for closed PRs. Enrich
+          # only merged history attached to still-open lane Issues, because that is the
+          # history needed to distinguish a durable claim from an orphaned claim.
+          for rec in mapped:
+              if rec["state"] != "closed" or not rec["merged_at"] or rec.get("merge_commit_sha"):
+                  continue
+              if not by_num[rec["issue"]]["open"]:
+                  continue
+              # v5.24 target reachability is ancestry-based even for PRs that report
+              # TARGET as their historical base. Resolve the actual merge commit.
+              detail = api(f"/pulls/{rec['number']}")
+              rec["merge_commit_sha"] = detail.get("merge_commit_sha")
+              rec["merged_at"] = detail.get("merged_at") or rec["merged_at"]
+              rec["head"] = ((detail.get("head") or {}).get("ref")) or rec["head"]
+              rec["head_sha"] = ((detail.get("head") or {}).get("sha")) or rec.get("head_sha")
+              rec["base"] = ((detail.get("base") or {}).get("ref")) or rec["base"]
+              if not rec.get("merge_commit_sha"):
+                  gh_detail = gh_json(["pr", "view", str(rec["number"]), "--repo", REPO, "--json", "mergeCommit,mergedAt,headRefName,baseRefName"]) or {}
+                  merge_commit = gh_detail.get("mergeCommit") or {}
+                  if isinstance(merge_commit, dict):
+                      rec["merge_commit_sha"] = merge_commit.get("oid")
+                  rec["merged_at"] = gh_detail.get("mergedAt") or rec["merged_at"]
+                  rec["head"] = gh_detail.get("headRefName") or rec["head"]
+                  rec["base"] = gh_detail.get("baseRefName") or rec["base"]
+              if not rec.get("merge_commit_sha"):
+                  raise RuntimeError(f"open Issue #{rec['issue']} historical merged PR #{rec['number']} merge commit unresolved; cannot prove target reachability")
+
+          # Open PR mapping is authoritative and must be unique per Issue.
+          for rec in mapped:
+              if rec["state"] != "open": continue
+              row = by_num[rec["issue"]]
+              if row["pr"] is not None and row["pr"] != rec["number"]:
+                  raise RuntimeError(f"Issue #{rec['issue']} maps to multiple open PRs")
+              row["pr"] = rec["number"]; row["pr_branch"] = rec["head"]; row["pr_base"] = rec["base"]; row["active"] = True
+
+          # Resolve merged history using actual commit reachability. A historical
+          # branch relationship never makes a later child release-reachable.
+          head_records = {}
+          for rec in mapped:
+              if rec["head"]:
+                  head_records.setdefault(rec["head"], []).append(rec)
+
+          release_reachable_prs = set()
+          for rec in mapped:
+              if not rec["merged_at"] or not by_num[rec["issue"]]["open"]:
+                  continue
+              if rec.get("merge_commit_sha") and commit_reachable(rec.get("merge_commit_sha"), target_sha):
+                  release_reachable_prs.add(rec["number"])
+
+          # A merged child can be carried only by a currently OPEN parent branch that
+          # actually contains the child's merge commit. Closed/stale historical
+          # parents never propagate release reachability or carrier status.
+          carrier = {}
+          for rec in mapped:
+              if not rec["merged_at"] or rec["number"] in release_reachable_prs or not rec.get("merge_commit_sha"):
+                  continue
+              parents = [p for p in head_records.get(rec.get("base"), []) if p.get("state") == "open"]
+              for parent in sorted(parents, key=lambda p: p["number"]):
+                  parent_head_sha = parent.get("head_sha")
+                  if parent_head_sha and commit_reachable(rec.get("merge_commit_sha"), parent_head_sha):
+                      carrier[rec["number"]] = parent["number"]
+                      break
+
+          by_issue_history = {}
+          for rec in mapped:
+              by_issue_history.setdefault(rec["issue"], []).append(rec)
+          for issue_num, history in by_issue_history.items():
+              row = by_num[issue_num]
+              history_with_reachability = []
+              for source in history:
+                  item = dict(source)
+                  item["release_reachable"] = item["number"] in release_reachable_prs
+                  item["carried_by_pr"] = carrier.get(item["number"])
+                  history_with_reachability.append(item)
+              row["historical_prs"] = sorted(
+                  history_with_reachability,
+                  key=lambda r: (r.get("created_at") or "", r["number"]),
+              )
+              release_evidence = [r for r in history_with_reachability if r.get("release_reachable")]
+              merged_history = [r for r in history_with_reachability if r.get("merged_at")]
+              if release_evidence:
+                  winner = sorted(release_evidence, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                  row["implementation_reachable"] = True
+                  row["implementation_pr"] = winner["number"]
+                  row["implementation_branch"] = winner.get("head")
+              if not row["open"]:
+                  if release_evidence:
+                      winner = sorted(release_evidence, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                      row["integrated_pr"] = winner["number"]
+                      row["integrated_branch"] = winner.get("head")
+                      row["merged"] = True
+                  row["target_integrated"] = True
+                  row["implementation_reachable"] = True
+                  row["completed"] = True
+                  row["carried_by_pr"] = None
+              elif row["pr"] is None:
+                  carried = [r for r in history_with_reachability if r.get("carried_by_pr") is not None]
+                  if carried:
+                      winner = sorted(carried, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                      row["carried_by_pr"] = winner["carried_by_pr"]
+                      row["active"] = True
+                  elif not release_evidence and merged_history:
+                      # Latest stale/non-reachable implementation is recovery evidence.
+                      winner = sorted(merged_history, key=lambda r: (r.get("created_at") or "", r["number"]))[-1]
+                      row["recoverable_pr"] = winner["number"]
+                      row["recoverable_branch"] = winner.get("head")
+
+          # Now that reachability is known, publish train-gate states from the live
+          # release graph rather than from Issue open/closed state alone.
+          for row in rows:
+              for dep_num in row.get("train_dependencies", []):
+                  parent = by_num.get(dep_num)
+                  if parent is None:
+                      continue
+                  if not parent["open"]:
+                      value = "closed"
+                  elif parent.get("implementation_reachable"):
+                      value = "target_reachable"
+                  elif parent.get("pr") is not None or parent.get("carried_by_pr") is not None or parent.get("claimed"):
+                      value = "active"
+                  else:
+                      value = "open"
+                  row["train_dependency_states"][str(dep_num)] = value
+
+          # Assignment is only the active no-PR coding lease. Existing/open Product
+          # PRs may be unassigned; they remain normal PR-service work.
+          # v5.24 intentionally permits any number of assigned open/no-PR Issues.
+          # Assignment is a GitHub fact meaning Product work is claimed. train.py only
+          # considers OPEN + unassigned Issues for new candidate selection and uses its
+          # local current_issue cursor for the one implementation it owns itself.
+          recoveries = [r for r in rows if r["product"] and r["open"] and r["claimed"] and r["pr"] is None and r["carried_by_pr"] is None]
+
+          captured = int(time.time())
+          observations = {}
+
+          for row in rows:
+              pr_num = row.get("pr")
+              if pr_num is None or not row.get("open") or not row.get("product"): continue
+              detail = gh_json([
+                  "pr","view",str(pr_num),"--repo",REPO,
+                  "--json","mergeable,mergeStateStatus,isDraft,headRefOid,headRefName,baseRefName,body",
+              ]) or {}
+              head = detail.get("headRefOid")
+              actual_base = detail.get("baseRefName") or row.get("pr_base")
+              base_head_sha = None
+              compare_status = "unknown"
+              ahead_by = behind_by = None
+              merge_base_sha = None
+              if actual_base and head:
+                  base_ref = api("/git/ref/heads/" + urllib.parse.quote(str(actual_base), safe=""))
+                  base_head_sha = ((base_ref.get("object") or {}).get("sha"))
+                  if base_head_sha:
+                      comparison = api(f"/compare/{base_head_sha}...{head}")
+                      compare_status = str(comparison.get("status") or "unknown").lower()
+                      ahead_by = int(comparison.get("ahead_by") or 0)
+                      behind_by = int(comparison.get("behind_by") or 0)
+                      merge_base_sha = ((comparison.get("merge_base_commit") or {}).get("sha"))
+              checks, required_check_states = exact_head_required_checks(head)
+              passed = running = failed = 0
+              for check in checks:
+                  bucket = str(check.get("bucket") or "pending").lower()
+                  if bucket in {"pass", "success", "skipping", "skipped"}: passed += 1
+                  elif bucket in {"pending", "queued", "running", "in_progress", "in-progress"}: running += 1
