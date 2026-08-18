@@ -8,7 +8,7 @@ import type {
 import { shortcutMetadata as sharedShortcutMetadata } from "../fs/shortcut.ts";
 import { createHeadlessPlasmonEnvironment } from "../../../test/headlessEnvironment.ts";
 import {
-  START_MANAGED_FOLDER_METADATA_KEY,
+  START_MANAGED_FOLDER_IDS_KEY,
   START_MENU_PATH,
   START_SEEDED_IDENTITIES_KEY,
   START_SHORTCUT_METADATA_KEY,
@@ -85,9 +85,9 @@ async function createLegacyManagedSystemState(
   options: { provenManagedFolder?: boolean } = {},
 ): Promise<{ root: FsNode; system: FsNode; shortcuts: Map<string, FsNode> }> {
   const { root } = await reconcileStartMenu(fs, [], []);
-  let system = await fs.mkdir(root.id, "System");
+  const system = await fs.mkdir(root.id, "System");
   if (options.provenManagedFolder) {
-    system = await fs.setMetadata(system.id, { [START_MANAGED_FOLDER_METADATA_KEY]: "System" });
+    await fs.setMetadata(root.id, { [START_MANAGED_FOLDER_IDS_KEY]: { System: system.id } });
   }
   const shortcuts = new Map<string, FsNode>();
   const seeded: string[] = [];
@@ -134,13 +134,14 @@ test("fresh reconciliation keeps retired System applications at Start root witho
   }
 });
 
-test("new managed Start categories record durable folder provenance", async () => {
+test("new managed Start categories record their stable folder NodeId on the Start root", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
-    await reconcileStartMenu(environment.services.fs, [accessoryApp], []);
+    const result = await reconcileStartMenu(environment.services.fs, [accessoryApp], []);
     const accessories = await environment.node(`${START_MENU_PATH}/Accessories`);
-    expect(accessories?.metadata[START_MANAGED_FOLDER_METADATA_KEY]).toBe("Accessories");
+    expect(result.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toEqual({ Accessories: accessories?.id });
+    expect(accessories?.metadata[START_MANAGED_FOLDER_IDS_KEY]).toBeUndefined();
   } finally {
     environment.dispose();
   }
@@ -154,10 +155,10 @@ test("existing same-name user folders are used without being adopted as managed"
     const userAccessories = await environment.services.fs.mkdir(root.id, "Accessories");
     await environment.services.fs.createFile(userAccessories.id, "Keep me.txt", { mime: "text/plain" });
 
-    await reconcileStartMenu(environment.services.fs, [accessoryApp], []);
+    const result = await reconcileStartMenu(environment.services.fs, [accessoryApp], []);
     const after = await environment.node(`${START_MENU_PATH}/Accessories`);
     expect(after?.id).toBe(userAccessories.id);
-    expect(after?.metadata[START_MANAGED_FOLDER_METADATA_KEY]).toBeUndefined();
+    expect(result.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toBeUndefined();
     expect(await environment.node(`${START_MENU_PATH}/Accessories/Keep me.txt`)).not.toBeNull();
     expect(await environment.node(`${START_MENU_PATH}/Accessories/Text`)).not.toBeNull();
   } finally {
@@ -171,11 +172,13 @@ test("provably managed legacy System defaults migrate to Start root without dupl
     await environment.ready;
     const fs = environment.services.fs;
     const legacy = await createLegacyManagedSystemState(fs, { provenManagedFolder: true });
-    const result = await reconcileStartMenu(fs, retiredSystemApps, []);
+    expect(legacy.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toEqual({ System: legacy.system.id });
 
+    const result = await reconcileStartMenu(fs, retiredSystemApps, []);
     expect(result.created).toBe(0);
     expect(result.preserved).toBe(retiredSystemApps.length);
     expect(await environment.node(`${START_MENU_PATH}/System`)).toBeNull();
+    expect(result.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toBeUndefined();
 
     const shortcuts = await allShortcuts(fs);
     expect(shortcuts).toHaveLength(retiredSystemApps.length);
@@ -227,11 +230,11 @@ test("unmarked legacy System defaults are preserved when directory ownership can
   }
 });
 
-test("user-created replacement System folder is never mistaken for the retired managed directory", async () => {
+test("user-created replacement System folder never inherits managed ownership from the retired directory NodeId", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
-    const legacy = await createLegacyManagedSystemState(environment.services.fs);
+    const legacy = await createLegacyManagedSystemState(environment.services.fs, { provenManagedFolder: true });
     const fs = environment.services.fs;
 
     await fs.rename(legacy.system.id, "Legacy System");
@@ -247,6 +250,7 @@ test("user-created replacement System folder is never mistaken for the retired m
     expect(result.preserved).toBe(retiredSystemApps.length);
     expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(replacement.id);
     expect((await environment.node(`${START_MENU_PATH}/Legacy System`))?.id).toBe(legacy.system.id);
+    expect(result.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toEqual({ System: legacy.system.id });
 
     for (const app of retiredSystemApps) {
       const identity = nativeIdentity(app);
@@ -285,13 +289,33 @@ test("legacy customization preserves renamed moved and deleted defaults and neve
     expect(await fs.pathOf(settings.id)).toBe(`${START_MENU_PATH}/System/My Settings`);
     expect(await fs.pathOf(explorer.id)).toBe(`${START_MENU_PATH}/My Tools/Explorer`);
     expect(await environment.node(`${START_MENU_PATH}/System/Keep me.txt`)).not.toBeNull();
-    expect(await environment.node(`${START_MENU_PATH}/System`)).not.toBeNull();
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.metadata["user.organized"]).toBe(true);
 
     const shortcuts = await allShortcuts(fs);
     expect(shortcuts.some((shortcut) => shortcut.node.id === properties.id)).toBe(false);
     expect(shortcuts.some((shortcut) => startShortcutTargetIdentity(shortcut.target) === propertiesId)).toBe(false);
     expect(shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === settingsId)).toHaveLength(1);
     expect(shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === explorerId)).toHaveLength(1);
+  } finally {
+    environment.dispose();
+  }
+});
+
+test("folder metadata customization alone prevents retirement of an otherwise exact managed System folder", async () => {
+  const environment = createHeadlessPlasmonEnvironment();
+  try {
+    await environment.ready;
+    const legacy = await createLegacyManagedSystemState(environment.services.fs, { provenManagedFolder: true });
+    const fs = environment.services.fs;
+    await fs.setMetadata(legacy.system.id, { "user.organized": true });
+    const revisionBefore = await fs.revision();
+
+    const result = await reconcileStartMenu(fs, retiredSystemApps, []);
+    expect(result.created).toBe(0);
+    expect(result.preserved).toBe(retiredSystemApps.length);
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(legacy.system.id);
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.metadata["user.organized"]).toBe(true);
+    expect(await fs.revision()).toBe(revisionBefore);
   } finally {
     environment.dispose();
   }
