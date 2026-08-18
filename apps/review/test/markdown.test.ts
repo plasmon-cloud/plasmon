@@ -25,7 +25,7 @@ test("acceptance-plan import preserves indented human test instructions", async 
     items: [
       {
         title: "Back returns to the prior folder",
-        descriptionMarkdown: "Steps:\n  1. Open Documents.\n  2. Open a child folder.\n  3. Press Back.\nExpected: Documents is shown again.",
+        descriptionMarkdown: "Steps:\n1. Open Documents.\n2. Open a child folder.\n3. Press Back.\nExpected: Documents is shown again.",
       },
       {
         title: "Markdown opens in Markdown",
