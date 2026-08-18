@@ -140,10 +140,12 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     await secondRename.press("Escape");
 
     // Activate the first shortcut through normal FileEntry double-click. The
-    // canonical dispatcher must resolve it to the same directory target.
+    // canonical dispatcher resolves it to the directory target, and Explorer's
+    // production onOpenDirectory callback navigates this same process in place.
     await firstShortcut.dblclick();
-    await expect(app.getByRole("dialog", { name: targetName }).last()).toBeVisible({ timeout: 20_000 });
-    await expect(explorer).toBeVisible();
+    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue(`/${targetName}`);
+    await expect(explorer.getByRole("navigation", { name: "Location breadcrumb" }).getByRole("button", { name: targetName, exact: true })).toBeVisible();
+    await expect(explorer.getByRole("listbox", { name: "Files" })).toBeVisible();
 
     health.assertClean();
   } finally {
