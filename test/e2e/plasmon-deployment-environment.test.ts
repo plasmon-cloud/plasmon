@@ -30,6 +30,21 @@ async function declaredArtifactPaths(manifestPath: string): Promise<string[]> {
 }
 
 describe("Plasmon deployment command semantics", () => {
+  test("public local and demo scripts bind to explicit deployment scopes", async () => {
+    const packageJson = JSON.parse(
+      await readFile(resolve(repoRoot, "package.json"), "utf8"),
+    ) as { scripts: Record<string, string> };
+
+    for (const command of ["prepare", "serve", "reinstall", "status"]) {
+      expect(packageJson.scripts[`plasmon:local:${command}`]).toBe(
+        `bun test/e2e/plasmon-deployment-environment.ts local ${command}`,
+      );
+      expect(packageJson.scripts[`plasmon:demo:${command}`]).toBe(
+        `bun test/e2e/plasmon-deployment-environment.ts demo ${command}`,
+      );
+    }
+  });
+
   test("local and demo scopes select different canonical manifests", () => {
     expect(manifestForPlasmonDeployment("local")).toBe(PLASMON_LOCAL_MANIFEST);
     expect(manifestForPlasmonDeployment("demo")).toBe(PLASMON_DEMO_MANIFEST);
