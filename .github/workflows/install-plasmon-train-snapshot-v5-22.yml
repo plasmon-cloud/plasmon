@@ -22,9 +22,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/train-helper-v5-22.parts/part-*.b64 | tr -d '\r\n' | base64 -d > /tmp/plasmon-train-snapshot-v5-22.yml
+          {
+            cat .github/train-helper-v5-22.parts/part-00.b64
+            cat .github/train-helper-v5-22.parts/part-01.b64
+            cat .github/train-helper-v5-22.parts/part-02.b64
+            cat .github/train-helper-v5-22.parts/part-03.b64
+            cat .github/train-helper-v5-22.corrections/part-04-00.b64
+            cat .github/train-helper-v5-22.corrections/part-04-01.b64
+            cat .github/train-helper-v5-22.corrections/part-04-02.b64
+            cat .github/train-helper-v5-22.corrections/part-04-03-00.b64
+            cat .github/train-helper-v5-22.corrections/part-04-03-01.b64
+            cat .github/train-helper-v5-22.corrections/part-04-03-02.b64
+            cat .github/train-helper-v5-22.corrections/part-04-03-03.b64
+            cat .github/train-helper-v5-22.parts/part-05.b64
+            cat .github/train-helper-v5-22.corrections/part-06-00.b64
+            cat .github/train-helper-v5-22.corrections/part-06-01.b64
+            cat .github/train-helper-v5-22.corrections/part-06-02.b64
+            cat .github/train-helper-v5-22.corrections/part-06-03.b64
+            cat .github/train-helper-v5-22.parts/part-07.b64
+          } | tr -d '\r\n' | base64 -d > /tmp/plasmon-train-snapshot-v5-22.yml
           actual="$(sha256sum /tmp/plasmon-train-snapshot-v5-22.yml | awk '{print $1}')"
           expected="eff2c935b5beaf2661f39fe42ad4f168cca74523a02b23adb34ff2cbd5361bf7"
+          echo "helper_sha256=$actual"
           test "$actual" = "$expected"
           mkdir -p .github/workflows
           mv /tmp/plasmon-train-snapshot-v5-22.yml .github/workflows/plasmon-train-snapshot-v5-22.yml
