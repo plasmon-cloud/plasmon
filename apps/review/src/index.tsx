@@ -39,7 +39,7 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const [updatesQueued, setUpdatesQueued] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [lastSubmittedRevision, setLastSubmittedRevision] = useState<string | null>(null);
+  const [submittedRevisions, setSubmittedRevisions] = useState<Record<string, string>>({});
   const [restoreRevision, setRestoreRevision] = useState<ReviewRevision | null>(null);
 
   const readAtom = useCallback(async (atomId: string) => {
@@ -51,7 +51,6 @@ export function App() {
     setHistory(revisions.revisions);
     setAtoms((current) => current.map((entry) => entry.atomId === atomId ? next.meta : entry));
     setLastSavedAt(next.meta.updatedAt);
-    setLastSubmittedRevision(localStorage.getItem(submittedKey(atomId)));
     setUpdatesQueued(false);
   }, [target]);
 
@@ -62,7 +61,6 @@ export function App() {
     if (!atomId) {
       setAtom(null);
       setHistory([]);
-      setLastSubmittedRevision(null);
       return;
     }
     await readAtom(atomId);
@@ -76,7 +74,7 @@ export function App() {
 
   // Shared/provider changes are deliberately not pulled into the visible Review
   // until the reviewer chooses Refresh. Local accepted actions still update the
-  // local durable provider immediately.
+  // durable provider immediately.
   useEffect(() => onAppStateChange(STATE_TOPIC, () => setUpdatesQueued(true)), []);
 
   const perform = useCallback(async (work: () => Promise<void>, options: { persisted?: boolean } = {}): Promise<boolean> => {
@@ -119,8 +117,9 @@ export function App() {
       });
     }, { persisted: true });
     if (!accepted || !imported) return;
-    await refreshCatalog(imported.atomId);
-    setNotice(`Imported ${imported.importedItems} acceptance check${imported.importedItems === 1 ? "" : "s"}.`);
+    const result = imported as { atomId: string; importedItems: number };
+    await refreshCatalog(result.atomId);
+    setNotice(`Imported ${result.importedItems} acceptance check${result.importedItems === 1 ? "" : "s"}.`);
   };
 
   const apply = useCallback(async (operation: ReviewOperation): Promise<boolean> => {
@@ -172,13 +171,13 @@ export function App() {
         expectedRevision: atom.meta.currentRevision,
         path: submitPath.trim(),
       });
-      localStorage.setItem(submittedKey(atom.meta.atomId), atom.meta.currentRevision);
-      setLastSubmittedRevision(atom.meta.currentRevision);
+      setSubmittedRevisions((current) => ({ ...current, [atom.meta.atomId]: atom.meta.currentRevision }));
       setNotice(`Submitted revision r${atom.meta.currentSequence} to ${submitPath.trim()}. This snapshot is ready to give to an AI for issue triage.`);
     });
   };
 
   const progress = atom ? reviewProgress(atom) : null;
+  const lastSubmittedRevision = atom ? submittedRevisions[atom.meta.atomId] ?? null : null;
   const hasUnsubmittedChanges = !!atom && lastSubmittedRevision !== atom.meta.currentRevision;
 
   return <main className="review-app">
@@ -234,7 +233,7 @@ export function App() {
         </section>
       </aside>
 
-      <section className="review-workspace" aria-label="Current Review">
+      <section className="review-workspace" aria-label="Current Review workspace">
         {!loading && !atom && <FirstRunState />}
         {loading && <div className="workspace-empty"><h2>Opening your Reviews…</h2></div>}
         {atom && <>
@@ -319,19 +318,16 @@ function FirstRunState() {
 
 function ReviewItemCard({ item, index, atom, busy, apply }: { item: ReviewItem; index: number; atom: ReviewAtomState; busy: boolean; apply: (operation: ReviewOperation) => Promise<boolean> }) {
   const local = item.results[LOCAL_ACTOR];
-  const draftKey = `review:draft:${atom.meta.atomId}:${item.itemId}`;
-  const [note, setNote] = useState(() => localStorage.getItem(draftKey) ?? local?.note ?? "");
+  const [note, setNote] = useState(local?.note ?? "");
   const comments = atom.comments.filter((entry) => entry.itemId === item.itemId);
   const otherResults = Object.values(item.results).filter((entry) => entry.actor !== LOCAL_ACTOR);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, note);
-  }, [draftKey, note]);
+    setNote(local?.note ?? "");
+  }, [local?.revisionId]);
 
-  const saveResult = (result: TestResult) => {
-    void apply({ type: "review.set_result", itemId: item.itemId, result, note: note.trim() || null }).then((ok) => {
-      if (ok) localStorage.removeItem(draftKey);
-    });
+  const saveResult = (result: TestResult, resultNote = note) => {
+    void apply({ type: "review.set_result", itemId: item.itemId, result, note: resultNote.trim() || null });
   };
 
   return <article className={`review-card ${local?.result === "working" ? "is-pass" : local?.result === "not_working" ? "is-fail" : ""}`}>
@@ -347,7 +343,7 @@ function ReviewItemCard({ item, index, atom, busy, apply }: { item: ReviewItem; 
       <div className="result-actions">
         <button className={local?.result === "working" ? "pass-button active" : "pass-button"} type="button" disabled={busy} onClick={() => saveResult("working")}>✓ Pass</button>
         <button className={local?.result === "not_working" ? "fail-button active" : "fail-button"} type="button" disabled={busy || !note.trim()} title={!note.trim() ? "Explain what failed before recording a failure" : undefined} onClick={() => saveResult("not_working")}>× Fail</button>
-        {local && local.result !== "not_tested" && <button className="secondary-button" type="button" disabled={busy} onClick={() => { setNote(""); saveResult("not_tested"); }}>Clear result</button>}
+        {local && local.result !== "not_tested" && <button className="secondary-button" type="button" disabled={busy} onClick={() => { setNote(""); saveResult("not_tested", ""); }}>Clear result</button>}
       </div>
       {local?.updatedAt && <p className="fine-print">Your last recorded result: {resultLabel(local.result)} · {formatReviewTime(local.updatedAt)}</p>}
     </section>
@@ -396,8 +392,6 @@ function reviewProgress(atom: ReviewAtomState) {
   }
   return { total: atom.items.length, reviewed, passed, failed, remaining: atom.items.length - reviewed };
 }
-
-function submittedKey(atomId: string) { return `review:submitted:${atomId}`; }
 
 async function call<T = unknown>(target: MsgBusEndpointId, name: string, args: Record<string, unknown>): Promise<T> {
   return await callTool({ target, name, arguments: args as any }, 30) as T;
