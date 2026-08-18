@@ -120,10 +120,12 @@ test("#110 packaged Explorer persists Show hidden files through reopen and reloa
     await expect(hiddenEntry(explorer, hiddenName)).toHaveAttribute("data-fm-node-id", nodeId);
 
     // Showing a hidden location affects presentation only. Navigate through the
-    // normal FileManager activation path, hide hidden entries again, and prove
-    // the explicitly addressed hidden directory remains the current location.
+    // normal FileManager activation path, then reacquire the native dialog after
+    // Windowing updates its title to the current directory name.
     await hiddenEntry(explorer, hiddenName).dblclick();
-    const address = explorer.getByRole("textbox", { name: "Address" });
+    explorer = app.getByRole("dialog", { name: hiddenName }).last();
+    await expect(explorer).toBeVisible({ timeout: 20_000 });
+    let address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue(`/${hiddenName}`);
     await setShowHiddenFiles(explorer, false);
     await expect(address).toHaveValue(`/${hiddenName}`);
@@ -131,6 +133,9 @@ test("#110 packaged Explorer persists Show hidden files through reopen and reloa
     // Persist the enabled preference for the reopen/reload boundaries below.
     await setShowHiddenFiles(explorer, true);
     await explorer.getByRole("button", { name: "Up one level" }).click();
+    explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
+    await expect(explorer).toBeVisible({ timeout: 20_000 });
+    address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue("/");
     await expect(hiddenEntry(explorer, hiddenName)).toHaveAttribute("data-fm-node-id", nodeId);
 
