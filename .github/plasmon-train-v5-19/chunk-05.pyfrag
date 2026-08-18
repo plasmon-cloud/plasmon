@@ -1,0 +1,120 @@
+        elif bucket in {"pending", "queued", "running", "in_progress", "in-progress"}: flake_probe_state = "running"
+        else: flake_probe_state = "failed"
+
+    required_failures = []
+    for check in checks:
+        bucket = str(check.get("bucket") or "pending").lower()
+        if bucket not in {"pass","success","skipping","skipped","pending","queued","running","in_progress","in-progress"}:
+            required_failures.append({
+                key: check.get(key)
+                for key in ("lane", "name", "state", "bucket", "link", "check_run_id")
+                if check.get(key) is not None
+            })
+    diagnostic_evidence = {"required_check_states": required_check_states}
+    if required_failures:
+        diagnostic_evidence["required_failures"] = required_failures[:10]
+    if flake_probe_state == "failed" and flake_summary is not None:
+        flake_evidence = flake_summary_evidence(head, flake_summary)
+        if flake_evidence:
+            diagnostic_evidence["flake_summary"] = flake_evidence
+
+    ci = "running" if running else "failed" if failed else "success" if passed == len(R2_REQUIRED_CHECKS) else "unknown"
+
+    reviews = pages(f"/pulls/{pr_num}/reviews")
+    bot_reviews = [
+        review for review in reviews
+        if str(((review.get("user") or {}).get("login") or "")) in {"plasmon-code-reviewer", "plasmon-code-reviewer[bot]"}
+        and str(review.get("state") or "").upper() in {"APPROVED", "CHANGES_REQUESTED"}
+    ]
+    bot_reviews.sort(key=lambda review: (str(review.get("submitted_at") or ""), int(review.get("id") or 0)))
+    latest_review = bot_reviews[-1] if bot_reviews else None
+    exact_review = next((review for review in reversed(bot_reviews) if review.get("commit_id") == head), None)
+    review_state = str(exact_review.get("state") or "").upper() if exact_review else ""
+    review = (
+        "changes_requested" if review_state == "CHANGES_REQUESTED"
+        else "approved" if review_state == "APPROVED"
+        else "pending"
+    )
+    blocking = latest_review if latest_review and str(latest_review.get("state") or "").upper() == "CHANGES_REQUESTED" else None
+
+    mr = str(detail.get("mergeable") or "unknown").lower()
+    mergeable = "true" if mr == "mergeable" else "false" if mr == "conflicting" else "unknown"
+    declared_base = declared_base_from_body(detail.get("body"))
+    observations[str(pr_num)] = {
+        "head": head,
+        "branch": detail.get("headRefName") or row.get("pr_branch"),
+        "base": actual_base,
+        "base_head_sha": base_head_sha,
+        "merge_base_sha": merge_base_sha,
+        "compare_status": compare_status,
+        "ahead_by": ahead_by,
+        "behind_by": behind_by,
+        "merge_state_status": str(detail.get("mergeStateStatus") or "unknown").lower(),
+        "declared_base": declared_base,
+        "base_mismatch": bool(declared_base and actual_base != declared_base),
+        "ci": ci,
+        "ci_diagnosis": "unknown",
+        "flake_probe_state": flake_probe_state,
+        "required_flake_summary_missing": required_flake_summary_missing,
+        "review": review,
+        "review_head": exact_review.get("commit_id") if exact_review else None,
+        "review_id": str(exact_review.get("node_id") or exact_review.get("id")) if exact_review else None,
+        "blocking_review_state": "changes_requested" if blocking else "none",
+        "blocking_review_id": str(blocking.get("node_id") or blocking.get("id")) if blocking else None,
+        "blocking_review_head": blocking.get("commit_id") if blocking else None,
+        "blocking_review_body": blocking.get("body") if blocking else None,
+        "review_applicability": "unknown" if blocking else "none",
+        "mergeable": mergeable,
+        "conflict_confirmed": "true" if mr == "conflicting" else "false",
+        "draft": "true" if detail.get("isDraft") else "false",
+        "check_passed": passed, "check_running": running, "check_failed": failed, "check_total": len(R2_REQUIRED_CHECKS),
+        "required_check_states": required_check_states,
+        "required_check_contract": "r2-v1-six-contexts",
+        "diagnostic_evidence": diagnostic_evidence,
+        "observation_source": "snapshot",
+        "observed_at": captured,
+    }
+
+milestone_after = api(f"/milestones/{milestone_number}")
+after = (int(milestone_after.get("open_issues") or 0), int(milestone_after.get("closed_issues") or 0))
+# GitHub milestone open/closed summary counters can lag individual Issue
+# state. They are only a coarse cardinality guard in v5.19.
+if sum(after) != len(rows):
+    raise RuntimeError(f"lane cardinality changed during snapshot: rows={len(rows)} milestone_after={sum(after)}")
+
+missing = []
+for row in [r for r in rows if r["open"] and r["product"]]:
+    absent = []
+    if row["type"] not in {"Bug","Feature","Task"}: absent.append("Type")
+    if row["desire"] not in {"High","Medium","Low"}: absent.append("Desire")
+    if row["effort"] not in {"High","Medium","Low"}: absent.append("Effort")
+    if not row["area"]: absent.append("Area")
+    if absent: missing.append(f"#{row['issue']}: {','.join(absent)}")
+if missing: raise RuntimeError("open r2 metadata incomplete: " + "; ".join(missing))
+
+derived_open = sum(1 for row in rows if row["open"])
+derived_closed = len(rows) - derived_open
+snapshot = {
+    "schema": "plasmon-train-snapshot-v5.19", "lane_complete": True, "repo": REPO,
+    "target": TARGET, "milestone": MILESTONE_TITLE, "claim_assignee": CLAIM_ASSIGNEE,
+    "captured_at": captured, "target_sha": target_sha,
+    "provenance": {
+        "kind": "github-actions",
+        "fixture": False,
+        "repository": os.environ.get("GITHUB_REPOSITORY"),
+        "target": TARGET,
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "workflow_ref": os.environ.get("GITHUB_WORKFLOW_REF"),
+        "workflow_sha": os.environ.get("GITHUB_SHA"),
+        "event_name": os.environ.get("GITHUB_EVENT_NAME"),
+        "ref": os.environ.get("GITHUB_REF"),
+    },
+    "lane_counts": {"open": derived_open, "closed": derived_closed, "total": len(rows)},
+    "milestone_summary_counts": {
+        "before": {"open": before[0], "closed": before[1], "total": sum(before)},
+        "after": {"open": after[0], "closed": after[1], "total": sum(after)},
+    },
+    "issues": rows, "observations": observations, "helper_operation": helper_operation,
+}
+with open("plasmon-train-snapshot-v5-19.json", "w", encoding="utf-8") as f:
