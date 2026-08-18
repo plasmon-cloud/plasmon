@@ -29,3 +29,4 @@ jobs:
           git add .github/workflows/plasmon-train-snapshot-v5-24.yml
           git commit -m 'install exact train snapshot v5.24 helper'
           git push origin HEAD:automation/train-snapshot-v5-24
+# contents-api bootstrap trigger
