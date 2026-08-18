@@ -12,14 +12,6 @@ case "$target" in
     ;;
 esac
 
-# Non-executable legacy command literals retained only for the existing flake-probe
-# source-contract verifier while this command taxonomy changes in-place:
-# npm run plasmon:demo:prepare
-# npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &
-# npm run plasmon:demo:status
-# npm run plasmon:demo:reinstall
-# The executable probe lifecycle below must use plasmon:local:* exclusively.
-
 npm ci
 npm run plasmon:local:prepare
 
