@@ -62,6 +62,7 @@ test("packaged Review saves human results locally and submits only on explicit S
   await expect(reopenedCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of the previous folder.");
 
   const submissionPath = `/e2e/review-submission-${Date.now()}.md`;
+  const canonicalSubmissionPath = `/Workspace${submissionPath}`;
   await harness.review.getByLabel("Submission file").fill(submissionPath);
   await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
   await approveFilesTool(page, "writeBinary");
@@ -74,7 +75,7 @@ test("packaged Review saves human results locally and submits only on explicit S
   reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
   await expect(reopenedCard).toBeVisible();
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
-  await expect(harness.review.getByLabel("Submission file")).toHaveValue(submissionPath);
+  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
 
   await reopenedCard.getByLabel("What happened?").fill("");
   await reopenedCard.getByRole("button", { name: "✓ Pass" }).click();
@@ -85,6 +86,7 @@ test("packaged Review saves human results locally and submits only on explicit S
   await approveFilesToolIfNeeded(page, "writeBinary");
   await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
 
   await expect(harness.review.getByRole("button", { name: "Refresh" })).toBeVisible();
   await expect(harness.review.getByText(/Other reviewers' queued changes appear only after Refresh/)).toBeVisible();
