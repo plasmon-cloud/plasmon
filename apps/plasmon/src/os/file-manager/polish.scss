@@ -25,6 +25,7 @@
 }
 
 .fm-entry.fm-entry--desktop {
+  --fm-desktop-label-top: 57px;
   padding-inline: 0;
 }
 
@@ -79,6 +80,7 @@
   max-height: var(--fm-rename-max-height, calc(10em + 8px));
   width: auto;
   padding-inline: 0;
+  text-align: center;
   white-space: pre-wrap;
   overflow-x: hidden;
   overflow-y: auto;
@@ -114,7 +116,7 @@
 .fm-entry--desktop .fm-entry__expanded-name {
   box-sizing: border-box;
   position: absolute;
-  top: 55px;
+  top: var(--fm-desktop-label-top, 57px);
   left: 0;
   width: 100%;
   max-width: 100%;
@@ -138,7 +140,7 @@
 .fm-entry--desktop.is-renaming .fm-entry__name {
   box-sizing: border-box;
   position: absolute;
-  top: 55px;
+  top: var(--fm-desktop-label-top, 57px);
   left: 50%;
   transform: translateX(-50%);
   width: fit-content;
