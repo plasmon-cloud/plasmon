@@ -67,7 +67,7 @@
 
 .fm-entry--desktop.is-renaming .fm-entry__name textarea,
 .fm-entry--grid.is-renaming .fm-entry__name textarea {
-  max-height: calc(10em + 8px);
+  max-height: var(--fm-rename-max-height, calc(10em + 8px));
   white-space: pre-wrap;
   overflow-x: hidden;
   overflow-y: auto;
@@ -76,7 +76,7 @@
 
 .fm-entry--list.is-renaming .fm-entry__name textarea,
 .fm-entry--details.is-renaming .fm-entry__name textarea {
-  height: calc(1.25em + 8px);
+  height: var(--fm-rename-max-height, calc(1.25em + 8px));
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
@@ -130,7 +130,7 @@
 }
 
 .fm-entry--desktop.is-renaming .fm-entry__name {
-  --fm-desktop-rename-width: min(112px, calc(100cqi - 16px));
+  --fm-desktop-rename-width: min(var(--fm-desktop-rename-ideal-width, 112px), calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
@@ -163,9 +163,9 @@
   box-sizing: border-box;
   position: absolute;
   top: 58px;
-  left: 6px;
-  width: calc(100% - 12px);
-  max-width: calc(100% - 12px);
+  left: var(--fm-grid-rename-inline-inset, 6px);
+  width: calc(100% - var(--fm-grid-rename-total-inset, 12px));
+  max-width: calc(100% - var(--fm-grid-rename-total-inset, 12px));
   overflow: visible;
   pointer-events: none;
   z-index: 3;

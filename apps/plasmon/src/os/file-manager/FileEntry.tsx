@@ -21,6 +21,10 @@ import {
   renameKeyAction,
   type InlineRenameState,
 } from "./rename.ts";
+import {
+  inlineRenamePresentation,
+  inlineRenameStyleVariables,
+} from "./rename-presentation.ts";
 import { shortcutTypeLabel } from "./shortcut.ts";
 import { useFileEntryResolvedPresentation } from "./use-file-entry-presentation.ts";
 import "./polish.scss";
@@ -110,6 +114,13 @@ export const FileEntry = memo(function FileEntry({
   });
   const resolvedPresentation = useFileEntryResolvedPresentation(fs, node, associations, entryRef);
   const renameValue = rename?.value;
+  const renamePresentation = inlineRenamePresentation(presentation);
+  const entryStyle = renderState.isRenaming
+    ? {
+        ...(renderState.style ?? {}),
+        ...inlineRenameStyleVariables(renamePresentation),
+      }
+    : renderState.style;
 
   useLayoutEffect(() => {
     if (!renderState.isRenaming || !rename || !inputRef.current) {
@@ -129,13 +140,13 @@ export const FileEntry = memo(function FileEntry({
   useLayoutEffect(() => {
     const editor = inputRef.current;
     if (!editor || !renderState.isRenaming) return;
-    if (presentation !== "desktop" && presentation !== "grid") {
+    if (!renamePresentation.autoGrow) {
       editor.style.height = "";
       return;
     }
     editor.style.height = "0px";
     editor.style.height = `${editor.scrollHeight}px`;
-  }, [presentation, renderState.isRenaming, renameValue]);
+  }, [renamePresentation.autoGrow, renderState.isRenaming, renameValue]);
 
   return (
     <div
@@ -144,7 +155,7 @@ export const FileEntry = memo(function FileEntry({
         setRef(element);
       }}
       className={renderState.className}
-      style={renderState.style as CSSProperties | undefined}
+      style={entryStyle as CSSProperties | undefined}
       role="option"
       tabIndex={-1}
       aria-selected={selected}
@@ -170,8 +181,8 @@ export const FileEntry = memo(function FileEntry({
           <>
             <textarea
               ref={inputRef}
-              rows={1}
-              wrap="soft"
+              rows={renamePresentation.rows}
+              wrap={renamePresentation.wrap}
               value={rename.value}
               aria-label={`Rename ${node.name}`}
               disabled={rename.busy}
