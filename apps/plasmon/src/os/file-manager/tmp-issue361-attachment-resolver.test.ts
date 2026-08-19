@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import { mkdir, writeFile } from "node:fs/promises";
 
+// Trigger after the temporary workflow gained artifact upload support.
 const body = String.raw`
 <img src="https://github.com/user-attachments/assets/b8d9a3c4-6647-4b2b-a1c5-ae4b6ebde473" />
 <img src="https://github.com/user-attachments/assets/a1545cd2-6c9a-45d8-8364-9a43e6befded" />
