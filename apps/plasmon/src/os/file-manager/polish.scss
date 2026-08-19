@@ -40,6 +40,13 @@
   overflow-wrap: anywhere;
 }
 
+.fm-entry.is-renaming .fm-entry__name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
 .fm-entry.is-renaming .fm-entry__name input {
   min-width: 0;
   max-width: 100%;
@@ -48,6 +55,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
+}
+
+.fm-entry.is-renaming .fm-inline-error {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .fm-root--desktop {
