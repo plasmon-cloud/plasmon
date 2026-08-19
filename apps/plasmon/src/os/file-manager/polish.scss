@@ -47,14 +47,40 @@
   overflow-wrap: anywhere;
 }
 
-.fm-entry.is-renaming .fm-entry__name input {
+.fm-entry.is-renaming .fm-entry__name textarea {
+  box-sizing: border-box;
+  display: block;
   min-width: 0;
   max-width: 100%;
   width: 100%;
-  padding-inline: 3px;
-  white-space: nowrap;
-  overflow: hidden;
+  margin: 0;
+  border: 1px solid #75a7ff;
+  border-radius: 5px;
+  background: #101a2a;
+  color: white;
+  padding: 3px;
+  font: inherit;
+  resize: none;
+  text-align: left;
   text-overflow: clip;
+}
+
+.fm-entry--desktop.is-renaming .fm-entry__name textarea,
+.fm-entry--grid.is-renaming .fm-entry__name textarea {
+  max-height: calc(10em + 8px);
+  white-space: pre-wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.fm-entry--list.is-renaming .fm-entry__name textarea,
+.fm-entry--details.is-renaming .fm-entry__name textarea {
+  height: calc(1.25em + 8px);
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overflow-wrap: normal;
 }
 
 .fm-entry.is-renaming .fm-inline-error {
@@ -75,17 +101,12 @@
 }
 
 .fm-entry--desktop .fm-entry__expanded-name {
-  --fm-desktop-label-width: min(260px, calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
-  left: clamp(
-    calc(8px - var(--fm-desktop-entry-x)),
-    -84px,
-    calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-label-width))
-  );
-  width: var(--fm-desktop-label-width);
-  max-width: none;
+  left: 0;
+  width: 100%;
+  max-width: 100%;
   max-height: calc(6.25em + 4px);
   padding: 2px 6px;
   border: 1px solid rgba(117,167,255,.44);
@@ -128,7 +149,20 @@
   z-index: 3;
 }
 
-.fm-entry--desktop.is-renaming .fm-entry__name input {
+.fm-entry--grid.is-renaming .fm-entry__name {
+  box-sizing: border-box;
+  position: absolute;
+  top: 58px;
+  left: 6px;
+  width: calc(100% - 12px);
+  max-width: calc(100% - 12px);
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.fm-entry--desktop.is-renaming .fm-entry__name textarea,
+.fm-entry--grid.is-renaming .fm-entry__name textarea {
   pointer-events: auto;
 }
 
@@ -136,7 +170,7 @@
 .fm-entry.is-drop-target {
   background: rgba(80, 157, 255, .28);
   border-color: rgba(149, 196, 255, .95);
-  box-shadow: inset 0 0 0 2px rgba(149, 196, 255, .42), 0 0 18px rgba(70, 142, 255, .28);
+  box-shadow: inset 0 0 0 2px rgba(149, 196,255,.42), 0 0 18px rgba(70,142,255,.28);
 }
 .fm-entry.is-drop-target .fm-entry__icon--folder { transform: scale(1.08); }
 
