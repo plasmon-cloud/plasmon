@@ -19,7 +19,8 @@ test("temporary: resolve Issue #361 attachment URLs", async () => {
     body: JSON.stringify({ text: body, context: "plasmon-cloud/plasmon", mode: "gfm" }),
   });
   if (!response.ok) throw new Error(`GitHub markdown render failed: ${response.status} ${await response.text()}`);
-  console.log("ISSUE361_RENDERED_HTML_BEGIN");
-  console.log(await response.text());
-  console.log("ISSUE361_RENDERED_HTML_END");
+  const rendered = await response.text();
+  console.log("ISSUE361_RENDERED_HTML_BASE64_BEGIN");
+  console.log(Buffer.from(rendered, "utf8").toString("base64"));
+  console.log("ISSUE361_RENDERED_HTML_BASE64_END");
 });
