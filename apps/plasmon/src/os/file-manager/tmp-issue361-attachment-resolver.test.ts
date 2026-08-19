@@ -1,0 +1,25 @@
+import { test } from "bun:test";
+
+const body = String.raw`
+<img src="https://github.com/user-attachments/assets/b8d9a3c4-6647-4b2b-a1c5-ae4b6ebde473" />
+<img src="https://github.com/user-attachments/assets/a1545cd2-6c9a-45d8-8364-9a43e6befded" />
+<img src="https://github.com/user-attachments/assets/e44552d1-ca23-4a72-9f1a-eac1ab682dea" />
+<img src="https://github.com/user-attachments/assets/d9d99056-58f6-497b-8994-58a36847129e" />
+`;
+
+test("temporary: resolve Issue #361 attachment URLs", async () => {
+  const response = await fetch("https://api.github.com/markdown", {
+    method: "POST",
+    headers: {
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "plasmon-issue361-attachment-resolver",
+    },
+    body: JSON.stringify({ text: body, context: "plasmon-cloud/plasmon", mode: "gfm" }),
+  });
+  if (!response.ok) throw new Error(`GitHub markdown render failed: ${response.status} ${await response.text()}`);
+  console.log("ISSUE361_RENDERED_HTML_BEGIN");
+  console.log(await response.text());
+  console.log("ISSUE361_RENDERED_HTML_END");
+});
