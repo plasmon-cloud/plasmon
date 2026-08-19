@@ -194,17 +194,8 @@ function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
   return category === "media" ? "Media" : "Document";
 }
 
-function elementRuntimeLabel(running: ExternalElement["running"]): string {
-  switch (running) {
-    case "yes": return "Running";
-    case "no": return "Not running";
-    case "unknown": return "Runtime status unavailable";
-  }
-}
-
 function elementSubtitle(element: ExternalElement): string {
-  const description = element.description.trim() || "Neutron application";
-  return `${description} · ${elementRuntimeLabel(element.running)}`;
+  return element.description.trim() || "Neutron application";
 }
 
 function projectionSearchResult(node: FsNode, metadata: NeutronAppMetadata): NeutronProjectionSearchResult {
@@ -292,7 +283,7 @@ export function searchApplicationEntries(
     }));
 
   const neutron = elements
-    .filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}\n${element.running}`), query))
+    .filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}`), query))
     .sort((left, right) => {
       const rank = pinnedRank(left.id, options.pinnedElements) - pinnedRank(right.id, options.pinnedElements);
       return rank || left.name.localeCompare(right.name);
