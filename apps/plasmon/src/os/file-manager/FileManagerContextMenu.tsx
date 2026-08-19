@@ -8,6 +8,7 @@ export type FileManagerContextMenuAction =
   | "cut"
   | "copy"
   | "createShortcut"
+  | "sendToDesktop"
   | "rename"
   | "delete"
   | "properties"
@@ -62,6 +63,7 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           <button type="button" role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("copy")}>Copy</button>
           <button type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("createShortcut")}>Create Shortcut</button>
+          <button type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("sendToDesktop")}>Send to Desktop (create shortcut)</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("rename")}>Rename</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("delete")}>Delete</button>
           <div className="fm-menu-separator" role="separator" />
