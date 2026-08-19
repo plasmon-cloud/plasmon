@@ -109,6 +109,7 @@ export const FileEntry = memo(function FileEntry({
     renameNodeId: rename?.nodeId ?? null,
   });
   const resolvedPresentation = useFileEntryResolvedPresentation(fs, node, associations, entryRef);
+  const renameValue = rename?.value;
 
   useLayoutEffect(() => {
     if (!renderState.isRenaming || !rename || !inputRef.current) {
@@ -134,7 +135,7 @@ export const FileEntry = memo(function FileEntry({
     }
     editor.style.height = "0px";
     editor.style.height = `${editor.scrollHeight}px`;
-  }, [presentation, renderState.isRenaming, rename?.value]);
+  }, [presentation, renderState.isRenaming, renameValue]);
 
   return (
     <div
