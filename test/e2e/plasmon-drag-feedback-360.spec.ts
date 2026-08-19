@@ -14,10 +14,11 @@ async function launchPlasmon(page: import("@playwright/test").Page) {
   await page.locator('[data-tid="launcher-open"]').click();
   await page.locator('[data-tid="launcher-tile-plasmon-main"]').click();
   const selector = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
+  const iframe = page.locator(selector).first();
   const frame = page.frameLocator(selector).first();
   const files = frame.getByRole("listbox", { name: "Files" }).first();
   await expect(files).toBeVisible({ timeout: 30_000 });
-  return { frame, files, health };
+  return { frame, iframe, files, health };
 }
 
 test("#360 Desktop drag ghost preserves entry identity and lands where it previews", async ({ page }) => {
@@ -72,8 +73,8 @@ test("#360 Desktop drag ghost preserves entry identity and lands where it previe
   }
 });
 
-test("#360 folder hover names the canonical move target and release moves the file", async ({ page }) => {
-  const { frame, files, health } = await launchPlasmon(page);
+test("#360 Desktop item moves into an already-open folder window", async ({ page }) => {
+  const { frame, iframe, files, health } = await launchPlasmon(page);
   try {
     const root = frame.locator('[data-fm-node-id]', { hasText: "Root" }).first();
     await expect(root).toBeVisible();
@@ -81,49 +82,106 @@ test("#360 folder hover names the canonical move target and release moves the fi
 
     const explorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
     await expect(explorer).toHaveCount(1);
-    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+    const address = explorer.getByRole("textbox", { name: "Address" });
+    await expect(address).toHaveValue("/");
     const explorerFiles = explorer.getByRole("listbox", { name: "Files" });
     const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
+
+    // Create a normal filesystem resource in /Desktop through the production
+    // Explorer/FileManager command path so the test can then reproduce the human
+    // Desktop -> already-open-folder-window gesture exactly.
+    await address.fill("/Desktop");
+    await address.press("Enter");
+    await expect(address).toHaveValue("/Desktop");
     await commandBar.getByRole("button", { name: "New Text Document" }).click();
     const rename = explorerFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
     await expect(rename).toBeVisible();
     const createdName = await rename.inputValue();
     await rename.press("Enter");
+    const explorerSource = explorerFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
+    await expect(explorerSource).toBeVisible();
+    const sourceId = await explorerSource.getAttribute("data-fm-node-id");
+    if (!sourceId) throw new Error("Created Desktop source has no stable NodeId");
 
-    const source = explorerFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
-    const destination = explorerFiles.locator('[data-fm-node-id][data-fm-kind="directory"]', { hasText: "Documents" }).first();
+    const source = files.locator(`[data-fm-node-id="${sourceId}"]`);
     await expect(source).toBeVisible();
-    await expect(destination).toBeVisible();
-    const sourceId = await source.getAttribute("data-fm-node-id");
-    const destinationId = await destination.getAttribute("data-fm-node-id");
-    if (!sourceId || !destinationId) throw new Error("Directory drop participants need stable NodeIds");
-    const sourceBox = await source.boundingBox();
-    const destinationBox = await destination.boundingBox();
-    if (!sourceBox || !destinationBox) throw new Error("Directory drop participants have no browser bounds");
+
+    // Leave this exact Explorer window open on Documents. The open window's
+    // FileManager content surface, not a Documents entry in the source FileManager,
+    // must become the canonical drop target.
+    await address.fill("/Documents");
+    await address.press("Enter");
+    await expect(address).toHaveValue("/Documents");
+    const destinationSurface = explorerFiles.locator("[data-fm-directory-id]").first();
+    await expect(destinationSurface).toBeVisible();
+    const destinationId = await destinationSurface.getAttribute("data-fm-directory-id");
+    if (!destinationId) throw new Error("Open Documents FileManager has no directory identity");
+
+    let sourceBox = await source.boundingBox();
+    if (!sourceBox) throw new Error("Desktop source has no browser bounds");
+    let explorerBox = await explorer.boundingBox();
+    if (!explorerBox) throw new Error("Explorer window has no browser bounds");
+    const sourceCenter = () => ({
+      x: sourceBox!.x + sourceBox!.width / 2,
+      y: sourceBox!.y + sourceBox!.height / 2,
+    });
+    const coveredByExplorer = () => {
+      const point = sourceCenter();
+      return point.x >= explorerBox!.x && point.x <= explorerBox!.x + explorerBox!.width
+        && point.y >= explorerBox!.y && point.y <= explorerBox!.y + explorerBox!.height;
+    };
+
+    // Default placement normally leaves the left Desktop column exposed. If a
+    // persisted prior geometry covers the newly-created icon, move the real window
+    // just enough to expose it instead of bypassing Windowing or dispatching events.
+    if (coveredByExplorer()) {
+      const titlebar = explorer.locator(".plasmon-window__titlebar");
+      const titlebarBox = await titlebar.boundingBox();
+      const iframeBox = await iframe.boundingBox();
+      if (!titlebarBox || !iframeBox) throw new Error("Cannot expose Desktop source using real window geometry");
+      const desiredLeft = sourceBox.x + sourceBox.width + 24;
+      const maxRightShift = Math.max(0, iframeBox.x + iframeBox.width - explorerBox.x - explorerBox.width - 12);
+      const shift = Math.min(Math.max(0, desiredLeft - explorerBox.x), maxRightShift);
+      if (shift <= 0) throw new Error("Open folder window covers the Desktop source and cannot be moved aside");
+      await page.mouse.move(titlebarBox.x + Math.min(120, titlebarBox.width / 3), titlebarBox.y + titlebarBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        titlebarBox.x + Math.min(120, titlebarBox.width / 3) + shift,
+        titlebarBox.y + titlebarBox.height / 2,
+        { steps: 6 },
+      );
+      await page.mouse.up();
+      sourceBox = await source.boundingBox();
+      explorerBox = await explorer.boundingBox();
+      if (!sourceBox || !explorerBox || coveredByExplorer()) {
+        throw new Error("Desktop source remains covered by the open folder window");
+      }
+    }
+
+    const destinationBox = await destinationSurface.boundingBox();
+    if (!destinationBox) throw new Error("Open Documents content surface has no browser bounds");
+    const dropPoint = {
+      x: destinationBox.x + destinationBox.width / 2,
+      y: destinationBox.y + destinationBox.height / 2,
+    };
 
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
-    await page.mouse.move(
-      destinationBox.x + destinationBox.width / 2,
-      destinationBox.y + destinationBox.height / 2,
-      { steps: 8 },
-    );
+    await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 10 });
 
     const preview = frame.locator('[data-fm-drag-preview="true"]');
     await expect(preview).toBeVisible();
     await expect(preview.locator(".fm-drag-preview__entry .fm-entry__icon")).toBeVisible();
     await expect(preview.locator(".fm-drag-preview__entry .fm-entry__name")).toHaveText(createdName);
-    await expect(destination).toHaveClass(/is-drop-target/);
+    await expect(destinationSurface).toHaveClass(/is-drop-target/);
     await expect(preview).toHaveAttribute("data-fm-drop-target-id", destinationId);
     await expect(preview.locator('[data-fm-drag-feedback="true"]')).toHaveText("Move to Documents");
 
     await page.mouse.up();
     await expect(preview).toHaveCount(0);
-    await expect(explorerFiles.locator(`[data-fm-node-id="${sourceId}"]`)).toHaveCount(0);
-
-    await destination.dblclick();
-    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
+    await expect(files.locator(`[data-fm-node-id="${sourceId}"]`)).toHaveCount(0);
     await expect(explorerFiles.locator(`[data-fm-node-id="${sourceId}"]`)).toBeVisible();
+    await expect(address).toHaveValue("/Documents");
     health.assertClean();
   } finally {
     health.dispose();
