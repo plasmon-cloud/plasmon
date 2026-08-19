@@ -101,12 +101,17 @@
 }
 
 .fm-entry--desktop .fm-entry__expanded-name {
+  --fm-desktop-label-width: min(260px, calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
-  left: 0;
-  width: 100%;
-  max-width: 100%;
+  left: clamp(
+    calc(8px - var(--fm-desktop-entry-x)),
+    -84px,
+    calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-label-width))
+  );
+  width: var(--fm-desktop-label-width);
+  max-width: none;
   max-height: calc(6.25em + 4px);
   padding: 2px 6px;
   border: 1px solid rgba(117,167,255,.44);
