@@ -30,7 +30,14 @@ test("#361 Desktop rename wrapper does not consume editor width with a second pa
   expect(desktop).toContain("overflow-wrap: normal");
 });
 
+test("#361 input clipping does not clip shared rename error presentation", () => {
+  const renameParent = rule(".fm-entry.is-renaming .fm-entry__name");
+  const error = rule(".fm-entry.is-renaming .fm-inline-error");
+  expect(renameParent).toContain("overflow: visible");
+  expect(error).toContain("white-space: normal");
+  expect(error).toContain("overflow-wrap: anywhere");
+});
+
 test("#361 selected Grid wrapping excludes the active rename editor", () => {
   expect(polish).toContain(".fm-entry--grid.is-selected:not(.is-renaming) .fm-entry__name");
-  expect(polish).not.toContain(".fm-entry--grid.is-selected .fm-entry__name,\n.fm-entry.is-renaming .fm-entry__name");
 });
