@@ -82,7 +82,7 @@ async function prepareMoveFixture(environment: ReturnType<typeof createHeadlessP
   return { documents, target, first, second };
 }
 
-test("#92 multi-item drag move exposes running state and truthful completion", async () => {
+test("#92/#377 multi-item drag move exposes running state without persistent success text", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -126,7 +126,8 @@ test("#92 multi-item drag move exposes running state and truthful completion", a
 
     await act(async () => { release(); });
     await waitFor(() => expect(operationState.snapshot().status).toBe("completed"));
-    await waitFor(() => expect(view.getByRole("status").textContent).toBe("Moved 2 items."));
+    await waitFor(() => expect(view.queryByRole("status")).toBeNull());
+    expect(view.queryByText("Moved 2 items.")).toBeNull();
   } finally {
     release?.();
     document.elementFromPoint = originalElementFromPoint;
