@@ -174,6 +174,31 @@ async function scanStartTree(fs: FsService, root: FsNode): Promise<Map<string, S
   return found;
 }
 
+async function scanStartIdentityNodeIds(fs: FsService, root: FsNode): Promise<Map<string, string[]>> {
+  const found = new Map<string, string[]>();
+  const queue = [root];
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const directory = queue.shift();
+    if (!directory || visited.has(directory.id)) continue;
+    visited.add(directory.id);
+    const children = await fs.list(directory.id, { includeHidden: true, sort: "name" });
+    for (const child of children) {
+      if (child.kind === "directory") {
+        queue.push(child);
+        continue;
+      }
+      const shortcut = parseStartShortcut(child);
+      if (!shortcut) continue;
+      const identity = startShortcutTargetIdentity(shortcut.target);
+      const ids = found.get(identity) ?? [];
+      ids.push(child.id);
+      found.set(identity, ids);
+    }
+  }
+  return found;
+}
+
 interface SeedSpec {
   identity: string;
   name: string;
@@ -220,11 +245,35 @@ function sameFilesystemName(left: string, right: string): boolean {
 }
 
 /**
- * Retire the former managed Start `System` category only when the Start-root
- * provenance registry names that exact stable directory NodeId and the folder is
- * still the untouched canonical legacy default. Folder name/shape and the v1
- * shortcut ledger are not sufficient proof by themselves. Customized, copied,
- * replaced, or otherwise ambiguous folders fail closed.
+ * Released pre-provenance installs did not persist the legacy System directory
+ * NodeId, but the filesystem does persist creation/modification history. The
+ * original untouched managed category was created before its canonical shortcuts,
+ * and neither the folder nor those shortcuts were subsequently mutated. A user
+ * rename/move/replacement updates modifiedAt (and a replacement/copy has a newer
+ * createdAt), so it cannot be backfilled as managed. The root's last v1 ledger
+ * write is an additional upper bound for nodes that belonged to that released
+ * seed state.
+ */
+function isUntouchedReleasedSystemBackfill(
+  root: FsNode,
+  system: FsNode,
+  candidates: readonly FsNode[],
+): boolean {
+  if (system.createdAt > root.modifiedAt || system.modifiedAt !== system.createdAt) return false;
+  return candidates.every((candidate) =>
+    candidate.createdAt >= system.createdAt
+      && candidate.createdAt <= root.modifiedAt
+      && candidate.modifiedAt === candidate.createdAt,
+  );
+}
+
+/**
+ * Retire the former managed Start `System` category when its stable directory
+ * NodeId is already registered, or when the exact released pre-provenance state
+ * can be safely backfilled from durable mutation history. Shape alone is never
+ * sufficient: all three ledger-backed shortcuts must be exact singletons across
+ * the Start tree and untouched since creation. Renamed, moved, copied, replaced,
+ * metadata/content-customized, or otherwise ambiguous folders fail closed.
  */
 async function migrateProvablyManagedRetiredSystemFolder(
   fs: FsService,
@@ -240,7 +289,10 @@ async function migrateProvablyManagedRetiredSystemFolder(
 
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
   const system = rootChildren.find((node) => node.name === "System");
-  if (!system || system.kind !== "directory" || managedFolderIds.get("System") !== system.id) return;
+  if (!system || system.kind !== "directory") return;
+
+  const registeredSystemId = managedFolderIds.get("System");
+  if (registeredSystemId && registeredSystemId !== system.id) return;
   if (Object.keys(system.metadata).length !== 0) return;
   if (specs.some((spec) => !seeded.has(spec.identity))) return;
   if (specs.some((spec) => rootChildren.some((node) =>
@@ -255,6 +307,20 @@ async function migrateProvablyManagedRetiredSystemFolder(
     const candidate = systemChildren.find((node) => node.name === spec.name);
     if (!candidate || !isExactManagedSeed(candidate, spec)) return;
     candidates.push(candidate);
+  }
+
+  const identityNodeIds = await scanStartIdentityNodeIds(fs, root);
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index]!;
+    const candidate = candidates[index]!;
+    const ids = identityNodeIds.get(spec.identity) ?? [];
+    if (ids.length !== 1 || ids[0] !== candidate.id) return;
+  }
+
+  if (!registeredSystemId) {
+    if (!isUntouchedReleasedSystemBackfill(root, system, candidates)) return;
+    managedFolderIds.set("System", system.id);
+    await persistManagedFolderIds(fs, root.id, managedFolderIds);
   }
 
   for (const candidate of candidates) await fs.move(candidate.id, root.id);
@@ -306,10 +372,11 @@ async function retireManagedRuntimeOnlySeeds(
  * intentional deletion and is not recreated. Newly discovered identities are
  * seeded exactly once. Exact previously-managed defaults that are now classified
  * runtime-only are retired without weakening those user-customization semantics.
- * Managed category ownership is recorded by stable NodeId only when Shell creates
- * a category; existing same-name directories are never adopted. The retired
- * `System` folder migrates only when that exact directory provenance is present
- * and the legacy contents remain exact; pre-provenance folders fail closed.
+ * Managed category ownership is recorded by stable NodeId when Shell creates a
+ * category. The retired `System` folder can additionally backfill that provenance
+ * only for the exact untouched released v1 state; durable mutation history and
+ * singleton shortcut identity prevent user-moved/replaced/customized folders from
+ * being adopted. All ambiguous states remain untouched.
  */
 export async function reconcileStartMenu(
   fs: FsService,
