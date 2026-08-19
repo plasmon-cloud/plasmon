@@ -116,9 +116,17 @@ test("#360 Desktop item moves into an already-open folder window", async ({ page
     const address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue("/");
     const explorerFiles = explorer.getByRole("listbox", { name: "Files" });
-    await address.fill("/Documents");
-    await address.press("Enter");
+    const rootSurface = explorerFiles.locator("[data-fm-directory-id]").first();
+    await expect(rootSurface).toBeVisible();
+    const rootDirectoryId = await rootSurface.getAttribute("data-fm-directory-id");
+    if (!rootDirectoryId) throw new Error("Root FileManager has no directory identity");
+
+    const favorites = explorer.getByRole("complementary", { name: "Favorites" });
+    await favorites.getByRole("button", { name: "Documents", exact: true }).click();
     await expect(address).toHaveValue("/Documents");
+    await expect.poll(
+      () => explorerFiles.locator("[data-fm-directory-id]").first().getAttribute("data-fm-directory-id"),
+    ).not.toBe(rootDirectoryId);
     const destinationSurface = explorerFiles.locator("[data-fm-directory-id]").first();
     await expect(destinationSurface).toBeVisible();
     const destinationId = await destinationSurface.getAttribute("data-fm-directory-id");
