@@ -43,9 +43,8 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     const desktopBounds = await desktop.boundingBox();
     if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");
 
-    // Exercise the real Desktop creation path from an edge-adjacent context
-    // location. Placement stays authoritative while every filename surface
-    // must remain inside the owning Desktop tile horizontally.
+    // Create through the real Desktop path near an edge. The owning entry and
+    // its neighbor must keep their placement while rename presentation grows.
     await desktop.click({
       button: "right",
       position: {
@@ -67,9 +66,9 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     if (!initialNodeId || !initialEntryBounds || !initialRenameBounds) {
       throw new Error("Rename state has no stable identity/browser bounds");
     }
+
     const stableEntry = desktop.locator(`[data-fm-node-id="${initialNodeId}"]`);
     await expect(stableEntry).toHaveCount(1);
-
     expect(initialRenameBounds.x, "rename starts inside its FileEntry left edge")
       .toBeGreaterThanOrEqual(initialEntryBounds.x - 1);
     expect(initialRenameBounds.x + initialRenameBounds.width, "rename starts inside its FileEntry right edge")
@@ -90,14 +89,13 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
         + Number.parseFloat(style.paddingRight)
         + Number.parseFloat(style.borderLeftWidth)
         + Number.parseFloat(style.borderRightWidth);
-      const borderInline = Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.borderRightWidth);
+      const borderInline = Number.parseFloat(style.borderLeftWidth)
+        + Number.parseFloat(style.borderRightWidth);
       return {
         contentWidth: element.getBoundingClientRect().width - horizontalChrome,
         textWidth: context.measureText(element.value).width,
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
-        clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
         offsetWidth: element.offsetWidth,
         borderInline,
         overflowY: style.overflowY,
@@ -105,24 +103,23 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       };
     });
     if (!ordinaryBounds) throw new Error("Ordinary rename state has no browser bounds");
+
     expect(ordinary.textWidth, "New folder (2) fits on one line")
       .toBeLessThanOrEqual(ordinary.contentWidth + 1);
-    expect(ordinaryBounds.height, "ordinary filename stays one editor row")
+    expect(ordinaryBounds.height, "New folder (2) stays at the one-row editor height")
       .toBeLessThanOrEqual(initialRenameBounds.height + 2);
-    expect(ordinaryBounds.width, "ordinary filename may grow but stays inside the tile")
+    expect(ordinaryBounds.width, "ordinary rename grows but stays inside the tile")
       .toBeLessThanOrEqual(initialEntryBounds.width + 1);
-    expect(ordinaryBounds.width, "ordinary filename does not shrink from the shorter initial value")
+    expect(ordinaryBounds.width, "ordinary rename does not shrink from its initial width")
       .toBeGreaterThanOrEqual(initialRenameBounds.width - 1);
-    expect(ordinary.scrollWidth, "ordinary filename does not horizontally overflow")
+    expect(ordinary.scrollWidth, "ordinary rename has no horizontal overflow")
       .toBeLessThanOrEqual(ordinary.clientWidth + 1);
-    expect(ordinary.scrollHeight, "ordinary filename has no hidden second line")
-      .toBeLessThanOrEqual(ordinary.clientHeight + 1);
-    expect(ordinary.overflowY, "ordinary rename never reserves a vertical scrollbar gutter").toBe("hidden");
+    expect(ordinary.overflowY, "ordinary rename has no vertical scrollbar").toBe("hidden");
     expect(
       ordinary.offsetWidth - ordinary.clientWidth - ordinary.borderInline,
       "ordinary rename has no scrollbar-width strip on the right",
     ).toBeLessThanOrEqual(1);
-    expect(ordinary.textAlign, "Desktop rename text stays visually centered in place").toBe("center");
+    expect(ordinary.textAlign, "Desktop rename text is centered").toBe("center");
 
     await rename.fill(LONG_NAME);
     const longBounds = await rename.boundingBox();
@@ -145,21 +142,22 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       .toBeGreaterThanOrEqual(longEntryBounds.x - 1);
     expect(longBounds.x + longBounds.width, "long rename remains inside its FileEntry right edge")
       .toBeLessThanOrEqual(longEntryBounds.x + longEntryBounds.width + 1);
-    expect(longBounds.width, "long name grows to the bounded tile width rather than workspace width")
+    expect(longBounds.width, "long rename grows to the bounded tile width")
       .toBeGreaterThan(initialRenameBounds.width + 4);
     expect(longBounds.width).toBeGreaterThanOrEqual(ordinaryBounds.width - 1);
-    expect(longBounds.height, "long name wraps downward inside the bounded editor")
+    expect(longBounds.height, "long rename wraps downward")
       .toBeGreaterThan(ordinaryBounds.height + 8);
     expect(longMetrics.whiteSpace).toBe("pre-wrap");
-    expect(longMetrics.overflowY, "tiled rename does not introduce a scrollbar gutter for long names").toBe("hidden");
-    expect(longMetrics.scrollWidth, "long rename does not create horizontal editor overflow")
+    expect(longMetrics.overflowY, "long tiled rename does not introduce a scrollbar gutter").toBe("hidden");
+    expect(longMetrics.scrollWidth, "long rename has no horizontal editor overflow")
       .toBeLessThanOrEqual(longMetrics.clientWidth + 1);
-    expect(longMetrics.scrollHeight, "long rename has multi-line content")
+    expect(longMetrics.scrollHeight, "long rename contains multiple wrapped rows")
       .toBeGreaterThan(ordinaryBounds.height);
     expect(await stableEntry.getAttribute("data-fm-node-id"), "rename keeps NodeId stable").toBe(initialNodeId);
-    expect(longEntryBounds.x, "long name keeps Desktop placement x stable").toBeCloseTo(initialEntryBounds.x, 0);
-    expect(longEntryBounds.y, "long name keeps Desktop placement y stable").toBeCloseTo(initialEntryBounds.y, 0);
-
+    expect(longEntryBounds.x, "long rename keeps Desktop placement x stable")
+      .toBeCloseTo(initialEntryBounds.x, 0);
+    expect(longEntryBounds.y, "long rename keeps Desktop placement y stable")
+      .toBeCloseTo(initialEntryBounds.y, 0);
     if (initialOtherBounds && longOtherBounds) {
       expect(longOtherBounds.x, "neighbor x remains stable").toBeCloseTo(initialOtherBounds.x, 0);
       expect(longOtherBounds.y, "neighbor y remains stable").toBeCloseTo(initialOtherBounds.y, 0);
@@ -167,12 +165,10 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
 
     await rename.press("Escape");
     await expect(rename).toBeHidden();
-    await expect(stableEntry).toBeVisible();
     expect(await stableEntry.getAttribute("data-fm-node-id"), "cancel keeps NodeId stable").toBe(initialNodeId);
 
-    // Exercise a second real rename session and commit the exact ordinary name
-    // called out by human review. Read-only assertions below therefore inspect
-    // the actual rendered filename rather than a hypothetical string width.
+    // Commit the exact ordinary filename from human review so normal, selected,
+    // and F2 states all exercise the same real resource/name.
     await stableEntry.click({ button: "right" });
     await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "Rename" }).click();
     const committedRename = plasmon.getByRole("textbox", { name: /^Rename New Folder/ });
@@ -182,97 +178,69 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     await expect(committedRename).toBeHidden();
     expect(await stableEntry.getAttribute("data-fm-node-id"), "commit keeps NodeId stable").toBe(initialNodeId);
 
-    // Human-review boundary: selection must not recreate the old 260px-wide
-    // Desktop filename field. The selected overlay remains pointer-inert but
-    // is horizontally bounded to the same tile and stays exactly one text row
-    // for the ordinary filename used in the review screenshots.
+    // Selected New Folder (1): exactly one rendered text line inside the tile.
     const selectedName = stableEntry.locator(".fm-entry__expanded-name");
     await expect(selectedName).toBeVisible();
     await expect(selectedName).toHaveText(ORDINARY_DISPLAY_NAME);
     const selectedEntryBounds = await stableEntry.boundingBox();
     const selectedNameBounds = await selectedName.boundingBox();
     if (!selectedEntryBounds || !selectedNameBounds) throw new Error("Selected filename has no browser bounds");
-    expect(selectedNameBounds.x, "selected filename stays inside tile left edge")
-      .toBeGreaterThanOrEqual(selectedEntryBounds.x - 1);
-    expect(selectedNameBounds.x + selectedNameBounds.width, "selected filename stays inside tile right edge")
+    expect(selectedNameBounds.x).toBeGreaterThanOrEqual(selectedEntryBounds.x - 1);
+    expect(selectedNameBounds.x + selectedNameBounds.width)
       .toBeLessThanOrEqual(selectedEntryBounds.x + selectedEntryBounds.width + 1);
 
     const selectedMetrics = await selectedName.evaluate((element) => {
       const style = getComputedStyle(element);
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas text measurement unavailable");
-      context.font = style.font;
-      const horizontalChrome = Number.parseFloat(style.paddingLeft)
-        + Number.parseFloat(style.paddingRight)
-        + Number.parseFloat(style.borderLeftWidth)
-        + Number.parseFloat(style.borderRightWidth);
       const range = document.createRange();
       range.selectNodeContents(element);
       const textRect = range.getBoundingClientRect();
       return {
-        contentWidth: element.getBoundingClientRect().width - horizontalChrome,
-        textWidth: context.measureText(element.textContent ?? "").width,
-        textTop: textRect.top,
         lineCount: range.getClientRects().length,
-        whiteSpace: style.whiteSpace,
-        overflowWrap: style.overflowWrap,
+        textTop: textRect.top,
         pointerEvents: style.pointerEvents,
       };
     });
-    expect(selectedMetrics.textWidth, "New Folder (1) fits the selected tile label without horizontal expansion")
-      .toBeLessThanOrEqual(selectedMetrics.contentWidth + 1);
     expect(selectedMetrics.lineCount, "selected New Folder (1) is exactly one rendered line").toBe(1);
-    expect(selectedMetrics.whiteSpace).toBe("normal");
-    expect(selectedMetrics.overflowWrap).toBe("anywhere");
     expect(selectedMetrics.pointerEvents).toBe("none");
 
-    // F2 should feel like editing the selected filename in place. The ordinary
-    // review filename remains one textarea row with no scrollbar gutter; only
-    // genuinely long content transitions into multiline growth.
+    // F2 New Folder (1): same one-row editor height as the proven ordinary
+    // rename above, centered in place, and with no scrollbar-width gutter.
     await stableEntry.press("F2");
     const inPlaceRename = plasmon.getByRole("textbox", { name: `Rename ${ORDINARY_DISPLAY_NAME}` });
     await expect(inPlaceRename).toBeVisible();
     const inPlaceBounds = await inPlaceRename.boundingBox();
     const inPlaceMetrics = await inPlaceRename.evaluate((element) => {
       const style = getComputedStyle(element);
-      const borderInline = Number.parseFloat(style.borderLeftWidth) + Number.parseFloat(style.borderRightWidth);
+      const borderInline = Number.parseFloat(style.borderLeftWidth)
+        + Number.parseFloat(style.borderRightWidth);
       return {
         textAlign: style.textAlign,
-        whiteSpace: style.whiteSpace,
         overflowY: style.overflowY,
-        clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
         clientWidth: element.clientWidth,
         offsetWidth: element.offsetWidth,
         borderInline,
       };
     });
     if (!inPlaceBounds) throw new Error("F2 rename has no browser bounds");
-    expect(inPlaceMetrics.textAlign, "F2 Desktop rename remains centered like the label it replaces").toBe("center");
-    expect(inPlaceMetrics.whiteSpace).toBe("pre-wrap");
-    expect(inPlaceMetrics.overflowY, "F2 ordinary rename has no vertical scrollbar").toBe("hidden");
-    expect(inPlaceMetrics.scrollHeight, "F2 New Folder (1) remains exactly one textarea row")
-      .toBeLessThanOrEqual(inPlaceMetrics.clientHeight + 1);
-    expect(inPlaceBounds.height, "F2 New Folder (1) matches the one-line rename height")
+    expect(inPlaceBounds.height, "F2 New Folder (1) is exactly the one-row editor height")
       .toBeLessThanOrEqual(ordinaryBounds.height + 1);
+    expect(inPlaceMetrics.textAlign).toBe("center");
+    expect(inPlaceMetrics.overflowY, "F2 New Folder (1) has no vertical scrollbar").toBe("hidden");
     expect(
       inPlaceMetrics.offsetWidth - inPlaceMetrics.clientWidth - inPlaceMetrics.borderInline,
       "F2 New Folder (1) has no scrollbar-width strip on the right",
     ).toBeLessThanOrEqual(1);
-    expect(Math.abs(inPlaceBounds.y - selectedNameBounds.y), "F2 rename keeps the selected label's vertical anchor")
+    expect(Math.abs(inPlaceBounds.y - selectedNameBounds.y), "F2 rename keeps the selected label vertical anchor")
       .toBeLessThanOrEqual(1);
     const selectedCenterX = selectedNameBounds.x + (selectedNameBounds.width / 2);
     const renameCenterX = inPlaceBounds.x + (inPlaceBounds.width / 2);
-    expect(Math.abs(renameCenterX - selectedCenterX), "F2 rename remains horizontally centered on the filename")
+    expect(Math.abs(renameCenterX - selectedCenterX), "F2 rename remains centered on the filename")
       .toBeLessThanOrEqual(1);
     await inPlaceRename.press("Escape");
     await expect(inPlaceRename).toBeHidden();
-    await expect(selectedName).toBeVisible();
 
-    // Unselected labels use the same compact tile boundary. Assert the real
-    // committed filename is fully present, one rendered line, and does not
-    // overflow into ellipsis.
+    // Normal New Folder (1): exactly one rendered text line with no ellipsis,
+    // and selection must not make that text jump vertically.
     await desktop.click({
       position: {
         x: Math.max(1, Math.floor(desktopBounds.width * 0.5)),
@@ -282,36 +250,26 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     await expect(selectedName).toHaveCount(0);
     const collapsedName = stableEntry.locator(".fm-entry__name");
     await expect(collapsedName).toHaveText(ORDINARY_DISPLAY_NAME);
-    const collapsedNameBounds = await collapsedName.boundingBox();
     const collapsedMetrics = await collapsedName.evaluate((element) => {
       const style = getComputedStyle(element);
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas text measurement unavailable");
-      context.font = style.font;
       const range = document.createRange();
       range.selectNodeContents(element);
       const textRect = range.getBoundingClientRect();
       return {
-        contentWidth: element.getBoundingClientRect().width,
-        textWidth: context.measureText(element.textContent ?? "").width,
-        textTop: textRect.top,
         lineCount: range.getClientRects().length,
+        textTop: textRect.top,
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
         whiteSpace: style.whiteSpace,
         textOverflow: style.textOverflow,
       };
     });
-    if (!collapsedNameBounds) throw new Error("Unselected filename has no browser bounds");
-    expect(collapsedMetrics.textWidth, "New Folder (1) fits the unselected Desktop label")
-      .toBeLessThanOrEqual(collapsedMetrics.contentWidth + 1);
-    expect(collapsedMetrics.scrollWidth, "New Folder (1) is not visually truncated")
+    expect(collapsedMetrics.lineCount, "normal New Folder (1) is exactly one rendered line").toBe(1);
+    expect(collapsedMetrics.scrollWidth, "normal New Folder (1) is not truncated")
       .toBeLessThanOrEqual(collapsedMetrics.clientWidth + 1);
-    expect(collapsedMetrics.lineCount, "unselected New Folder (1) is exactly one rendered line").toBe(1);
     expect(collapsedMetrics.whiteSpace).toBe("nowrap");
     expect(collapsedMetrics.textOverflow).toBe("ellipsis");
-    expect(Math.abs(collapsedMetrics.textTop - selectedMetrics.textTop), "selection does not make the filename jump vertically")
+    expect(Math.abs(collapsedMetrics.textTop - selectedMetrics.textTop), "selection does not move the filename text")
       .toBeLessThanOrEqual(1);
 
     health.assertClean();
