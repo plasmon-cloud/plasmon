@@ -63,3 +63,12 @@ jobs:
       - name: Plasmon fast tests
         timeout-minutes: 1
         run: npm --workspace neutron-plasmon test
+
+      - name: Upload temporary Issue 361 screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue361-screenshots
+          path: /tmp/issue361-images/*.png
+          if-no-files-found: error
+          retention-days: 1
