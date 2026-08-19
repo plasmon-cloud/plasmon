@@ -86,6 +86,24 @@ For both lanes:
 npm --workspace neutron-plasmon run test:all
 ```
 
+### Package profiles
+
+The normal package command remains the full, self-contained Plasmon package and includes the packaged js-dos and EmulatorJS runtime/proof assets used by the corresponding installed/browser acceptance:
+
+```sh
+npm --workspace neutron-plasmon run package
+```
+
+For developer/public-alpha branch preview, use the lean profile:
+
+```sh
+npm --workspace neutron-plasmon run package:lean
+```
+
+The lean profile produces the same ordinary `plasmon.v0.1.0.neutron` application package and retains Plasmon UI and Monaco/editor assets, but deliberately skips downloading and packaging the heavyweight js-dos runtime, EmulatorJS runtime, demo game bundle, and test ROM. It exists so branch previews can exercise the real active-Kernel `.neutron` install/update path without carrying optional game-runtime payloads through every preview.
+
+The lean profile is not the full product acceptance artifact: runtime/game functionality omitted from it must still be verified with the normal package. The long-term optional-runtime distribution model is tracked separately from this preview optimization.
+
 See [`TESTING.md`](TESTING.md) for the canonical matrix.
 
 The testing goal is layered confidence, not maximum browser coverage. Keep deterministic semantics in fast unit/integration tests. Use a real browser for behavior that actually depends on the DOM, focus/pointer events, workers, media/iframe behavior, packaged assets, or installed Neutron integration. Manual review remains necessary for visual quality and interaction feel that automation cannot establish.
