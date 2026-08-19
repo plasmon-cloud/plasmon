@@ -24,7 +24,7 @@
   height: 46px;
 }
 
-.fm-entry--desktop {
+.fm-entry.fm-entry--desktop {
   padding-inline: 0;
 }
 
@@ -189,7 +189,7 @@
 .fm-entry.is-renaming { z-index: 130; }
 .fm-entry.is-drop-target {
   background: rgba(80, 157, 255, .28);
-  border-color: rgba(149, 196, 255, .95);
+  border-color: rgba(149, 196, 255,.95);
   box-shadow: inset 0 0 0 2px rgba(149, 196, 255, .42), 0 0 18px rgba(70, 142, 255, .28);
 }
 .fm-entry.is-drop-target .fm-entry__icon--folder { transform: scale(1.08); }
