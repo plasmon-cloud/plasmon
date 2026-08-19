@@ -19,6 +19,7 @@ const outputCss = "./dist/web/main.css";
 const outputIndex = "./dist/web/index.html";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
+const leanMode = args[0] === "lean";
 
 const JS_DOS_VERSION = "8.4.1";
 const JS_DOS_RELEASE_URL = `https://github.com/caiiiycuk/js-dos/releases/download/v${JS_DOS_VERSION}/release.zip`;
@@ -336,7 +337,9 @@ const config: BuildOptions = {
         build.onEnd(async (result) => {
           if (result.errors.length !== 0) return;
           if (!result.metafile) throw new Error("Plasmon build requires an esbuild metafile");
-          await Promise.all([installPlayableProofAssets(), installEmulatorJsProofAssets()]);
+          if (!leanMode) {
+            await Promise.all([installPlayableProofAssets(), installEmulatorJsProofAssets()]);
+          }
           assertMatureNativeAppBundle(result.metafile);
           await mergeApplicationStyles();
           if (!devMode) await stripRemoteDiagnostics();
