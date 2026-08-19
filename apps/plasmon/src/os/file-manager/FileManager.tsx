@@ -78,7 +78,7 @@ export interface FileManagerProps {
     delta: { dx: number; dy: number },
     bounds: { width: number; height: number },
   ) => void | Promise<void>;
-  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void;
+  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
   onSnapshot?: (snapshot: FileManagerSnapshot) => void;
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
