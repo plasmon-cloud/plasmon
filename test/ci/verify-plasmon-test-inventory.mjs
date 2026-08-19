@@ -165,6 +165,7 @@ async function verify(inventory) {
     assert(persistenceWorkflow.includes(path), `Required Persistence CI must execute ${path}`);
   }
   assert(smokeWorkflow.includes('bun test apps/plasmon/test/package.test.ts'), 'Required Smoke CI must execute Plasmon package/structural tests after packaging');
+  assert(smokeWorkflow.includes('npm --workspace neutron-plasmon run test:package:lean'), 'Required Smoke CI must validate the lean preview package after full packaged browser acceptance');
 
   const counts = {
     fast: layerPaths(inventory, 'fast').length,
