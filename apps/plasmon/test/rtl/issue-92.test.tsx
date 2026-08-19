@@ -82,6 +82,14 @@ async function prepareMoveFixture(environment: ReturnType<typeof createHeadlessP
   return { documents, target, first, second };
 }
 
+async function prepareDesktopMoveFixture(environment: ReturnType<typeof createHeadlessPlasmonEnvironment>) {
+  await environment.ready;
+  const desktop = await directory(environment, "/Desktop");
+  const target = await environment.services.fs.mkdir(desktop.id, "Desktop Move Target");
+  const source = await environment.services.fs.createFile(desktop.id, "desktop-drag.txt", { mime: "text/plain" });
+  return { desktop, target, source };
+}
+
 test("#92/#377 multi-item drag move exposes running state without persistent success text", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let release!: () => void;
@@ -128,6 +136,62 @@ test("#92/#377 multi-item drag move exposes running state without persistent suc
     await waitFor(() => expect(operationState.snapshot().status).toBe("completed"));
     await waitFor(() => expect(view.queryByRole("status")).toBeNull());
     expect(view.queryByText("Moved 2 items.")).toBeNull();
+  } finally {
+    release?.();
+    document.elementFromPoint = originalElementFromPoint;
+    cleanup();
+    environment.dispose();
+  }
+});
+
+test("#377 single-item Desktop drag removes operation status after successful completion", async () => {
+  const environment = createHeadlessPlasmonEnvironment();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  let moveStarted = false;
+  let targetElement: HTMLElement | null = null;
+  const originalElementFromPoint = document.elementFromPoint;
+  document.elementFromPoint = () => targetElement;
+
+  try {
+    const { desktop, target, source } = await prepareDesktopMoveFixture(environment);
+    const operationState = new FileOperationState();
+    const fs = delayedMoves(environment.services.fs, () => { moveStarted = true; }, gate);
+    const view = render(
+      <FileManager
+        directoryId={desktop.id}
+        fs={fs}
+        openAuthority={environment.services.filesystem.open}
+        trashAuthority={environment.services.filesystem.trash}
+        clipboard={new FileOperationClipboard()}
+        operationState={operationState}
+        presentation="desktop"
+        positions={{
+          [target.id]: { x: 200, y: 10 },
+          [source.id]: { x: 10, y: 10 },
+        }}
+      />,
+    );
+
+    const sourceEntry = await view.findByRole("option", { name: "desktop-drag.txt" });
+    targetElement = await view.findByRole("option", { name: "Desktop Move Target" });
+    dragEntry(sourceEntry, 31);
+
+    await waitFor(() => expect(moveStarted).toBe(true));
+    await waitFor(() => expect(view.getByRole("status").textContent).toBe("Moving 1 of 1: desktop-drag.txt"));
+    expect(operationState.snapshot()).toMatchObject({
+      kind: "move",
+      status: "running",
+      totalItems: 1,
+      currentIndex: 1,
+      currentItem: "desktop-drag.txt",
+    });
+
+    await act(async () => { release(); });
+    await waitFor(() => expect(operationState.snapshot().status).toBe("completed"));
+    await waitFor(() => expect(view.queryByRole("status")).toBeNull());
+    expect(view.queryByText("Moved 1 item.")).toBeNull();
+    expect((await environment.services.fs.stat(source.id)).parentId).toBe(target.id);
   } finally {
     release?.();
     document.elementFromPoint = originalElementFromPoint;
