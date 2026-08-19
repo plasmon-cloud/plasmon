@@ -14,10 +14,11 @@ import {
   marqueeSelection,
   moveNodesToDirectory,
   normalizeRect,
+  validateDirectoryDrop,
   type RectLike,
   type SelectionState,
 } from "./model.ts";
-import { directoryDropTargetId } from "./drop-target.ts";
+import { directoryDropCandidateId } from "./drop-target.ts";
 import { finishEntryDragGesture } from "./drag.ts";
 import {
   dragOperationFeedback,
@@ -70,6 +71,16 @@ interface DragPendingVisual {
   dy: number;
   clientX: number;
   clientY: number;
+}
+
+interface DragDropCandidate {
+  id: NodeId;
+  element: HTMLElement;
+}
+
+interface ActiveDropTarget {
+  node: FsNode;
+  element: HTMLElement;
 }
 
 interface MarqueePointerState {
@@ -140,7 +151,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     clientX: 0,
     clientY: 0,
   });
-  const dropTargetRef = useRef<NodeId | null>(null);
+  const dropTargetRef = useRef<ActiveDropTarget | null>(null);
+  const dropCandidateRef = useRef<DragDropCandidate | null>(null);
+  const dropTargetGenerationRef = useRef(0);
   const dragRef = useRef<EntryDragState | null>(null);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef(selection);
@@ -171,13 +184,26 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     return rectangles;
   };
 
-  const setActiveDropTarget = (id: NodeId | null) => {
-    if (dropTargetRef.current === id) return;
-    dropTargetRef.current = id;
-    setDropTargetId(id);
+  const removeDropTargetVisual = () => {
+    dropTargetRef.current?.element.classList.remove("is-drop-target");
+    dropTargetRef.current = null;
   };
 
-  const clearDropTarget = () => setActiveDropTarget(null);
+  const setActiveDropTarget = (target: ActiveDropTarget | null) => {
+    const current = dropTargetRef.current;
+    if (current?.node.id === target?.node.id && current?.element === target?.element) return;
+    current?.element.classList.remove("is-drop-target");
+    dropTargetRef.current = target;
+    target?.element.classList.add("is-drop-target");
+    const localEntry = target ? entriesRef.current.get(target.node.id) : null;
+    setDropTargetId(target && localEntry === target.element ? target.node.id : null);
+  };
+
+  const clearDropTarget = () => {
+    dropTargetGenerationRef.current += 1;
+    dropCandidateRef.current = null;
+    setActiveDropTarget(null);
+  };
 
   const removeDragPreview = () => {
     dragPreviewRef.current?.remove();
@@ -221,15 +247,14 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       height: `${rect.height}px`,
     });
 
-    const targetId = dropTargetRef.current;
-    const targetName = targetId ? nodes.find((node) => node.id === targetId)?.name : null;
-    const feedbackText = dragOperationFeedback("move", targetName);
+    const target = dropTargetRef.current?.node ?? null;
+    const feedbackText = dragOperationFeedback("move", target?.name);
     const feedback = preview.querySelector<HTMLElement>("[data-fm-drag-feedback]");
     if (feedback) {
       feedback.textContent = feedbackText ?? "";
       feedback.hidden = feedbackText === null;
     }
-    if (targetId) preview.dataset.fmDropTargetId = String(targetId);
+    if (target) preview.dataset.fmDropTargetId = String(target.id);
     else delete preview.dataset.fmDropTargetId;
   };
 
@@ -270,6 +295,91 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     }
   };
 
+  const sourceNodesFor = (active: EntryDragState): FsNode[] => {
+    const ids = new Set(active.ids);
+    return nodes.filter((node) => ids.has(node.id));
+  };
+
+  const dragCandidateAtPoint = (
+    active: EntryDragState,
+    clientX: number,
+    clientY: number,
+  ): DragDropCandidate | null => {
+    if (!active.moved) return null;
+    const elements = typeof document.elementsFromPoint === "function"
+      ? document.elementsFromPoint(clientX, clientY)
+      : [document.elementFromPoint(clientX, clientY)].filter((element): element is Element => element !== null);
+
+    const seenEntries = new Set<HTMLElement>();
+    const seenSurfaces = new Set<HTMLElement>();
+    for (const element of elements) {
+      const entry = element.closest<HTMLElement>("[data-fm-node-id]");
+      if (entry && !seenEntries.has(entry)) {
+        seenEntries.add(entry);
+        const id = entry.dataset.fmNodeId;
+        if (!id) return null;
+        const candidateId = directoryDropCandidateId([
+          {
+            kind: "entry",
+            nodeId: id,
+            nodeKind: entry.dataset.fmKind as FsNode["kind"] | undefined,
+          },
+        ], active.ids);
+        // A visible resource entry blocks its containing directory surface. A
+        // normal file therefore means "no target" instead of "drop in folder".
+        return candidateId ? { id: candidateId, element: entry } : null;
+      }
+
+      const surface = element.closest<HTMLElement>("[data-fm-directory-id]");
+      if (!surface || seenSurfaces.has(surface)) continue;
+      seenSurfaces.add(surface);
+      const directoryId = surface.dataset.fmDirectoryId;
+      if (!directoryId) continue;
+      const candidateId = directoryDropCandidateId([
+        { kind: "surface", directoryId },
+      ], active.ids);
+      if (candidateId) return { id: candidateId, element: surface };
+    }
+    return null;
+  };
+
+  const resolveCanonicalDropTarget = async (
+    active: EntryDragState,
+    candidate: DragDropCandidate | null,
+  ): Promise<FsNode | null> => {
+    if (!candidate) return null;
+    const source = sourceNodesFor(active);
+    if (source.length !== active.ids.length) return null;
+    try {
+      const target = await fs.stat(candidate.id);
+      await validateDirectoryDrop(fs, source, target);
+      return target;
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveDropCandidate = (active: EntryDragState, candidate: DragDropCandidate | null) => {
+    const previous = dropCandidateRef.current;
+    if (previous?.id === candidate?.id && previous?.element === candidate?.element) return;
+    dropCandidateRef.current = candidate;
+    const generation = ++dropTargetGenerationRef.current;
+    setActiveDropTarget(null);
+    applyDragVisual();
+    if (!candidate) return;
+
+    void resolveCanonicalDropTarget(active, candidate).then((target) => {
+      if (
+        generation !== dropTargetGenerationRef.current
+        || dragRef.current !== active
+        || dropCandidateRef.current?.id !== candidate.id
+        || dropCandidateRef.current.element !== candidate.element
+      ) return;
+      if (target) setActiveDropTarget({ node: target, element: candidate.element });
+      applyDragVisual();
+    });
+  };
+
   const cancelActiveEntryDrag = (): boolean => {
     const active = dragRef.current;
     if (!active) return false;
@@ -295,23 +405,11 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   });
 
   useEffect(() => () => {
+    dropTargetGenerationRef.current += 1;
     resetDragFrame();
+    removeDropTargetVisual();
     removeDragPreview();
   }, []);
-
-  const dragTargetAtPoint = (clientX: number, clientY: number): NodeId | null => {
-    const active = dragRef.current;
-    if (!active?.moved) return null;
-    const elements = typeof document.elementsFromPoint === "function"
-      ? document.elementsFromPoint(clientX, clientY)
-      : [document.elementFromPoint(clientX, clientY)].filter((element): element is Element => element !== null);
-    for (const element of elements) {
-      const entry = element.closest<HTMLElement>("[data-fm-node-id]");
-      const targetId = directoryDropTargetId(nodes, active.ids, entry?.dataset.fmNodeId);
-      if (targetId) return targetId;
-    }
-    return null;
-  };
 
   const handleEntryPointerDown = (
     node: FsNode,
@@ -363,13 +461,13 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         }
       }
     }
-    setActiveDropTarget(dragTargetAtPoint(event.clientX, event.clientY));
     dragPendingRef.current = {
       dx,
       dy,
       clientX: event.clientX,
       clientY: event.clientY,
     };
+    resolveDropCandidate(active, dragCandidateAtPoint(active, event.clientX, event.clientY));
     if (dragFrameRef.current !== null) return;
     dragFrameRef.current = requestAnimationFrame(() => {
       dragFrameRef.current = null;
@@ -382,7 +480,12 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     if (!active || active.pointerId !== event.pointerId) return;
     const { dx, dy } = dragPendingRef.current;
     const outcome = finishEntryDragGesture(active, selectionRef.current, false);
-    const targetId = dragTargetAtPoint(event.clientX, event.clientY);
+    const candidate = dragCandidateAtPoint(active, event.clientX, event.clientY);
+    const resolved = dropTargetRef.current;
+    const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element
+      ? resolved.node
+      : await resolveCanonicalDropTarget(active, candidate);
+
     resetDragFrame();
     clearDropTarget();
     restoreDraggedEntries(active);
@@ -396,8 +499,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     }
 
     const ids = [...outcome.ids];
-    const target = targetId ? nodes.find((node) => node.id === targetId) : undefined;
-    const source = nodes.filter((node) => ids.includes(node.id));
+    const source = sourceNodesFor(active);
     try {
       if (target?.kind === "directory") {
         removeDragPreview();
