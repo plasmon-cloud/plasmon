@@ -47,6 +47,14 @@ test("#92/#377 presents truthful move progress and failures without successful c
   expect(presentFileOperation(snapshot({
     status: "completed",
     kind: "move",
+    totalItems: 1,
+    processedItems: 1,
+    succeededItems: 1,
+  }))).toEqual({ running: false, message: null });
+
+  expect(presentFileOperation(snapshot({
+    status: "completed",
+    kind: "move",
     totalItems: 2,
     processedItems: 2,
     succeededItems: 2,
