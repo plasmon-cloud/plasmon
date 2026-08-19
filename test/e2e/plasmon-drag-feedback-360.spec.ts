@@ -81,46 +81,36 @@ test("#360 Desktop drag ghost preserves entry identity and lands where it previe
 test("#360 Desktop item moves into an already-open folder window", async ({ page }) => {
   const { frame, iframe, files, health } = await launchPlasmon(page);
   try {
+    // Create the source directly through the production Desktop FileManager path.
+    // This is the same packaged setup used by the broad refactor smoke and keeps
+    // #360 focused on the subsequent cross-window pointer/drop contract instead
+    // of depending on unrelated cross-FileManager refresh or remount behavior.
+    const desktopBounds = await files.boundingBox();
+    if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");
+    await files.click({
+      button: "right",
+      position: {
+        x: Math.max(120, Math.floor(desktopBounds.width * 0.55)),
+        y: Math.max(120, Math.floor(desktopBounds.height * 0.55)),
+      },
+    });
+    await frame.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+    const rename = frame.getByRole("textbox", { name: /^Rename New Text Document/ });
+    await expect(rename).toBeVisible();
+    const createdName = await rename.inputValue();
+    await rename.press("Enter");
+    const source = files.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
+    await expect(source).toBeVisible();
+    const sourceId = await source.getAttribute("data-fm-node-id");
+    if (!sourceId) throw new Error("Created Desktop source has no stable NodeId");
+
     const root = frame.locator('[data-fm-node-id]', { hasText: "Root" }).first();
     await expect(root).toBeVisible();
     await root.dblclick();
 
-    const setupExplorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
-    await expect(setupExplorer).toHaveCount(1);
-    const setupAddress = setupExplorer.getByRole("textbox", { name: "Address" });
-    await expect(setupAddress).toHaveValue("/");
-    const setupFiles = setupExplorer.getByRole("listbox", { name: "Files" });
-    const setupCommandBar = setupFiles.getByRole("toolbar", { name: "File commands" });
-
-    // Create a normal filesystem resource in /Desktop through the production
-    // Explorer/FileManager command path. Remount Plasmon after setup so this test
-    // does not accidentally depend on cross-FileManager live-refresh behavior;
-    // #360 owns the subsequent pointer/drop journey, not unrelated refresh policy.
-    await setupAddress.fill("/Desktop");
-    await setupAddress.press("Enter");
-    await expect(setupAddress).toHaveValue("/Desktop");
-    await setupCommandBar.getByRole("button", { name: "New Text Document" }).click();
-    const rename = setupFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
-    await expect(rename).toBeVisible();
-    const createdName = await rename.inputValue();
-    await rename.press("Enter");
-    const explorerSource = setupFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
-    await expect(explorerSource).toBeVisible();
-    const sourceId = await explorerSource.getAttribute("data-fm-node-id");
-    if (!sourceId) throw new Error("Created Desktop source has no stable NodeId");
-
-    await page.reload();
-    await authenticateAndLaunchPlasmon(page);
-    await expect(files).toBeVisible({ timeout: 30_000 });
-    const source = files.locator(`[data-fm-node-id="${sourceId}"]`);
-    await expect(source).toBeVisible();
-
-    // Open a fresh Explorer and leave it on Documents. Its FileManager content
+    // Leave a real Explorer window open on Documents. Its FileManager content
     // surface, not a Documents entry in the source FileManager, must become the
     // canonical target for the real Desktop drag.
-    const remountedRoot = frame.locator('[data-fm-node-id]', { hasText: "Root" }).first();
-    await expect(remountedRoot).toBeVisible();
-    await remountedRoot.dblclick();
     const explorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
     await expect(explorer).toHaveCount(1);
     const address = explorer.getByRole("textbox", { name: "Address" });
@@ -148,9 +138,9 @@ test("#360 Desktop item moves into an already-open folder window", async ({ page
         && point.y >= explorerBox!.y && point.y <= explorerBox!.y + explorerBox!.height;
     };
 
-    // Default placement normally leaves the left Desktop column exposed. If a
-    // persisted prior geometry covers the newly-created icon, move the real window
-    // just enough to expose it instead of bypassing Windowing or dispatching events.
+    // Default placement normally leaves the left Desktop column exposed. If the
+    // opened Explorer covers this newly-created icon, move the real window just
+    // enough to expose it instead of bypassing Windowing or dispatching events.
     if (coveredByExplorer()) {
       const titlebar = explorer.locator(".plasmon-window__titlebar");
       const titlebarBox = await titlebar.boundingBox();
