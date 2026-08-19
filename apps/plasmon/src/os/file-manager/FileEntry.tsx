@@ -95,7 +95,7 @@ export const FileEntry = memo(function FileEntry({
   onRenameCommit,
   onRenameCancel,
 }: FileEntryProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
   const suppressBlurCommitRef = useRef(false);
@@ -124,6 +124,17 @@ export const FileEntry = memo(function FileEntry({
       node.kind === "directory",
     );
   }, [renderState.isRenaming, rename?.initialName, rename?.session, node.kind]);
+
+  useLayoutEffect(() => {
+    const editor = inputRef.current;
+    if (!editor || !renderState.isRenaming) return;
+    if (presentation !== "desktop" && presentation !== "grid") {
+      editor.style.height = "";
+      return;
+    }
+    editor.style.height = "0px";
+    editor.style.height = `${editor.scrollHeight}px`;
+  }, [presentation, renderState.isRenaming, rename?.value]);
 
   return (
     <div
@@ -156,21 +167,23 @@ export const FileEntry = memo(function FileEntry({
       <span className="fm-entry__name" title={renderState.showCollapsedNameTitle ? node.name : undefined}>
         {renderState.isRenaming && rename ? (
           <>
-            <input
+            <textarea
               ref={inputRef}
+              rows={1}
+              wrap="soft"
               value={rename.value}
               aria-label={`Rename ${node.name}`}
               disabled={rename.busy}
-              onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
+              onPointerDown={(event: ReactPointerEvent<HTMLTextAreaElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
+              onChange={(event: ReactChangeEvent<HTMLTextAreaElement>) => {
                 suppressBlurCommitRef.current = false;
                 onRenameChange(event.target.value);
               }}
               onBlur={() => {
                 if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit();
               }}
-              onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+              onKeyDown={(event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
                 const action = renameKeyAction(event.key);
                 if (!action) return;
                 event.preventDefault();
