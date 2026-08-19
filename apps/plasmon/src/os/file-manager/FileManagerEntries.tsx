@@ -17,6 +17,7 @@ type FileManagerEntriesMode =
   };
 
 interface FileManagerEntriesProps {
+  directoryId: NodeId;
   fs: FsService;
   associations?: AssociationRegistry;
   nodes: readonly FsNode[];
@@ -50,7 +51,7 @@ export function FileManagerEntries(props: FileManagerEntriesProps) {
           {strategy.detailsColumns.map((column) => <span key={column}>{column}</span>)}
         </div>
       ) : null}
-      <div className={entriesClassName}>
+      <div className={entriesClassName} data-fm-directory-id={props.directoryId}>
         {props.nodes.map((node) => (
           <FileEntry
             key={node.id}
