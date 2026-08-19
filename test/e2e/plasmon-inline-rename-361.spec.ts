@@ -6,7 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const ORDINARY_NAME = "New folder (2)";
 const LONG_NAME = "0123456789".repeat(8);
 
-test("#361 — packaged Desktop rename stays bounded and wraps genuinely long names", async ({ page }) => {
+test("#361 — packaged Desktop rename stays compact and wraps genuinely long names", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -42,8 +42,9 @@ test("#361 — packaged Desktop rename stays bounded and wraps genuinely long na
     const desktopBounds = await desktop.boundingBox();
     if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");
 
-    // Exercise creation from the right side of the real packaged Desktop so an
-    // accidental workspace-wide editor is caught at the surface where it hurts.
+    // Exercise the real Desktop creation path from an edge-adjacent context
+    // location. Placement stays authoritative; the rename overlay itself must
+    // remain compact and workspace-clamped wherever that new NodeId is placed.
     await desktop.click({
       button: "right",
       position: {
@@ -63,10 +64,15 @@ test("#361 — packaged Desktop rename stays bounded and wraps genuinely long na
     const initialOtherBounds = await otherEntry.boundingBox();
     if (!initialEntryBounds || !initialRenameBounds) throw new Error("Rename state has no browser bounds");
 
-    expect(initialRenameBounds.x, "rename left edge").toBeGreaterThanOrEqual(initialEntryBounds.x - 1);
-    expect(initialRenameBounds.x + initialRenameBounds.width, "rename right edge")
-      .toBeLessThanOrEqual(initialEntryBounds.x + initialEntryBounds.width + 1);
-    expect(initialRenameBounds.width, "rename width").toBeLessThanOrEqual(initialEntryBounds.width + 2);
+    expect(initialRenameBounds.x, "rename stays inside Desktop left edge")
+      .toBeGreaterThanOrEqual(desktopBounds.x - 1);
+    expect(initialRenameBounds.x + initialRenameBounds.width, "rename stays inside Desktop right edge")
+      .toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
+    expect(initialRenameBounds.width, "rename remains a compact local overlay").toBeLessThanOrEqual(114);
+    expect(initialRenameBounds.x, "rename overlaps its owning FileEntry horizontally")
+      .toBeLessThan(initialEntryBounds.x + initialEntryBounds.width);
+    expect(initialRenameBounds.x + initialRenameBounds.width, "rename overlaps its owning FileEntry horizontally")
+      .toBeGreaterThan(initialEntryBounds.x);
 
     await rename.fill(ORDINARY_NAME);
     const ordinaryBounds = await rename.boundingBox();
