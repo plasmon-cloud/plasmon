@@ -24,6 +24,10 @@
   height: 46px;
 }
 
+.fm-entry--desktop {
+  padding-inline: 0;
+}
+
 .fm-entry--desktop .fm-entry__name,
 .fm-entry--grid .fm-entry__name {
   width: 100%;
@@ -67,7 +71,11 @@
 
 .fm-entry--desktop.is-renaming .fm-entry__name textarea,
 .fm-entry--grid.is-renaming .fm-entry__name textarea {
+  field-sizing: content;
+  min-width: var(--fm-rename-min-width, 36px);
   max-height: var(--fm-rename-max-height, calc(10em + 8px));
+  width: auto;
+  padding-inline: 1px;
   white-space: pre-wrap;
   overflow-x: hidden;
   overflow-y: auto;
@@ -101,19 +109,14 @@
 }
 
 .fm-entry--desktop .fm-entry__expanded-name {
-  --fm-desktop-label-width: min(260px, calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
-  left: clamp(
-    calc(8px - var(--fm-desktop-entry-x)),
-    -84px,
-    calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-label-width))
-  );
-  width: var(--fm-desktop-label-width);
-  max-width: none;
+  left: 0;
+  width: 100%;
+  max-width: 100%;
   max-height: calc(6.25em + 4px);
-  padding: 2px 6px;
+  padding: 2px 0;
   border: 1px solid rgba(117,167,255,.44);
   border-radius: 5px;
   background: rgba(18,27,43,.96);
@@ -130,17 +133,14 @@
 }
 
 .fm-entry--desktop.is-renaming .fm-entry__name {
-  --fm-desktop-rename-width: min(var(--fm-desktop-rename-ideal-width, 112px), calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
-  left: clamp(
-    calc(8px - var(--fm-desktop-entry-x)),
-    -10px,
-    calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-rename-width))
-  );
-  width: var(--fm-desktop-rename-width);
-  max-width: none;
+  left: 50%;
+  transform: translateX(-50%);
+  width: fit-content;
+  min-width: var(--fm-rename-min-width, 36px);
+  max-width: var(--fm-desktop-rename-max-width, 90px);
   padding: 0;
   border: 0;
   border-radius: 5px;
@@ -163,16 +163,23 @@
   box-sizing: border-box;
   position: absolute;
   top: 58px;
-  left: var(--fm-grid-rename-inline-inset, 6px);
-  width: calc(100% - var(--fm-grid-rename-total-inset, 12px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: fit-content;
+  min-width: var(--fm-rename-min-width, 36px);
   max-width: calc(100% - var(--fm-grid-rename-total-inset, 12px));
   overflow: visible;
   pointer-events: none;
   z-index: 3;
 }
 
-.fm-entry--desktop.is-renaming .fm-entry__name textarea,
+.fm-entry--desktop.is-renaming .fm-entry__name textarea {
+  max-width: var(--fm-desktop-rename-max-width, 90px);
+  pointer-events: auto;
+}
+
 .fm-entry--grid.is-renaming .fm-entry__name textarea {
+  max-width: 100%;
   pointer-events: auto;
 }
 

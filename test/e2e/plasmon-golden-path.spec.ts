@@ -65,9 +65,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(app.getByRole("button", { name: "Start" })).toBeVisible();
   await expect(app.getByRole("button", { name: "Search" })).toBeVisible();
 
-  // Issue #95 browser boundary: normal Desktop names remain compact, while
-  // selected/focused names use a pointer-inert overlay that stays inside the
-  // workspace without changing the icon entry's fixed collision geometry.
+  // Issues #95/#361 browser boundary: normal Desktop names remain compact;
+  // selected/focused names keep the pointer-inert overlay ownership from #95
+  // but are now horizontally bounded to the owning tile and wrap vertically.
+  // Neither state may change the icon entry's fixed collision geometry.
   const desktopFiles = app.locator(".fm-root--desktop").first();
   await expect(desktopFiles).toBeVisible({ timeout: 30_000 });
   const desktopBounds = await desktopFiles.boundingBox();
@@ -116,9 +117,12 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(Math.abs(selectedEntryBox.x - compactEntryBox.x)).toBeLessThan(0.5);
   expect(Math.abs(selectedEntryBox.y - compactEntryBox.y)).toBeLessThan(0.5);
   expect(Math.abs(selectedEntryBox.width - compactEntryBox.width)).toBeLessThan(0.5);
-  expect(leftExpandedBox.width).toBeGreaterThan(selectedEntryBox.width + 80);
-  expect(leftExpandedBox.x).toBeGreaterThanOrEqual(desktopBounds.x + 7);
-  expect(leftExpandedBox.x + leftExpandedBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width - 7);
+  expect(leftExpandedBox.width).toBeLessThanOrEqual(selectedEntryBox.width + 1);
+  expect(leftExpandedBox.x).toBeGreaterThanOrEqual(selectedEntryBox.x - 1);
+  expect(leftExpandedBox.x + leftExpandedBox.width)
+    .toBeLessThanOrEqual(selectedEntryBox.x + selectedEntryBox.width + 1);
+  expect(leftExpandedBox.x).toBeGreaterThanOrEqual(desktopBounds.x - 1);
+  expect(leftExpandedBox.x + leftExpandedBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
   expect(await expandedName.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("none");
 
   await desktopFiles.focus();
@@ -127,13 +131,14 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(boundedRename).toBeVisible();
   const renameBox = await boundedRename.boundingBox();
   if (!renameBox) throw new Error("Desktop rename editor has no browser bounds");
-  expect(renameBox.width, "Desktop rename remains a compact local overlay").toBeLessThanOrEqual(114);
-  expect(renameBox.x, "Desktop rename overlaps its owning entry")
-    .toBeLessThan(selectedEntryBox.x + selectedEntryBox.width);
-  expect(renameBox.x + renameBox.width, "Desktop rename overlaps its owning entry")
-    .toBeGreaterThan(selectedEntryBox.x);
-  expect(renameBox.x).toBeGreaterThanOrEqual(desktopBounds.x + 7);
-  expect(renameBox.x + renameBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width - 7);
+  expect(renameBox.width, "Desktop rename remains inside the owning tile")
+    .toBeLessThanOrEqual(selectedEntryBox.width + 1);
+  expect(renameBox.x, "Desktop rename stays inside owning entry at left")
+    .toBeGreaterThanOrEqual(selectedEntryBox.x - 1);
+  expect(renameBox.x + renameBox.width, "Desktop rename stays inside owning entry at right")
+    .toBeLessThanOrEqual(selectedEntryBox.x + selectedEntryBox.width + 1);
+  expect(renameBox.x).toBeGreaterThanOrEqual(desktopBounds.x - 1);
+  expect(renameBox.x + renameBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
   await boundedRename.press("Escape");
 
   const dragStart = await longDesktopEntry.boundingBox();
@@ -149,8 +154,12 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   if (!rightEntryBox || !rightExpandedBox) throw new Error("Right-edge Desktop filename has no browser bounds");
   expect(rightEntryBox.x).toBeGreaterThan(compactEntryBox.x + 80);
   expect(Math.abs(rightEntryBox.width - compactEntryBox.width)).toBeLessThan(0.5);
-  expect(rightExpandedBox.x).toBeGreaterThanOrEqual(desktopBounds.x + 7);
-  expect(rightExpandedBox.x + rightExpandedBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width - 7);
+  expect(rightExpandedBox.width).toBeLessThanOrEqual(rightEntryBox.width + 1);
+  expect(rightExpandedBox.x).toBeGreaterThanOrEqual(rightEntryBox.x - 1);
+  expect(rightExpandedBox.x + rightExpandedBox.width)
+    .toBeLessThanOrEqual(rightEntryBox.x + rightEntryBox.width + 1);
+  expect(rightExpandedBox.x).toBeGreaterThanOrEqual(desktopBounds.x - 1);
+  expect(rightExpandedBox.x + rightExpandedBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
 
   // Issue #45 visible boundary: use the real packaged Shell/native process path
   // to launch Recycle Bin and prove its first-class native surface renders.

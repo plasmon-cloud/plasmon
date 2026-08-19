@@ -5,12 +5,15 @@ export interface InlineRenamePresentation {
   readonly wrap: "soft" | "off";
   readonly autoGrow: boolean;
   readonly maxHeight: string;
-  readonly desktopIdealWidthPx: number | null;
+  readonly minWidthPx: number | null;
+  readonly desktopMaxWidthPx: number | null;
   readonly gridInlineInsetPx: number | null;
 }
 
 const TILED_MAX_HEIGHT = "calc(10em + 8px)";
 const SINGLE_LINE_HEIGHT = "calc(1.25em + 8px)";
+const TILED_MIN_WIDTH_PX = 36;
+const DESKTOP_MAX_WIDTH_PX = 90;
 
 export function inlineRenamePresentation(
   presentation: FileEntryPresentation,
@@ -21,7 +24,8 @@ export function inlineRenamePresentation(
       wrap: "soft",
       autoGrow: true,
       maxHeight: TILED_MAX_HEIGHT,
-      desktopIdealWidthPx: 112,
+      minWidthPx: TILED_MIN_WIDTH_PX,
+      desktopMaxWidthPx: DESKTOP_MAX_WIDTH_PX,
       gridInlineInsetPx: null,
     };
   }
@@ -32,7 +36,8 @@ export function inlineRenamePresentation(
       wrap: "soft",
       autoGrow: true,
       maxHeight: TILED_MAX_HEIGHT,
-      desktopIdealWidthPx: null,
+      minWidthPx: TILED_MIN_WIDTH_PX,
+      desktopMaxWidthPx: null,
       gridInlineInsetPx: 6,
     };
   }
@@ -42,7 +47,8 @@ export function inlineRenamePresentation(
     wrap: "off",
     autoGrow: false,
     maxHeight: SINGLE_LINE_HEIGHT,
-    desktopIdealWidthPx: null,
+    minWidthPx: null,
+    desktopMaxWidthPx: null,
     gridInlineInsetPx: null,
   };
 }
@@ -54,8 +60,12 @@ export function inlineRenameStyleVariables(
     "--fm-rename-max-height": presentation.maxHeight,
   };
 
-  if (presentation.desktopIdealWidthPx !== null) {
-    variables["--fm-desktop-rename-ideal-width"] = `${presentation.desktopIdealWidthPx}px`;
+  if (presentation.minWidthPx !== null) {
+    variables["--fm-rename-min-width"] = `${presentation.minWidthPx}px`;
+  }
+
+  if (presentation.desktopMaxWidthPx !== null) {
+    variables["--fm-desktop-rename-max-width"] = `${presentation.desktopMaxWidthPx}px`;
   }
 
   if (presentation.gridInlineInsetPx !== null) {

@@ -8,13 +8,13 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
  * coverage. It consumes #187's browser-health ledger and canonical packaged
  * Plasmon environment; it does not create a component harness.
  *
- * #361 intentionally permits a compact rename overlay to overhang the 92px
- * Desktop FileEntry by a few pixels so ordinary Windows-like names fit on one
- * line. Keep this smoke focused on #191's durable contract: rename remains
- * local to its owning entry, bounded by the Desktop workspace, and compact
- * enough that it cannot become the old workspace-wide editor.
+ * #361 tightens the remaining rename presentation gap: the active editor may
+ * grow from its content width, but its horizontal cap is the owning Desktop
+ * FileEntry rather than a wider overlay. Keep this smoke focused on #191's
+ * durable contract: rename remains local, tile-bounded, and unable to change
+ * Desktop collision/placement geometry.
  */
-test("#191/#361 — Desktop rename editor stays compact, local, and workspace-bounded", async ({ page }) => {
+test("#191/#361 — Desktop rename editor stays inside its FileEntry tile", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -82,16 +82,17 @@ test("#191/#361 — Desktop rename editor stays compact, local, and workspace-bo
 
     const renameRight = renameBounds.x + renameBounds.width;
     const entryRight = entryBounds.x + entryBounds.width;
-    const overlap = Math.min(renameRight, entryRight) - Math.max(renameBounds.x, entryBounds.x);
 
     expect(renameBounds.x, "rename stays inside Desktop workspace at left")
       .toBeGreaterThanOrEqual(filesBounds.x - 1);
     expect(renameRight, "rename stays inside Desktop workspace at right")
       .toBeLessThanOrEqual(filesBounds.x + filesBounds.width + 1);
-    expect(renameBounds.width, "rename remains a compact local overlay")
-      .toBeLessThanOrEqual(entryBounds.width + 24);
-    expect(overlap, "rename remains horizontally anchored to its owning FileEntry")
-      .toBeGreaterThan(0);
+    expect(renameBounds.x, "rename stays inside owning FileEntry at left")
+      .toBeGreaterThanOrEqual(entryBounds.x - 1);
+    expect(renameRight, "rename stays inside owning FileEntry at right")
+      .toBeLessThanOrEqual(entryRight + 1);
+    expect(renameBounds.width, "rename remains tile-bounded")
+      .toBeLessThanOrEqual(entryBounds.width + 1);
 
     health.assertClean();
   } finally {
