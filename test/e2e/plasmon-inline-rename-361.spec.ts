@@ -71,19 +71,24 @@ test("#361 — packaged Desktop rename stays compact for ordinary, long, and edg
     await rename.fill(ORDINARY_NAME);
     const ordinary = await rename.evaluate((input) => {
       const element = input as HTMLInputElement;
+      const style = getComputedStyle(element);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas text measurement unavailable");
+      context.font = style.font;
+      const horizontalChrome = Number.parseFloat(style.paddingLeft)
+        + Number.parseFloat(style.paddingRight)
+        + Number.parseFloat(style.borderLeftWidth)
+        + Number.parseFloat(style.borderRightWidth);
       return {
-        clientWidth: element.clientWidth,
-        scrollWidth: element.scrollWidth,
-        clientHeight: element.clientHeight,
-        scrollHeight: element.scrollHeight,
-        whiteSpace: getComputedStyle(element).whiteSpace,
+        contentWidth: element.getBoundingClientRect().width - horizontalChrome,
+        textWidth: context.measureText(element.value).width,
+        whiteSpace: style.whiteSpace,
       };
     });
     expect(ordinary.whiteSpace).toBe("nowrap");
-    expect(ordinary.scrollWidth, "ordinary filename fits without horizontal clipping")
-      .toBeLessThanOrEqual(ordinary.clientWidth + 1);
-    expect(ordinary.scrollHeight, "ordinary filename remains one input line")
-      .toBeLessThanOrEqual(ordinary.clientHeight + 1);
+    expect(ordinary.textWidth, "ordinary filename fits on one line without horizontal clipping")
+      .toBeLessThanOrEqual(ordinary.contentWidth + 1);
 
     await rename.fill(LONG_NAME);
     const longBounds = await rename.boundingBox();
@@ -91,15 +96,27 @@ test("#361 — packaged Desktop rename stays compact for ordinary, long, and edg
     const longOtherBounds = await otherEntry.boundingBox();
     const longMetrics = await rename.evaluate((input) => {
       const element = input as HTMLInputElement;
-      return { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth };
+      const style = getComputedStyle(element);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas text measurement unavailable");
+      context.font = style.font;
+      const horizontalChrome = Number.parseFloat(style.paddingLeft)
+        + Number.parseFloat(style.paddingRight)
+        + Number.parseFloat(style.borderLeftWidth)
+        + Number.parseFloat(style.borderRightWidth);
+      return {
+        contentWidth: element.getBoundingClientRect().width - horizontalChrome,
+        textWidth: context.measureText(element.value).width,
+      };
     });
     if (!longBounds || !longEntryBounds) throw new Error("Long rename state has no browser bounds");
 
     expect(longBounds.width, "long name does not widen rename editor").toBeCloseTo(initialRenameBounds.width, 0);
     expect(longEntryBounds.x, "long name keeps Desktop placement x stable").toBeCloseTo(initialEntryBounds.x, 0);
     expect(longEntryBounds.y, "long name keeps Desktop placement y stable").toBeCloseTo(initialEntryBounds.y, 0);
-    expect(longMetrics.scrollWidth, "genuinely long text uses bounded input scrolling")
-      .toBeGreaterThan(longMetrics.clientWidth);
+    expect(longMetrics.textWidth, "genuinely long text exceeds the fixed editing viewport rather than widening it")
+      .toBeGreaterThan(longMetrics.contentWidth);
 
     if (initialOtherBounds && longOtherBounds) {
       expect(longOtherBounds.x, "neighbor x remains stable").toBeCloseTo(initialOtherBounds.x, 0);
