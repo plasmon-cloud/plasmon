@@ -1,4 +1,5 @@
 name: Plasmon Train Snapshot
+run-name: Plasmon Train Snapshot ${{ github.sha }}
 
 # Install this exact file on branch automation/train-snapshot in
 # plasmon-cloud/plasmon. A change to the trigger file refreshes one normalized
@@ -118,11 +119,13 @@ jobs:
               for source, pattern in [
                   (body, r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b"),
                   (body, r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b"),
-                  (title, r"^#(\d+)\b"),
+                  (title, r"^(#)?(\d+)\b"),
               ]:
                   match = re.search(pattern, source)
-                  if match and int(match.group(1)) in lane_numbers:
-                      return int(match.group(1))
+                  if match:
+                      group = match.group(2) if match.lastindex and match.lastindex >= 2 else match.group(1)
+                      if int(group) in lane_numbers:
+                          return int(group)
               return None
 
           pr_to_issue = {}
