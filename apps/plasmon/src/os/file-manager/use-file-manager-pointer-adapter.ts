@@ -24,7 +24,9 @@ import {
   FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT,
   incomingDropPlacementIntent,
   type DropPlacementSourceRect,
+  type IncomingDropPlacementCommit,
   type IncomingDropPlacementIntent,
+  type IncomingDropPlacementRequest,
 } from "./drop-placement.ts";
 import { finishEntryDragGesture } from "./drag.ts";
 import {
@@ -59,7 +61,7 @@ interface UseFileManagerPointerAdapterOptions {
     delta: { dx: number; dy: number },
     bounds: { width: number; height: number },
   ) => void | Promise<void>;
-  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void;
+  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
 }
 
 interface EntryDragState {
@@ -418,10 +420,10 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     candidate: DragDropCandidate | null,
     dx: number,
     dy: number,
-  ): boolean => {
-    if (!candidate || candidate.kind !== "surface") return false;
+  ): IncomingDropPlacementCommit | null => {
+    if (!candidate || candidate.kind !== "surface") return null;
     const sources = sourcePlacementRects(active);
-    if (sources.length !== active.ids.length) return false;
+    if (sources.length !== active.ids.length) return null;
     const targetRect = candidate.element.getBoundingClientRect();
     return dispatchIncomingDropPlacement(
       candidate.element,
@@ -462,9 +464,10 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const root = rootRef.current;
     if (!root || !onIncomingDropPlacement) return undefined;
     const handleIncomingPlacement = (event: Event) => {
-      const custom = event as CustomEvent<IncomingDropPlacementIntent>;
-      if (!custom.detail) return;
-      onIncomingDropPlacement(custom.detail);
+      const custom = event as CustomEvent<IncomingDropPlacementRequest>;
+      const request = custom.detail;
+      if (!request?.intent) return;
+      request.commit = () => Promise.resolve(onIncomingDropPlacement(request.intent));
       event.preventDefault();
     };
     root.addEventListener(FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT, handleIncomingPlacement);
@@ -552,9 +555,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element
       ? resolved.node
       : await resolveCanonicalDropTarget(active, candidate);
-    const placementAccepted = target?.kind === "directory" && candidate?.id === target.id
+    const placementCommit = target?.kind === "directory" && candidate?.id === target.id
       ? handoffIncomingPlacement(active, candidate, dx, dy)
-      : false;
+      : null;
 
     resetDragFrame();
     clearDropTarget();
@@ -572,7 +575,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const source = sourceNodesFor(active);
     try {
       if (target?.kind === "directory") {
-        if (!placementAccepted) removeDragPreview();
+        if (!placementCommit) removeDragPreview();
         if (!operationState.begin("move", source.length)) {
           removeDragPreview();
           setError("Another file operation is already running");
@@ -585,9 +588,25 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
             onItemFailure: (_index, node, cause) => operationState.failItem(node.name, errorMessage(cause)),
           });
           operationState.complete();
-          setError(null);
-          await refresh();
-          if (placementAccepted) {
+
+          let completionError: string | null = null;
+          if (placementCommit) {
+            try {
+              await placementCommit();
+            } catch (cause: unknown) {
+              completionError = `Move completed, but drop placement could not be saved: ${errorMessage(cause)}`;
+            }
+          }
+          try {
+            await refresh();
+          } catch (refreshCause: unknown) {
+            const refreshMessage = `refresh failed: ${errorMessage(refreshCause)}`;
+            completionError = completionError
+              ? `${completionError} (${refreshMessage})`
+              : refreshMessage;
+          }
+          setError(completionError);
+          if (placementCommit) {
             await nextAnimationFrame();
             removeDragPreview();
           }
