@@ -13,9 +13,9 @@ case "$target" in
 esac
 
 npm ci
-npm run plasmon:demo:prepare
+npm run plasmon:local:prepare
 
-npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &
+npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
 server_pid=$!
 
 cleanup() {
@@ -49,8 +49,8 @@ if [ "$pocketic_ready" -ne 1 ]; then
   exit 1
 fi
 
-npm run plasmon:demo:status
-npm run plasmon:demo:reinstall
+npm run plasmon:local:status
+npm run plasmon:local:reinstall
 
 run_one() {
   NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json \

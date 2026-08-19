@@ -6,6 +6,7 @@ import {
 } from "./search.ts";
 import type { StartShortcutTarget } from "./startMenu.ts";
 import type { SearchSurfaceController } from "./use-search-surface-controller.ts";
+import "./searchSurface.scss";
 
 export interface SearchShortcutPresentation {
   icon?: string;

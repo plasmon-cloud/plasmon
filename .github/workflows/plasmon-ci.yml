@@ -57,6 +57,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Plasmon deployment command semantics
+        run: npm run test:plasmon:deployment-commands
+
       - name: Plasmon fast tests
         timeout-minutes: 1
         run: npm --workspace neutron-plasmon test
