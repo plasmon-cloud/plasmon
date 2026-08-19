@@ -11,9 +11,9 @@ const gates = [
     expensiveFragments: [
       "npm ci",
       "node test/ci/verify-playwright-gate.mjs",
-      "npm run plasmon:demo:prepare",
-      "npm run plasmon:demo:status",
-      "npm run plasmon:demo:reinstall",
+      "npm run plasmon:local:prepare",
+      "npm run plasmon:local:status",
+      "npm run plasmon:local:reinstall",
       "npm run test:e2e:plasmon:smoke",
     ],
     forbiddenPrSelectionFragments: [
@@ -30,9 +30,9 @@ const gates = [
     expensiveStepName: "Package and run Plasmon specialist browser acceptance",
     expensiveFragments: [
       "npm ci",
-      "npm run plasmon:demo:prepare",
-      "npm run plasmon:demo:status",
-      "npm run plasmon:demo:reinstall",
+      "npm run plasmon:local:prepare",
+      "npm run plasmon:local:status",
+      "npm run plasmon:local:reinstall",
       "npm run test:e2e:plasmon:specialist",
     ],
     forbiddenPrSelectionFragments: [
@@ -52,9 +52,9 @@ const gates = [
     expensiveStepName: "Package and run browser persistence gate",
     expensiveFragments: [
       "npm ci",
-      "npm run plasmon:demo:prepare",
-      "npm run plasmon:demo:status",
-      "npm run plasmon:demo:reinstall",
+      "npm run plasmon:local:prepare",
+      "npm run plasmon:local:status",
+      "npm run plasmon:local:reinstall",
       "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json npx --no-install playwright test test/e2e/plasmon-persistence.spec.ts",
     ],
     forbiddenPrSelectionFragments: [
@@ -189,6 +189,9 @@ for (const gate of selectedGates) {
     if (!expensiveStep.includes(fragment)) {
       throw new Error(`${gate.context} real gate lost required acceptance fragment: ${fragment}`);
     }
+  }
+  if (expensiveStep.includes("npm run plasmon:demo:")) {
+    throw new Error(`${gate.context} must use the bounded plasmon:local:* fixture, not the full demo manifest`);
   }
 
   if (gate.pushBranches) {
