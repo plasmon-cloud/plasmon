@@ -386,6 +386,7 @@ export function FileManager({
       ) : null}
 
       <FileManagerEntries
+        directoryId={directoryId}
         fs={fs}
         {...(associations ? { associations } : {})}
         nodes={renderState.visibleNodes}

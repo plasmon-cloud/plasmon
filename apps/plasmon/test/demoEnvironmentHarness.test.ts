@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { resolveDemoArtifacts } from "../../../test/e2e/plasmon-demo-environment.ts";
+import {
+  manifestForPlasmonDeployment,
+  resolveDeploymentArtifacts,
+} from "../../../test/e2e/plasmon-deployment-environment.ts";
 
 const repoRoot = resolve(import.meta.dir, "../../..");
 
@@ -13,9 +16,12 @@ async function readJson<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, "utf8")) as T;
 }
 
-describe("Plasmon installed demo environment preparation", () => {
-  test("fresh acceptance packaging is driven by the deployment manifest", async () => {
-    const artifacts = await resolveDemoArtifacts({ repoRoot });
+describe("Plasmon local acceptance environment preparation", () => {
+  test("fresh acceptance packaging is driven by the bounded local deployment manifest", async () => {
+    const artifacts = await resolveDeploymentArtifacts({
+      repoRoot,
+      manifestPath: manifestForPlasmonDeployment("local"),
+    });
     expect(artifacts.map(({ workspace }) => workspace)).toEqual([
       "neutron-kernel",
       "neutron-plasmon",
@@ -26,11 +32,13 @@ describe("Plasmon installed demo environment preparation", () => {
     }
 
     const rootPackage = await readJson<PackageJson>(resolve(repoRoot, "package.json"));
-    const prepare = rootPackage.scripts?.["plasmon:demo:prepare"];
+    const prepare = rootPackage.scripts?.["plasmon:local:prepare"];
     const fresh = rootPackage.scripts?.["test:e2e:plasmon:fresh"] ?? "";
 
-    expect(prepare).toBe("bun test/e2e/plasmon-demo-environment.ts prepare");
-    expect(fresh).toContain("npm run plasmon:demo:prepare");
+    expect(prepare).toBe("bun test/e2e/plasmon-deployment-environment.ts local prepare");
+    expect(fresh).toContain("npm run plasmon:local:prepare");
+    expect(fresh).toContain("npm run plasmon:local:reinstall");
+    expect(fresh).not.toContain("plasmon:demo:");
 
     for (const { workspace } of artifacts) {
       expect(fresh).not.toContain(`--workspace ${workspace}`);
