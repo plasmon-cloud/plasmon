@@ -212,17 +212,21 @@ export function Desktop({
         presentation="desktop"
         positions={resolvedPositions}
         onSnapshot={handleSnapshot}
-        onIncomingDropPlacement={(intent) => {
+        onIncomingDropPlacement={async (intent) => {
           const next = applyIncomingDesktopDropPositions(
             resolvedPositions,
             orderedIds,
             intent.placements,
             intent.workspace,
           );
-          setPositions(next);
-          void persistDesktopPositions(fs, desktop.id, next)
-            .then(() => setError(null))
-            .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+          try {
+            await persistDesktopPositions(fs, desktop.id, next);
+            setPositions(next);
+            setError(null);
+          } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : String(cause));
+            throw cause;
+          }
         }}
         onDesktopReposition={async (ids, delta, bounds) => {
           const candidates = applyDesktopDragDelta(resolvedPositions, orderedIds, ids, delta, bounds);
