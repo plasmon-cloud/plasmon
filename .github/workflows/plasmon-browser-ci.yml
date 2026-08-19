@@ -40,9 +40,9 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
-            npm run plasmon:demo:prepare
+            npm run plasmon:local:prepare
 
-            npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &
+            npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
             server_pid=$!
             trap '\''status=$?; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/plasmon-pocketic.log || true; fi; exit "$status"'\'' EXIT
 
@@ -65,7 +65,7 @@ jobs:
               exit 1
             fi
 
-            npm run plasmon:demo:status
-            npm run plasmon:demo:reinstall
+            npm run plasmon:local:status
+            npm run plasmon:local:reinstall
             npm run test:e2e:plasmon:specialist
           '

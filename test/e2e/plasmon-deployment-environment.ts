@@ -1,13 +1,16 @@
 import { access, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
-export const DEFAULT_PLASMON_DEMO_MANIFEST = "plasmon-local.ndeploy.json";
+export const PLASMON_LOCAL_MANIFEST = "plasmon-local.ndeploy.json";
+export const PLASMON_DEMO_MANIFEST = "plasmon.ndeploy.json";
+
+export type PlasmonDeploymentScope = "local" | "demo";
 
 interface InlineArtifact {
   path: string;
 }
 
-interface PlasmonDemoDeploymentManifest {
+interface PlasmonDeploymentManifest {
   artifacts: {
     kind: "inline";
     kernel: InlineArtifact;
@@ -20,17 +23,26 @@ interface WorkspacePackageJson {
   scripts?: Record<string, string>;
 }
 
-export interface DemoArtifact {
+export interface DeploymentArtifact {
   archivePath: string;
   workspace: string;
   workspaceDirectory: string;
 }
 
-export type DemoProvisionAction = "serve" | "reinstall" | "status";
+export type ProvisionAction = "serve" | "reinstall" | "status";
 
-export interface DemoEnvironmentOptions {
+export interface DeploymentEnvironmentOptions {
   repoRoot?: string;
   manifestPath?: string;
+}
+
+export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): string {
+  switch (scope) {
+    case "local":
+      return PLASMON_LOCAL_MANIFEST;
+    case "demo":
+      return PLASMON_DEMO_MANIFEST;
+  }
 }
 
 function repositoryRoot(): string {
@@ -50,16 +62,19 @@ async function readJson<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, "utf8")) as T;
 }
 
-export async function resolveDemoArtifacts(
-  options: DemoEnvironmentOptions = {},
-): Promise<DemoArtifact[]> {
+export async function resolveDeploymentArtifacts(
+  options: DeploymentEnvironmentOptions = {},
+): Promise<DeploymentArtifact[]> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
-  const manifestPath = options.manifestPath ?? DEFAULT_PLASMON_DEMO_MANIFEST;
+  const manifestPath = options.manifestPath;
+  if (!manifestPath) {
+    throw new Error("Deployment manifest must be selected explicitly");
+  }
   const manifestFile = assertRepositoryPath(repoRoot, manifestPath, "Deployment manifest");
-  const manifest = await readJson<PlasmonDemoDeploymentManifest>(manifestFile);
+  const manifest = await readJson<PlasmonDeploymentManifest>(manifestFile);
 
   if (manifest.artifacts?.kind !== "inline") {
-    throw new Error("Plasmon demo preparation requires an inline deployment artifact manifest");
+    throw new Error("Plasmon deployment preparation requires an inline deployment artifact manifest");
   }
 
   const artifactPaths = [
@@ -67,11 +82,10 @@ export async function resolveDemoArtifacts(
     ...(manifest.artifacts.packages ?? []).map((artifact) => artifact.path),
   ];
   if (artifactPaths.some((path) => typeof path !== "string" || !path.trim())) {
-    throw new Error("Plasmon demo deployment contains an artifact without a path");
+    throw new Error("Plasmon deployment contains an artifact without a path");
   }
 
-  const artifacts: DemoArtifact[] = [];
-  const seenWorkspaces = new Set<string>();
+  const artifacts: DeploymentArtifact[] = [];
   for (const archivePath of artifactPaths) {
     const archiveFile = assertRepositoryPath(repoRoot, archivePath, "Deployment artifact");
     const workspaceDirectory = dirname(archiveFile);
@@ -83,8 +97,6 @@ export async function resolveDemoArtifacts(
     if (!packageJson.scripts?.package) {
       throw new Error(`Deployment artifact workspace has no production package command: ${workspace}`);
     }
-    if (seenWorkspaces.has(workspace)) continue;
-    seenWorkspaces.add(workspace);
     artifacts.push({
       archivePath,
       workspace,
@@ -93,6 +105,10 @@ export async function resolveDemoArtifacts(
   }
 
   return artifacts;
+}
+
+export function workspacesToPackage(artifacts: readonly DeploymentArtifact[]): string[] {
+  return [...new Set(artifacts.map((artifact) => artifact.workspace))];
 }
 
 async function runCommand(command: string[], cwd: string): Promise<void> {
@@ -108,9 +124,9 @@ async function runCommand(command: string[], cwd: string): Promise<void> {
   }
 }
 
-export async function verifyDemoArchives(
-  artifacts: readonly DemoArtifact[],
-  options: DemoEnvironmentOptions = {},
+export async function verifyDeploymentArchives(
+  artifacts: readonly DeploymentArtifact[],
+  options: DeploymentEnvironmentOptions = {},
 ): Promise<void> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
   for (const artifact of artifacts) {
@@ -118,52 +134,60 @@ export async function verifyDemoArchives(
     try {
       await access(archiveFile);
     } catch {
-      throw new Error(`Required Plasmon demo archive was not produced: ${artifact.archivePath}`);
+      throw new Error(`Required Plasmon deployment archive was not produced: ${artifact.archivePath}`);
     }
   }
 }
 
-export async function prepareDemoEnvironment(
-  options: DemoEnvironmentOptions = {},
-): Promise<DemoArtifact[]> {
+export async function prepareDeploymentEnvironment(
+  options: DeploymentEnvironmentOptions,
+): Promise<DeploymentArtifact[]> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
-  const artifacts = await resolveDemoArtifacts({ ...options, repoRoot });
-  for (const artifact of artifacts) {
-    await runCommand(["npm", "--workspace", artifact.workspace, "run", "package"], repoRoot);
+  const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
+  for (const workspace of workspacesToPackage(artifacts)) {
+    await runCommand(["npm", "--workspace", workspace, "run", "package"], repoRoot);
   }
-  await verifyDemoArchives(artifacts, { ...options, repoRoot });
+  await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   return artifacts;
 }
 
-export async function provisionDemoEnvironment(
-  action: DemoProvisionAction,
-  options: DemoEnvironmentOptions = {},
+export async function provisionDeploymentEnvironment(
+  action: ProvisionAction,
+  options: DeploymentEnvironmentOptions,
 ): Promise<void> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
-  const manifestPath = options.manifestPath ?? DEFAULT_PLASMON_DEMO_MANIFEST;
+  const manifestPath = options.manifestPath;
+  if (!manifestPath) {
+    throw new Error("Deployment manifest must be selected explicitly");
+  }
   assertRepositoryPath(repoRoot, manifestPath, "Deployment manifest");
 
   if (action !== "status") {
-    const artifacts = await resolveDemoArtifacts({ ...options, repoRoot });
-    await verifyDemoArchives(artifacts, { ...options, repoRoot });
+    const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
+    await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   }
 
   await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
 }
 
 async function main(): Promise<void> {
-  const command = process.argv[2];
+  const scope = process.argv[2] as PlasmonDeploymentScope | undefined;
+  const command = process.argv[3];
+  if (scope !== "local" && scope !== "demo") {
+    throw new Error("Usage: bun test/e2e/plasmon-deployment-environment.ts <local|demo> <prepare|serve|reinstall|status>");
+  }
+  const manifestPath = manifestForPlasmonDeployment(scope);
   switch (command) {
     case "prepare":
-      await prepareDemoEnvironment();
+      await prepareDeploymentEnvironment({ manifestPath });
       return;
     case "serve":
     case "reinstall":
     case "status":
-      await provisionDemoEnvironment(command);
+      await provisionDeploymentEnvironment(command, { manifestPath });
       return;
     default:
-      throw new Error("Usage: bun test/e2e/plasmon-demo-environment.ts <prepare|serve|reinstall|status>");
+      throw new Error("Usage: bun test/e2e/plasmon-deployment-environment.ts <local|demo> <prepare|serve|reinstall|status>");
   }
 }
 

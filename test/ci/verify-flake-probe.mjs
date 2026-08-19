@@ -35,6 +35,34 @@ function forbidFragment(source, fragment, label) {
   }
 }
 
+function executableShellSource(source) {
+  return source
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+#.*$/, "").trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .join("\n");
+}
+
+const executableRunner = executableShellSource(runner);
+const deadCommentFixture = [
+  "# npm run plasmon:local:prepare",
+  "true # npm run plasmon:local:serve",
+  "# npm run plasmon:local:status",
+  "# npm run plasmon:local:reinstall",
+].join("\n");
+for (const fragment of [
+  "npm run plasmon:local:prepare",
+  "npm run plasmon:local:serve",
+  "npm run plasmon:local:status",
+  "npm run plasmon:local:reinstall",
+]) {
+  forbidFragment(
+    executableShellSource(deadCommentFixture),
+    fragment,
+    "flake-probe executable-shell parser must ignore dead comments",
+  );
+}
+
 const workflowFragments = [
   "name: Plasmon Flake Probe",
   "types: [opened, synchronize, reopened]",
@@ -179,10 +207,10 @@ const runnerFragments = [
   "node test/ci/verify-plasmon-test-inventory.mjs",
   "npm --workspace neutron-plasmon test",
   "npm --workspace neutron-plasmon run test:package",
-  "npm run plasmon:demo:prepare",
-  "npm run plasmon:demo:serve > /tmp/plasmon-pocketic.log 2>&1 &",
-  "npm run plasmon:demo:status",
-  "npm run plasmon:demo:reinstall",
+  "npm run plasmon:local:prepare",
+  "npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &",
+  "npm run plasmon:local:status",
+  "npm run plasmon:local:reinstall",
   "--workers=1",
   "--retries=0",
   "npm run test:e2e:plasmon:specialist -- --retries=0",
@@ -194,7 +222,20 @@ const runnerFragments = [
   "run_one test/e2e/plasmon-demo-game.spec.ts --grep @issue-304",
 ];
 for (const fragment of runnerFragments) {
-  requireFragment(runner, fragment, "flake-probe runner");
+  requireFragment(executableRunner, fragment, "flake-probe executable runner");
+}
+
+for (const fragment of [
+  "plasmon:demo:prepare",
+  "plasmon:demo:serve",
+  "plasmon:demo:status",
+  "plasmon:demo:reinstall",
+]) {
+  forbidFragment(
+    runner,
+    fragment,
+    "flake-probe runner must not retain the full-demo lifecycle namespace",
+  );
 }
 
 const specialistScript = packageJson.scripts?.["test:e2e:plasmon:specialist"];
@@ -247,15 +288,15 @@ for (const fragment of [
   "run: exit 1",
 ]) {
   forbidFragment(workflow, fragment, "flake-probe workflow");
-  forbidFragment(runner, fragment, "flake-probe runner");
+  forbidFragment(executableRunner, fragment, "flake-probe executable runner");
 }
 
 // Targeted probes deliberately execute the named acceptance even while that
 // boundary is quarantined from the normal required Specialist inventory.
 forbidFragment(
-  runner,
+  executableRunner,
   "--grep-invert @r2-quarantine",
-  "targeted flake-probe runner",
+  "targeted flake-probe executable runner",
 );
 
 const attempts = workflow.match(/attempt: \[([^\]]+)\]/)?.[1]
@@ -271,7 +312,7 @@ if (
   );
 }
 
-const retryZeroCount = runner.split("--retries=0").length - 1;
+const retryZeroCount = executableRunner.split("--retries=0").length - 1;
 if (retryZeroCount < 2) {
   throw new Error(
     "flake-probe runner must disable retries for full and targeted probes",
@@ -279,7 +320,7 @@ if (retryZeroCount < 2) {
 }
 
 const workerOneCount =
-  runner.split("--workers=1").length - 1 +
+  executableRunner.split("--workers=1").length - 1 +
   specialistRunner.split("--workers=1").length - 1;
 if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error(
@@ -379,5 +420,5 @@ function verifySummaryParserBehavior() {
 verifySummaryParserBehavior();
 
 console.log(
-  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, rerun-safe logical-slot artifacts, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
+  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, executable local-fixture lifecycle, rerun-safe logical-slot artifacts, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
 );
