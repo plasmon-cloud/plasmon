@@ -19,6 +19,11 @@ import {
 } from "./model.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { finishEntryDragGesture } from "./drag.ts";
+import {
+  dragOperationFeedback,
+  translatedDragPreviewRect,
+  type DragPreviewRect,
+} from "./drag-preview.ts";
 import type { FileOperationState } from "./operation-state.ts";
 import type { FileManagerPresentation } from "./render-state.ts";
 
@@ -52,6 +57,8 @@ interface EntryDragState {
   pointerId: number;
   startX: number;
   startY: number;
+  sourceId: NodeId;
+  sourceRect: DragPreviewRect;
   ids: NodeId[];
   moved: boolean;
   releaseSelection: SelectionState | null;
@@ -83,25 +90,25 @@ function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-function styleDragPreview(element: HTMLDivElement): void {
-  Object.assign(element.style, {
-    position: "fixed",
-    zIndex: "2147483646",
-    minWidth: "88px",
-    minHeight: "48px",
-    display: "grid",
-    placeItems: "center",
+function cloneDragEntry(source: HTMLDivElement, sourceRect: DragPreviewRect): HTMLDivElement {
+  const clone = source.cloneNode(true) as HTMLDivElement;
+  clone.classList.remove("is-selected", "is-focused", "is-drop-target", "is-dragging", "is-renaming");
+  clone.classList.add("fm-drag-preview__entry");
+  clone.removeAttribute("data-fm-node-id");
+  clone.removeAttribute("role");
+  clone.removeAttribute("tabindex");
+  clone.removeAttribute("aria-selected");
+  clone.querySelectorAll("[data-fm-node-id]").forEach((element) => element.removeAttribute("data-fm-node-id"));
+  clone.querySelectorAll(".fm-entry__expanded-name, .fm-entry__selection-mark, .fm-inline-error").forEach((element) => element.remove());
+  Object.assign(clone.style, {
+    left: "0px",
+    top: "0px",
+    width: `${sourceRect.width}px`,
+    height: `${sourceRect.height}px`,
+    transform: "none",
     pointerEvents: "none",
-    padding: "8px 12px",
-    border: "1px solid rgba(169, 200, 255, .7)",
-    borderRadius: "9px",
-    background: "rgba(20, 32, 52, .92)",
-    boxShadow: "0 12px 30px rgba(0, 0, 0, .42)",
-    color: "#f4f8ff",
-    fontSize: "12px",
-    fontWeight: "650",
-    whiteSpace: "nowrap",
   });
+  return clone;
 }
 
 export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapterOptions) {
@@ -173,35 +180,59 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     dragPreviewRef.current = null;
   };
 
-  const updateDragPreview = (clientX: number, clientY: number, ids: readonly NodeId[]) => {
-    let preview = dragPreviewRef.current;
-    if (!preview) {
-      preview = document.createElement("div");
-      preview.className = "fm-drag-preview";
-      preview.dataset.fmDragPreview = "true";
-      preview.setAttribute("aria-hidden", "true");
-      styleDragPreview(preview);
-      document.body.append(preview);
-      dragPreviewRef.current = preview;
+  const createDragPreview = (active: EntryDragState): HTMLDivElement => {
+    const preview = document.createElement("div");
+    preview.className = "fm-drag-preview";
+    preview.dataset.fmDragPreview = "true";
+    preview.dataset.fmDragSourceId = String(active.sourceId);
+    preview.dataset.fmDragCount = String(active.ids.length);
+    preview.setAttribute("aria-hidden", "true");
+    preview.append(cloneDragEntry(active.captureElement, active.sourceRect));
+
+    if (active.ids.length > 1) {
+      const count = document.createElement("span");
+      count.className = "fm-drag-preview__count";
+      count.textContent = String(active.ids.length);
+      preview.append(count);
     }
 
-    preview.dataset.fmDragCount = String(ids.length);
-    const firstName = nodes.find((node) => node.id === ids[0])?.name;
-    preview.textContent = ids.length === 1
-      ? firstName ?? "1 item"
-      : `${ids.length} items`;
-    preview.style.left = `${clientX - 24}px`;
-    preview.style.top = `${clientY - 16}px`;
+    const feedback = document.createElement("span");
+    feedback.className = "fm-drag-preview__feedback";
+    feedback.dataset.fmDragFeedback = "true";
+    feedback.hidden = true;
+    preview.append(feedback);
+
+    document.body.append(preview);
+    dragPreviewRef.current = preview;
+    return preview;
+  };
+
+  const updateDragPreview = (active: EntryDragState, dx: number, dy: number) => {
+    const preview = dragPreviewRef.current ?? createDragPreview(active);
+    const rect = translatedDragPreviewRect(active.sourceRect, { dx, dy });
+    Object.assign(preview.style, {
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
+
+    const targetId = dropTargetRef.current;
+    const targetName = targetId ? nodes.find((node) => node.id === targetId)?.name : null;
+    const feedbackText = dragOperationFeedback("move", targetName);
+    const feedback = preview.querySelector<HTMLElement>("[data-fm-drag-feedback]");
+    if (feedback) {
+      feedback.textContent = feedbackText ?? "";
+      feedback.hidden = feedbackText === null;
+    }
+    if (targetId) preview.dataset.fmDropTargetId = String(targetId);
+    else delete preview.dataset.fmDropTargetId;
   };
 
   const applyDragVisual = () => {
     const active = dragRef.current;
     if (!active?.moved) return;
-    updateDragPreview(
-      dragPendingRef.current.clientX,
-      dragPendingRef.current.clientY,
-      active.ids,
-    );
+    updateDragPreview(active, dragPendingRef.current.dx, dragPendingRef.current.dy);
   };
 
   const clearDragVisual = () => {
@@ -265,10 +296,15 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   const dragTargetAtPoint = (clientX: number, clientY: number): NodeId | null => {
     const active = dragRef.current;
     if (!active?.moved) return null;
-    const underPointer = document
-      .elementFromPoint(clientX, clientY)
-      ?.closest<HTMLElement>("[data-fm-node-id]");
-    return directoryDropTargetId(nodes, active.ids, underPointer?.dataset.fmNodeId);
+    const elements = typeof document.elementsFromPoint === "function"
+      ? document.elementsFromPoint(clientX, clientY)
+      : [document.elementFromPoint(clientX, clientY)].filter((element): element is Element => element !== null);
+    for (const element of elements) {
+      const entry = element.closest<HTMLElement>("[data-fm-node-id]");
+      const targetId = directoryDropTargetId(nodes, active.ids, entry?.dataset.fmNodeId);
+      if (targetId) return targetId;
+    }
+    return null;
   };
 
   const handleEntryPointerDown = (
@@ -285,10 +321,18 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       range: event.shiftKey,
     });
     setSelection(decision.selection);
+    const sourceRect = event.currentTarget.getBoundingClientRect();
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
+      sourceId: node.id,
+      sourceRect: {
+        left: sourceRect.left,
+        top: sourceRect.top,
+        width: sourceRect.width,
+        height: sourceRect.height,
+      },
       ids: [...decision.dragIds],
       moved: false,
       releaseSelection: decision.releaseSelection,
