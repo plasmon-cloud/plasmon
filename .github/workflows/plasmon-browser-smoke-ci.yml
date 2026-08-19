@@ -69,4 +69,9 @@ jobs:
             npm run plasmon:local:status
             npm run plasmon:local:reinstall
             npm run test:e2e:plasmon:smoke
+
+            # The browser gate above intentionally installs/tests the full
+            # self-contained package. Build the lean preview artifact only
+            # afterward so it cannot weaken packaged product acceptance.
+            npm --workspace neutron-plasmon run test:package:lean
           '
