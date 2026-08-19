@@ -26,6 +26,13 @@ export interface IncomingDropPlacementIntent {
   workspace: { width: number; height: number };
 }
 
+export type IncomingDropPlacementCommit = () => void | Promise<void>;
+
+export interface IncomingDropPlacementRequest {
+  intent: IncomingDropPlacementIntent;
+  commit: IncomingDropPlacementCommit | null;
+}
+
 export const FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT = "plasmon:file-manager-incoming-drop-placement";
 
 /**
@@ -50,17 +57,19 @@ export function incomingDropPlacementIntent(
 
 /**
  * Browser-only handoff to the FileManager that owns the hit target. A target
- * prevents the event when it accepted the placement intent. The event carries
- * presentation/placement intent only; filesystem mutation remains separate.
+ * prevents the event when it accepts the placement request and supplies a
+ * deferred commit. Dispatch itself never mutates placement: the source invokes
+ * the returned commit only after the canonical filesystem move succeeds.
  */
 export function dispatchIncomingDropPlacement(
-  target: HTMLElement,
+  target: EventTarget,
   intent: IncomingDropPlacementIntent,
-): boolean {
-  const event = new CustomEvent<IncomingDropPlacementIntent>(
+): IncomingDropPlacementCommit | null {
+  const request: IncomingDropPlacementRequest = { intent, commit: null };
+  const event = new CustomEvent<IncomingDropPlacementRequest>(
     FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT,
-    { bubbles: true, cancelable: true, detail: intent },
+    { bubbles: true, cancelable: true, detail: request },
   );
   target.dispatchEvent(event);
-  return event.defaultPrevented;
+  return event.defaultPrevented ? request.commit : null;
 }
