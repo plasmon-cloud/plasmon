@@ -1,0 +1,31 @@
+name: Restore exact train helper
+on:
+  push:
+    branches: [automation/train-snapshot]
+    paths: [.train/restore-train-helper.txt]
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/train-snapshot
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/plasmon-train-snapshot.yml')
+          s=p.read_text()
+          start=s.index('          def map_pr(pr):\n')
+          end=s.index('          pr_to_issue = {}\n', start)
+          block='''          def map_pr(pr):\n              body = str(pr.get("body") or "")\n              title = str(pr.get("title") or "")\n              for source, pattern in [\n                  (body, r"(?im)^\\s*Plasmon-Issue\\s*:\\s*#(\\d+)\\b"),\n                  (body, r"(?i)\\b(?:closes|fixes|resolves)\\s+#(\\d+)\\b"),\n                  (title, r"^#(\\d+)\\b"),\n              ]:\n                  match = re.search(pattern, source)\n                  if match and int(match.group(1)) in lane_numbers:\n                      return int(match.group(1))\n              return None\n\n'''
+          p.write_text(s[:start]+block+s[end:])
+          PY
+          rm -f .github/workflows/fix-train-helper.yml .train/fix-train-helper.txt
+          rm -f .github/workflows/restore-train-helper.yml .train/restore-train-helper.txt
+          git config user.name plasmon-train-dev
+          git config user.email plasmon-train-dev@users.noreply.github.com
+          git add -A
+          git commit -m "Restore exact Plasmon Train 6.2 helper"
+          git push origin HEAD:automation/train-snapshot
