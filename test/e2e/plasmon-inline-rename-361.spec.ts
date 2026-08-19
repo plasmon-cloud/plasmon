@@ -67,6 +67,8 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     if (!initialNodeId || !initialEntryBounds || !initialRenameBounds) {
       throw new Error("Rename state has no stable identity/browser bounds");
     }
+    const stableEntry = desktop.locator(`[data-fm-node-id="${initialNodeId}"]`);
+    await expect(stableEntry).toHaveCount(1);
 
     expect(initialRenameBounds.x, "rename starts inside its FileEntry left edge")
       .toBeGreaterThanOrEqual(initialEntryBounds.x - 1);
@@ -109,7 +111,7 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
 
     await rename.fill(LONG_NAME);
     const longBounds = await rename.boundingBox();
-    const longEntryBounds = await entry.boundingBox();
+    const longEntryBounds = await stableEntry.boundingBox();
     const longOtherBounds = await otherEntry.boundingBox();
     const longMetrics = await rename.evaluate((input) => {
       const element = input as HTMLTextAreaElement;
@@ -137,7 +139,7 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       .toBeLessThanOrEqual(longMetrics.clientWidth + 1);
     expect(longMetrics.scrollHeight, "long rename has multi-line content")
       .toBeGreaterThan(ordinaryBounds.height);
-    expect(await entry.getAttribute("data-fm-node-id"), "rename keeps NodeId stable").toBe(initialNodeId);
+    expect(await stableEntry.getAttribute("data-fm-node-id"), "rename keeps NodeId stable").toBe(initialNodeId);
     expect(longEntryBounds.x, "long name keeps Desktop placement x stable").toBeCloseTo(initialEntryBounds.x, 0);
     expect(longEntryBounds.y, "long name keeps Desktop placement y stable").toBeCloseTo(initialEntryBounds.y, 0);
 
@@ -148,13 +150,28 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
 
     await rename.press("Escape");
     await expect(rename).toBeHidden();
+    await expect(stableEntry).toBeVisible();
+    expect(await stableEntry.getAttribute("data-fm-node-id"), "cancel keeps NodeId stable").toBe(initialNodeId);
+
+    // Exercise a second real rename session and commit the exact ordinary name
+    // called out by human review. Read-only assertions below therefore inspect
+    // the actual rendered filename rather than a hypothetical string width.
+    await stableEntry.click({ button: "right" });
+    await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "Rename" }).click();
+    const committedRename = plasmon.getByRole("textbox", { name: /^Rename New Folder/ });
+    await expect(committedRename).toBeVisible();
+    await committedRename.fill(ORDINARY_DISPLAY_NAME);
+    await committedRename.press("Enter");
+    await expect(committedRename).toBeHidden();
+    expect(await stableEntry.getAttribute("data-fm-node-id"), "commit keeps NodeId stable").toBe(initialNodeId);
 
     // Human-review boundary: selection must not recreate the old 260px-wide
     // Desktop filename field. The selected overlay remains pointer-inert but
-    // is horizontally bounded to the same tile, wrapping long names vertically.
-    const selectedName = entry.locator(".fm-entry__expanded-name");
+    // is horizontally bounded to the same tile.
+    const selectedName = stableEntry.locator(".fm-entry__expanded-name");
     await expect(selectedName).toBeVisible();
-    const selectedEntryBounds = await entry.boundingBox();
+    await expect(selectedName).toHaveText(ORDINARY_DISPLAY_NAME);
+    const selectedEntryBounds = await stableEntry.boundingBox();
     const selectedNameBounds = await selectedName.boundingBox();
     if (!selectedEntryBounds || !selectedNameBounds) throw new Error("Selected filename has no browser bounds");
     expect(selectedNameBounds.x, "selected filename stays inside tile left edge")
@@ -162,7 +179,7 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     expect(selectedNameBounds.x + selectedNameBounds.width, "selected filename stays inside tile right edge")
       .toBeLessThanOrEqual(selectedEntryBounds.x + selectedEntryBounds.width + 1);
 
-    const selectedMetrics = await selectedName.evaluate((element, ordinaryDisplayName) => {
+    const selectedMetrics = await selectedName.evaluate((element) => {
       const style = getComputedStyle(element);
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
@@ -174,20 +191,20 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
         + Number.parseFloat(style.borderRightWidth);
       return {
         contentWidth: element.getBoundingClientRect().width - horizontalChrome,
-        ordinaryTextWidth: context.measureText(ordinaryDisplayName).width,
+        textWidth: context.measureText(element.textContent ?? "").width,
         whiteSpace: style.whiteSpace,
         overflowWrap: style.overflowWrap,
         pointerEvents: style.pointerEvents,
       };
-    }, ORDINARY_DISPLAY_NAME);
-    expect(selectedMetrics.ordinaryTextWidth, "New Folder (1) fits the selected tile label without ellipsis")
+    });
+    expect(selectedMetrics.textWidth, "New Folder (1) fits the selected tile label without horizontal expansion")
       .toBeLessThanOrEqual(selectedMetrics.contentWidth + 1);
     expect(selectedMetrics.whiteSpace).toBe("normal");
     expect(selectedMetrics.overflowWrap).toBe("anywhere");
     expect(selectedMetrics.pointerEvents).toBe("none");
 
-    // Unselected labels get the full tile content width too; long names may
-    // ellipsize, but ordinary Windows-sized names must fit before ellipsis is needed.
+    // Unselected labels use the same compact tile boundary. Assert the real
+    // committed filename is fully present and does not overflow into ellipsis.
     await desktop.click({
       position: {
         x: Math.max(1, Math.floor(desktopBounds.width * 0.5)),
@@ -195,8 +212,9 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       },
     });
     await expect(selectedName).toHaveCount(0);
-    const collapsedName = entry.locator(".fm-entry__name");
-    const collapsedMetrics = await collapsedName.evaluate((element, ordinaryDisplayName) => {
+    const collapsedName = stableEntry.locator(".fm-entry__name");
+    await expect(collapsedName).toHaveText(ORDINARY_DISPLAY_NAME);
+    const collapsedMetrics = await collapsedName.evaluate((element) => {
       const style = getComputedStyle(element);
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
@@ -204,13 +222,17 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       context.font = style.font;
       return {
         contentWidth: element.getBoundingClientRect().width,
-        ordinaryTextWidth: context.measureText(ordinaryDisplayName).width,
+        textWidth: context.measureText(element.textContent ?? "").width,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
         whiteSpace: style.whiteSpace,
         textOverflow: style.textOverflow,
       };
-    }, ORDINARY_DISPLAY_NAME);
-    expect(collapsedMetrics.ordinaryTextWidth, "New Folder (1) fits the unselected Desktop label")
+    });
+    expect(collapsedMetrics.textWidth, "New Folder (1) fits the unselected Desktop label")
       .toBeLessThanOrEqual(collapsedMetrics.contentWidth + 1);
+    expect(collapsedMetrics.scrollWidth, "New Folder (1) is not visually truncated")
+      .toBeLessThanOrEqual(collapsedMetrics.clientWidth + 1);
     expect(collapsedMetrics.whiteSpace).toBe("nowrap");
     expect(collapsedMetrics.textOverflow).toBe("ellipsis");
 
