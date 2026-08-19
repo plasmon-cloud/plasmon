@@ -4,9 +4,9 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const ORDINARY_NAME = "New folder (2)";
-const LONG_NAME = "A genuinely long filename that should stay inside the bounded Plasmon inline rename editor without moving nearby Desktop entries";
+const LONG_NAME = "0123456789".repeat(8);
 
-test("#361 — packaged Desktop rename stays compact for ordinary, long, and edge-positioned names", async ({ page }) => {
+test("#361 — packaged Desktop rename stays bounded and wraps genuinely long names", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -42,8 +42,8 @@ test("#361 — packaged Desktop rename stays compact for ordinary, long, and edg
     const desktopBounds = await desktop.boundingBox();
     if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");
 
-    // Create at the right side of the workspace so the same editor contract is
-    // exercised where accidental expansion would most obviously escape/reflow.
+    // Exercise creation from the right side of the real packaged Desktop so an
+    // accidental workspace-wide editor is caught at the surface where it hurts.
     await desktop.click({
       button: "right",
       position: {
@@ -63,14 +63,15 @@ test("#361 — packaged Desktop rename stays compact for ordinary, long, and edg
     const initialOtherBounds = await otherEntry.boundingBox();
     if (!initialEntryBounds || !initialRenameBounds) throw new Error("Rename state has no browser bounds");
 
-    expect(initialRenameBounds.x, "edge rename left edge").toBeGreaterThanOrEqual(initialEntryBounds.x - 1);
-    expect(initialRenameBounds.x + initialRenameBounds.width, "edge rename right edge")
+    expect(initialRenameBounds.x, "rename left edge").toBeGreaterThanOrEqual(initialEntryBounds.x - 1);
+    expect(initialRenameBounds.x + initialRenameBounds.width, "rename right edge")
       .toBeLessThanOrEqual(initialEntryBounds.x + initialEntryBounds.width + 1);
-    expect(initialRenameBounds.width, "edge rename width").toBeLessThanOrEqual(initialEntryBounds.width + 2);
+    expect(initialRenameBounds.width, "rename width").toBeLessThanOrEqual(initialEntryBounds.width + 2);
 
     await rename.fill(ORDINARY_NAME);
+    const ordinaryBounds = await rename.boundingBox();
     const ordinary = await rename.evaluate((input) => {
-      const element = input as HTMLInputElement;
+      const element = input as HTMLTextAreaElement;
       const style = getComputedStyle(element);
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
@@ -83,40 +84,44 @@ test("#361 — packaged Desktop rename stays compact for ordinary, long, and edg
       return {
         contentWidth: element.getBoundingClientRect().width - horizontalChrome,
         textWidth: context.measureText(element.value).width,
-        whiteSpace: style.whiteSpace,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
       };
     });
-    expect(ordinary.whiteSpace).toBe("nowrap");
-    expect(ordinary.textWidth, "ordinary filename fits on one line without horizontal clipping")
+    if (!ordinaryBounds) throw new Error("Ordinary rename state has no browser bounds");
+    expect(ordinary.textWidth, "New folder (2) fits on one line")
       .toBeLessThanOrEqual(ordinary.contentWidth + 1);
+    expect(ordinaryBounds.height, "ordinary filename stays one editor row")
+      .toBeLessThanOrEqual(initialRenameBounds.height + 2);
+    expect(ordinary.scrollWidth, "ordinary filename does not horizontally overflow")
+      .toBeLessThanOrEqual(ordinary.clientWidth + 1);
 
     await rename.fill(LONG_NAME);
     const longBounds = await rename.boundingBox();
     const longEntryBounds = await entry.boundingBox();
     const longOtherBounds = await otherEntry.boundingBox();
     const longMetrics = await rename.evaluate((input) => {
-      const element = input as HTMLInputElement;
-      const style = getComputedStyle(element);
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas text measurement unavailable");
-      context.font = style.font;
-      const horizontalChrome = Number.parseFloat(style.paddingLeft)
-        + Number.parseFloat(style.paddingRight)
-        + Number.parseFloat(style.borderLeftWidth)
-        + Number.parseFloat(style.borderRightWidth);
+      const element = input as HTMLTextAreaElement;
       return {
-        contentWidth: element.getBoundingClientRect().width - horizontalChrome,
-        textWidth: context.measureText(element.value).width,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        whiteSpace: getComputedStyle(element).whiteSpace,
       };
     });
     if (!longBounds || !longEntryBounds) throw new Error("Long rename state has no browser bounds");
 
     expect(longBounds.width, "long name does not widen rename editor").toBeCloseTo(initialRenameBounds.width, 0);
+    expect(longBounds.height, "long name wraps downward inside the bounded editor")
+      .toBeGreaterThan(ordinaryBounds.height + 8);
+    expect(longMetrics.whiteSpace).toBe("pre-wrap");
+    expect(longMetrics.scrollWidth, "long rename does not create horizontal editor overflow")
+      .toBeLessThanOrEqual(longMetrics.clientWidth + 1);
+    expect(longMetrics.scrollHeight, "long rename has multi-line content")
+      .toBeGreaterThan(ordinaryBounds.height);
     expect(longEntryBounds.x, "long name keeps Desktop placement x stable").toBeCloseTo(initialEntryBounds.x, 0);
     expect(longEntryBounds.y, "long name keeps Desktop placement y stable").toBeCloseTo(initialEntryBounds.y, 0);
-    expect(longMetrics.textWidth, "genuinely long text exceeds the fixed editing viewport rather than widening it")
-      .toBeGreaterThan(longMetrics.contentWidth);
 
     if (initialOtherBounds && longOtherBounds) {
       expect(longOtherBounds.x, "neighbor x remains stable").toBeCloseTo(initialOtherBounds.x, 0);
