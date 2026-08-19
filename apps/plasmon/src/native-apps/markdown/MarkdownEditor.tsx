@@ -1,10 +1,27 @@
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
-import { MonacoEditorHost, monacoEngineStatus, type MonacoCursorState } from "../shared/monaco/MonacoEditorHost.tsx";
+import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppStateSurface,
+  NativeAppStatusStrip,
+  NativeAppToolbar,
+} from "../../os/visual/index.ts";
+import {
+  MonacoEditorHost,
+  type MonacoCursorState,
+  type MonacoEditorCommandApi,
+} from "../shared/monaco/MonacoEditorHost.tsx";
 import { DocumentClosePrompt } from "../text/DocumentClosePrompt.tsx";
-import { controlButtonStyle, editorChrome, editorErrorStyle, editorStatusStyle } from "../text/editorChrome.ts";
+import { editorChrome, editorErrorStyle } from "../text/editorChrome.ts";
 import { useDocumentCloseProtection } from "../text/useDocumentCloseProtection.ts";
 import { useDocumentSession } from "../text/useDocumentSession.ts";
+import {
+  MARKDOWN_EDITOR_COMMANDS,
+  MARKDOWN_EDITOR_DEFAULTS,
+  markdownEditorWindowTitle,
+} from "./editorPresentation.ts";
+import { applyMarkdownFormatter } from "./markdownFormatter.ts";
 import { MarkdownPreview } from "./MarkdownPreview.tsx";
 
 export type MarkdownMode = "edit" | "split" | "preview";
@@ -23,17 +40,41 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
   const [mode, setMode] = useState<MarkdownMode>("split");
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
+  const [commandApi, setCommandApi] = useState<MonacoEditorCommandApi | null>(null);
+  const [minimap, setMinimap] = useState(MARKDOWN_EDITOR_DEFAULTS.minimap);
+  const [wordWrap, setWordWrap] = useState(MARKDOWN_EDITOR_DEFAULTS.wordWrap);
+  const [formatFeedback, setFormatFeedback] = useState<string | null>(null);
+  const [formatError, setFormatError] = useState<string | null>(null);
   const { snapshot, sessionRef } = useDocumentSession(fs, target.nodeId);
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const readOnly = target.readOnly === true;
   const visible = markdownPaneVisibility(mode);
 
   useEffect(() => {
-    process.setTitle(processId, snapshot.name || "Markdown");
+    process.setTitle(processId, markdownEditorWindowTitle(snapshot.name));
   }, [process, processId, snapshot.name]);
 
   const save = () => {
     if (!readOnly) void sessionRef.current?.save();
+  };
+
+  const format = () => {
+    if (readOnly) return;
+    const attempt = applyMarkdownFormatter(snapshot.text);
+    if (attempt.error) {
+      setFormatFeedback(null);
+      setFormatError(attempt.error);
+      return;
+    }
+
+    setFormatError(null);
+    setFormatFeedback(attempt.changed ? "Markdown formatted" : "Markdown is already formatted");
+    if (attempt.changed) sessionRef.current?.edit(attempt.text);
+    if (visible.editor) commandApi?.focus();
+  };
+
+  const runEditorCommand = (command: (typeof MARKDOWN_EDITOR_COMMANDS)[number]["command"]) => {
+    commandApi?.run(command);
   };
 
   const captureSave = (event: KeyboardEvent<HTMLElement>) => {
@@ -44,42 +85,72 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
   };
 
   if (!target.nodeId) {
-    return <div style={styles.message} role="status">Choose a Markdown file to open.</div>;
+    return (
+      <NativeAppContentSurface style={styles.root} aria-label="Markdown editor">
+        <NativeAppStateSurface role="status">Choose a Markdown file to open.</NativeAppStateSurface>
+      </NativeAppContentSurface>
+    );
   }
 
   const saveDisabled = readOnly || !snapshot.dirty || snapshot.status === "saving";
   const loadingDocument = snapshot.status === "idle" || snapshot.status === "loading";
+  const editorCommandsDisabled = !monacoReady || commandApi === null;
+  const formatDisabled = readOnly || loadingDocument || snapshot.status === "saving";
 
   return (
-    <section style={styles.root} aria-label="Markdown editor" onKeyDownCapture={captureSave}>
-      <div style={styles.toolbar} role="toolbar" aria-label="Markdown mode and save controls">
-        <span style={styles.engineBadge} role="status">{monacoEngineStatus(monacoReady)}</span>
+    <NativeAppContentSurface style={styles.root} aria-label="Markdown editor" onKeyDownCapture={captureSave}>
+      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Markdown editor controls">
         {MARKDOWN_MODES.map((candidate) => (
-          <button
+          <NativeAppButton
             key={candidate}
             type="button"
             aria-pressed={mode === candidate}
-            style={controlButtonStyle(false, mode === candidate)}
             onClick={() => setMode(candidate)}
           >
             {candidate[0]!.toUpperCase() + candidate.slice(1)}
-          </button>
+          </NativeAppButton>
         ))}
-        <span style={styles.spacer} />
+        <span style={styles.toolbarDivider} aria-hidden="true" />
+        <NativeAppButton type="button" onClick={save} disabled={saveDisabled}>Save</NativeAppButton>
+        <NativeAppButton type="button" onClick={format} disabled={formatDisabled}>Format</NativeAppButton>
+        <span style={styles.toolbarDivider} aria-hidden="true" />
+        {MARKDOWN_EDITOR_COMMANDS.map(({ command, label }) => (
+          <NativeAppButton
+            key={command}
+            type="button"
+            onClick={() => runEditorCommand(command)}
+            disabled={editorCommandsDisabled}
+          >
+            {label}
+          </NativeAppButton>
+        ))}
+        <NativeAppButton type="button" aria-pressed={wordWrap} onClick={() => setWordWrap((current) => !current)}>
+          Word wrap
+        </NativeAppButton>
+        <NativeAppButton type="button" aria-pressed={minimap} onClick={() => setMinimap((current) => !current)}>
+          Minimap
+        </NativeAppButton>
         {readOnly && <span style={styles.readOnly}>Read only</span>}
-        <button type="button" style={controlButtonStyle(saveDisabled)} onClick={save} disabled={saveDisabled}>Save</button>
         {snapshot.status === "conflict" && (
           <>
-            <button type="button" style={controlButtonStyle(false)} onClick={() => { void sessionRef.current?.reload(); }}>Reload newer file</button>
-            <button type="button" style={controlButtonStyle(readOnly)} onClick={() => { if (!readOnly) void sessionRef.current?.forceSave(); }} disabled={readOnly}>Overwrite newer file</button>
+            <NativeAppButton type="button" onClick={() => { void sessionRef.current?.reload(); }}>
+              Reload newer file
+            </NativeAppButton>
+            <NativeAppButton
+              type="button"
+              onClick={() => { if (!readOnly) void sessionRef.current?.forceSave(); }}
+              disabled={readOnly}
+            >
+              Overwrite newer file
+            </NativeAppButton>
           </>
         )}
-      </div>
+      </NativeAppToolbar>
 
       {loadingDocument ? (
-        <div style={styles.message} role="status">Loading Markdown…</div>
+        <NativeAppStateSurface role="status">Loading Markdown…</NativeAppStateSurface>
       ) : snapshot.status === "error" && !snapshot.text ? (
-        <div style={styles.fatalError} role="alert">{snapshot.error}</div>
+        <NativeAppStateSurface tone="error" role="alert">{snapshot.error}</NativeAppStateSurface>
       ) : (
         <div style={styles.workarea}>
           <div
@@ -96,10 +167,13 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
               language="markdown"
               readOnly={readOnly}
               visible={visible.editor}
+              minimap={minimap}
+              wordWrap={wordWrap}
               ariaLabel="Markdown source"
               onChange={(value) => sessionRef.current?.edit(value)}
               onCursorChange={setCursor}
               onReadyChange={setMonacoReady}
+              onCommandApiChange={setCommandApi}
             />
           </div>
           <div
@@ -114,12 +188,16 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
         </div>
       )}
 
-      {snapshot.error && snapshot.text && <div style={editorErrorStyle} role="alert">{snapshot.error}</div>}
-      <footer style={editorStatusStyle}>
-        <span>UTF-8 · Markdown</span>
+      {(formatError || (snapshot.error && snapshot.text)) && (
+        <div style={editorErrorStyle} role="alert">{formatError ?? snapshot.error}</div>
+      )}
+      <NativeAppStatusStrip style={styles.status}>
+        {formatFeedback && <span role="status">{formatFeedback}</span>}
+        <span>Markdown</span>
+        <span>UTF-8</span>
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
-      </footer>
+      </NativeAppStatusStrip>
       {closeProtection.snapshot.pending && (
         <DocumentClosePrompt
           documentName={snapshot.name}
@@ -131,19 +209,37 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
           onCancel={() => { closeProtection.cancelClose(); }}
         />
       )}
-    </section>
+    </NativeAppContentSurface>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  root: { position: "relative", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: editorChrome.background, color: editorChrome.text },
-  toolbar: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 7, padding: 8, background: editorChrome.panel, borderBottom: `1px solid ${editorChrome.border}` },
-  engineBadge: { padding: "4px 7px", border: `1px solid ${editorChrome.border}`, borderRadius: 4, background: "#171b21", color: "#b8d8ff", font: "600 11px/1.2 system-ui, sans-serif" },
-  spacer: { flex: 1 },
-  readOnly: { color: "#d6bd75", font: "600 12px/1.2 system-ui, sans-serif" },
+  root: {
+    position: "relative",
+    height: "100%",
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+  },
+  toolbar: {
+    flexWrap: "wrap",
+  },
+  toolbarDivider: {
+    alignSelf: "stretch",
+    width: 1,
+    minHeight: 24,
+    background: "var(--plasmon-border-subtle)",
+  },
+  readOnly: {
+    marginLeft: "auto",
+    color: "var(--plasmon-warning)",
+    font: "600 var(--plasmon-font-size-small)/1.2 var(--plasmon-font-ui)",
+  },
   workarea: { display: "flex", flex: 1, minHeight: 0, minWidth: 0 },
   editorPane: { minWidth: 0, minHeight: 0, flex: "1 1 50%" },
   previewPane: { minWidth: 0, minHeight: 0, flex: "1 1 50%" },
-  message: { flex: 1, display: "grid", placeItems: "center", padding: 24, background: editorChrome.background, color: editorChrome.muted },
-  fatalError: { ...editorErrorStyle, flex: 1, display: "grid", placeItems: "center", textAlign: "center" },
+  status: {
+    justifyContent: "flex-end",
+    gap: 18,
+  },
 };
