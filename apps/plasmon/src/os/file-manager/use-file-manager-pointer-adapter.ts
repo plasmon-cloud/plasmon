@@ -14,11 +14,17 @@ import {
   marqueeSelection,
   moveNodesToDirectory,
   normalizeRect,
+  validateDirectoryDrop,
   type RectLike,
   type SelectionState,
 } from "./model.ts";
-import { directoryDropTargetId } from "./drop-target.ts";
+import { directoryDropCandidateId } from "./drop-target.ts";
 import { finishEntryDragGesture } from "./drag.ts";
+import {
+  dragOperationFeedback,
+  translatedDragPreviewRect,
+  type DragPreviewRect,
+} from "./drag-preview.ts";
 import type { FileOperationState } from "./operation-state.ts";
 import type { FileManagerPresentation } from "./render-state.ts";
 
@@ -52,6 +58,8 @@ interface EntryDragState {
   pointerId: number;
   startX: number;
   startY: number;
+  sourceId: NodeId;
+  sourceRect: DragPreviewRect;
   ids: NodeId[];
   moved: boolean;
   releaseSelection: SelectionState | null;
@@ -63,6 +71,16 @@ interface DragPendingVisual {
   dy: number;
   clientX: number;
   clientY: number;
+}
+
+interface DragDropCandidate {
+  id: NodeId;
+  element: HTMLElement;
+}
+
+interface ActiveDropTarget {
+  node: FsNode;
+  element: HTMLElement;
 }
 
 interface MarqueePointerState {
@@ -83,25 +101,29 @@ function errorMessage(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-function styleDragPreview(element: HTMLDivElement): void {
-  Object.assign(element.style, {
-    position: "fixed",
-    zIndex: "2147483646",
-    minWidth: "88px",
-    minHeight: "48px",
-    display: "grid",
-    placeItems: "center",
+function cloneDragEntry(source: HTMLDivElement, sourceRect: DragPreviewRect): HTMLDivElement {
+  const clone = source.cloneNode(true) as HTMLDivElement;
+  clone.classList.remove("is-selected", "is-focused", "is-drop-target", "is-dragging", "is-renaming");
+  clone.classList.add("fm-drag-preview__entry");
+  clone.removeAttribute("data-fm-node-id");
+  clone.removeAttribute("role");
+  clone.removeAttribute("tabindex");
+  clone.removeAttribute("aria-selected");
+  clone.querySelectorAll("[data-fm-node-id]").forEach((element) => element.removeAttribute("data-fm-node-id"));
+  clone.querySelectorAll(".fm-entry__expanded-name, .fm-entry__selection-mark, .fm-inline-error").forEach((element) => element.remove());
+  Object.assign(clone.style, {
+    left: "0px",
+    top: "0px",
+    width: `${sourceRect.width}px`,
+    height: `${sourceRect.height}px`,
+    transform: "none",
     pointerEvents: "none",
-    padding: "8px 12px",
-    border: "1px solid rgba(169, 200, 255, .7)",
-    borderRadius: "9px",
-    background: "rgba(20, 32, 52, .92)",
-    boxShadow: "0 12px 30px rgba(0, 0, 0, .42)",
-    color: "#f4f8ff",
-    fontSize: "12px",
-    fontWeight: "650",
-    whiteSpace: "nowrap",
   });
+  return clone;
+}
+
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapterOptions) {
@@ -129,7 +151,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     clientX: 0,
     clientY: 0,
   });
-  const dropTargetRef = useRef<NodeId | null>(null);
+  const dropTargetRef = useRef<ActiveDropTarget | null>(null);
+  const dropCandidateRef = useRef<DragDropCandidate | null>(null);
+  const dropTargetGenerationRef = useRef(0);
   const dragRef = useRef<EntryDragState | null>(null);
   const dragPreviewRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef(selection);
@@ -160,61 +184,99 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     return rectangles;
   };
 
-  const setActiveDropTarget = (id: NodeId | null) => {
-    if (dropTargetRef.current === id) return;
-    dropTargetRef.current = id;
-    setDropTargetId(id);
+  const removeDropTargetVisual = () => {
+    dropTargetRef.current?.element.classList.remove("is-drop-target");
+    dropTargetRef.current = null;
   };
 
-  const clearDropTarget = () => setActiveDropTarget(null);
+  const setActiveDropTarget = (target: ActiveDropTarget | null) => {
+    const current = dropTargetRef.current;
+    if (current?.node.id === target?.node.id && current?.element === target?.element) return;
+    current?.element.classList.remove("is-drop-target");
+    dropTargetRef.current = target;
+    target?.element.classList.add("is-drop-target");
+    const localEntry = target ? entriesRef.current.get(target.node.id) : null;
+    setDropTargetId(target && localEntry === target.element ? target.node.id : null);
+  };
+
+  const clearDropTarget = () => {
+    dropTargetGenerationRef.current += 1;
+    dropCandidateRef.current = null;
+    setActiveDropTarget(null);
+  };
 
   const removeDragPreview = () => {
     dragPreviewRef.current?.remove();
     dragPreviewRef.current = null;
   };
 
-  const updateDragPreview = (clientX: number, clientY: number, ids: readonly NodeId[]) => {
-    let preview = dragPreviewRef.current;
-    if (!preview) {
-      preview = document.createElement("div");
-      preview.className = "fm-drag-preview";
-      preview.dataset.fmDragPreview = "true";
-      preview.setAttribute("aria-hidden", "true");
-      styleDragPreview(preview);
-      document.body.append(preview);
-      dragPreviewRef.current = preview;
+  const createDragPreview = (active: EntryDragState): HTMLDivElement => {
+    const preview = document.createElement("div");
+    preview.className = "fm-drag-preview";
+    preview.dataset.fmDragPreview = "true";
+    preview.dataset.fmDragSourceId = String(active.sourceId);
+    preview.dataset.fmDragCount = String(active.ids.length);
+    preview.setAttribute("aria-hidden", "true");
+    preview.append(cloneDragEntry(active.captureElement, active.sourceRect));
+
+    if (active.ids.length > 1) {
+      const count = document.createElement("span");
+      count.className = "fm-drag-preview__count";
+      count.textContent = String(active.ids.length);
+      preview.append(count);
     }
 
-    preview.dataset.fmDragCount = String(ids.length);
-    const firstName = nodes.find((node) => node.id === ids[0])?.name;
-    preview.textContent = ids.length === 1
-      ? firstName ?? "1 item"
-      : `${ids.length} items`;
-    preview.style.left = `${clientX - 24}px`;
-    preview.style.top = `${clientY - 16}px`;
+    const feedback = document.createElement("span");
+    feedback.className = "fm-drag-preview__feedback";
+    feedback.dataset.fmDragFeedback = "true";
+    feedback.hidden = true;
+    preview.append(feedback);
+
+    document.body.append(preview);
+    dragPreviewRef.current = preview;
+    return preview;
+  };
+
+  const updateDragPreview = (active: EntryDragState, dx: number, dy: number) => {
+    const preview = dragPreviewRef.current ?? createDragPreview(active);
+    const rect = translatedDragPreviewRect(active.sourceRect, { dx, dy });
+    Object.assign(preview.style, {
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
+
+    const target = dropTargetRef.current?.node ?? null;
+    const feedbackText = dragOperationFeedback("move", target?.name);
+    const feedback = preview.querySelector<HTMLElement>("[data-fm-drag-feedback]");
+    if (feedback) {
+      feedback.textContent = feedbackText ?? "";
+      feedback.hidden = feedbackText === null;
+    }
+    if (target) preview.dataset.fmDropTargetId = String(target.id);
+    else delete preview.dataset.fmDropTargetId;
   };
 
   const applyDragVisual = () => {
     const active = dragRef.current;
     if (!active?.moved) return;
-    updateDragPreview(
-      dragPendingRef.current.clientX,
-      dragPendingRef.current.clientY,
-      active.ids,
-    );
+    updateDragPreview(active, dragPendingRef.current.dx, dragPendingRef.current.dy);
+  };
+
+  const restoreDraggedEntries = (active: EntryDragState | null = dragRef.current) => {
+    if (!active) return;
+    for (const id of active.ids) {
+      const element = entriesRef.current.get(id);
+      if (!element) continue;
+      element.style.transform = "";
+      element.style.pointerEvents = "";
+      element.classList.remove("is-dragging");
+    }
   };
 
   const clearDragVisual = () => {
-    const active = dragRef.current;
-    if (active) {
-      for (const id of active.ids) {
-        const element = entriesRef.current.get(id);
-        if (!element) continue;
-        element.style.transform = "";
-        element.style.pointerEvents = "";
-        element.classList.remove("is-dragging");
-      }
-    }
+    restoreDraggedEntries();
     removeDragPreview();
   };
 
@@ -231,6 +293,91 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     if (active.captureElement.hasPointerCapture(active.pointerId)) {
       active.captureElement.releasePointerCapture(active.pointerId);
     }
+  };
+
+  const sourceNodesFor = (active: EntryDragState): FsNode[] => {
+    const ids = new Set(active.ids);
+    return nodes.filter((node) => ids.has(node.id));
+  };
+
+  const dragCandidateAtPoint = (
+    active: EntryDragState,
+    clientX: number,
+    clientY: number,
+  ): DragDropCandidate | null => {
+    if (!active.moved) return null;
+    const elements = typeof document.elementsFromPoint === "function"
+      ? document.elementsFromPoint(clientX, clientY)
+      : [document.elementFromPoint(clientX, clientY)].filter((element): element is Element => element !== null);
+
+    const seenEntries = new Set<HTMLElement>();
+    const seenSurfaces = new Set<HTMLElement>();
+    for (const element of elements) {
+      const entry = element.closest<HTMLElement>("[data-fm-node-id]");
+      if (entry && !seenEntries.has(entry)) {
+        seenEntries.add(entry);
+        const id = entry.dataset.fmNodeId;
+        if (!id) return null;
+        const candidateId = directoryDropCandidateId([
+          {
+            kind: "entry",
+            nodeId: id,
+            nodeKind: entry.dataset.fmKind as FsNode["kind"] | undefined,
+          },
+        ], active.ids);
+        // A visible resource entry blocks its containing directory surface. A
+        // normal file therefore means "no target" instead of "drop in folder".
+        return candidateId ? { id: candidateId, element: entry } : null;
+      }
+
+      const surface = element.closest<HTMLElement>("[data-fm-directory-id]");
+      if (!surface || seenSurfaces.has(surface)) continue;
+      seenSurfaces.add(surface);
+      const directoryId = surface.dataset.fmDirectoryId;
+      if (!directoryId) continue;
+      const candidateId = directoryDropCandidateId([
+        { kind: "surface", directoryId },
+      ], active.ids);
+      if (candidateId) return { id: candidateId, element: surface };
+    }
+    return null;
+  };
+
+  const resolveCanonicalDropTarget = async (
+    active: EntryDragState,
+    candidate: DragDropCandidate | null,
+  ): Promise<FsNode | null> => {
+    if (!candidate) return null;
+    const source = sourceNodesFor(active);
+    if (source.length !== active.ids.length) return null;
+    try {
+      const target = await fs.stat(candidate.id);
+      await validateDirectoryDrop(fs, source, target);
+      return target;
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveDropCandidate = (active: EntryDragState, candidate: DragDropCandidate | null) => {
+    const previous = dropCandidateRef.current;
+    if (previous?.id === candidate?.id && previous?.element === candidate?.element) return;
+    dropCandidateRef.current = candidate;
+    const generation = ++dropTargetGenerationRef.current;
+    setActiveDropTarget(null);
+    applyDragVisual();
+    if (!candidate) return;
+
+    void resolveCanonicalDropTarget(active, candidate).then((target) => {
+      if (
+        generation !== dropTargetGenerationRef.current
+        || dragRef.current !== active
+        || dropCandidateRef.current?.id !== candidate.id
+        || dropCandidateRef.current.element !== candidate.element
+      ) return;
+      if (target) setActiveDropTarget({ node: target, element: candidate.element });
+      applyDragVisual();
+    });
   };
 
   const cancelActiveEntryDrag = (): boolean => {
@@ -258,18 +405,11 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   });
 
   useEffect(() => () => {
+    dropTargetGenerationRef.current += 1;
     resetDragFrame();
+    removeDropTargetVisual();
     removeDragPreview();
   }, []);
-
-  const dragTargetAtPoint = (clientX: number, clientY: number): NodeId | null => {
-    const active = dragRef.current;
-    if (!active?.moved) return null;
-    const underPointer = document
-      .elementFromPoint(clientX, clientY)
-      ?.closest<HTMLElement>("[data-fm-node-id]");
-    return directoryDropTargetId(nodes, active.ids, underPointer?.dataset.fmNodeId);
-  };
 
   const handleEntryPointerDown = (
     node: FsNode,
@@ -285,10 +425,18 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       range: event.shiftKey,
     });
     setSelection(decision.selection);
+    const sourceRect = event.currentTarget.getBoundingClientRect();
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
+      sourceId: node.id,
+      sourceRect: {
+        left: sourceRect.left,
+        top: sourceRect.top,
+        width: sourceRect.width,
+        height: sourceRect.height,
+      },
       ids: [...decision.dragIds],
       moved: false,
       releaseSelection: decision.releaseSelection,
@@ -313,13 +461,13 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         }
       }
     }
-    setActiveDropTarget(dragTargetAtPoint(event.clientX, event.clientY));
     dragPendingRef.current = {
       dx,
       dy,
       clientX: event.clientX,
       clientY: event.clientY,
     };
+    resolveDropCandidate(active, dragCandidateAtPoint(active, event.clientX, event.clientY));
     if (dragFrameRef.current !== null) return;
     dragFrameRef.current = requestAnimationFrame(() => {
       dragFrameRef.current = null;
@@ -332,23 +480,29 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     if (!active || active.pointerId !== event.pointerId) return;
     const { dx, dy } = dragPendingRef.current;
     const outcome = finishEntryDragGesture(active, selectionRef.current, false);
-    const targetId = dragTargetAtPoint(event.clientX, event.clientY);
+    const candidate = dragCandidateAtPoint(active, event.clientX, event.clientY);
+    const resolved = dropTargetRef.current;
+    const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element
+      ? resolved.node
+      : await resolveCanonicalDropTarget(active, candidate);
+
     resetDragFrame();
     clearDropTarget();
-    clearDragVisual();
+    restoreDraggedEntries(active);
     dragRef.current = null;
     resetDragPending();
     releaseDragCapture(active);
     if (!outcome.shouldDrop) {
+      removeDragPreview();
       setSelection(outcome.selection);
       return;
     }
 
     const ids = [...outcome.ids];
-    const target = targetId ? nodes.find((node) => node.id === targetId) : undefined;
-    const source = nodes.filter((node) => ids.includes(node.id));
+    const source = sourceNodesFor(active);
     try {
       if (target?.kind === "directory") {
+        removeDragPreview();
         if (!operationState.begin("move", source.length)) {
           setError("Another file operation is already running");
           return;
@@ -379,14 +533,23 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       }
       if (presentation === "desktop" && onDesktopReposition && rootRef.current) {
         const rect = rootRef.current.getBoundingClientRect();
-        await onDesktopReposition(
+        const reposition = Promise.resolve(onDesktopReposition(
           ids,
           { dx, dy },
           { width: rect.width, height: rect.height },
-        );
+        ));
+        // Desktop queues the canonical position before its persistence await.
+        // Keep the faithful ghost for one render frame so release transitions
+        // directly from the previewed rectangle to the authoritative entry.
+        await nextAnimationFrame();
+        removeDragPreview();
+        await reposition;
         setError(null);
+        return;
       }
+      removeDragPreview();
     } catch (cause: unknown) {
+      removeDragPreview();
       setError(errorMessage(cause));
     }
   };
