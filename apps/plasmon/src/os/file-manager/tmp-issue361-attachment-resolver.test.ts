@@ -20,7 +20,10 @@ test("temporary: resolve Issue #361 attachment URLs", async () => {
   });
   if (!response.ok) throw new Error(`GitHub markdown render failed: ${response.status} ${await response.text()}`);
   const rendered = await response.text();
-  console.log("ISSUE361_RENDERED_HTML_BASE64_BEGIN");
-  console.log(Buffer.from(rendered, "utf8").toString("base64"));
-  console.log("ISSUE361_RENDERED_HTML_BASE64_END");
+  const urls = [...rendered.matchAll(/<img src="(https:\/\/private-user-images\.githubusercontent\.com\/[^"]+)"/g)]
+    .map((match) => match[1]);
+  if (urls.length !== 4) throw new Error(`Expected 4 resolved images, got ${urls.length}`);
+  urls.forEach((url, index) => {
+    console.log(`ISSUE361_IMAGE_${index + 1}_BASE64=${Buffer.from(url, "utf8").toString("base64")}`);
+  });
 });
