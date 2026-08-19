@@ -111,6 +111,10 @@ function cloneDragEntry(source: HTMLDivElement, sourceRect: DragPreviewRect): HT
   return clone;
 }
 
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapterOptions) {
   const {
     fs,
@@ -235,17 +239,19 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     updateDragPreview(active, dragPendingRef.current.dx, dragPendingRef.current.dy);
   };
 
-  const clearDragVisual = () => {
-    const active = dragRef.current;
-    if (active) {
-      for (const id of active.ids) {
-        const element = entriesRef.current.get(id);
-        if (!element) continue;
-        element.style.transform = "";
-        element.style.pointerEvents = "";
-        element.classList.remove("is-dragging");
-      }
+  const restoreDraggedEntries = (active: EntryDragState | null = dragRef.current) => {
+    if (!active) return;
+    for (const id of active.ids) {
+      const element = entriesRef.current.get(id);
+      if (!element) continue;
+      element.style.transform = "";
+      element.style.pointerEvents = "";
+      element.classList.remove("is-dragging");
     }
+  };
+
+  const clearDragVisual = () => {
+    restoreDraggedEntries();
     removeDragPreview();
   };
 
@@ -379,11 +385,12 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const targetId = dragTargetAtPoint(event.clientX, event.clientY);
     resetDragFrame();
     clearDropTarget();
-    clearDragVisual();
+    restoreDraggedEntries(active);
     dragRef.current = null;
     resetDragPending();
     releaseDragCapture(active);
     if (!outcome.shouldDrop) {
+      removeDragPreview();
       setSelection(outcome.selection);
       return;
     }
@@ -393,6 +400,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const source = nodes.filter((node) => ids.includes(node.id));
     try {
       if (target?.kind === "directory") {
+        removeDragPreview();
         if (!operationState.begin("move", source.length)) {
           setError("Another file operation is already running");
           return;
@@ -423,14 +431,23 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       }
       if (presentation === "desktop" && onDesktopReposition && rootRef.current) {
         const rect = rootRef.current.getBoundingClientRect();
-        await onDesktopReposition(
+        const reposition = Promise.resolve(onDesktopReposition(
           ids,
           { dx, dy },
           { width: rect.width, height: rect.height },
-        );
+        ));
+        // Desktop queues the canonical position before its persistence await.
+        // Keep the faithful ghost for one render frame so release transitions
+        // directly from the previewed rectangle to the authoritative entry.
+        await nextAnimationFrame();
+        removeDragPreview();
+        await reposition;
         setError(null);
+        return;
       }
+      removeDragPreview();
     } catch (cause: unknown) {
+      removeDragPreview();
       setError(errorMessage(cause));
     }
   };
