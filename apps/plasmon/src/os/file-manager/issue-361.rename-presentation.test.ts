@@ -38,14 +38,18 @@ test("#361 preserves the completed #95 selected Desktop expanded-label contract"
   expect(selected).toContain("max-width: none");
 });
 
-test("#361 Desktop rename wrapper remains tile-bounded without a second padded box", () => {
+test("#361 Desktop rename wrapper is compact and workspace-clamped without reusing #95 width", () => {
   const desktop = rule(".fm-entry--desktop.is-renaming .fm-entry__name");
-  expect(desktop).toContain("left: 0");
-  expect(desktop).toContain("width: 100%");
-  expect(desktop).toContain("max-width: 100%");
+  expect(desktop).toContain("--fm-desktop-rename-width: min(112px, calc(100cqi - 16px))");
+  expect(desktop).toContain("calc(8px - var(--fm-desktop-entry-x))");
+  expect(desktop).toContain("-10px");
+  expect(desktop).toContain("calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-rename-width))");
+  expect(desktop).toContain("width: var(--fm-desktop-rename-width)");
+  expect(desktop).toContain("max-width: none");
   expect(desktop).toContain("padding: 0");
   expect(desktop).toContain("border: 0");
   expect(desktop).toContain("background: transparent");
+  expect(desktop).not.toContain("260px");
 });
 
 test("#361 Grid rename is an overlay so long editor growth cannot reflow neighboring entries", () => {
