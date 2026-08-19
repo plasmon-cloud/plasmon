@@ -95,6 +95,7 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
         textWidth: context.measureText(element.value).width,
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
+        textAlign: style.textAlign,
       };
     });
     if (!ordinaryBounds) throw new Error("Ordinary rename state has no browser bounds");
@@ -108,6 +109,7 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       .toBeGreaterThanOrEqual(initialRenameBounds.width - 1);
     expect(ordinary.scrollWidth, "ordinary filename does not horizontally overflow")
       .toBeLessThanOrEqual(ordinary.clientWidth + 1);
+    expect(ordinary.textAlign, "Desktop rename text stays visually centered in place").toBe("center");
 
     await rename.fill(LONG_NAME);
     const longBounds = await rename.boundingBox();
@@ -189,9 +191,13 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
         + Number.parseFloat(style.paddingRight)
         + Number.parseFloat(style.borderLeftWidth)
         + Number.parseFloat(style.borderRightWidth);
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const textRect = range.getBoundingClientRect();
       return {
         contentWidth: element.getBoundingClientRect().width - horizontalChrome,
         textWidth: context.measureText(element.textContent ?? "").width,
+        textTop: textRect.top,
         whiteSpace: style.whiteSpace,
         overflowWrap: style.overflowWrap,
         pointerEvents: style.pointerEvents,
@@ -202,6 +208,30 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
     expect(selectedMetrics.whiteSpace).toBe("normal");
     expect(selectedMetrics.overflowWrap).toBe("anywhere");
     expect(selectedMetrics.pointerEvents).toBe("none");
+
+    // F2 should feel like editing the selected filename in place. The bounded
+    // editor keeps the selected label's vertical anchor and remains centered;
+    // only genuinely long content transitions into multiline growth.
+    await stableEntry.press("F2");
+    const inPlaceRename = plasmon.getByRole("textbox", { name: `Rename ${ORDINARY_DISPLAY_NAME}` });
+    await expect(inPlaceRename).toBeVisible();
+    const inPlaceBounds = await inPlaceRename.boundingBox();
+    const inPlaceMetrics = await inPlaceRename.evaluate((element) => ({
+      textAlign: getComputedStyle(element).textAlign,
+      whiteSpace: getComputedStyle(element).whiteSpace,
+    }));
+    if (!inPlaceBounds) throw new Error("F2 rename has no browser bounds");
+    expect(inPlaceMetrics.textAlign, "F2 Desktop rename remains centered like the label it replaces").toBe("center");
+    expect(inPlaceMetrics.whiteSpace).toBe("pre-wrap");
+    expect(Math.abs(inPlaceBounds.y - selectedNameBounds.y), "F2 rename keeps the selected label's vertical anchor")
+      .toBeLessThanOrEqual(1);
+    const selectedCenterX = selectedNameBounds.x + (selectedNameBounds.width / 2);
+    const renameCenterX = inPlaceBounds.x + (inPlaceBounds.width / 2);
+    expect(Math.abs(renameCenterX - selectedCenterX), "F2 rename remains horizontally centered on the filename")
+      .toBeLessThanOrEqual(1);
+    await inPlaceRename.press("Escape");
+    await expect(inPlaceRename).toBeHidden();
+    await expect(selectedName).toBeVisible();
 
     // Unselected labels use the same compact tile boundary. Assert the real
     // committed filename is fully present and does not overflow into ellipsis.
@@ -220,9 +250,13 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       const context = canvas.getContext("2d");
       if (!context) throw new Error("Canvas text measurement unavailable");
       context.font = style.font;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const textRect = range.getBoundingClientRect();
       return {
         contentWidth: element.getBoundingClientRect().width,
         textWidth: context.measureText(element.textContent ?? "").width,
+        textTop: textRect.top,
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
         whiteSpace: style.whiteSpace,
@@ -235,6 +269,8 @@ test("#361 — packaged Desktop filename and rename surfaces stay tile-bounded",
       .toBeLessThanOrEqual(collapsedMetrics.clientWidth + 1);
     expect(collapsedMetrics.whiteSpace).toBe("nowrap");
     expect(collapsedMetrics.textOverflow).toBe("ellipsis");
+    expect(Math.abs(collapsedMetrics.textTop - selectedMetrics.textTop), "selection does not make the filename jump vertically")
+      .toBeLessThanOrEqual(1);
 
     health.assertClean();
   } finally {
