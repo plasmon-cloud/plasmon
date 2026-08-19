@@ -32,8 +32,12 @@ test("#360 Desktop drag ghost preserves entry identity and lands where it previe
     const sourceBox = await source.boundingBox();
     if (!sourceBox) throw new Error("Desktop drag source has no browser bounds");
 
-    const dx = 36;
-    const dy = 24;
+    // r2 Desktop slots have a 12px horizontal and 16px vertical gap around
+    // the 92x88 entry footprint. An 8px/8px move is large enough to establish
+    // a drag while remaining a valid free position, so placement reconciliation
+    // should not legitimately move the entry somewhere else.
+    const dx = 8;
+    const dy = 8;
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2);
     await page.mouse.down();
     await page.mouse.move(
