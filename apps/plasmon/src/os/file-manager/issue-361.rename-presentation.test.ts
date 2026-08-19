@@ -21,7 +21,7 @@ test("#361 inline rename editor is a bounded wrapping textarea", () => {
   expect(editor).toContain("resize: none");
 });
 
-test("#361 tile rename wraps long names vertically instead of widening horizontally", () => {
+test("#361 Desktop and Grid rename wrap long names vertically instead of widening horizontally", () => {
   const tileEditor = rule(".fm-entry--desktop.is-renaming .fm-entry__name textarea,\n.fm-entry--grid.is-renaming .fm-entry__name textarea");
   expect(tileEditor).toContain("white-space: pre-wrap");
   expect(tileEditor).toContain("overflow-x: hidden");
@@ -31,12 +31,11 @@ test("#361 tile rename wraps long names vertically instead of widening horizonta
   expect(fileEntry).toContain("editor.scrollHeight");
 });
 
-test("#361 selected Desktop filename stays inside the tile instead of using the old wide overlay", () => {
+test("#361 preserves the completed #95 selected Desktop expanded-label contract", () => {
   const selected = rule(".fm-entry--desktop .fm-entry__expanded-name");
-  expect(selected).toContain("left: 0");
-  expect(selected).toContain("width: 100%");
-  expect(selected).toContain("max-width: 100%");
-  expect(selected).not.toContain("260px");
+  expect(selected).toContain("--fm-desktop-label-width: min(260px, calc(100cqi - 16px))");
+  expect(selected).toContain("width: var(--fm-desktop-label-width)");
+  expect(selected).toContain("max-width: none");
 });
 
 test("#361 Desktop rename wrapper remains tile-bounded without a second padded box", () => {
