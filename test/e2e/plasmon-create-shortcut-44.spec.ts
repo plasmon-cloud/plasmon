@@ -108,11 +108,14 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(firstShortcutName).not.toBe(targetName);
     expect(firstShortcutName.startsWith(targetName)).toBe(true);
 
-    const firstShortcut = files.locator('[data-fm-kind="shortcut"]', { has: firstRename }).first();
-    await expect(firstShortcut).toBeVisible();
-    await expect(firstShortcut).toHaveAttribute("aria-selected", "true");
-    await expect(firstShortcut.locator(".fm-entry__icon")).toBeVisible();
+    const firstRenamingShortcut = files.locator('[data-fm-kind="shortcut"]', { has: firstRename }).first();
+    await expect(firstRenamingShortcut).toBeVisible();
+    await expect(firstRenamingShortcut).toHaveAttribute("aria-selected", "true");
+    await expect(firstRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
+    const firstShortcutId = await firstRenamingShortcut.getAttribute("data-fm-node-id");
+    if (!firstShortcutId) throw new Error("First packaged shortcut has no stable NodeId");
     await firstRename.press("Escape");
+    const firstShortcut = files.locator(`[data-fm-node-id="${firstShortcutId}"]`);
     await expect(firstShortcut).toContainText(firstShortcutName);
 
     // Item-context-menu discoverability runs the same production command seam.
@@ -134,11 +137,14 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(secondShortcutName).not.toBe(firstShortcutName);
     expect(secondShortcutName.startsWith(targetName)).toBe(true);
 
-    const secondShortcut = files.locator('[data-fm-kind="shortcut"]', { has: secondRename }).first();
-    await expect(secondShortcut).toBeVisible();
-    await expect(secondShortcut).toHaveAttribute("aria-selected", "true");
-    await expect(secondShortcut.locator(".fm-entry__icon")).toBeVisible();
+    const secondRenamingShortcut = files.locator('[data-fm-kind="shortcut"]', { has: secondRename }).first();
+    await expect(secondRenamingShortcut).toBeVisible();
+    await expect(secondRenamingShortcut).toHaveAttribute("aria-selected", "true");
+    await expect(secondRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
+    const secondShortcutId = await secondRenamingShortcut.getAttribute("data-fm-node-id");
+    if (!secondShortcutId) throw new Error("Second packaged shortcut has no stable NodeId");
     await secondRename.press("Escape");
+    const secondShortcut = files.locator(`[data-fm-node-id="${secondShortcutId}"]`);
     await expect(secondShortcut).toContainText(secondShortcutName);
 
     // Activate the first shortcut through normal FileEntry double-click. The
