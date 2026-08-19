@@ -18,6 +18,7 @@ import {
 } from "../file-manager/index.ts";
 import {
   applyDesktopDragDelta,
+  applyIncomingDesktopDropPositions,
   desktopPositionsEqual,
   reconcileDesktopPositions,
   type DesktopPositions,
@@ -211,6 +212,18 @@ export function Desktop({
         presentation="desktop"
         positions={resolvedPositions}
         onSnapshot={handleSnapshot}
+        onIncomingDropPlacement={(intent) => {
+          const next = applyIncomingDesktopDropPositions(
+            resolvedPositions,
+            orderedIds,
+            intent.placements,
+            intent.workspace,
+          );
+          setPositions(next);
+          void persistDesktopPositions(fs, desktop.id, next)
+            .then(() => setError(null))
+            .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+        }}
         onDesktopReposition={async (ids, delta, bounds) => {
           const candidates = applyDesktopDragDelta(resolvedPositions, orderedIds, ids, delta, bounds);
           const movedIds = new Set(ids);
