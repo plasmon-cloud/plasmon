@@ -130,12 +130,17 @@
 }
 
 .fm-entry--desktop.is-renaming .fm-entry__name {
+  --fm-desktop-rename-width: min(112px, calc(100cqi - 16px));
   box-sizing: border-box;
   position: absolute;
   top: 55px;
-  left: 0;
-  width: 100%;
-  max-width: 100%;
+  left: clamp(
+    calc(8px - var(--fm-desktop-entry-x)),
+    -10px,
+    calc(100cqi - 8px - var(--fm-desktop-entry-x) - var(--fm-desktop-rename-width))
+  );
+  width: var(--fm-desktop-rename-width);
+  max-width: none;
   padding: 0;
   border: 0;
   border-radius: 5px;
