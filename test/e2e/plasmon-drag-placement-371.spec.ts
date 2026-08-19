@@ -92,6 +92,10 @@ test("#371 Explorer to Desktop drop commits the icon where the ghost is released
       x: sourceBox.x + sourceBox.width * 0.32,
       y: sourceBox.y + sourceBox.height * 0.38,
     };
+    const grabOffset = {
+      x: grab.x - sourceBox.x,
+      y: grab.y - sourceBox.y,
+    };
     await page.mouse.move(grab.x, grab.y);
     await page.mouse.down();
     await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 12 });
@@ -103,6 +107,9 @@ test("#371 Explorer to Desktop drop commits the icon where the ghost is released
     await expect(preview.locator('[data-fm-drag-feedback="true"]')).toHaveText("Move to Desktop");
     const previewBox = await preview.boundingBox();
     if (!previewBox) throw new Error("Incoming Desktop drag ghost has no browser bounds");
+
+    expect(Math.abs((dropPoint.x - previewBox.x) - grabOffset.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs((dropPoint.y - previewBox.y) - grabOffset.y)).toBeLessThanOrEqual(2);
 
     await page.mouse.up();
     await expect(preview).toHaveCount(0);
