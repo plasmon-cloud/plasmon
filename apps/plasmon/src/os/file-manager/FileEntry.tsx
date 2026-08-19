@@ -22,6 +22,7 @@ import {
   type InlineRenameState,
 } from "./rename.ts";
 import {
+  boundedInlineRenameWidth,
   inlineRenamePresentation,
   inlineRenameStyleVariables,
 } from "./rename-presentation.ts";
@@ -76,6 +77,11 @@ function iconContext(presentation: FileEntryPresentation): IconContext {
   if (presentation === "desktop") return "desktop";
   if (presentation === "grid") return "file-grid";
   return "file-list";
+}
+
+function cssPixels(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export const FileEntry = memo(function FileEntry({
@@ -141,12 +147,41 @@ export const FileEntry = memo(function FileEntry({
     const editor = inputRef.current;
     if (!editor || !renderState.isRenaming) return;
     if (!renamePresentation.autoGrow) {
+      editor.style.width = "";
       editor.style.height = "";
       return;
     }
+
+    const style = getComputedStyle(editor);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.font = style.font;
+      const textWidth = Math.max(
+        ...editor.value.split(/\r?\n/).map((line) => context.measureText(line || " ").width),
+      );
+      const horizontalChrome = cssPixels(style.paddingLeft)
+        + cssPixels(style.paddingRight)
+        + cssPixels(style.borderLeftWidth)
+        + cssPixels(style.borderRightWidth);
+      const minimum = renamePresentation.minWidthPx ?? 0;
+      const gridInset = renamePresentation.gridInlineInsetPx ?? 0;
+      const entryWidth = entryRef.current?.getBoundingClientRect().width ?? minimum;
+      const maximum = renamePresentation.desktopMaxWidthPx
+        ?? Math.max(minimum, entryWidth - (gridInset * 2));
+      editor.style.width = `${boundedInlineRenameWidth(textWidth, horizontalChrome, minimum, maximum)}px`;
+    }
+
     editor.style.height = "0px";
     editor.style.height = `${editor.scrollHeight}px`;
-  }, [renamePresentation.autoGrow, renderState.isRenaming, renameValue]);
+  }, [
+    renamePresentation.autoGrow,
+    renamePresentation.desktopMaxWidthPx,
+    renamePresentation.gridInlineInsetPx,
+    renamePresentation.minWidthPx,
+    renderState.isRenaming,
+    renameValue,
+  ]);
 
   return (
     <div

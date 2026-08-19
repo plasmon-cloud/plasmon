@@ -53,6 +53,18 @@ export function inlineRenamePresentation(
   };
 }
 
+export function boundedInlineRenameWidth(
+  textWidthPx: number,
+  horizontalChromePx: number,
+  minWidthPx: number,
+  maxWidthPx: number,
+): number {
+  const minimum = Math.max(0, minWidthPx);
+  const maximum = Math.max(minimum, maxWidthPx);
+  const natural = Math.ceil(Math.max(0, textWidthPx) + Math.max(0, horizontalChromePx));
+  return Math.min(maximum, Math.max(minimum, natural));
+}
+
 export function inlineRenameStyleVariables(
   presentation: InlineRenamePresentation,
 ): Record<string, string> {

@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import {
+  boundedInlineRenameWidth,
   inlineRenamePresentation,
   inlineRenameStyleVariables,
 } from "./rename-presentation.ts";
 
-test("#361 Desktop rename grows from content width to the bounded tile width", () => {
+test("#361 Desktop rename grows from measured content width to the bounded tile width", () => {
   const presentation = inlineRenamePresentation("desktop");
   expect(presentation).toEqual({
     rows: 1,
@@ -20,6 +21,10 @@ test("#361 Desktop rename grows from content width to the bounded tile width", (
     "--fm-rename-min-width": "36px",
     "--fm-desktop-rename-max-width": "90px",
   });
+
+  expect(boundedInlineRenameWidth(18.2, 2, 36, 90)).toBe(36);
+  expect(boundedInlineRenameWidth(82.4, 2, 36, 90)).toBe(85);
+  expect(boundedInlineRenameWidth(180, 2, 36, 90)).toBe(90);
 });
 
 test("#361 Grid rename uses the same content-sized wrapped policy without widening its tile", () => {

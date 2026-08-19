@@ -28,6 +28,10 @@
   padding-inline: 0;
 }
 
+.fm-entry--desktop .fm-entry__name {
+  font-size: 12px;
+}
+
 .fm-entry--desktop .fm-entry__name,
 .fm-entry--grid .fm-entry__name {
   width: 100%;
@@ -71,11 +75,10 @@
 
 .fm-entry--desktop.is-renaming .fm-entry__name textarea,
 .fm-entry--grid.is-renaming .fm-entry__name textarea {
-  field-sizing: content;
   min-width: var(--fm-rename-min-width, 36px);
   max-height: var(--fm-rename-max-height, calc(10em + 8px));
   width: auto;
-  padding-inline: 1px;
+  padding-inline: 0;
   white-space: pre-wrap;
   overflow-x: hidden;
   overflow-y: auto;
@@ -122,7 +125,7 @@
   background: rgba(18,27,43,.96);
   box-shadow: 0 4px 14px rgba(0,0,0,.32);
   color: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.25;
   text-align: center;
   white-space: normal;
@@ -147,7 +150,7 @@
   background: transparent;
   box-shadow: none;
   color: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.25;
   text-align: center;
   white-space: normal;
