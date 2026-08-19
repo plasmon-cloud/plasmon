@@ -23,6 +23,10 @@ async function openPlasmon(page: Page): Promise<FrameLocator> {
   return app;
 }
 
+function locationBreadcrumb(explorer: Locator): Locator {
+  return explorer.getByRole("navigation", { name: "Location breadcrumb" });
+}
+
 async function openRootExplorer(app: FrameLocator): Promise<Locator> {
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
@@ -30,7 +34,9 @@ async function openRootExplorer(app: FrameLocator): Promise<Locator> {
 
   const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
   await expect(explorer).toBeVisible({ timeout: 20_000 });
-  await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+  const breadcrumb = locationBreadcrumb(explorer);
+  await expect(breadcrumb.getByRole("button", { name: "This Plasmon", exact: true })).toBeVisible();
+  await expect(breadcrumb.getByRole("button")).toHaveCount(1);
   return explorer;
 }
 
@@ -121,22 +127,26 @@ test("#110 packaged Explorer persists Show hidden files through reopen and reloa
 
     // Showing a hidden location affects presentation only. Navigate through the
     // normal FileManager activation path, then reacquire the native dialog after
-    // Windowing updates its title to the current directory name.
+    // Windowing updates its title to the current directory name. Assert the
+    // rendered breadcrumb rather than the responsive address editor, which may
+    // be visually hidden at the packaged viewport.
     await hiddenEntry(explorer, hiddenName).dblclick();
     explorer = app.getByRole("dialog", { name: hiddenName }).last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
-    let address = explorer.getByRole("textbox", { name: "Address" });
-    await expect(address).toHaveValue(`/${hiddenName}`);
+    let breadcrumb = locationBreadcrumb(explorer);
+    await expect(breadcrumb.getByRole("button", { name: hiddenName, exact: true })).toBeVisible();
+    await expect(breadcrumb.getByRole("button", { name: "This Plasmon", exact: true })).toBeVisible();
     await setShowHiddenFiles(explorer, false);
-    await expect(address).toHaveValue(`/${hiddenName}`);
+    await expect(breadcrumb.getByRole("button", { name: hiddenName, exact: true })).toBeVisible();
 
     // Persist the enabled preference for the reopen/reload boundaries below.
     await setShowHiddenFiles(explorer, true);
     await explorer.getByRole("button", { name: "Up one level" }).click();
     explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
-    address = explorer.getByRole("textbox", { name: "Address" });
-    await expect(address).toHaveValue("/");
+    breadcrumb = locationBreadcrumb(explorer);
+    await expect(breadcrumb.getByRole("button", { name: "This Plasmon", exact: true })).toBeVisible();
+    await expect(breadcrumb.getByRole("button")).toHaveCount(1);
     await expect(hiddenEntry(explorer, hiddenName)).toHaveAttribute("data-fm-node-id", nodeId);
 
     await explorer.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
