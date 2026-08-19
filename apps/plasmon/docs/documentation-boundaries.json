@@ -5,12 +5,14 @@
     {
       "path": "apps/plasmon/src/os",
       "children": "directories",
-      "classification": "boundary"
+      "nonBoundaryChildren": []
     },
     {
       "path": "apps/plasmon/src/native-apps",
       "children": "directories",
-      "classification": "boundary"
+      "nonBoundaryChildren": [
+        "shared"
+      ]
     }
   ],
   "boundaries": [
