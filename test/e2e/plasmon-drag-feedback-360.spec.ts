@@ -3,16 +3,21 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
-async function launchPlasmon(page: import("@playwright/test").Page) {
+async function authenticateAndLaunchPlasmon(page: import("@playwright/test").Page) {
   const runtime = resolveLocalNeutronRuntime();
-  const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
-  await page.goto(kernelUrl);
   await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
   const principal = await page.evaluate((seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed), runtime.developerIdentitySeed);
   expect(principal).toBe(runtime.developerIdentityPrincipal);
   await page.locator('[data-tid="launcher-open"]').click();
   await page.locator('[data-tid="launcher-tile-plasmon-main"]').click();
+}
+
+async function launchPlasmon(page: import("@playwright/test").Page) {
+  const runtime = resolveLocalNeutronRuntime();
+  const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
+  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  await page.goto(kernelUrl);
+  await authenticateAndLaunchPlasmon(page);
   const selector = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
   const iframe = page.locator(selector).first();
   const frame = page.frameLocator(selector).first();
@@ -80,35 +85,47 @@ test("#360 Desktop item moves into an already-open folder window", async ({ page
     await expect(root).toBeVisible();
     await root.dblclick();
 
+    const setupExplorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
+    await expect(setupExplorer).toHaveCount(1);
+    const setupAddress = setupExplorer.getByRole("textbox", { name: "Address" });
+    await expect(setupAddress).toHaveValue("/");
+    const setupFiles = setupExplorer.getByRole("listbox", { name: "Files" });
+    const setupCommandBar = setupFiles.getByRole("toolbar", { name: "File commands" });
+
+    // Create a normal filesystem resource in /Desktop through the production
+    // Explorer/FileManager command path. Remount Plasmon after setup so this test
+    // does not accidentally depend on cross-FileManager live-refresh behavior;
+    // #360 owns the subsequent pointer/drop journey, not unrelated refresh policy.
+    await setupAddress.fill("/Desktop");
+    await setupAddress.press("Enter");
+    await expect(setupAddress).toHaveValue("/Desktop");
+    await setupCommandBar.getByRole("button", { name: "New Text Document" }).click();
+    const rename = setupFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
+    await expect(rename).toBeVisible();
+    const createdName = await rename.inputValue();
+    await rename.press("Enter");
+    const explorerSource = setupFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
+    await expect(explorerSource).toBeVisible();
+    const sourceId = await explorerSource.getAttribute("data-fm-node-id");
+    if (!sourceId) throw new Error("Created Desktop source has no stable NodeId");
+
+    await page.reload();
+    await authenticateAndLaunchPlasmon(page);
+    await expect(files).toBeVisible({ timeout: 30_000 });
+    const source = files.locator(`[data-fm-node-id="${sourceId}"]`);
+    await expect(source).toBeVisible();
+
+    // Open a fresh Explorer and leave it on Documents. Its FileManager content
+    // surface, not a Documents entry in the source FileManager, must become the
+    // canonical target for the real Desktop drag.
+    const remountedRoot = frame.locator('[data-fm-node-id]', { hasText: "Root" }).first();
+    await expect(remountedRoot).toBeVisible();
+    await remountedRoot.dblclick();
     const explorer = frame.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
     await expect(explorer).toHaveCount(1);
     const address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue("/");
     const explorerFiles = explorer.getByRole("listbox", { name: "Files" });
-    const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
-
-    // Create a normal filesystem resource in /Desktop through the production
-    // Explorer/FileManager command path so the test can then reproduce the human
-    // Desktop -> already-open-folder-window gesture exactly.
-    await address.fill("/Desktop");
-    await address.press("Enter");
-    await expect(address).toHaveValue("/Desktop");
-    await commandBar.getByRole("button", { name: "New Text Document" }).click();
-    const rename = explorerFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
-    await expect(rename).toBeVisible();
-    const createdName = await rename.inputValue();
-    await rename.press("Enter");
-    const explorerSource = explorerFiles.locator('[data-fm-node-id][data-fm-kind="file"]', { hasText: createdName }).first();
-    await expect(explorerSource).toBeVisible();
-    const sourceId = await explorerSource.getAttribute("data-fm-node-id");
-    if (!sourceId) throw new Error("Created Desktop source has no stable NodeId");
-
-    const source = files.locator(`[data-fm-node-id="${sourceId}"]`);
-    await expect(source).toBeVisible();
-
-    // Leave this exact Explorer window open on Documents. The open window's
-    // FileManager content surface, not a Documents entry in the source FileManager,
-    // must become the canonical drop target.
     await address.fill("/Documents");
     await address.press("Enter");
     await expect(address).toHaveValue("/Documents");
