@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { incomingDropPlacementIntent } from "./drop-placement.ts";
+import {
+  dispatchIncomingDropPlacement,
+  FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT,
+  incomingDropPlacementIntent,
+  type IncomingDropPlacementRequest,
+} from "./drop-placement.ts";
 
 test("#371 incoming placement preserves the translated ghost top-left in target coordinates", () => {
   const intent = incomingDropPlacementIntent([
@@ -32,4 +37,30 @@ test("#371 grouped incoming placement keeps each stable NodeId and relative sour
     { id: "a", x: 780, y: 170 },
     { id: "b", x: 780, y: 274 },
   ]);
+});
+
+test("#371 target placement is only committed when the successful move invokes its deferred commit", async () => {
+  const intent = incomingDropPlacementIntent([
+    { id: "file-a", left: 100, top: 80, width: 92, height: 88 },
+  ], { dx: 40, dy: 50 }, {
+    left: 10,
+    top: 20,
+    width: 800,
+    height: 600,
+  });
+  const target = new EventTarget();
+  let commitCalls = 0;
+
+  target.addEventListener(FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT, (event) => {
+    const request = (event as CustomEvent<IncomingDropPlacementRequest>).detail;
+    request.commit = async () => { commitCalls += 1; };
+    event.preventDefault();
+  });
+
+  const commit = dispatchIncomingDropPlacement(target, intent);
+  expect(commit).not.toBeNull();
+  expect(commitCalls).toBe(0);
+
+  await commit?.();
+  expect(commitCalls).toBe(1);
 });
