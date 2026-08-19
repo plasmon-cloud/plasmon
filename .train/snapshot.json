@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-19T22:00:13.935186Z",
+  "captured_at": "2026-08-19T22:52:26.897869Z",
   "counts": {
-    "issues": 101,
-    "open_issues": 45,
-    "open_product_prs": 12
+    "issues": 107,
+    "open_issues": 51,
+    "open_product_prs": 13
   },
-  "generation": "48cff69ec193242de1352045e6cbc6b296518675",
+  "generation": "355e9aef5a8b939f2848fd104c1311c540e834fb",
   "issues": [
     {
       "area": "Repo",
@@ -2242,6 +2242,122 @@
       "type": null,
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/374"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [
+        "release-blocker"
+      ],
+      "number": 377,
+      "open": true,
+      "open_pr": 379,
+      "priority": null,
+      "product": true,
+      "title": "Remove persistent FileManager move-completion text from end-user surfaces",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/377"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [],
+      "number": 380,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Make repository docs authoritative for Plasmon project bootstrap",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/380"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [],
+      "number": 381,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Define the current Plasmon documentation boundary registry",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/381"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [],
+      "number": 382,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Generate and validate the Plasmon documentation boundary index",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/382"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [],
+      "number": 383,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Add documentation review fingerprints for owned Plasmon implementation",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/383"
+    },
+    {
+      "area": null,
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": null,
+      "effort": null,
+      "labels": [],
+      "number": 384,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Enforce Plasmon documentation boundaries and freshness in the fast test lane",
+      "type": null,
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/384"
     }
   ],
   "milestone": "0.1.0-r2",
@@ -3708,34 +3824,118 @@
       "base_valid": true,
       "checks": [
         {
-          "conclusion": null,
-          "name": "Packaged refactor smoke",
-          "status": "queued",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32306697373/job/96240903640"
+          "conclusion": "failure",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96246968368"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185134/job/96246621061"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 8/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635601"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe 9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635541"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 7/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635520"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635461"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 1/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635447"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635445"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 3/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635427"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 2/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635418"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 5/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635415"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe 4/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635410"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245597656"
+        },
+        {
+          "conclusion": "failure",
           "name": "Packaged Playwright specialist acceptance",
-          "status": "queued",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32306697372/job/96240897679"
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185187/job/96245494638"
         },
         {
-          "conclusion": null,
-          "name": "Fast Bun tests",
-          "status": "queued",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32306697346/job/96240890490"
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185141/job/96245490887"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185332/job/96245482051"
+        },
+        {
+          "conclusion": "success",
           "name": "Determine Kernel CI applicability",
-          "status": "queued",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32306697380/job/96240890227"
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185134/job/96245404538"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185084/job/96245404532"
         }
       ],
-      "ci": "running",
+      "ci": "unknown_red",
       "conflict": false,
       "draft": false,
-      "head": "cfeb8b30df3a6c85d6de1bb43c085bb1110ba332",
+      "head": "efcb63a393a9c723683156084a9327874063dca9",
       "head_branch": "work/bug/issue371",
       "issue": 371,
       "mergeable_state": "blocked",
@@ -3743,12 +3943,139 @@
       "review": "pending",
       "state": "open",
       "title": "#371 Preserve Explorer-to-Desktop drop placement",
-      "updated_at": "2026-08-19T22:00:07Z",
+      "updated_at": "2026-08-19T22:18:11Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/372"
+    },
+    {
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
+      "checks": [
+        {
+          "conclusion": "failure",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96228231199"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 4/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741731"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 7/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741697"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741671"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741670"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 2/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741603"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 1/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741598"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741584"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 8/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741581"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 3/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741580"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe 5/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226741554"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996596/job/96226702820"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996546/job/96226561448"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996418/job/96226555604"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996432/job/96226542827"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996540/job/96226413501"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996673/job/96226413236"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32301996673/job/96226375093"
+        }
+      ],
+      "ci": "flake",
+      "conflict": false,
+      "draft": true,
+      "head": "8bc32f5b41343b7db972376424bf505c94a6cd9b",
+      "head_branch": "agent/377-remove-move-completion-status",
+      "issue": 377,
+      "mergeable_state": "blocked",
+      "number": 379,
+      "review": "pending",
+      "state": "open",
+      "title": "#377 Remove persistent move-completion status from FileManager",
+      "updated_at": "2026-08-19T21:05:17Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/379"
     }
   ],
   "repo": "plasmon-cloud/plasmon",
   "schema": "plasmon-train-snapshot-v1",
   "target": "release/0.1.0-r2",
-  "target_sha": "fc68075f0b83abeffe0b8b2014a519d1b8f9440f"
+  "target_sha": "a8b7f806a2ded7d037b5d6d7fc355ddaf5e170ad"
 }
