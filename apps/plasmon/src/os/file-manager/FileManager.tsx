@@ -249,6 +249,10 @@ export function FileManager({
       void commands.createShortcutFromSelection();
       return;
     }
+    if (action === "sendToDesktop") {
+      void commands.sendSelectionToDesktop();
+      return;
+    }
     if (!contextNode) return;
 
     if (action === "open") {
