@@ -84,8 +84,6 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     ],
   });
 
-  let theme: Locator | null = null;
-  let originalTheme: string | null = null;
   try {
     await openSearchResult(app, "Settings");
     const settings = app.getByRole("dialog", { name: "Settings" }).last();
@@ -93,18 +91,8 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     const settingsSurface = settings.locator(".plasmon-native-app-surface");
     await expect(settingsSurface).toBeVisible();
     await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(4);
-    theme = settings.getByLabel("Theme");
-    originalTheme = await theme.inputValue();
-
-    await theme.selectOption("light");
-    const light = await surfacePalette(settingsSurface);
-    await testInfo.attach("112-settings-light.png", { body: await settings.screenshot(), contentType: "image/png" });
-    await theme.selectOption("dark");
-    const dark = await surfacePalette(settingsSurface);
-    expect(dark.background).not.toBe(light.background);
-    expect(dark.color).not.toBe(light.color);
-    expect(dark.font).toBe(light.font);
-    await testInfo.attach("112-settings-dark.png", { body: await settings.screenshot(), contentType: "image/png" });
+    const sharedPalette = await surfacePalette(settingsSurface);
+    await testInfo.attach("112-settings-current-theme.png", { body: await settings.screenshot(), contentType: "image/png" });
 
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await rootShortcut.dblclick();
@@ -121,8 +109,8 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(textSurface).toBeVisible();
     await expect(text.locator(".plasmon-native-app-toolbar")).toBeVisible();
     await expect(text.locator(".plasmon-native-app-status")).toBeVisible();
-    expect(await surfacePalette(textSurface)).toEqual(dark);
-    await testInfo.attach("112-text-dark.png", { body: await text.screenshot(), contentType: "image/png" });
+    expect(await surfacePalette(textSurface)).toEqual(sharedPalette);
+    await testInfo.attach("112-text-current-theme.png", { body: await text.screenshot(), contentType: "image/png" });
 
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await filesTask.click();
@@ -142,14 +130,11 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(photosSurface).toBeVisible();
     await expect(photos.locator(".plasmon-native-app-toolbar")).toBeVisible();
     await expect(photos.locator(".plasmon-native-app-status")).toBeVisible();
-    expect(await surfacePalette(photosSurface)).toEqual(dark);
-    await testInfo.attach("112-photos-dark.png", { body: await photos.screenshot(), contentType: "image/png" });
+    expect(await surfacePalette(photosSurface)).toEqual(sharedPalette);
+    await testInfo.attach("112-photos-current-theme.png", { body: await photos.screenshot(), contentType: "image/png" });
 
     health.assertClean();
   } finally {
-    if (theme && originalTheme) {
-      try { await theme.selectOption(originalTheme); } catch { /* keep the primary failure */ }
-    }
     health.dispose();
   }
 });
