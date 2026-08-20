@@ -2,8 +2,8 @@ name: Plasmon Train Snapshot
 run-name: Plasmon Train Snapshot ${{ github.sha }}
 
 # Install this exact file on branch automation/train-snapshot in
-# plasmon-cloud/plasmon. A change to the trigger file refreshes one normalized
-# read model for the train. Python does not crawl GitHub itself.
+# plasmon-cloud/plasmon. The trigger commit is the queued signal; this helper
+# publishes .train/status.json for connector-visible running/terminal state.
 
 on:
   workflow_dispatch:
@@ -29,6 +29,7 @@ env:
   TARGET_BRANCH: release/0.1.0-r2
   MILESTONE_TITLE: 0.1.0-r2
   SNAPSHOT_PATH: .train/snapshot.json
+  STATUS_PATH: .train/status.json
   ARTIFACT_NAME: plasmon-train-snapshot
 
 jobs:
@@ -39,6 +40,28 @@ jobs:
         with:
           ref: automation/train-snapshot
           fetch-depth: 1
+
+      - name: Publish running status
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, json, os
+          from pathlib import Path
+          path = Path(os.environ["STATUS_PATH"])
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps({
+              "schema": "plasmon-train-bootstrap-status-v1",
+              "generation": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "state": "running",
+              "conclusion": None,
+              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          git config user.name "plasmon-train-snapshot"
+          git config user.email "plasmon-train-snapshot@users.noreply.github.com"
+          git add "$STATUS_PATH"
+          git commit -m "Mark Plasmon train snapshot running"
+          git push origin HEAD:automation/train-snapshot
 
       - name: Build normalized train snapshot
         env:
@@ -64,11 +87,10 @@ jobs:
 
           def gh_pages(path, params=None):
               params = params or {}
-              page = 1
-              rows = []
+              page, rows = 1, []
               while True:
                   suffix = "&" if "?" in path else "?"
-                  query = "&".join([*(f"{k}={v}" for k,v in params.items()), "per_page=100", f"page={page}"])
+                  query = "&".join([*(f"{k}={v}" for k, v in params.items()), "per_page=100", f"page={page}"])
                   batch = gh(path + suffix + query)
                   if not isinstance(batch, list):
                       return batch
@@ -80,8 +102,10 @@ jobs:
           def labels(issue):
               out = []
               for row in issue.get("labels") or []:
-                  if isinstance(row, str): out.append(row)
-                  elif isinstance(row, dict) and row.get("name"): out.append(row["name"])
+                  if isinstance(row, str):
+                      out.append(row)
+                  elif isinstance(row, dict) and row.get("name"):
+                      out.append(row["name"])
               return sorted(set(out))
 
           def field_values(number):
@@ -97,25 +121,24 @@ jobs:
                       out[str(name)] = str(option["name"])
               return out
 
-          milestones = gh_pages(f"repos/{REPO}/milestones", {"state":"all"})
+          def train_owner(body):
+              match = re.search(r"(?im)^\s*Train-Owner\s*:\s*(\S[^\r\n]*)$", str(body or ""))
+              return match.group(1).strip() if match else None
+
+          milestones = gh_pages(f"repos/{REPO}/milestones", {"state": "all"})
           milestone = next((x for x in milestones if x.get("title") == MILESTONE_TITLE), None)
           if not milestone:
               raise SystemExit(f"milestone {MILESTONE_TITLE!r} not found")
 
-          raw_issues = gh_pages(
-              f"repos/{REPO}/issues",
-              {"milestone": milestone["number"], "state":"all", "direction":"asc"},
-          )
+          raw_issues = gh_pages(f"repos/{REPO}/issues", {"milestone": milestone["number"], "state": "all", "direction": "asc"})
           raw_issues = [x for x in raw_issues if "pull_request" not in x]
           target_ref = gh(f"repos/{REPO}/git/ref/heads/{TARGET.replace('/', '%2F')}")
           target_sha = target_ref["object"]["sha"]
-
-          raw_prs = gh_pages(f"repos/{REPO}/pulls", {"state":"open", "sort":"created", "direction":"asc"})
+          raw_prs = gh_pages(f"repos/{REPO}/pulls", {"state": "open", "sort": "created", "direction": "asc"})
           lane_numbers = {int(x["number"]) for x in raw_issues}
 
           def map_pr(pr):
-              body = str(pr.get("body") or "")
-              title = str(pr.get("title") or "")
+              body, title = str(pr.get("body") or ""), str(pr.get("title") or "")
               for source, pattern in [
                   (body, r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b"),
                   (body, r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b"),
@@ -126,26 +149,21 @@ jobs:
                       return int(match.group(1))
               return None
 
-          pr_to_issue = {}
-          for pr in raw_prs:
-              issue = map_pr(pr)
-              if issue:
-                  pr_to_issue[int(pr["number"])] = issue
+          pr_to_issue = {int(pr["number"]): issue for pr in raw_prs if (issue := map_pr(pr))}
           issue_to_pr = {issue: pr for pr, issue in pr_to_issue.items()}
-          open_pr_heads = {str(pr.get("head",{}).get("ref") or "") for pr in raw_prs}
+          open_pr_heads = {str(pr.get("head", {}).get("ref") or "") for pr in raw_prs}
 
-          dependency_map = {}
-          dependency_states = {}
+          dependency_map, dependency_states = {}, {}
           for issue in raw_issues:
               number = int(issue["number"])
               try:
                   deps = gh_pages(f"repos/{REPO}/issues/{number}/dependencies/blocked_by")
               except Exception:
                   deps = []
-              nums = []
-              states = {}
+              nums, states = [], {}
               for dep in deps if isinstance(deps, list) else []:
-                  if dep.get("number") is None: continue
+                  if dep.get("number") is None:
+                      continue
                   n = int(dep["number"])
                   nums.append(n)
                   states[str(n)] = str(dep.get("state") or "unknown")
@@ -163,22 +181,21 @@ jobs:
               number = int(raw["number"])
               fields = field_values(number)
               labs = labels(raw)
-              area = fields.get("Area")
-              product = not any(x.lower().startswith("ci:") for x in labs) and not str(raw.get("title") or "").startswith("[r2 CI]")
-              deps = dependency_map[number]
-              states = dependency_states[number]
-              dependencies_ready = all(str(states.get(str(n), "unknown")).lower() in {"closed","completed","merged","integrated","superseded","waived"} for n in deps)
+              ci_owned = any(x.lower().startswith("ci:") for x in labs) or str(raw.get("title") or "").startswith("[r2 CI]")
+              deps, states = dependency_map[number], dependency_states[number]
+              dependencies_ready = all(str(states.get(str(n), "unknown")).lower() in {"closed", "completed", "merged", "integrated", "superseded", "waived"} for n in deps)
               issues.append({
                   "number": number,
                   "title": raw.get("title") or "",
                   "open": str(raw.get("state") or "open").lower() == "open",
-                  "product": product,
+                  "product": not ci_owned,
+                  "ci_owned": ci_owned,
                   "assignees": [x.get("login") for x in raw.get("assignees") or [] if x.get("login")],
                   "labels": labs,
                   "priority": fields.get("Priority"),
                   "desire": fields.get("Desire"),
                   "effort": fields.get("Effort"),
-                  "area": area,
+                  "area": fields.get("Area"),
                   "type": (raw.get("type") or {}).get("name") if isinstance(raw.get("type"), dict) else raw.get("type"),
                   "blocked_by": deps,
                   "dependency_states": states,
@@ -186,7 +203,9 @@ jobs:
                   "unlocks": unlocks.get(number, 0),
                   "open_pr": issue_to_pr.get(number),
                   "url": raw.get("html_url"),
+                  "updated_at": raw.get("updated_at"),
               })
+          issue_rows = {int(x["number"]): x for x in issues}
 
           def latest_check_runs(head_sha):
               payload = gh(f"repos/{REPO}/commits/{head_sha}/check-runs?filter=latest&per_page=100")
@@ -200,10 +219,9 @@ jobs:
           def ci_state(checks):
               if not checks:
                   return "pending"
-              running = [x for x in checks if str(x.get("status") or "").lower() != "completed"]
-              if running:
+              if any(str(x.get("status") or "").lower() != "completed" for x in checks):
                   return "running"
-              failed = [x for x in checks if str(x.get("conclusion") or "").lower() not in {"success","skipped","neutral"}]
+              failed = [x for x in checks if str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
               if not failed:
                   return "green"
               names = {str(x.get("name") or "").lower() for x in failed}
@@ -211,14 +229,33 @@ jobs:
                   return "flake"
               return "unknown_red"
 
-          def review_state(number, head_sha):
+          def review_facts(number, head_sha):
               reviews = gh_pages(f"repos/{REPO}/pulls/{number}/reviews")
-              exact = [x for x in reviews if str(x.get("commit_id") or "") == head_sha]
-              if any(str(x.get("state") or "").upper() == "CHANGES_REQUESTED" for x in exact):
-                  return "changes_requested"
-              if any(str(x.get("state") or "").upper() == "APPROVED" for x in exact):
-                  return "approved"
-              return "pending"
+              latest_by_user = {}
+              for row in reviews:
+                  user = str((row.get("user") or {}).get("login") or row.get("user", {}).get("id") or "unknown")
+                  if int(row.get("id") or 0) >= int((latest_by_user.get(user) or {}).get("id") or 0):
+                      latest_by_user[user] = row
+              blocking = [x for x in latest_by_user.values() if str(x.get("state") or "").upper() == "CHANGES_REQUESTED"]
+              blocking.sort(key=lambda x: int(x.get("id") or 0), reverse=True)
+              blocker = blocking[0] if blocking else None
+              exact = [x for x in latest_by_user.values() if str(x.get("commit_id") or "") == head_sha]
+              if blocker:
+                  review = "changes_requested"
+              elif any(str(x.get("state") or "").upper() == "APPROVED" for x in exact):
+                  review = "approved"
+              else:
+                  review = "pending"
+              normalized = None
+              if blocker:
+                  normalized = {
+                      "id": blocker.get("id"),
+                      "state": blocker.get("state"),
+                      "commit_id": blocker.get("commit_id"),
+                      "body": blocker.get("body") or "",
+                      "user": (blocker.get("user") or {}).get("login"),
+                  }
+              return review, normalized
 
           prs = []
           for raw in raw_prs:
@@ -227,12 +264,12 @@ jobs:
               if issue is None:
                   continue
               detail = gh(f"repos/{REPO}/pulls/{number}")
-              head_sha = detail["head"]["sha"]
-              base = detail["base"]["ref"]
+              head_sha, base = detail["head"]["sha"], detail["base"]["ref"]
               checks = latest_check_runs(head_sha)
               mergeable_state = str(detail.get("mergeable_state") or "unknown").lower()
               conflict = detail.get("mergeable") is False and mergeable_state == "dirty"
-              base_valid = base == TARGET or base in open_pr_heads
+              review, blocker = review_facts(number, head_sha)
+              issue_row = issue_rows[issue]
               prs.append({
                   "number": number,
                   "issue": issue,
@@ -241,18 +278,17 @@ jobs:
                   "head": head_sha,
                   "head_branch": detail["head"]["ref"],
                   "base": base,
-                  "base_valid": base_valid,
+                  "base_valid": base == TARGET or base in open_pr_heads,
                   "draft": bool(detail.get("draft")),
+                  "owner": train_owner(detail.get("body")),
+                  "product": bool(issue_row["product"]),
+                  "ci_owned": bool(issue_row["ci_owned"]),
                   "conflict": bool(conflict),
                   "mergeable_state": mergeable_state,
-                  "review": review_state(number, head_sha),
+                  "review": review,
+                  "blocking_review": blocker,
                   "ci": ci_state(checks),
-                  "checks": [{
-                      "name": x.get("name"),
-                      "status": x.get("status"),
-                      "conclusion": x.get("conclusion"),
-                      "url": x.get("details_url"),
-                  } for x in checks],
+                  "checks": [{"name": x.get("name"), "status": x.get("status"), "conclusion": x.get("conclusion"), "url": x.get("details_url")} for x in checks],
                   "url": detail.get("html_url"),
                   "updated_at": detail.get("updated_at"),
               })
@@ -264,20 +300,21 @@ jobs:
               "target": TARGET,
               "target_sha": target_sha,
               "milestone": MILESTONE_TITLE,
-              "generation": os.environ.get("GITHUB_SHA"),
+              "generation": os.environ["GITHUB_SHA"],
               "issues": issues,
               "prs": prs,
               "counts": {
                   "issues": len(issues),
                   "open_issues": sum(1 for x in issues if x["open"]),
-                  "open_product_prs": len(prs),
+                  "open_product_prs": sum(1 for x in prs if x["product"]),
+                  "open_ci_prs": sum(1 for x in prs if x["ci_owned"]),
               },
           }
           OUT.parent.mkdir(parents=True, exist_ok=True)
           tmp = OUT.with_suffix(".tmp")
           tmp.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           tmp.replace(OUT)
-          print(f"wrote {OUT} with {len(issues)} issues and {len(prs)} Product PRs")
+          print(f"wrote {OUT} with {len(issues)} issues and {len(prs)} lane PRs")
           PY
 
       - name: Upload stable diagnostic artifact
@@ -288,14 +325,41 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish stable branch snapshot
+      - name: Publish stable snapshot and success status
         run: |
-          git config user.name "plasmon-train-snapshot"
-          git config user.email "plasmon-train-snapshot@users.noreply.github.com"
-          git add "$SNAPSHOT_PATH"
-          if git diff --cached --quiet; then
-            echo "Snapshot content unchanged."
-            exit 0
-          fi
+          python3 - <<'PY'
+          import datetime as dt, json, os
+          from pathlib import Path
+          path = Path(os.environ["STATUS_PATH"])
+          path.write_text(json.dumps({
+              "schema": "plasmon-train-bootstrap-status-v1",
+              "generation": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "state": "completed",
+              "conclusion": "success",
+              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          git add "$SNAPSHOT_PATH" "$STATUS_PATH"
           git commit -m "Refresh Plasmon train snapshot"
           git push origin HEAD:automation/train-snapshot
+
+      - name: Publish failure status
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, json, os
+          from pathlib import Path
+          path = Path(os.environ["STATUS_PATH"])
+          path.write_text(json.dumps({
+              "schema": "plasmon-train-bootstrap-status-v1",
+              "generation": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "state": "completed",
+              "conclusion": "failure",
+              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          git add "$STATUS_PATH"
+          git commit -m "Mark Plasmon train snapshot failed" || true
+          git push origin HEAD:automation/train-snapshot || true
