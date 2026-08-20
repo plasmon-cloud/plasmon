@@ -7,8 +7,14 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
  * Adopted from Luna TDD-A's #191 browser RED gate as production regression
  * coverage. It consumes #187's browser-health ledger and canonical packaged
  * Plasmon environment; it does not create a component harness.
+ *
+ * #361 tightens the remaining rename presentation gap: the active editor may
+ * grow from its content width, but its horizontal cap is the owning Desktop
+ * FileEntry rather than a wider overlay. Keep this smoke focused on #191's
+ * durable contract: rename remains local, tile-bounded, and unable to change
+ * Desktop collision/placement geometry.
  */
-test("#191 — Desktop rename editor stays bounded by its FileEntry tile", async ({ page }) => {
+test("#191/#361 — Desktop rename editor stays inside its FileEntry tile", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -74,11 +80,19 @@ test("#191 — Desktop rename editor stays bounded by its FileEntry tile", async
     const renameBounds = await rename.boundingBox();
     if (!entryBounds || !renameBounds) throw new Error("Desktop FileEntry rename state has no browser bounds");
 
-    expect(renameBounds.x, "rename left edge").toBeGreaterThanOrEqual(entryBounds.x - 1);
-    expect(renameBounds.x + renameBounds.width, "rename right edge")
-      .toBeLessThanOrEqual(entryBounds.x + entryBounds.width + 1);
-    expect(renameBounds.width, "rename width")
-      .toBeLessThanOrEqual(entryBounds.width + 2);
+    const renameRight = renameBounds.x + renameBounds.width;
+    const entryRight = entryBounds.x + entryBounds.width;
+
+    expect(renameBounds.x, "rename stays inside Desktop workspace at left")
+      .toBeGreaterThanOrEqual(filesBounds.x - 1);
+    expect(renameRight, "rename stays inside Desktop workspace at right")
+      .toBeLessThanOrEqual(filesBounds.x + filesBounds.width + 1);
+    expect(renameBounds.x, "rename stays inside owning FileEntry at left")
+      .toBeGreaterThanOrEqual(entryBounds.x - 1);
+    expect(renameRight, "rename stays inside owning FileEntry at right")
+      .toBeLessThanOrEqual(entryRight + 1);
+    expect(renameBounds.width, "rename remains tile-bounded")
+      .toBeLessThanOrEqual(entryBounds.width + 1);
 
     health.assertClean();
   } finally {
