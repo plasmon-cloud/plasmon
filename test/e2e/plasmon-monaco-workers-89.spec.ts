@@ -33,7 +33,7 @@ test.afterEach(async ({ browserName }, testInfo) => {
   );
 });
 
-test("#89 packaged Monaco workers use Program Files authority through the opaque-origin transport", async ({
+test("#89 packaged Monaco workers use Program Files authority through the opaque-origin transport", { tag: ["@r2-quarantine", "@issue-89", "@issue-391"] }, async ({
   page,
   request,
   browserName,
