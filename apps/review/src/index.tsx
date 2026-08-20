@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   callTool,
+  copyToClipboard,
   loadTileContext,
   onAppStateChange,
   type MsgBusEndpointId,
@@ -18,11 +19,13 @@ import { draftAfterReviewAction, settleReviewAction } from "./action_outcome.ts"
 import { formatReviewTime } from "./presentation.ts";
 import type { ReviewSubmission } from "./submission.ts";
 import "./style.scss";
+import "./issue395.scss";
 
 const STATE_TOPIC = "review.state";
 const LOCAL_ACTOR = "human:local";
 const DEFAULT_IMPORT_PATH = "/review-plan.md";
-const DEFAULT_SUBMIT_PATH = "/review-submission.md";
+const DEFAULT_EXPORT_PATH = "/review-submission.md";
+const PLAN_EXAMPLE = `# r2 Human Acceptance\n\n- [ ] Explorer Back returns to the prior folder\n  1. Open Explorer.\n  2. Navigate into two folders.\n  3. Press Back.\n  Expected: Explorer returns to the folder you just left.\n\n- [ ] Markdown files open in Markdown\n  1. Open a .md file from Explorer.\n  Expected: Markdown opens the selected file.`;
 
 export function App() {
   const context = useMemo(() => loadTileContext(), []);
@@ -32,8 +35,12 @@ export function App() {
   const [history, setHistory] = useState<ReviewRevision[]>([]);
   const [newTitle, setNewTitle] = useState("");
   const [newItem, setNewItem] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importTitle, setImportTitle] = useState("");
+  const [importText, setImportText] = useState("");
   const [importPath, setImportPath] = useState(DEFAULT_IMPORT_PATH);
-  const [submitPath, setSubmitPath] = useState(DEFAULT_SUBMIT_PATH);
+  const [exportPath, setExportPath] = useState(DEFAULT_EXPORT_PATH);
+  const [submittedMarkdown, setSubmittedMarkdown] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +59,8 @@ export function App() {
     setAtom(next);
     setHistory(revisions.revisions);
     setSubmission(submissionState.submission);
-    setSubmitPath(submissionState.submission?.path ?? DEFAULT_SUBMIT_PATH);
+    setExportPath(submissionState.submission?.path ?? DEFAULT_EXPORT_PATH);
+    setSubmittedMarkdown("");
     setAtoms((current) => current.map((entry) => entry.atomId === atomId ? next.meta : entry));
     setLastSavedAt(next.meta.updatedAt);
     setUpdatesQueued(false);
@@ -66,7 +74,7 @@ export function App() {
       setAtom(null);
       setHistory([]);
       setSubmission(null);
-      setSubmitPath(DEFAULT_SUBMIT_PATH);
+      setSubmittedMarkdown("");
       return;
     }
     await readAtom(atomId);
@@ -78,9 +86,8 @@ export function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Shared/provider changes are deliberately not pulled into the visible Review
-  // until the reviewer chooses Refresh. Local accepted actions still update the
-  // durable provider immediately.
+  // Shared/provider changes are deliberately queued. The visible Review changes
+  // only when the human chooses Refresh; local accepted actions remain durable.
   useEffect(() => onAppStateChange(STATE_TOPIC, () => setUpdatesQueued(true)), []);
 
   const perform = useCallback(async (work: () => Promise<void>, options: { persisted?: boolean } = {}): Promise<boolean> => {
@@ -110,22 +117,43 @@ export function App() {
     if (!accepted || !createdAtomId) return;
     setNewTitle("");
     await refreshCatalog(createdAtomId);
-    setNotice("Review created. Your local review progress is saved as you record it.");
+    setNotice("Empty Review created. Add checks manually or start another Review from an AI test plan.");
   };
 
-  const importReview = async () => {
+  const importPastedPlan = async () => {
+    if (!importText.trim()) return;
+    let imported: { atomId: string; importedItems: number } | null = null;
+    const accepted = await perform(async () => {
+      imported = await call<{ atomId: string; importedItems: number }>(target, "review_import_text", {
+        commandId: command("import-text"),
+        markdown: importText,
+        ...(importTitle.trim() ? { title: importTitle.trim() } : {}),
+      });
+    }, { persisted: true });
+    if (!accepted || !imported) return;
+    const result = imported as { atomId: string; importedItems: number };
+    setImportText("");
+    setImportTitle("");
+    setImportOpen(false);
+    await refreshCatalog(result.atomId);
+    setNotice(`Created Review with ${result.importedItems} acceptance check${result.importedItems === 1 ? "" : "s"}.`);
+  };
+
+  const importFromFiles = async () => {
+    if (!importPath.trim()) return;
     let imported: { atomId: string; importedItems: number } | null = null;
     const accepted = await perform(async () => {
       imported = await call<{ atomId: string; importedItems: number }>(target, "review_file", {
         action: "import",
-        commandId: command("import"),
+        commandId: command("import-file"),
         path: importPath.trim(),
       });
     }, { persisted: true });
     if (!accepted || !imported) return;
     const result = imported as { atomId: string; importedItems: number };
+    setImportOpen(false);
     await refreshCatalog(result.atomId);
-    setNotice(`Imported ${result.importedItems} acceptance check${result.importedItems === 1 ? "" : "s"}.`);
+    setNotice(`Imported ${result.importedItems} acceptance check${result.importedItems === 1 ? "" : "s"} from Files.`);
   };
 
   const apply = useCallback(async (operation: ReviewOperation): Promise<boolean> => {
@@ -161,9 +189,7 @@ export function App() {
 
   const manualRefresh = () => {
     if (!atom || busy) return;
-    void perform(async () => {
-      await refreshCatalog(atom.meta.atomId);
-    }).then((ok) => {
+    void perform(() => refreshCatalog(atom.meta.atomId)).then((ok) => {
       if (ok) setNotice("Refreshed. You are now seeing the latest queued reviewer updates.");
     });
   };
@@ -171,15 +197,50 @@ export function App() {
   const submitReview = () => {
     if (!atom || busy) return;
     void perform(async () => {
+      const result = await call<{ submission: ReviewSubmission; markdown: string }>(target, "review_submit", {
+        atomId: atom.meta.atomId,
+        expectedRevision: atom.meta.currentRevision,
+      });
+      setSubmission(result.submission);
+      setSubmittedMarkdown(result.markdown);
+      setNotice(`Submitted revision r${atom.meta.currentSequence}. The snapshot is fixed until you Submit again.`);
+    });
+  };
+
+  const showSubmittedSnapshot = () => {
+    if (!atom || !submission || busy) return;
+    void perform(async () => {
+      const result = await call<{ revisionId: string; markdown: string }>(target, "review_render", {
+        atomId: atom.meta.atomId,
+        revisionId: submission.revisionId,
+      });
+      setSubmittedMarkdown(result.markdown);
+    });
+  };
+
+  // Clipboard access must start synchronously from the user gesture. Neutron's
+  // helper proxies the write through the trusted parent page for sandboxed tiles.
+  const copySubmittedSnapshot = () => {
+    if (!submittedMarkdown) return;
+    setError(null);
+    void copyToClipboard(submittedMarkdown).then(
+      () => setNotice("Submitted review copied. Paste it into the AI or engineering conversation that will triage the results."),
+      (cause) => setError(`Could not copy the submitted review. ${message(cause)}`),
+    );
+  };
+
+  const saveSubmittedToFiles = () => {
+    if (!atom || !submission || submission.revisionId !== atom.meta.currentRevision || !exportPath.trim() || busy) return;
+    void perform(async () => {
       const result = await call<{ submission: ReviewSubmission }>(target, "review_file", {
         action: "export",
         atomId: atom.meta.atomId,
         expectedRevision: atom.meta.currentRevision,
-        path: submitPath.trim(),
+        path: exportPath.trim(),
       });
       setSubmission(result.submission);
-      setSubmitPath(result.submission.path);
-      setNotice(`Submitted revision r${atom.meta.currentSequence} to ${result.submission.path}. This snapshot is ready to give to an AI for issue triage.`);
+      setExportPath(result.submission.path ?? exportPath.trim());
+      setNotice(`Saved the submitted snapshot to ${result.submission.path ?? exportPath.trim()}.`);
     });
   };
 
@@ -193,8 +254,8 @@ export function App() {
         <span className="eyebrow">Review</span>
         <h1>{atom?.meta.title ?? "Human acceptance review"}</h1>
         <p>{atom
-          ? "Follow each check in the real OS, record what happened, and come back later without losing your progress."
-          : "Turn an acceptance plan into durable human verification before engineering work is created."}</p>
+          ? "Follow the real OS checks, record what happened, and come back later without losing completed work."
+          : "Paste an AI-generated test plan, perform the checks in Plasmon, then Submit the human evidence."}</p>
       </div>
       <div className="header-actions">
         {atom && <button className={updatesQueued ? "refresh-button has-updates" : "refresh-button"} type="button" disabled={busy} onClick={manualRefresh}>
@@ -203,45 +264,46 @@ export function App() {
         <div className="persistence-status" role="status" aria-live="polite">
           <span className="status-mark" aria-hidden="true" />
           <div><strong>{busy ? "Saving…" : error ? "Action failed" : "Local progress saved"}</strong>
-            <span>{atom ? `Last local save ${formatReviewTime(lastSavedAt ?? atom.meta.updatedAt)}` : "Completed review actions persist locally."}</span>
+            <span>{atom ? `Last local save ${formatReviewTime(lastSavedAt ?? atom.meta.updatedAt)}` : "Pass/Fail results save as you record them."}</span>
           </div>
         </div>
       </div>
     </header>
 
-    {updatesQueued && <div className="banner update" role="status"><strong>Reviewer updates are waiting.</strong><span>They will not change what you see until you choose Refresh.</span></div>}
+    {updatesQueued && <div className="banner update" role="status"><strong>Reviewer updates are waiting.</strong><span>Nothing on this page changes until you choose Refresh.</span></div>}
     {error && <div className="banner error" role="alert"><strong>Action failed.</strong><span>{error}</span></div>}
     {notice && <div className="banner notice" role="status"><strong>Done.</strong><span>{notice}</span></div>}
 
     <div className="review-shell">
       <aside className="review-nav" aria-label="Reviews">
-        <section className="nav-section">
-          <span className="section-kicker">Start</span>
-          <h2>New review</h2>
-          <p className="section-help">Create one manually, or import an AI-generated acceptance plan.</p>
-          <label className="control-label" htmlFor="new-review-title">Review name</label>
-          <input id="new-review-title" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder="r2 human acceptance" />
-          <button className="primary-button full-width" type="button" disabled={busy} onClick={() => void createReview()}>Create review</button>
+        <section className="nav-section start-panel">
+          <span className="section-kicker">Start here</span>
+          <h2>Load a test plan</h2>
+          <p className="section-help">Recommended: paste the checklist produced by the AI. No Files app is required.</p>
+          <button className="primary-button full-width" type="button" disabled={busy} onClick={() => setImportOpen(true)}>Paste AI test plan</button>
           <div className="panel-divider" />
-          <label className="control-label" htmlFor="review-import-path">Import test plan</label>
-          <input id="review-import-path" value={importPath} onChange={(event) => setImportPath(event.target.value)} />
-          <button className="secondary-button full-width" type="button" disabled={busy || !importPath.trim()} onClick={() => void importReview()}>Import AI test plan</button>
+          <details className="empty-review-option">
+            <summary>Or create an empty Review</summary>
+            <label className="control-label" htmlFor="new-review-title">Review name</label>
+            <input id="new-review-title" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder="r2 human acceptance" />
+            <button className="secondary-button full-width" type="button" disabled={busy} onClick={() => void createReview()}>Create empty Review</button>
+          </details>
         </section>
 
         <section className="nav-section">
-          <div className="section-heading"><div><span className="section-kicker">Saved</span><h2>Your reviews</h2></div><span className="count-badge">{atoms.length}</span></div>
+          <div className="section-heading"><div><span className="section-kicker">Saved locally</span><h2>Your reviews</h2></div><span className="count-badge">{atoms.length}</span></div>
           {loading && <p className="muted">Loading Reviews…</p>}
           {!loading && atoms.length === 0 && <p className="muted">No Reviews yet.</p>}
           <div className="atom-list">
             {atoms.map((entry) => <button key={entry.atomId} type="button" className={entry.atomId === atom?.meta.atomId ? "atom-choice active" : "atom-choice"} disabled={busy} onClick={() => void perform(() => readAtom(entry.atomId))}>
-              <strong>{entry.title}</strong><span>Updated {formatReviewTime(entry.updatedAt)}</span>
+              <strong>{entry.title}</strong><span>Updated {formatReviewTime(entry.updatedAt)} · r{entry.currentSequence}</span>
             </button>)}
           </div>
         </section>
       </aside>
 
       <section className="review-workspace" aria-label="Current Review workspace">
-        {!loading && !atom && <FirstRunState />}
+        {!loading && !atom && <FirstRunState onImport={() => setImportOpen(true)} />}
         {loading && <div className="workspace-empty"><h2>Opening your Reviews…</h2></div>}
         {atom && <>
           <div className="workspace-heading">
@@ -257,12 +319,12 @@ export function App() {
           <div className="progress-track" aria-hidden="true"><span style={{ width: `${progress!.total ? (progress!.reviewed / progress!.total) * 100 : 0}%` }} /></div>
 
           <div className="add-item-panel">
-            <div><label className="control-label" htmlFor="new-review-item">Add acceptance check</label><p>Use this for a criterion a human can verify in the real OS.</p></div>
-            <div className="inline-control"><input id="new-review-item" value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addItem(); }} placeholder="e.g. Back navigation returns to the prior folder" />
+            <div><label className="control-label" htmlFor="new-review-item">Add another check</label><p>For quick additions. AI plans should normally be pasted as a group.</p></div>
+            <div className="inline-control"><input id="new-review-item" value={newItem} onChange={(event) => setNewItem(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addItem(); }} placeholder="What should the human verify?" />
               <button className="primary-button" type="button" disabled={busy || !newItem.trim()} onClick={addItem}>Add check</button></div>
           </div>
 
-          {atom.items.length === 0 && <div className="workspace-empty compact"><span className="section-kicker">No checks yet</span><h3>Import or add acceptance checks</h3><p>An AI-generated plan should say what to test, how a human should perform it in the real OS, and what successful behavior looks like.</p></div>}
+          {atom.items.length === 0 && <div className="workspace-empty compact"><span className="section-kicker">No checks yet</span><h3>This Review is empty</h3><p>Add a check above, or create another Review by pasting the AI-generated test plan.</p><button className="secondary-button" type="button" onClick={() => setImportOpen(true)}>Paste a test plan</button></div>}
 
           <div className="review-items">
             {atom.items.map((item, index) => <ReviewItemCard key={item.itemId} item={item} index={index + 1} atom={atom} busy={busy} apply={apply} />)}
@@ -272,23 +334,36 @@ export function App() {
 
       <aside className="review-inspector" aria-label="Review context and submission">
         <section className="side-panel submit-panel">
-          <span className="section-kicker">Publish</span><h2>Submit review</h2>
-          <p className="section-help">Recorded results are saved immediately. The AI-facing snapshot changes only when you choose Submit.</p>
+          <span className="section-kicker">When you are ready</span><h2>Submit review</h2>
+          <p className="section-help">Your Pass/Fail work is already saved. Submit freezes the exact current revision into the snapshot that an AI or engineer should consume.</p>
           {atom && <div className={hasUnsubmittedChanges ? "submission-state pending" : "submission-state current"}>
-            <strong>{hasUnsubmittedChanges ? "Changes not submitted" : "Submitted snapshot is current"}</strong>
+            <strong>{hasUnsubmittedChanges ? "Current changes are not submitted" : "Submitted snapshot is current"}</strong>
             <span>{submission ? `Last submitted ${submission.revisionId} · ${formatReviewTime(submission.submittedAt)}` : "Nothing has been submitted yet."}</span>
           </div>}
-          <label className="control-label" htmlFor="submit-path">Submission file</label>
-          <input id="submit-path" value={submitPath} onChange={(event) => setSubmitPath(event.target.value)} />
-          <button className="submit-button full-width" type="button" disabled={busy || !atom || !submitPath.trim()} onClick={submitReview}>Submit</button>
-          <p className="fine-print">Submit writes a deliberate snapshot for an AI or engineer to consume. It does not give an AI live access to this Review.</p>
+          <button className="submit-button full-width" type="button" disabled={busy || !atom} onClick={submitReview}>Submit current review</button>
+          <p className="fine-print">Submit does not silently send data anywhere in this build. It creates the deliberate AI-facing snapshot.</p>
+
+          {submission && !submittedMarkdown && <button className="secondary-button full-width snapshot-action" type="button" disabled={busy} onClick={showSubmittedSnapshot}>Show submitted snapshot</button>}
+          {submittedMarkdown && <div className="submission-preview-wrap">
+            <label className="control-label" htmlFor="submitted-review">Submitted Markdown</label>
+            <textarea id="submitted-review" aria-label="Submitted review snapshot" readOnly value={submittedMarkdown} />
+            <button className="secondary-button full-width" type="button" onClick={copySubmittedSnapshot}>Copy for AI</button>
+          </div>}
+
+          <details className="optional-files">
+            <summary>Save a Markdown file (optional)</summary>
+            <p className="fine-print">Only use this when the Files app is installed. Copy for AI works without Files.</p>
+            <label className="control-label" htmlFor="export-path">Files path</label>
+            <input id="export-path" value={exportPath} onChange={(event) => setExportPath(event.target.value)} />
+            <button className="secondary-button full-width" type="button" disabled={busy || !atom || !submission || hasUnsubmittedChanges || !exportPath.trim()} onClick={saveSubmittedToFiles}>Save submitted Markdown</button>
+          </details>
         </section>
 
         <section className="side-panel collaboration-panel">
-          <span className="section-kicker">Collaboration</span><h2>Reviewer context</h2>
-          <p className="section-help">Each reviewer keeps independent results. Other reviewers' queued changes appear only after Refresh.</p>
+          <span className="section-kicker">People</span><h2>Reviewer context</h2>
+          <p className="section-help">Each person keeps an independent result. Queued changes from others appear only when you choose Refresh.</p>
           {atom ? <ReviewerSummary atom={atom} /> : <p className="muted">Open a Review to see reviewer activity.</p>}
-          <div className="availability-row"><span className="availability-icon">—</span><div><strong>MTN live sharing is not wired yet</strong><span>The UI already follows explicit Refresh semantics so shared updates cannot interrupt a review in progress.</span></div></div>
+          <p className="fine-print collaboration-note">Live MTN sharing is the next integration step; this build already preserves the explicit Refresh boundary.</p>
         </section>
 
         <section className="side-panel history-panel">
@@ -309,17 +384,60 @@ export function App() {
         </section>
       </aside>
     </div>
+
+    {importOpen && <ImportDialog
+      busy={busy}
+      title={importTitle}
+      text={importText}
+      filePath={importPath}
+      onTitle={setImportTitle}
+      onText={setImportText}
+      onFilePath={setImportPath}
+      onCancel={() => setImportOpen(false)}
+      onPasteImport={() => void importPastedPlan()}
+      onFileImport={() => void importFromFiles()}
+    />}
   </main>;
 }
 
-function FirstRunState() {
+function ImportDialog({ busy, title, text, filePath, onTitle, onText, onFilePath, onCancel, onPasteImport, onFileImport }: {
+  busy: boolean;
+  title: string;
+  text: string;
+  filePath: string;
+  onTitle: (value: string) => void;
+  onText: (value: string) => void;
+  onFilePath: (value: string) => void;
+  onCancel: () => void;
+  onPasteImport: () => void;
+  onFileImport: () => void;
+}) {
+  return <div className="review-dialog-backdrop" role="presentation">
+    <section className="review-dialog" role="dialog" aria-modal="true" aria-labelledby="import-plan-title">
+      <div className="dialog-heading"><div><span className="section-kicker">New review</span><h2 id="import-plan-title">Paste AI test plan</h2><p>Paste Markdown/TODO text. Each top-level bullet or checkbox becomes one acceptance check; indented lines stay with that check as the human test instructions.</p></div><button className="dialog-close" type="button" disabled={busy} onClick={onCancel} aria-label="Close import">×</button></div>
+      <label className="control-label" htmlFor="import-review-title">Review name <span className="optional-label">optional</span></label>
+      <input id="import-review-title" value={title} onChange={(event) => onTitle(event.target.value)} placeholder="Uses the Markdown heading when left blank" />
+      <label className="control-label" htmlFor="import-plan-text">Test plan</label>
+      <textarea id="import-plan-text" className="plan-textarea" value={text} onChange={(event) => onText(event.target.value)} placeholder={PLAN_EXAMPLE} autoFocus />
+      <div className="dialog-actions"><button className="secondary-button" type="button" disabled={busy} onClick={onCancel}>Cancel</button><button className="primary-button" type="button" disabled={busy || !text.trim()} onClick={onPasteImport}>Create Review from plan</button></div>
+      <details className="optional-files import-files">
+        <summary>Open a Markdown/TODO file from Files (optional)</summary>
+        <p className="fine-print">This requires the separate Files app. If it is not installed, paste the plan above instead.</p>
+        <div className="file-path-row"><input aria-label="Import Files path" value={filePath} onChange={(event) => onFilePath(event.target.value)} /><button className="secondary-button" type="button" disabled={busy || !filePath.trim()} onClick={onFileImport}>Open from Files</button></div>
+      </details>
+    </section>
+  </div>;
+}
+
+function FirstRunState({ onImport }: { onImport: () => void }) {
   return <div className="first-run-state"><span className="section-kicker">Human acceptance</span><h2>Test the real OS. Record what actually happened.</h2>
-    <p className="first-run-lead">Review is the handoff between an acceptance plan and engineering work. An AI or engineer defines what needs verification; humans perform those checks in Plasmon and record the evidence.</p>
+    <p className="first-run-lead">Review is the handoff between an AI-generated acceptance plan and engineering work. The AI says what humans should verify; people perform those checks in Plasmon and record the evidence.</p>
     <div className="first-run-grid">
-      <div className="first-run-step"><span>1</span><div><strong>Load the plan</strong><p>Import an AI-generated checklist based on r2 issues and acceptance criteria.</p></div></div>
-      <div className="first-run-step"><span>2</span><div><strong>Perform the checks</strong><p>Follow the real OS workflow and mark Pass or Fail. Your progress remains saved when you leave.</p></div></div>
-      <div className="first-run-step"><span>3</span><div><strong>Submit when ready</strong><p>Only Submit publishes a fresh snapshot for AI-assisted issue triage.</p></div></div>
+      <div className="first-run-step"><span>1</span><div><strong>Paste the plan</strong><p>Load acceptance criteria and real OS test instructions generated from r2 work.</p></div></div>
+      <div className="first-run-step"><span>2</span><div><strong>Perform the checks</strong><p>Mark Pass or Fail. Recorded results persist when you close Review and return later.</p></div></div>
+      <div className="first-run-step"><span>3</span><div><strong>Submit the evidence</strong><p>Submit freezes the current revision; Copy for AI hands that exact snapshot downstream.</p></div></div>
     </div>
+    <button className="primary-button first-run-cta" type="button" onClick={onImport}>Paste AI test plan</button>
   </div>;
 }
 
@@ -340,19 +458,19 @@ function ReviewItemCard({ item, index, atom, busy, apply }: { item: ReviewItem; 
   return <article className={`review-card ${local?.result === "working" ? "is-pass" : local?.result === "not_working" ? "is-fail" : ""}`}>
     <header className="item-heading"><div className="item-number">{index}</div><div className="item-title"><span className="item-kicker">Acceptance check</span><h3>{item.title}</h3></div><ResultBadge result={local?.result ?? "not_tested"} /></header>
 
-    <section className="test-instructions"><h4>How to test / expected behavior</h4>
-      {item.descriptionMarkdown ? <div className="markdown-copy">{item.descriptionMarkdown}</div> : <p className="muted">No detailed instructions were supplied. Perform the check using the real Plasmon OS workflow and record what you observed.</p>}
+    <section className="test-instructions"><h4>Test instructions / expected result</h4>
+      {item.descriptionMarkdown ? <div className="markdown-copy">{item.descriptionMarkdown}</div> : <p className="muted">No detailed instructions were supplied. Perform this check using the real Plasmon OS workflow and record what you observed.</p>}
     </section>
 
-    <section className="your-review"><div className="subsection-heading"><div><h4>Your review</h4><p>Record your own observation. This is saved independently from other reviewers.</p></div></div>
+    <section className="your-review"><div className="subsection-heading"><div><h4>Your review</h4><p>Your result is independent from every other reviewer.</p></div></div>
       <label className="control-label" htmlFor={`note-${item.itemId}`}>What happened?</label>
-      <textarea id={`note-${item.itemId}`} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Required for failures; useful for environment details, unexpected behavior, or anything the next reviewer should know." />
+      <textarea id={`note-${item.itemId}`} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Required for Fail. Add environment details or useful evidence for Pass when needed." />
       <div className="result-actions">
         <button className={local?.result === "working" ? "pass-button active" : "pass-button"} type="button" disabled={busy} onClick={() => saveResult("working")}>✓ Pass</button>
         <button className={local?.result === "not_working" ? "fail-button active" : "fail-button"} type="button" disabled={busy || !note.trim()} title={!note.trim() ? "Explain what failed before recording a failure" : undefined} onClick={() => saveResult("not_working")}>× Fail</button>
         {local && local.result !== "not_tested" && <button className="secondary-button" type="button" disabled={busy} onClick={() => { setNote(""); saveResult("not_tested", ""); }}>Clear result</button>}
       </div>
-      {local?.updatedAt && <p className="fine-print">Your last recorded result: {resultLabel(local.result)} · {formatReviewTime(local.updatedAt)}</p>}
+      {local?.updatedAt && <p className="fine-print">Last recorded: {resultLabel(local.result)} · {formatReviewTime(local.updatedAt)}</p>}
     </section>
 
     {(otherResults.length > 0 || comments.length > 0) && <section className="reviewer-context"><h4>Other reviewer context</h4>
