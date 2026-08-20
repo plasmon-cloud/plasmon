@@ -1,9 +1,10 @@
 export interface ReviewSubmission {
   atomId: string;
-  path: string;
   revisionId: string;
-  etag: string;
   submittedAt: number;
+  /** Optional Files portability metadata. Core Submit does not require Files. */
+  path?: string;
+  etag?: string;
 }
 
 export interface ReviewSubmissionStore {
@@ -23,6 +24,9 @@ export function createMemoryReviewSubmissionStore(): ReviewSubmissionStore {
   };
 }
 
+// Keep the existing database/version so this code release does not invent a
+// persistence migration. Older records with path/etag remain valid because
+// those fields are now optional compatibility metadata.
 const DATABASE_NAME = "neutron-review-submissions-v1";
 const DATABASE_VERSION = 1;
 const SUBMISSIONS = "submissions";
