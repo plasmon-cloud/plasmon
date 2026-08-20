@@ -30,7 +30,7 @@ cleanup() {
 trap cleanup EXIT
 
 pocketic_ready=0
-for attempt in $(seq 1 180); do
+for poll in $(seq 1 180); do
   if ! kill -0 "$server_pid" 2>/dev/null; then
     echo "PocketIC serve exited before becoming ready" >&2
     cat /tmp/plasmon-pocketic.log >&2 || true
