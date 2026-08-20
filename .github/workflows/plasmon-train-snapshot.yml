@@ -284,6 +284,7 @@ jobs:
                   "product": bool(issue_row["product"]),
                   "ci_owned": bool(issue_row["ci_owned"]),
                   "conflict": bool(conflict),
+                  "mergeable": detail.get("mergeable"),
                   "mergeable_state": mergeable_state,
                   "review": review,
                   "blocking_review": blocker,
