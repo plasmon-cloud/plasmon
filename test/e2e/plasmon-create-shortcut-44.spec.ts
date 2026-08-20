@@ -101,15 +101,20 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     await expect(toolbarCreateShortcut).toBeEnabled();
     await toolbarCreateShortcut.click();
 
-    const firstRename = files.getByRole("textbox", { name: /^Rename / }).last();
+    // FileEntry renders the active rename textarea inside the resource row.
+    // Anchor the packaged assertion to that descendant relationship so the
+    // evidence proves this exact shortcut entry entered ordinary rename state.
+    const firstRenamingShortcut = files
+      .locator('[data-fm-kind="shortcut"]:has(textarea[aria-label^="Rename "])')
+      .first();
+    const firstRename = firstRenamingShortcut.getByRole("textbox", { name: /^Rename / });
+    await expect(firstRenamingShortcut).toBeVisible();
     await expect(firstRename).toBeVisible();
     await expect(firstRename).toBeFocused();
     const firstShortcutName = nameFromRenameLabel(await firstRename.getAttribute("aria-label"));
     expect(firstShortcutName).not.toBe(targetName);
     expect(firstShortcutName.startsWith(targetName)).toBe(true);
 
-    const firstRenamingShortcut = files.locator('[data-fm-kind="shortcut"]', { has: firstRename }).first();
-    await expect(firstRenamingShortcut).toBeVisible();
     await expect(firstRenamingShortcut).toHaveAttribute("aria-selected", "true");
     await expect(firstRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
     const firstShortcutId = await firstRenamingShortcut.getAttribute("data-fm-node-id");
@@ -130,15 +135,17 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     await expect(menuCreateShortcut).toBeEnabled();
     await menuCreateShortcut.click();
 
-    const secondRename = files.getByRole("textbox", { name: /^Rename / }).last();
+    const secondRenamingShortcut = files
+      .locator('[data-fm-kind="shortcut"]:has(textarea[aria-label^="Rename "])')
+      .first();
+    const secondRename = secondRenamingShortcut.getByRole("textbox", { name: /^Rename / });
+    await expect(secondRenamingShortcut).toBeVisible();
     await expect(secondRename).toBeVisible();
     await expect(secondRename).toBeFocused();
     const secondShortcutName = nameFromRenameLabel(await secondRename.getAttribute("aria-label"));
     expect(secondShortcutName).not.toBe(firstShortcutName);
     expect(secondShortcutName.startsWith(targetName)).toBe(true);
 
-    const secondRenamingShortcut = files.locator('[data-fm-kind="shortcut"]', { has: secondRename }).first();
-    await expect(secondRenamingShortcut).toBeVisible();
     await expect(secondRenamingShortcut).toHaveAttribute("aria-selected", "true");
     await expect(secondRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
     const secondShortcutId = await secondRenamingShortcut.getAttribute("data-fm-node-id");
