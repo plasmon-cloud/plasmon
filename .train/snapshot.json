@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-08-19T23:37:21.256108Z",
+  "captured_at": "2026-08-20T00:08:20.996247Z",
   "counts": {
-    "issues": 107,
-    "open_issues": 51,
-    "open_product_prs": 13
+    "issues": 115,
+    "open_issues": 55,
+    "open_product_prs": 14
   },
-  "generation": "3eb71c4ccd19cf7ffe22fe17abe29a6b0621968e",
+  "generation": "fb1040bd64e108ae9e648f60c315b76a01c80962",
   "issues": [
     {
       "area": "Repo",
@@ -110,9 +110,7 @@
     },
     {
       "area": "Native Apps",
-      "assignees": [
-        "3E4B54"
-      ],
+      "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
@@ -170,6 +168,25 @@
       "type": "Feature",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/51"
+    },
+    {
+      "area": "Shell",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "Medium",
+      "effort": "Medium",
+      "labels": [],
+      "number": 61,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Extract Shell overlay state into a headless production controller",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/61"
     },
     {
       "area": "Shell",
@@ -301,6 +318,28 @@
     },
     {
       "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Low",
+      "labels": [
+        "blocked",
+        "ci:flaky"
+      ],
+      "number": 78,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": false,
+      "title": "Backfill a headless shortcut lifecycle regression across creation and open surfaces",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/78"
+    },
+    {
+      "area": "Testing",
       "assignees": [
         "3E4B54"
       ],
@@ -362,6 +401,27 @@
       "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/82"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Low",
+      "labels": [
+        "ci:flaky"
+      ],
+      "number": 83,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": false,
+      "title": "Backfill a headless runtime-selection regression for js-dos and EmulatorJS",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/83"
     },
     {
       "area": "File Manager",
@@ -469,7 +529,7 @@
       "effort": "Medium",
       "labels": [],
       "number": 90,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
@@ -525,6 +585,25 @@
       "type": "Bug",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/93"
+    },
+    {
+      "area": "Visual",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "Medium",
+      "effort": "Medium",
+      "labels": [],
+      "number": 94,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Generate bounded FileManager thumbnails for supported video resources",
+      "type": "Feature",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/94"
     },
     {
       "area": "File Manager",
@@ -652,6 +731,25 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/110"
     },
     {
+      "area": "Visual",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Medium",
+      "labels": [],
+      "number": 111,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Converge Shell surfaces on the shared Plasmon visual system",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/111"
+    },
+    {
       "area": "Native Apps",
       "assignees": [
         "3E4B54"
@@ -717,7 +815,7 @@
         "release-blocker"
       ],
       "number": 114,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": "High",
       "product": true,
@@ -725,6 +823,44 @@
       "type": "Feature",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/114"
+    },
+    {
+      "area": "Contracts",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "High",
+      "labels": [],
+      "number": 115,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Converge existing filesystem user actions on a thin shared resource-command layer",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/115"
+    },
+    {
+      "area": "Windowing",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "Medium",
+      "effort": "Medium",
+      "labels": [],
+      "number": 119,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Define native dialog and transient-window ownership semantics",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/119"
     },
     {
       "area": "Testing",
@@ -796,13 +932,34 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/124"
     },
     {
-      "area": null,
+      "area": "Neutron",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "High",
+      "labels": [
+        "blocked"
+      ],
+      "number": 125,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "Implement the Plasmon MTN authorization adapter only after deliberate release of the live-sharing boundary",
+      "type": "Task",
+      "unlocks": 0,
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/125"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "High",
       "labels": [],
       "number": 167,
       "open": false,
@@ -810,7 +967,7 @@
       "priority": null,
       "product": true,
       "title": "Establish the r2 shared RTL harness and representative integration test layer",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/167"
     },
@@ -952,7 +1109,7 @@
         "release-blocker"
       ],
       "number": 175,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
@@ -1063,13 +1220,13 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/180"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Medium",
       "labels": [],
       "number": 181,
       "open": false,
@@ -1077,7 +1234,7 @@
       "priority": null,
       "product": true,
       "title": "Provide explicit first-demo document and media fixtures through normal filesystem bootstrap",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/181"
     },
@@ -1283,7 +1440,7 @@
         "release-blocker"
       ],
       "number": 194,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
@@ -1362,7 +1519,7 @@
       "dependencies_ready": false,
       "dependency_states": {
         "193": "open",
-        "194": "open"
+        "194": "closed"
       },
       "desire": "High",
       "effort": "High",
@@ -1767,13 +1924,13 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/279"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Medium",
       "labels": [],
       "number": 285,
       "open": false,
@@ -1781,7 +1938,7 @@
       "priority": null,
       "product": true,
       "title": "Stabilize packaged Monaco Explorer create-document readiness",
-      "type": null,
+      "type": "Bug",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/285"
     },
@@ -1990,13 +2147,13 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/317"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Medium",
       "labels": [
         "ci:flaky",
         "release-blocker"
@@ -2007,18 +2164,18 @@
       "priority": null,
       "product": false,
       "title": "[r2 CI] Repair and restore flaky #66 drag-preview acceptance",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/320"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "Low",
+      "effort": "Low",
       "labels": [
         "ci:flaky"
       ],
@@ -2028,18 +2185,18 @@
       "priority": null,
       "product": false,
       "title": "[r2 CI] Repair and restore flaky #66 drag-preview acceptance",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/321"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Medium",
       "labels": [
         "ci:flaky",
         "release-blocker"
@@ -2050,7 +2207,7 @@
       "priority": null,
       "product": false,
       "title": "[r2 CI] Repair and restore #86 diagnostic-selection acceptance",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/330"
     },
@@ -2294,7 +2451,7 @@
       "labels": [],
       "number": 381,
       "open": true,
-      "open_pr": null,
+      "open_pr": 386,
       "priority": null,
       "product": true,
       "title": "Define the current Plasmon documentation boundary registry",
@@ -2341,13 +2498,13 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/383"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Medium",
       "labels": [],
       "number": 384,
       "open": true,
@@ -2355,7 +2512,7 @@
       "priority": null,
       "product": true,
       "title": "Enforce Plasmon documentation boundaries and freshness in the fast test lane",
-      "type": null,
+      "type": "Task",
       "unlocks": 0,
       "url": "https://github.com/plasmon-cloud/plasmon/issues/384"
     }
@@ -3827,115 +3984,115 @@
           "conclusion": "failure",
           "name": "Flake probe summary",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96246968368"
-        },
-        {
-          "conclusion": "success",
-          "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185134/job/96246621061"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635601"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake probe 9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635541"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 7/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635520"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635461"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96268206898"
         },
         {
           "conclusion": "success",
           "name": "Flake probe 1/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635447"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089382"
         },
         {
           "conclusion": "success",
-          "name": "Flake probe 6/10",
+          "name": "Flake probe 8/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635445"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635427"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635418"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe 5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635415"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089332"
         },
         {
           "conclusion": "failure",
           "name": "Flake probe 4/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245635410"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089316"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 5/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089280"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe 7/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089275"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089264"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089262"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 3/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089254"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 2/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089216"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe 6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267089203"
+        },
+        {
+          "conclusion": "success",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603648/job/96267065121"
         },
         {
           "conclusion": "success",
           "name": "Determine flake probe applicability",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185082/job/96245597656"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603662/job/96267053142"
         },
         {
           "conclusion": "failure",
           "name": "Packaged Playwright specialist acceptance",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185187/job/96245494638"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603607/job/96267038615"
         },
         {
-          "conclusion": "success",
+          "conclusion": "failure",
           "name": "Packaged browser persistence",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185141/job/96245490887"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603615/job/96267037874"
         },
         {
           "conclusion": "success",
           "name": "Packaged refactor smoke",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185332/job/96245482051"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine Kernel CI applicability",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185134/job/96245404538"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603603/job/96267036541"
         },
         {
           "conclusion": "success",
           "name": "Fast Bun tests",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32308185084/job/96245404532"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603624/job/96267034631"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32315603648/job/96267023859"
         }
       ],
       "ci": "unknown_red",
       "conflict": false,
       "draft": false,
-      "head": "efcb63a393a9c723683156084a9327874063dca9",
+      "head": "11696b3ddb5cf7eb4d451e009afecc3543312022",
       "head_branch": "work/bug/issue371",
       "issue": 371,
       "mergeable_state": "blocked",
@@ -3943,7 +4100,7 @@
       "review": "pending",
       "state": "open",
       "title": "#371 Preserve Explorer-to-Desktop drop placement",
-      "updated_at": "2026-08-19T22:18:11Z",
+      "updated_at": "2026-08-20T00:00:28Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/372"
     },
     {
@@ -4072,6 +4229,79 @@
       "title": "#377 Remove persistent move-completion status from FileManager",
       "updated_at": "2026-08-19T21:05:17Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/379"
+    },
+    {
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
+      "checks": [
+        {
+          "conclusion": "skipped",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355624/job/96263540372"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Flake probe ${{ matrix.attempt }}/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355615/job/96263527987"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355615/job/96263527974"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355687/job/96263487943"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355615/job/96263487566"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355586/job/96263487488"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355603/job/96263487319"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355624/job/96263487301"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32314355578/job/96263487040"
+        }
+      ],
+      "ci": "green",
+      "conflict": false,
+      "draft": false,
+      "head": "383c2dc7a01034bb60c339e4cd0f654a7933e623",
+      "head_branch": "agent/docs-boundary-registry",
+      "issue": 381,
+      "mergeable_state": "blocked",
+      "number": 386,
+      "review": "pending",
+      "state": "open",
+      "title": "Define the Plasmon documentation boundary registry",
+      "updated_at": "2026-08-19T23:55:30Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/386"
     }
   ],
   "repo": "plasmon-cloud/plasmon",
