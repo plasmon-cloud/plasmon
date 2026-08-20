@@ -1,107 +1,110 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
-import { approveFilesTool, login, openReview } from "./harness.ts";
+import { login, openReview } from "./harness.ts";
 
-test("packaged Review first-run explains the human acceptance contract", async ({ page }, testInfo) => {
+const TEST_PLAN = `# r2 Human Acceptance\n\n- [ ] Explorer Back returns to the prior folder\n  1. Open Explorer.\n  2. Navigate into Documents and then a child folder.\n  3. Press Back.\n  Expected: Explorer returns to Documents.\n\n- [ ] Markdown files open in Markdown\n  1. Open Explorer.\n  2. Double-click a Markdown file.\n  Expected: Markdown opens the selected file.`;
+
+test("packaged Review first-run makes the human acceptance workflow obvious", async ({ page }, testInfo) => {
   await login(page);
   const harness = await openReview(page);
 
   await expect(harness.review.getByRole("heading", { name: "Human acceptance review" })).toBeVisible();
   await expect(harness.review.getByRole("heading", { name: "Test the real OS. Record what actually happened." })).toBeVisible();
-  await expect(harness.review.getByText(/AI or engineer defines what needs verification/)).toBeVisible();
-  await expect(harness.review.getByText(/Only Submit publishes a fresh snapshot/)).toBeVisible();
-  await expect(harness.review.getByRole("button", { name: "Import AI test plan" })).toBeVisible();
+  await expect(harness.review.getByText(/AI says what humans should verify/)).toBeVisible();
+  await expect(harness.review.getByRole("button", { name: "Paste AI test plan" }).first()).toBeVisible();
+  await expect(harness.review.getByText(/Pass\/Fail results save as you record them/)).toBeVisible();
+
+  await harness.review.getByRole("button", { name: "Paste AI test plan" }).first().click();
+  const dialog = harness.review.getByRole("dialog", { name: "Paste AI test plan" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(/top-level bullet or checkbox becomes one acceptance check/)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Create Review from plan" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Close import" }).click();
 
   await page.emulateMedia({ colorScheme: "light" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "human-review-first-run-light");
+  await attachBrowserScreenshot(page, testInfo, "review-395-first-run-light");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "human-review-first-run-dark");
-
-  await page.setViewportSize({ width: 560, height: 900 });
-  const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
-  expect(narrowMetrics.scrollWidth).toBeLessThanOrEqual(narrowMetrics.clientWidth + 1);
+  await attachBrowserScreenshot(page, testInfo, "review-395-first-run-dark");
 });
 
-test("packaged Review saves human results locally and submits only on explicit Submit", async ({ page }, testInfo) => {
+test("packaged Review pastes a plan, resumes human progress, and submits without Files", async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: "light" });
   await login(page);
   let harness = await openReview(page);
 
-  await harness.review.getByLabel("Review name").fill("r2 Human Acceptance");
-  await harness.review.getByRole("button", { name: "Create review" }).click();
+  await harness.review.getByRole("button", { name: "Paste AI test plan" }).first().click();
+  let dialog = harness.review.getByRole("dialog", { name: "Paste AI test plan" });
+  await dialog.getByLabel("Review name").fill("r2 Human Acceptance");
+  await dialog.getByLabel("Test plan").fill(TEST_PLAN);
+  await dialog.getByRole("button", { name: "Create Review from plan" }).click();
+
   await expect(harness.review.locator(".review-workspace").getByRole("heading", { name: "r2 Human Acceptance" })).toBeVisible();
-  await expect(harness.review.locator(".persistence-status").getByText("Local progress saved", { exact: true })).toBeVisible();
+  await expect(harness.review.getByText("0 of 2 checks reviewed by you.")).toBeVisible();
+  await expect(harness.review.getByText("2 Remaining", { exact: true })).toBeVisible();
 
-  await harness.review.getByLabel("Add acceptance check").fill("Explorer Back returns to the prior folder");
-  await harness.review.getByRole("button", { name: "Add check" }).click();
-  const card = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
-  await expect(card).toBeVisible();
-  await expect(card.getByRole("heading", { name: "How to test / expected behavior" })).toBeVisible();
-  await expect(card.getByRole("button", { name: "× Fail" })).toBeDisabled();
+  let backCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  await expect(backCard).toBeVisible();
+  await expect(backCard.getByRole("heading", { name: "Test instructions / expected result" })).toBeVisible();
+  await expect(backCard.getByText("Press Back.")).toBeVisible();
+  await expect(backCard.getByText("Expected: Explorer returns to Documents.")).toBeVisible();
+  await expect(backCard.getByRole("button", { name: "× Fail" })).toBeDisabled();
 
-  await card.getByLabel("What happened?").fill("Back returned to the desktop instead of the previous folder.");
-  await expect(card.getByRole("button", { name: "× Fail" })).toBeEnabled();
-  await card.getByRole("button", { name: "× Fail" }).click();
-  await expect(card.getByText("Fail", { exact: true }).first()).toBeVisible();
-  await expect(harness.review.getByText("0 Pass", { exact: true })).toBeVisible();
+  await backCard.getByLabel("What happened?").fill("Back returned to the desktop instead of Documents.");
+  await backCard.getByRole("button", { name: "× Fail" }).click();
+  await expect(backCard.getByText("Fail", { exact: true }).first()).toBeVisible();
   await expect(harness.review.getByText("1 Fail", { exact: true })).toBeVisible();
-  await expect(harness.review.getByText("0 Remaining", { exact: true })).toBeVisible();
-  await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
-  await attachBrowserScreenshot(page, testInfo, "recorded-human-failure");
+  await expect(harness.review.getByText("1 Remaining", { exact: true })).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Current changes are not submitted");
+  await attachBrowserScreenshot(page, testInfo, "review-395-recorded-failure");
 
+  // Recorded human evidence survives closing/reopening the Review tile.
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);
   harness = await openReview(page);
-  let reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
-  await expect(reopenedCard).toBeVisible();
-  await expect(reopenedCard.getByText("Fail", { exact: true }).first()).toBeVisible();
-  await expect(reopenedCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of the previous folder.");
+  backCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  await expect(backCard.getByText("Fail", { exact: true }).first()).toBeVisible();
+  await expect(backCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of Documents.");
 
-  const submissionPath = `/e2e/review-submission-${Date.now()}.md`;
-  const canonicalSubmissionPath = `/Workspace${submissionPath}`;
-  await harness.review.getByLabel("Submission file").fill(submissionPath);
-  await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
-  await approveFilesTool(page, "writeBinary");
-  await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
+  // Submit is the explicit publication boundary and does not call Files.
+  await harness.review.getByRole("button", { name: "Submit current review" }).click();
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  const snapshot = harness.review.getByLabel("Submitted review snapshot");
+  await expect(snapshot).toBeVisible();
+  await expect(snapshot).toHaveValue(/Explorer Back returns to the prior folder/);
+  await expect(snapshot).toHaveValue(/Back returned to the desktop instead of Documents\./);
+  await expect(snapshot).toHaveValue(/Markdown files open in Markdown/);
 
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await login(page);
-  harness = await openReview(page);
-  reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
-  await expect(reopenedCard).toBeVisible();
+  // Copy uses Neutron's trusted clipboard helper from the user gesture.
+  await harness.review.getByRole("button", { name: "Copy for AI" }).click();
+  await expect(harness.review.getByText(/Submitted review copied/)).toBeVisible();
+
+  const markdownCard = harness.review.locator(".review-card").filter({ hasText: "Markdown files open in Markdown" });
+  await markdownCard.getByRole("button", { name: "✓ Pass" }).click();
+  await expect(harness.review.getByText("1 Pass", { exact: true })).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Current changes are not submitted");
+
+  await harness.review.getByRole("button", { name: "Submit current review" }).click();
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
-  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
-
-  await reopenedCard.getByLabel("What happened?").fill("");
-  await reopenedCard.getByRole("button", { name: "✓ Pass" }).click();
-  await expect(reopenedCard.getByText("Pass", { exact: true }).first()).toBeVisible();
-  await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
-
-  await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
-  await approveFilesToolIfNeeded(page, "writeBinary");
-  await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
-  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
-  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
-
+  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/Result: Pass/);
   await expect(harness.review.getByRole("button", { name: "Refresh" })).toBeVisible();
-  await expect(harness.review.getByText(/Other reviewers' queued changes appear only after Refresh/)).toBeVisible();
+
+  // Submission metadata survives reopen; the exact submitted revision can be rendered again.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await login(page);
+  harness = await openReview(page);
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  await harness.review.getByRole("button", { name: "Show submitted snapshot" }).click();
+  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/Result: Pass/);
 
   await page.setViewportSize({ width: 620, height: 900 });
-  const populatedNarrow = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
-  expect(populatedNarrow.scrollWidth).toBeLessThanOrEqual(populatedNarrow.clientWidth + 1);
-  await attachBrowserScreenshot(page, testInfo, "human-review-narrow");
+  const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
+  expect(narrowMetrics.scrollWidth).toBeLessThanOrEqual(narrowMetrics.clientWidth + 1);
+  await attachBrowserScreenshot(page, testInfo, "review-395-narrow");
 });
-
-async function approveFilesToolIfNeeded(page: Page, tool: "readBinary" | "writeBinary"): Promise<void> {
-  const dialog = page.locator('[data-tid="frontend-tool-dialog"]');
-  const appeared = await dialog.waitFor({ state: "visible", timeout: 750 }).then(() => true).catch(() => false);
-  if (appeared) await approveFilesTool(page, tool);
-}
 
 async function expectReadable(locator: Locator, minimumRatio: number): Promise<void> {
   const colors = await locator.evaluate((element) => {
