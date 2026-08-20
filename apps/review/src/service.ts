@@ -11,10 +11,12 @@ import { exportReviewMarkdown, parseReviewMarkdown, sourceImport } from "./markd
 import type { ReviewActor, ReviewOperation } from "./model.ts";
 import { NeutronFilesPort } from "./neutron_files_port.ts";
 import { createIndexedDbReviewPersistence } from "./persistence.ts";
+import { createIndexedDbReviewSubmissionStore, type ReviewSubmission } from "./submission.ts";
 
 const STATE_TOPIC = "review.state";
 const engine = new ReviewEngine(createIndexedDbReviewPersistence());
 const files = new NeutronFilesPort();
+const submissions = createIndexedDbReviewSubmissionStore();
 
 const stringId = { type: "string", minLength: 1, maxLength: 240 } satisfies JsonObject;
 const revisionId = stringId;
@@ -68,6 +70,17 @@ exposeTool(
     annotations: { "neutron:effects": ["read"] },
   },
   async (args) => asJson(await engine.getAtom(requiredString(args.atomId, "atomId"))),
+);
+
+exposeTool(
+  "review_submission",
+  {
+    title: "Read Review Submission",
+    description: "Read the most recent successfully written submission snapshot for one Review Atom. Submission metadata is provider-local bookkeeping and does not create a Review revision.",
+    inputSchema: objectSchema(["atomId"], { atomId: stringId }),
+    annotations: { "neutron:effects": ["read"] },
+  },
+  async (args) => asJson({ submission: await submissions.load(requiredString(args.atomId, "atomId")) }),
 );
 
 exposeTool(
@@ -172,20 +185,31 @@ exposeTool(
     if (action === "export") {
       const atomId = requiredString(args.atomId, "atomId");
       const expectedRevision = requiredString(args.expectedRevision, "expectedRevision");
+      const path = requiredString(args.path, "path");
       const state = await engine.getAtom(atomId);
       if (state.meta.currentRevision !== expectedRevision) throw new ReviewEngineError("REVISION_CONFLICT", "Review Atom changed before export");
       const markdown = exportReviewMarkdown(state);
       const bytes = new TextEncoder().encode(markdown);
       const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-      const ifMatch = optionalString(args.ifMatch);
+      const priorSubmission = await submissions.load(atomId);
+      const requestedIfMatch = optionalString(args.ifMatch);
+      const safeIfMatch = requestedIfMatch ?? (priorSubmission?.path === path ? priorSubmission.etag : undefined);
       const file = await files.writeBinary(
-        requiredString(args.path, "path"),
+        path,
         "text/markdown",
         data,
-        ifMatch ? { ifMatch } : { ifNoneMatch: "*" },
+        safeIfMatch ? { ifMatch: safeIfMatch } : { ifNoneMatch: "*" },
         { ...(delegationToken ? { delegationToken } : {}) },
       );
-      return asJson({ atomId, revisionId: expectedRevision, file });
+      const submission: ReviewSubmission = {
+        atomId,
+        path: file.path,
+        revisionId: expectedRevision,
+        etag: file.etag,
+        submittedAt: Date.now(),
+      };
+      await submissions.save(submission);
+      return asJson({ atomId, revisionId: expectedRevision, file, submission });
     }
     throw new ReviewEngineError("INVALID_ACTION", "review_file action must be import or export");
   },

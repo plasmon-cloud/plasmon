@@ -1,159 +1,107 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { approveFilesTool, login, openReview } from "./harness.ts";
 
-test("packaged Review first-run is readable and self-explanatory", async ({ page }, testInfo) => {
+test("packaged Review first-run explains the human acceptance contract", async ({ page }, testInfo) => {
   await login(page);
   const harness = await openReview(page);
 
-  await expect(harness.review.getByRole("heading", { name: "Structured reviews without the guesswork" })).toBeVisible();
-  await expect(harness.review.getByTestId("persistence-status").getByText("Completed actions are stored automatically by Review’s provider.", { exact: true })).toBeVisible();
-  await expect(harness.review.getByText("Live sharing isn’t available in this build")).toBeVisible();
-  await expect(harness.review.getByText(/Markdown export is portability only/)).toBeVisible();
-  await expect(harness.review.getByRole("button", { name: /save/i })).toHaveCount(0);
+  await expect(harness.review.getByRole("heading", { name: "Human acceptance review" })).toBeVisible();
+  await expect(harness.review.getByRole("heading", { name: "Test the real OS. Record what actually happened." })).toBeVisible();
+  await expect(harness.review.getByText(/AI or engineer defines what needs verification/)).toBeVisible();
+  await expect(harness.review.getByText(/Only Submit publishes a fresh snapshot/)).toBeVisible();
+  await expect(harness.review.getByRole("button", { name: "Import AI test plan" })).toBeVisible();
 
   await page.emulateMedia({ colorScheme: "light" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "first-run-light");
+  await attachBrowserScreenshot(page, testInfo, "human-review-first-run-light");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
   await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "first-run-dark");
+  await attachBrowserScreenshot(page, testInfo, "human-review-first-run-dark");
 
   await page.setViewportSize({ width: 560, height: 900 });
-  const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({
-    clientWidth: body.clientWidth,
-    scrollWidth: body.scrollWidth,
-  }));
+  const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
   expect(narrowMetrics.scrollWidth).toBeLessThanOrEqual(narrowMetrics.clientWidth + 1);
-  await attachBrowserScreenshot(page, testInfo, "first-run-narrow");
 });
 
-test("packaged vanilla Neutron Review completes the first-demo workflow and persists it", async ({ page }, testInfo) => {
+test("packaged Review saves human results locally and submits only on explicit Submit", async ({ page }, testInfo) => {
   await page.emulateMedia({ colorScheme: "light" });
   await login(page);
   let harness = await openReview(page);
 
-  await harness.review.getByLabel("New review").fill("Packaged Review Gate");
+  await harness.review.getByLabel("Review name").fill("r2 Human Acceptance");
   await harness.review.getByRole("button", { name: "Create review" }).click();
-  await expect(harness.review.locator(".review-workspace").getByRole("heading", { name: "Packaged Review Gate" })).toBeVisible();
-  await expect(harness.review.getByTestId("persistence-status").getByText("Saved", { exact: true })).toBeVisible();
+  await expect(harness.review.locator(".review-workspace").getByRole("heading", { name: "r2 Human Acceptance" })).toBeVisible();
+  await expect(harness.review.locator(".persistence-status").getByText("Local progress saved", { exact: true })).toBeVisible();
 
-  await harness.review.getByLabel("New review item").fill("Review launches in vanilla Neutron");
-  await harness.review.getByRole("button", { name: "Add item" }).click();
-  const card = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
-  const workControl = card.locator(".work-field select");
+  await harness.review.getByLabel("Add acceptance check").fill("Explorer Back returns to the prior folder");
+  await harness.review.getByRole("button", { name: "Add check" }).click();
+  const card = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
   await expect(card).toBeVisible();
-  await expect(card.getByLabel("Desired")).toBeVisible();
-  await expect(card.getByLabel("Effort")).toBeVisible();
-  await expect(card.getByLabel("Owner")).toBeVisible();
-  await expect(workControl).toBeVisible();
-  await expect(card.getByText("How strongly this outcome needs to be true.")).toBeVisible();
-  await expect(card.getByText("The expected size of the work.")).toBeVisible();
-  await expect(card.getByText("No owner is assigned yet.")).toBeVisible();
+  await expect(card.getByRole("heading", { name: "How to test / expected behavior" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "× Fail" })).toBeDisabled();
 
-  await card.getByRole("button", { name: "Working", exact: true }).click();
-  await expect(card.getByRole("button", { name: "Working", exact: true })).toHaveAttribute("aria-pressed", "true");
-
-  await card.getByLabel("Desired").selectOption("must");
-  await card.getByLabel("Effort").selectOption("small");
-  await card.getByLabel("Owner").fill("Agent 13");
-  await workControl.selectOption("needs_retest");
-  await expect(card.getByText("Unsaved changes")).toBeVisible();
-  await expect(harness.review.getByTestId("persistence-status").getByText("1 unsaved item")).toBeVisible();
-  await card.getByRole("button", { name: "Save details" }).click();
-  await expect(card.getByText("Saved", { exact: true })).toBeVisible();
-  await expect(harness.review.getByTestId("persistence-status").getByText("Saved", { exact: true })).toBeVisible();
-
-  await card.getByLabel("Comment on Review launches in vanilla Neutron").fill("Packaged workflow verified.");
-  await card.getByRole("button", { name: "Add note" }).click();
-  await expect(card.getByText("Packaged workflow verified.")).toBeVisible();
-  await expect(card.getByText("Local reviewer")).toBeVisible();
-  await attachBrowserScreenshot(page, testInfo, "populated-review");
-
-  const originalAtomId = (await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "";
-  expect(originalAtomId).not.toBe("");
-  await expect(harness.review.locator(".history-entry")).toHaveCount(5);
-  const revisionFour = harness.review.locator(".history-entry").filter({ hasText: "r4" }).first();
-  await revisionFour.getByRole("button", { name: "Restore…" }).click();
-  const restoreConfirm = revisionFour.getByRole("alert");
-  await expect(restoreConfirm.getByText("Restore revision r4?")).toBeVisible();
-  await expect(restoreConfirm.getByText(/keeping the same Review Atom and preserving all history/)).toBeVisible();
-  await attachBrowserScreenshot(page, testInfo, "restore-confirmation");
-  const restoreAction = restoreConfirm.getByRole("button", { name: "Restore revision" });
-  await expect(restoreAction).toBeVisible();
-  await restoreAction.click();
-  await expect(harness.review.locator(".history-entry")).toHaveCount(6);
-  await expect(card.getByText("Packaged workflow verified.")).toHaveCount(0);
-  expect((await harness.review.locator(".atom-details dd").first().textContent())?.trim()).toBe(originalAtomId);
-
-  await card.getByLabel("Comment on Review launches in vanilla Neutron").fill("Verified again after deliberate restore.");
-  await card.getByRole("button", { name: "Add note" }).click();
-  await expect(card.getByText("Verified again after deliberate restore.")).toBeVisible();
-
-  await page.setViewportSize({ width: 620, height: 900 });
-  const populatedNarrow = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
-  expect(populatedNarrow.scrollWidth).toBeLessThanOrEqual(populatedNarrow.clientWidth + 1);
-  await attachBrowserScreenshot(page, testInfo, "populated-review-narrow");
-  await page.setViewportSize({ width: 1440, height: 900 });
-
-  const exportPath = `/e2e/review-${Date.now()}.md`;
-  await harness.review.getByLabel("Export Markdown path").fill(exportPath);
-  await harness.review.getByRole("button", { name: "Export Markdown copy" }).click();
-  await approveFilesTool(page, "writeBinary");
-  const exportBanner = harness.review.locator(".banner");
-  await expect(exportBanner).toBeVisible({ timeout: 5_000 });
-  const exportMessage = await exportBanner.innerText();
-  expect(exportMessage, `Review export did not succeed: ${exportMessage}`).toContain("portable copy, not a live share");
-
-  await harness.review.getByLabel("Markdown or TODO path").fill(exportPath);
-  await harness.review.getByRole("button", { name: "Import as new Review" }).click();
-  await approveFilesTool(page, "readBinary");
-  await expect(harness.review.getByText(/Imported 1 item into a new Review/)).toBeVisible();
-
-  const atomChoices = harness.review.locator(".atom-choice");
-  await expect(atomChoices).toHaveCount(2);
-  const importedAtomId = (await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "";
-  expect(importedAtomId).not.toBe("");
-  expect(importedAtomId).not.toBe(originalAtomId);
-  await expect(harness.review.locator(".source-chip")).toHaveText(`Imported from ${exportPath}`);
-
-  const importedCard = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
-  await expect(importedCard).toBeVisible();
-  await expect(importedCard.getByRole("button", { name: "Not tested", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(importedCard.getByLabel("Desired")).toHaveValue("");
-  await expect(importedCard.getByLabel("Effort")).toHaveValue("");
-  await expect(importedCard.getByLabel("Owner")).toHaveValue("");
-  await expect(importedCard.locator(".work-field select")).toHaveValue("untriaged");
-  await expect(importedCard.locator(".comment")).toHaveCount(0);
-  await expect(harness.review.locator(".history-entry")).toHaveCount(1);
-  await expect(harness.review.getByTestId("sharing-status").getByText("Live sharing isn’t available in this build")).toBeVisible();
+  await card.getByLabel("What happened?").fill("Back returned to the desktop instead of the previous folder.");
+  await expect(card.getByRole("button", { name: "× Fail" })).toBeEnabled();
+  await card.getByRole("button", { name: "× Fail" }).click();
+  await expect(card.getByText("Fail", { exact: true }).first()).toBeVisible();
+  await expect(harness.review.getByText("0 Pass", { exact: true })).toBeVisible();
+  await expect(harness.review.getByText("1 Fail", { exact: true })).toBeVisible();
+  await expect(harness.review.getByText("0 Remaining", { exact: true })).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
+  await attachBrowserScreenshot(page, testInfo, "recorded-human-failure");
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);
   harness = await openReview(page);
+  let reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  await expect(reopenedCard).toBeVisible();
+  await expect(reopenedCard.getByText("Fail", { exact: true }).first()).toBeVisible();
+  await expect(reopenedCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of the previous folder.");
 
-  const reopenedChoices = harness.review.locator(".atom-choice");
-  await expect(reopenedChoices).toHaveCount(2);
-  const reopenedAtomIds: string[] = [];
-  for (let index = 0; index < 2; index += 1) {
-    await reopenedChoices.nth(index).click();
-    await expect(reopenedChoices.nth(index)).toHaveAttribute("aria-current", "page");
-    reopenedAtomIds.push((await harness.review.locator(".atom-details dd").first().textContent())?.trim() ?? "");
-  }
-  expect(reopenedAtomIds.every(Boolean)).toBe(true);
-  expect(new Set(reopenedAtomIds)).toEqual(new Set([originalAtomId, importedAtomId]));
+  const submissionPath = `/e2e/review-submission-${Date.now()}.md`;
+  const canonicalSubmissionPath = `/Workspace${submissionPath}`;
+  await harness.review.getByLabel("Submission file").fill(submissionPath);
+  await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
+  await approveFilesTool(page, "writeBinary");
+  await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
 
-  const originalIndex = reopenedAtomIds.indexOf(originalAtomId);
-  await reopenedChoices.nth(originalIndex).click();
-  await expect(reopenedChoices.nth(originalIndex)).toHaveAttribute("aria-current", "page");
-  const reopenedOriginalCard = harness.review.locator(".review-card").filter({ hasText: "Review launches in vanilla Neutron" });
-  await expect(reopenedOriginalCard.getByRole("button", { name: "Working", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(reopenedOriginalCard.getByText("Verified again after deliberate restore.")).toBeVisible();
-  await expect(harness.review.getByTestId("persistence-status").getByText("Saved", { exact: true })).toBeVisible();
-  await attachBrowserScreenshot(page, testInfo, "reopened-persisted-review");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await login(page);
+  harness = await openReview(page);
+  reopenedCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
+  await expect(reopenedCard).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
+
+  await reopenedCard.getByLabel("What happened?").fill("");
+  await reopenedCard.getByRole("button", { name: "✓ Pass" }).click();
+  await expect(reopenedCard.getByText("Pass", { exact: true }).first()).toBeVisible();
+  await expect(harness.review.locator(".submission-state")).toContainText("Changes not submitted");
+
+  await harness.review.getByRole("button", { name: "Submit", exact: true }).click();
+  await approveFilesToolIfNeeded(page, "writeBinary");
+  await expect(harness.review.getByText(/Submitted revision/)).toBeVisible({ timeout: 5_000 });
+  await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
+  await expect(harness.review.getByLabel("Submission file")).toHaveValue(canonicalSubmissionPath);
+
+  await expect(harness.review.getByRole("button", { name: "Refresh" })).toBeVisible();
+  await expect(harness.review.getByText(/Other reviewers' queued changes appear only after Refresh/)).toBeVisible();
+
+  await page.setViewportSize({ width: 620, height: 900 });
+  const populatedNarrow = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
+  expect(populatedNarrow.scrollWidth).toBeLessThanOrEqual(populatedNarrow.clientWidth + 1);
+  await attachBrowserScreenshot(page, testInfo, "human-review-narrow");
 });
+
+async function approveFilesToolIfNeeded(page: Page, tool: "readBinary" | "writeBinary"): Promise<void> {
+  const dialog = page.locator('[data-tid="frontend-tool-dialog"]');
+  const appeared = await dialog.waitFor({ state: "visible", timeout: 750 }).then(() => true).catch(() => false);
+  if (appeared) await approveFilesTool(page, tool);
+}
 
 async function expectReadable(locator: Locator, minimumRatio: number): Promise<void> {
   const colors = await locator.evaluate((element) => {
