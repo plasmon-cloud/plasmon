@@ -215,38 +215,43 @@ test("provably managed legacy System defaults migrate to Start root without dupl
   }
 });
 
-test("released pre-provenance legacy System defaults backfill ownership and migrate exactly once", async () => {
+test("released pre-provenance legacy System defaults remain in place when directory ownership is unproven", async () => {
   const fs = createMonotonicFs();
   const legacy = await createLegacyManagedSystemState(fs);
   expect(legacy.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toBeUndefined();
+
+  // This deliberately resembles the pristine released shape that the previous
+  // implementation tried to adopt from timestamps. Even exact names, contents,
+  // shortcut identities, and untouched mutation history are not ownership proof.
   for (const shortcut of legacy.shortcuts.values()) {
     expect(shortcut.createdAt).toBe(shortcut.modifiedAt);
     expect(shortcut.createdAt).toBeGreaterThanOrEqual(legacy.system.createdAt);
     expect(shortcut.createdAt).toBeLessThanOrEqual(legacy.root.modifiedAt);
   }
 
+  const revisionBefore = await fs.revision();
   const result = await reconcileStartMenu(fs, retiredSystemApps, []);
   expect(result.created).toBe(0);
   expect(result.preserved).toBe(retiredSystemApps.length);
-  expect(await fs.resolvePath(`${START_MENU_PATH}/System`)).toBeNull();
+  expect((await fs.resolvePath(`${START_MENU_PATH}/System`))?.id).toBe(legacy.system.id);
   expect(result.root.metadata[START_MANAGED_FOLDER_IDS_KEY]).toBeUndefined();
 
   const shortcuts = await allShortcuts(fs);
   expect(shortcuts).toHaveLength(retiredSystemApps.length);
   for (const app of retiredSystemApps) {
     const identity = nativeIdentity(app);
-    const migrated = shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === identity);
-    expect(migrated).toHaveLength(1);
-    expect(migrated[0]?.node.id).toBe(legacy.shortcuts.get(identity)?.id);
-    expect(await fs.pathOf(migrated[0]!.node.id)).toBe(`${START_MENU_PATH}/${app.name}`);
+    const preserved = shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === identity);
+    expect(preserved).toHaveLength(1);
+    expect(preserved[0]?.node.id).toBe(legacy.shortcuts.get(identity)?.id);
+    expect(await fs.pathOf(preserved[0]!.node.id)).toBe(`${START_MENU_PATH}/System/${app.name}`);
   }
+  expect(await fs.revision()).toBe(revisionBefore);
 
-  const revisionAfterMigration = await fs.revision();
   const second = await reconcileStartMenu(fs, retiredSystemApps, []);
   expect(second.created).toBe(0);
   expect(second.preserved).toBe(retiredSystemApps.length);
   expect(second.skippedDeleted).toBe(0);
-  expect(await fs.revision()).toBe(revisionAfterMigration);
+  expect(await fs.revision()).toBe(revisionBefore);
 });
 
 test("pre-provenance user replacement System preserves the folder and user-moved seeded shortcuts", async () => {
@@ -259,8 +264,6 @@ test("pre-provenance user replacement System preserves the folder and user-moved
     await fs.move(shortcut.id, replacement.id);
   }
 
-  const moved = [...legacy.shortcuts.values()].map((shortcut) => shortcut.id);
-  for (const id of moved) expect((await fs.stat(id)).modifiedAt).toBeGreaterThan((await fs.stat(id)).createdAt);
   const revisionBefore = await fs.revision();
   const result = await reconcileStartMenu(fs, retiredSystemApps, []);
 
