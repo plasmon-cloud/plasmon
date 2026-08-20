@@ -20,6 +20,7 @@ import {
   type SelectionState,
 } from "./model.ts";
 import { fileManagerErrorMessage } from "./error-message.ts";
+import { SerializedRefreshQueue } from "./serialized-refresh-queue.ts";
 
 interface UseFileManagerDirectoryStateOptions {
   directoryId: NodeId;
@@ -27,11 +28,6 @@ interface UseFileManagerDirectoryStateOptions {
   fsEvents?: FsEventSource;
   sort: FsListOptions["sort"];
   setSelection: Dispatch<SetStateAction<SelectionState>>;
-}
-
-interface RefreshOperation {
-  scope: number;
-  promise: Promise<void>;
 }
 
 export function useFileManagerDirectoryState(
@@ -42,67 +38,44 @@ export function useFileManagerDirectoryState(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const refreshGateRef = useRef(new RefreshGate());
-  const refreshOperationRef = useRef<RefreshOperation | null>(null);
-  const refreshAgainRef = useRef(false);
+  const refreshQueueRef = useRef(new SerializedRefreshQueue());
   const refreshScopeRef = useRef(0);
 
   const refresh = useCallback(async () => {
     const scope = refreshScopeRef.current;
-    const current = refreshOperationRef.current;
-    if (current?.scope === scope) {
-      // Fs events can arrive while an explicit post-mutation refresh is in
-      // flight. Do not issue competing frontend filesystem calls: request one
-      // serialized follow-up so the final projection observes the committed
-      // filesystem state rather than whichever list response happened to win.
-      refreshAgainRef.current = true;
-      await current.promise;
-      return;
-    }
 
-    const operation = (async () => {
-      do {
-        refreshAgainRef.current = false;
-        if (scope !== refreshScopeRef.current) return;
-        const generation = refreshGateRef.current.begin();
-        setLoading(true);
-        try {
-          const directory = await fs.stat(directoryId);
-          if (directory.kind !== "directory") {
-            throw new Error(`${directory.name} is not a directory`);
-          }
-          const listed = await fs.list(directoryId, { sort });
-          if (
-            scope !== refreshScopeRef.current
-            || !refreshGateRef.current.isCurrent(generation)
-          ) continue;
-          setNodes(listed);
-          setSelection((selection) =>
-            reconcileSelection(selection, new Set(listed.map((node) => node.id))),
-          );
-          setError(null);
-        } catch (cause: unknown) {
-          if (
-            scope !== refreshScopeRef.current
-            || !refreshGateRef.current.isCurrent(generation)
-          ) continue;
-          setError(fileManagerErrorMessage(cause));
-        } finally {
-          if (
-            scope === refreshScopeRef.current
-            && refreshGateRef.current.isCurrent(generation)
-          ) setLoading(false);
+    await refreshQueueRef.current.request(async () => {
+      if (scope !== refreshScopeRef.current) return;
+      const generation = refreshGateRef.current.begin();
+      setLoading(true);
+      try {
+        const directory = await fs.stat(directoryId);
+        if (directory.kind !== "directory") {
+          throw new Error(`${directory.name} is not a directory`);
         }
-      } while (scope === refreshScopeRef.current && refreshAgainRef.current);
-    })();
-
-    refreshOperationRef.current = { scope, promise: operation };
-    try {
-      await operation;
-    } finally {
-      if (refreshOperationRef.current?.promise === operation) {
-        refreshOperationRef.current = null;
+        const listed = await fs.list(directoryId, { sort });
+        if (
+          scope !== refreshScopeRef.current
+          || !refreshGateRef.current.isCurrent(generation)
+        ) return;
+        setNodes(listed);
+        setSelection((selection) =>
+          reconcileSelection(selection, new Set(listed.map((node) => node.id))),
+        );
+        setError(null);
+      } catch (cause: unknown) {
+        if (
+          scope !== refreshScopeRef.current
+          || !refreshGateRef.current.isCurrent(generation)
+        ) return;
+        setError(fileManagerErrorMessage(cause));
+      } finally {
+        if (
+          scope === refreshScopeRef.current
+          && refreshGateRef.current.isCurrent(generation)
+        ) setLoading(false);
       }
-    }
+    });
   }, [directoryId, fs, setSelection, sort]);
 
   useEffect(() => {
@@ -110,9 +83,7 @@ export function useFileManagerDirectoryState(
     void refresh();
     return () => {
       if (refreshScopeRef.current === scope) refreshScopeRef.current += 1;
-      refreshAgainRef.current = false;
       refreshGateRef.current.invalidate();
-      if (refreshOperationRef.current?.scope === scope) refreshOperationRef.current = null;
     };
   }, [refresh]);
 
