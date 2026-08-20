@@ -79,6 +79,15 @@ test("#109 — packaged Start and taskbar context share the canonical pin afford
 
     const startAction = panel.getByRole("button", { name: /^(Pin to taskbar|Unpin from taskbar)$/ }).first();
     await expect(startAction).toBeVisible();
+    const contextTarget = await startAction.evaluate((button) => {
+      const row = button.closest(".plasmon-shell__row");
+      const source = row?.querySelector<HTMLElement>("[data-shell-context-native], [data-shell-context-element]");
+      if (!source) throw new Error("Start pin action has no canonical Shell context identity");
+      if (source.dataset.shellContextNative) return { kind: "native" as const, id: source.dataset.shellContextNative };
+      if (source.dataset.shellContextElement) return { kind: "element" as const, id: source.dataset.shellContextElement };
+      throw new Error("Start pin action has no taskbar identity");
+    });
+
     const before = await pinPresentation(startAction);
     expect(before.label).toBe(before.pressed ? "Unpin from taskbar" : "Pin to taskbar");
     expect(await startAction.textContent()).not.toContain("📌");
@@ -91,46 +100,38 @@ test("#109 — packaged Start and taskbar context share the canonical pin afford
     expect(after.transform, "pinned/unpinned artwork orientation is structurally distinct").not.toBe(before.transform);
     expect(after.markerOpacity, "pinned/unpinned state marker is structurally distinct").not.toBe(before.markerOpacity);
 
-    // Restore the selected Start item's original pin state so this proof does
-    // not leak a preference change into later specialist tests.
+    // Restore the selected Start item's original pin state before the
+    // taskbar-context proof, then normalize it to pinned for that boundary.
     await startAction.click();
     await expect(startAction).toHaveAttribute("aria-pressed", String(before.pressed));
-
-    // Put at least one application on the taskbar, then exercise the real Shell
-    // context action. If the selected Start item began pinned this is a no-op;
-    // otherwise pin it once for the context-menu boundary.
     if (!before.pressed) {
       await startAction.click();
       await expect(startAction).toHaveAttribute("aria-pressed", "true");
     }
 
-    await start.click();
-    await expect(panel).toHaveCount(0);
-
     const taskbar = plasmon.getByRole("navigation", { name: "Taskbar" });
-    const contextableTask = taskbar.locator("[data-shell-context-native], [data-shell-context-element]").first();
+    const contextableTask = contextTarget.kind === "native"
+      ? taskbar.locator(`[data-shell-context-native="${contextTarget.id}"]`)
+      : taskbar.locator(`[data-shell-context-element="${contextTarget.id}"]`);
     await expect(contextableTask).toBeVisible();
     await contextableTask.click({ button: "right" });
 
     const contextMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
     await expect(contextMenu).toBeVisible();
-    const contextAction = contextMenu.getByRole("menuitem", { name: /^(Pin to taskbar|Unpin from taskbar)$/ });
+    const contextAction = contextMenu.getByRole("menuitem", { name: "Unpin from taskbar" });
     await expect(contextAction).toBeVisible();
 
     const contextIcon = contextAction.locator(".plasmon-pin-icon");
     const contextArt = contextIcon.locator("img");
-    const contextLabel = await contextAction.getAttribute("aria-label");
-    if (!contextLabel) throw new Error("Taskbar context pin action has no accessible label");
-    await expect(contextAction).toHaveAttribute("title", contextLabel);
+    await expect(contextAction).toHaveAttribute("aria-label", "Unpin from taskbar");
+    await expect(contextAction).toHaveAttribute("title", "Unpin from taskbar");
     await expect(contextArt).toHaveAttribute("src", /\/static\/plasmon\/icons\/pin\.svg$/);
     expect(await contextArt.evaluate((image: HTMLImageElement) => image.naturalWidth), "taskbar context pin artwork loads").toBeGreaterThan(0);
     expect(await contextAction.textContent()).not.toContain("📌");
-    await expect(contextIcon).toHaveAttribute(
-      "data-pin-state",
-      contextLabel === "Unpin from taskbar" ? "pinned" : "unpinned",
-    );
+    await expect(contextIcon).toHaveAttribute("data-pin-state", "pinned");
 
-    // Restore the Start-selected item when this test pinned it.
+    // Restore the selected item's original preference state when this test
+    // temporarily pinned it for taskbar-context acceptance.
     if (!before.pressed) {
       await contextAction.click();
     }
