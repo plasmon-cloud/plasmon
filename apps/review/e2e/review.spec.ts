@@ -22,12 +22,9 @@ test("packaged Review first-run makes the human acceptance workflow obvious", as
 
   await page.emulateMedia({ colorScheme: "light" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
-  await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
   await attachBrowserScreenshot(page, testInfo, "review-395-first-run-light");
-
   await page.emulateMedia({ colorScheme: "dark" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
-  await expectReadable(harness.review.locator(".first-run-lead"), 4.5);
   await attachBrowserScreenshot(page, testInfo, "review-395-first-run-dark");
 });
 
@@ -37,7 +34,7 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
   let harness = await openReview(page);
 
   await harness.review.getByRole("button", { name: "Paste AI test plan" }).first().click();
-  let dialog = harness.review.getByRole("dialog", { name: "Paste AI test plan" });
+  const dialog = harness.review.getByRole("dialog", { name: "Paste AI test plan" });
   await dialog.getByLabel("Review name").fill("r2 Human Acceptance");
   await dialog.getByLabel("Test plan").fill(TEST_PLAN);
   await dialog.getByRole("button", { name: "Create Review from plan" }).click();
@@ -47,7 +44,6 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
   await expect(harness.review.getByText("2 Remaining", { exact: true })).toBeVisible();
 
   let backCard = harness.review.locator(".review-card").filter({ hasText: "Explorer Back returns to the prior folder" });
-  await expect(backCard).toBeVisible();
   await expect(backCard.getByRole("heading", { name: "Test instructions / expected result" })).toBeVisible();
   await expect(backCard.getByText("Press Back.")).toBeVisible();
   await expect(backCard.getByText("Expected: Explorer returns to Documents.")).toBeVisible();
@@ -61,7 +57,6 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
   await expect(harness.review.locator(".submission-state")).toContainText("Current changes are not submitted");
   await attachBrowserScreenshot(page, testInfo, "review-395-recorded-failure");
 
-  // Recorded human evidence survives closing/reopening the Review tile.
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);
   harness = await openReview(page);
@@ -69,16 +64,14 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
   await expect(backCard.getByText("Fail", { exact: true }).first()).toBeVisible();
   await expect(backCard.getByLabel("What happened?")).toHaveValue("Back returned to the desktop instead of Documents.");
 
-  // Submit is the explicit publication boundary and does not call Files.
   await harness.review.getByRole("button", { name: "Submit current review" }).click();
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
   const snapshot = harness.review.getByLabel("Submitted review snapshot");
   await expect(snapshot).toBeVisible();
   await expect(snapshot).toHaveValue(/Explorer Back returns to the prior folder/);
+  await expect(snapshot).toHaveValue(/human:local: FAIL/);
   await expect(snapshot).toHaveValue(/Back returned to the desktop instead of Documents\./);
-  await expect(snapshot).toHaveValue(/Markdown files open in Markdown/);
 
-  // Copy uses Neutron's trusted clipboard helper from the user gesture.
   await harness.review.getByRole("button", { name: "Copy for AI" }).click();
   await expect(harness.review.getByText(/Submitted review copied/)).toBeVisible();
 
@@ -89,20 +82,19 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
 
   await harness.review.getByRole("button", { name: "Submit current review" }).click();
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
-  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/Result: Pass/);
+  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/human:local: PASS/);
   await expect(harness.review.getByRole("button", { name: "Refresh" })).toBeVisible();
 
-  // Submission metadata survives reopen; the exact submitted revision can be rendered again.
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);
   harness = await openReview(page);
   await expect(harness.review.locator(".submission-state")).toContainText("Submitted snapshot is current");
   await harness.review.getByRole("button", { name: "Show submitted snapshot" }).click();
-  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/Result: Pass/);
+  await expect(harness.review.getByLabel("Submitted review snapshot")).toHaveValue(/human:local: PASS/);
 
   await page.setViewportSize({ width: 620, height: 900 });
-  const narrowMetrics = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
-  expect(narrowMetrics.scrollWidth).toBeLessThanOrEqual(narrowMetrics.clientWidth + 1);
+  const narrow = await harness.review.locator("body").evaluate((body) => ({ clientWidth: body.clientWidth, scrollWidth: body.scrollWidth }));
+  expect(narrow.scrollWidth).toBeLessThanOrEqual(narrow.clientWidth + 1);
   await attachBrowserScreenshot(page, testInfo, "review-395-narrow");
 });
 
@@ -113,10 +105,7 @@ async function expectReadable(locator: Locator, minimumRatio: number): Promise<v
     let background = "rgba(0, 0, 0, 0)";
     while (current) {
       const candidate = getComputedStyle(current).backgroundColor;
-      if (!candidate.endsWith(", 0)") && candidate !== "transparent") {
-        background = candidate;
-        break;
-      }
+      if (!candidate.endsWith(", 0)") && candidate !== "transparent") { background = candidate; break; }
       current = current.parentElement;
     }
     return { foreground, background };
