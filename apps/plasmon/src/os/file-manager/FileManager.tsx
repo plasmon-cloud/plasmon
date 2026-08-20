@@ -385,7 +385,9 @@ export function FileManager({
           {operationPresentation.message}
         </p>
       ) : null}
-      {directory.loading && directory.nodes.length === 0 ? (
+      {presentation !== "desktop"
+        && directory.loading
+        && directory.nodes.length === 0 ? (
         <p className="fm-empty">Loading…</p>
       ) : null}
 
