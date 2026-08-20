@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
+const workflowReadmePath = ".github/workflows/README.md";
 const labelWorkflowPath = ".github/workflows/plasmon-flake-probe-label.yml";
 const runnerPath = "test/ci/run-plasmon-flake-probe.sh";
 const specialistRunnerPath = "test/ci/run-plasmon-specialist.mjs";
@@ -17,6 +18,7 @@ const summarizerPath = "test/ci/summarize-flake-probe.mjs";
 const packagePath = "package.json";
 
 const workflow = readFileSync(workflowPath, "utf8");
+const workflowReadme = readFileSync(workflowReadmePath, "utf8");
 const labelWorkflow = readFileSync(labelWorkflowPath, "utf8");
 const runner = readFileSync(runnerPath, "utf8");
 const specialistRunner = readFileSync(specialistRunnerPath, "utf8");
@@ -90,20 +92,25 @@ const workflowFragments = [
   "needs: applicability",
   "fail-fast: false",
   "max-parallel: 10",
-  "attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
-  "name: Flake probe ${{ matrix.attempt }}/10",
+  "iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+  "name: Flake probe iteration ${{ matrix.iteration }}/10",
   "ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}",
+  "echo \"iteration=${{ matrix.iteration }}/10\"",
   "bash test/ci/run-plasmon-flake-probe.sh \"$PROBE_TARGET\"",
   "2>&1 | tee flake-probe-output.log",
   "run_id=${{ github.run_id }}",
+  "run_number=${{ github.run_number }}",
   "run_attempt=${{ github.run_attempt }}",
-  "name: flake-probe-result-${{ github.run_id }}-${{ matrix.attempt }}",
-  "name: flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}",
+  "iteration=${{ matrix.iteration }}",
+  "name: flake-probe-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}",
+  "name: flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}",
   "cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt",
   "cp flake-probe-output.log flake-probe-diagnostics/probe-output.log",
   "name: Report observed probe failure",
   "context_file=\"$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)\"",
-  "Attempt: ${{ matrix.attempt }}/10",
+  "Probe iteration: ${{ matrix.iteration }}/10",
+  "Workflow run_number: ${{ github.run_number }}",
+  "Workflow run_attempt: ${{ github.run_attempt }}",
   "Exact SHA: \\`${PROBE_SHA:-unknown}\\`",
   "Target: \\`${PROBE_TARGET:-unknown}\\`",
   "Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
@@ -116,11 +123,11 @@ const workflowFragments = [
   "needs: [applicability, probe]",
   "name: Require successful applicability detection",
   "name: Download applicability evidence",
-  "name: Download attempt results",
-  "pattern: flake-probe-result-${{ github.run_id }}-*",
-  "name: Download failed-attempt diagnostics",
+  "name: Download probe iteration results",
+  "pattern: flake-probe-iteration-result-${{ github.run_id }}-*",
+  "name: Download failed-probe-iteration diagnostics",
   "if: needs.probe.result != 'success'",
-  "pattern: flake-probe-diagnostics-${{ github.run_id }}-*",
+  "pattern: flake-probe-iteration-diagnostics-${{ github.run_id }}-*",
   "node test/ci/summarize-flake-probe.mjs",
   "| tee -a \"$GITHUB_STEP_SUMMARY\"",
 ];
@@ -140,9 +147,25 @@ forbidFragment(
 );
 
 for (const fragment of [
+  "matrix.attempt",
+  "attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]",
+  "name: Upload attempt result",
+  "name: Download attempt results",
+  "name: Download failed-attempt diagnostics",
+  "Plasmon flake probe attempt failure",
+  "- Attempt:",
+]) {
+  forbidFragment(
+    workflow,
+    fragment,
+    "flake-probe workflow must reserve attempt terminology for GitHub run_attempt only",
+  );
+}
+
+for (const fragment of [
   "flake-probe-applicability-${{ github.run_id }}-${{ github.run_attempt }}",
-  "flake-probe-result-${{ github.run_id }}-${{ github.run_attempt }}-",
-  "flake-probe-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-",
+  "flake-probe-iteration-result-${{ github.run_id }}-${{ github.run_attempt }}-",
+  "flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-",
 ]) {
   forbidFragment(
     workflow,
@@ -211,6 +234,7 @@ const runnerFragments = [
   "npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &",
   "npm run plasmon:local:status",
   "npm run plasmon:local:reinstall",
+  "for poll in $(seq 1 180)",
   "--workers=1",
   "--retries=0",
   "npm run test:e2e:plasmon:specialist -- --retries=0",
@@ -230,11 +254,12 @@ for (const fragment of [
   "plasmon:demo:serve",
   "plasmon:demo:status",
   "plasmon:demo:reinstall",
+  "for attempt in $(seq 1 180)",
 ]) {
   forbidFragment(
     runner,
     fragment,
-    "flake-probe runner must not retain the full-demo lifecycle namespace",
+    "flake-probe runner must not retain obsolete lifecycle or ambiguous polling terminology",
   );
 }
 
@@ -262,15 +287,24 @@ for (const fragment of [
 }
 
 for (const fragment of [
+  "probeIteration",
+  "result.iteration",
+  "result.attempt",
+  "run_number",
+  "run_attempt",
+  "Fresh probe iterations reported",
+  "Iteration-1 passes",
+  "Failed probe iterations",
   "Failure summary",
   "failure occurrence(s)",
   "Unique failing tests parsed",
   "MODIFIED IN PR",
   "UNCHANGED IN PR",
-  "attempt(s)",
-  "Failed attempts without a parsed test identity",
+  "probe iteration(s)",
+  "Legacy result files parsed",
+  "Failed probe iterations without a parsed test identity",
   "SUMMARY INTEGRITY FAILURE",
-  "STABILITY OBSERVED: 10/10 fresh attempts passed.",
+  "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
   "FLAKE/FAILURE OBSERVED:",
   "process.exitCode = 1",
   "extractFailures",
@@ -278,6 +312,43 @@ for (const fragment of [
   "playwrightDetailFailure",
 ]) {
   requireFragment(summarizer, fragment, "flake-probe aggregate summarizer");
+}
+
+for (const fragment of [
+  "Fresh attempts reported",
+  "First-attempt passes",
+  "Failed attempts:",
+  "attempt(s)",
+  "Failed attempts without a parsed test identity",
+  "fresh attempts passed",
+]) {
+  forbidFragment(
+    summarizer,
+    fragment,
+    "flake-probe user-facing summary must use probe iteration terminology",
+  );
+}
+
+for (const fragment of [
+  "**workflow run** / `run_number`",
+  "**workflow run attempt** / `run_attempt`",
+  "**probe iteration**",
+  "**test retry**",
+  "iteration=<n>",
+  "legacy alias",
+  "new workflow output must not emit the legacy field",
+]) {
+  requireFragment(workflowReadme, fragment, "flake-probe terminology documentation");
+}
+for (const fragment of [
+  "ten independent attempts",
+  "first-attempt pass is green",
+]) {
+  forbidFragment(
+    workflowReadme,
+    fragment,
+    "flake-probe documentation must distinguish probe iterations from test retries",
+  );
 }
 
 for (const fragment of [
@@ -291,31 +362,29 @@ for (const fragment of [
   forbidFragment(executableRunner, fragment, "flake-probe executable runner");
 }
 
-// Targeted probes deliberately execute the named acceptance even while that
-// boundary is quarantined from the normal required Specialist inventory.
 forbidFragment(
   executableRunner,
   "--grep-invert @r2-quarantine",
   "targeted flake-probe executable runner",
 );
 
-const attempts = workflow.match(/attempt: \[([^\]]+)\]/)?.[1]
+const iterations = workflow.match(/iteration: \[([^\]]+)\]/)?.[1]
   ?.split(",")
   .map((value) => Number(value.trim()));
 if (
-  !attempts ||
-  attempts.length !== 10 ||
-  attempts.some((value, index) => value !== index + 1)
+  !iterations ||
+  iterations.length !== 10 ||
+  iterations.some((value, index) => value !== index + 1)
 ) {
   throw new Error(
-    "flake-probe workflow must define exactly ten numbered fresh attempts",
+    "flake-probe workflow must define exactly ten numbered fresh probe iterations",
   );
 }
 
 const retryZeroCount = executableRunner.split("--retries=0").length - 1;
 if (retryZeroCount < 2) {
   throw new Error(
-    "flake-probe runner must disable retries for full and targeted probes",
+    "flake-probe runner must disable test retries for full and targeted probes",
   );
 }
 
@@ -354,12 +423,21 @@ function verifySummaryParserBehavior() {
       "",
     ].join("\n");
 
-    for (let attempt = 1; attempt <= 10; attempt += 1) {
-      const result = `attempt=${attempt}\noutcome=failure\nsha=fixture-sha\ntarget=all\n`;
-      const resultDirectory = join(resultsRoot, `attempt-${attempt}`);
+    for (let iteration = 1; iteration <= 10; iteration += 1) {
+      const result = [
+        "run_id=fixture-run-id",
+        "run_number=317",
+        "run_attempt=2",
+        `iteration=${iteration}`,
+        "outcome=failure",
+        "sha=fixture-sha",
+        "target=all",
+        "",
+      ].join("\n");
+      const resultDirectory = join(resultsRoot, `iteration-${iteration}`);
       const diagnosticDirectory = join(
         diagnosticsRoot,
-        `flake-probe-diagnostics-fixture-${attempt}`,
+        `flake-probe-iteration-diagnostics-fixture-${iteration}`,
       );
       mkdirSync(resultDirectory, { recursive: true });
       mkdirSync(diagnosticDirectory, { recursive: true });
@@ -388,11 +466,16 @@ function verifySummaryParserBehavior() {
 
     const summaryOutput = summaryRun.stdout;
     for (const fragment of [
+      "Workflow `run_number`: `317`",
+      "Workflow `run_attempt`: `2`",
+      "Fresh probe iterations reported: 10/10",
+      "Iteration-1 passes: 0/10",
+      "Failed probe iterations: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
       "Failure occurrences parsed: 20",
       "Unique failing tests parsed: 2",
       "**(20 failure occurrence(s)) `test/e2e/changed.spec.ts` — MODIFIED IN PR**",
-      "`failure one` — 10 occurrence(s), attempt(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
-      "`failure two` — 10 occurrence(s), attempt(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
+      "`failure one` — 10 occurrence(s), probe iteration(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
+      "`failure two` — 10 occurrence(s), probe iteration(s) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10",
     ]) {
       requireFragment(
         summaryOutput,
@@ -405,6 +488,9 @@ function verifySummaryParserBehavior() {
       "failure one ─",
       "failure two ─",
       "test/e2e/unchanged.spec.ts",
+      "Fresh attempts reported",
+      "Failed attempts",
+      "attempt(s)",
     ]) {
       forbidFragment(
         summaryOutput,
@@ -417,8 +503,61 @@ function verifySummaryParserBehavior() {
   }
 }
 
+function verifyLegacyResultCompatibility() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-legacy-summary-"));
+  try {
+    const resultsRoot = join(fixtureRoot, "results");
+    const diagnosticsRoot = join(fixtureRoot, "diagnostics");
+    const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    mkdirSync(resultsRoot, { recursive: true });
+    mkdirSync(diagnosticsRoot, { recursive: true });
+    writeFileSync(changedFilesPath, "");
+
+    for (let legacySlot = 1; legacySlot <= 10; legacySlot += 1) {
+      const result = [
+        "run_id=legacy-run-id",
+        "run_attempt=1",
+        `attempt=${legacySlot}`,
+        "outcome=success",
+        "sha=legacy-sha",
+        "target=specialist",
+        "",
+      ].join("\n");
+      const resultDirectory = join(resultsRoot, `attempt-${legacySlot}`);
+      mkdirSync(resultDirectory, { recursive: true });
+      writeFileSync(join(resultDirectory, "result.txt"), result);
+    }
+
+    const summaryRun = spawnSync(
+      process.execPath,
+      [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    if (summaryRun.status !== 0) {
+      throw new Error(
+        `legacy flake-probe result fixture must remain readable; got ${summaryRun.status}: ${summaryRun.stderr}`,
+      );
+    }
+    for (const fragment of [
+      "Fresh probe iterations reported: 10/10",
+      "Iteration-1 passes: 10/10",
+      "Legacy result files parsed: 10",
+      "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
+    ]) {
+      requireFragment(
+        summaryRun.stdout,
+        fragment,
+        "legacy flake-probe result compatibility fixture",
+      );
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 verifySummaryParserBehavior();
+verifyLegacyResultCompatibility();
 
 console.log(
-  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-run, exact-head, retry-zero, target-selection, automatic-test-discovery, executable local-fixture lifecycle, rerun-safe logical-slot artifacts, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
+  "Flake-probe always-instantiated required-check, cheap applicability detection, job-level not-applicable skip, ten-fresh-probe-iteration, exact-head, retry-zero, target-selection, automatic-test-discovery, executable local-fixture lifecycle, rerun-safe iteration artifacts, explicit workflow-run metadata, backward-compatible legacy result parsing, diagnostic aggregation, failure-identity summary, Playwright failure-only parsing, and changed-file annotation contracts verified",
 );
