@@ -13,6 +13,7 @@ test("#72 packaged taskbar exposes user-facing native and Element state", async 
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  let filesWasPinned: boolean | undefined;
 
   try {
     await page.goto(kernelUrl);
@@ -36,7 +37,7 @@ test("#72 packaged taskbar exposes user-facing native and Element state", async 
     // Preserve any pre-existing persisted pin choice. With no native Files
     // process at startup, a rendered Files task means the user already pinned it.
     const initialFilesTask = taskbar.getByRole("button", { name: /^Files;/ });
-    const filesWasPinned = await initialFilesTask.count() > 0;
+    filesWasPinned = await initialFilesTask.count() > 0;
     if (filesWasPinned) {
       await expect(initialFilesTask.first()).toHaveAttribute("data-task-state", "pinned-only");
       await expect(initialFilesTask.first()).toHaveAccessibleName("Files; Pinned to taskbar");
@@ -128,18 +129,32 @@ test("#72 packaged taskbar exposes user-facing native and Element state", async 
       if (task.state === "uncertain") expect(task.label).toContain("Runtime status unavailable");
     }
 
-    // Restore the preference we changed so this packaged test does not seed a
-    // Files pin into later acceptance journeys.
-    if (!filesWasPinned) {
-      await filesTask.click({ button: "right" });
-      const itemMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
-      await expect(itemMenu).toBeVisible();
-      await itemMenu.getByRole("menuitem", { name: "Unpin from taskbar" }).click();
-    }
-
     health.assertClean();
   } finally {
-    health.dispose();
+    try {
+      // Restore only a pin created by this test. This teardown also covers
+      // assertion failures/timeouts after the mutation, including retries that
+      // reuse the durable installed Plasmon preference store.
+      if (filesWasPinned === false) {
+        const cleanupPlasmon = page.frameLocator(
+          `iframe[data-app-id="${PLASMON_APP_ID}"][data-tile-id="${PLASMON_TILE_ID}"]`,
+        ).first();
+        const cleanupTaskbar = cleanupPlasmon.getByRole("navigation", { name: "Taskbar" });
+        const cleanupFilesTask = cleanupTaskbar.getByRole("button", { name: /^Files;/ }).first();
+        if (await cleanupFilesTask.count() > 0) {
+          const cleanupLabel = (await cleanupFilesTask.getAttribute("aria-label")) ?? "";
+          if (/pinned to taskbar/i.test(cleanupLabel)) {
+            await cleanupFilesTask.click({ button: "right" });
+            const cleanupMenu = cleanupPlasmon.getByRole("menu", { name: "Taskbar context menu" });
+            await expect(cleanupMenu).toBeVisible();
+            await cleanupMenu.getByRole("menuitem", { name: "Unpin from taskbar" }).click();
+            await expect(cleanupFilesTask).not.toHaveAccessibleName(/pinned to taskbar/i);
+          }
+        }
+      }
+    } finally {
+      health.dispose();
+    }
   }
 });
 
