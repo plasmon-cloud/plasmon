@@ -16,7 +16,7 @@ The long-term direction is one coherent OS implementation with reusable services
 - **Atom** — an app-defined, independently addressable logical unit. A physical Element installation may own many Atoms.
 - **NodeId** — the stable identity of a filesystem node; path and display name are mutable presentation.
 
-Do not infer identity or ownership from a filename suffix, window, process, path, or storage representation. Those mappings belong to the relevant contracts and subsystem policy.
+Do not infer identity or ownership from a filename suffix, window, process, path, or storage representation. Those mappings belong to the relevant contracts and subsystem policy. See [`docs/GLOSSARY.md`](docs/GLOSSARY.md) for the shared terminology and identity distinctions used across Plasmon.
 
 ## Architecture
 
@@ -94,12 +94,17 @@ A source-level implementation is not product acceptance when the user-visible pa
 
 ## Documentation
 
+The repository is the durable authority for Plasmon documentation. External project/chat context should only bootstrap navigation; when it conflicts with current repository guidance, follow the repository source-of-truth order and surface material conflicts.
+
 Start with:
 
-- [`AGENTS.md`](AGENTS.md) — scoped implementation rules.
+- [`AGENTS.md`](AGENTS.md) — scoped implementation rules and source-of-truth order.
+- [`docs/README.md`](docs/README.md) — documentation map and navigation authority.
+- [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — shared terminology and identity distinctions.
 - [`TESTING.md`](TESTING.md) — test protocol and CI lanes.
-- [`docs/README.md`](docs/README.md) — accepted architecture/design index.
 - [`src/README.md`](src/README.md) — active frontend layout and legacy boundaries.
 - [`src/os/README.md`](src/os/README.md) — OS subsystem map.
+
+Then read the nearest applicable subsystem `README.md` and `AGENTS.md` before modifying that scope.
 
 Repository-level Neutron documentation under [`../../doc/`](../../doc/) remains authoritative for Kernel behavior.
