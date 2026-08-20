@@ -78,6 +78,11 @@
 }
 
 @media (max-width: 780px) {
+  /* On a narrow screen the thing being reviewed is more important than the
+     catalog/start controls. First-run still has its own primary paste CTA. */
+  .review-workspace { order: 1; }
+  .review-nav { order: 2; }
+  .review-inspector { order: 3; }
   .review-dialog-backdrop { padding: 8px; align-items: stretch; }
   .review-dialog { max-height: calc(100vh - 16px); margin: auto 0; }
   .plan-textarea { min-height: 240px; }
