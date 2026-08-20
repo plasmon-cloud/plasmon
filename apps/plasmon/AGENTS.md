@@ -7,11 +7,14 @@ These instructions apply to `apps/plasmon/**`. Repository-level instructions sti
 ## Read first
 
 1. `apps/plasmon/README.md`.
-2. `apps/plasmon/TESTING.md`.
-3. `apps/plasmon/src/README.md` for frontend/source work.
-4. The nearest subsystem README and `AGENTS.md`.
-5. Relevant accepted documents under `apps/plasmon/docs/`.
-6. Repository `/doc/` when behavior crosses the Neutron/Kernel boundary.
+2. `apps/plasmon/docs/README.md` for the documentation map and repository navigation.
+3. `apps/plasmon/TESTING.md`.
+4. `apps/plasmon/src/README.md` for frontend/source work.
+5. The nearest subsystem README and `AGENTS.md`.
+6. Relevant accepted documents under `apps/plasmon/docs/`.
+7. Repository `/doc/` when behavior crosses the Neutron/Kernel boundary.
+
+Use `apps/plasmon/docs/GLOSSARY.md` for shared terminology and identity distinctions. Do not rely on external project sources, chat, or old handoffs as architecture/testing authority when current repository guidance exists.
 
 ## Source-of-truth order
 
@@ -21,7 +24,7 @@ These instructions apply to `apps/plasmon/**`. Repository-level instructions sti
 4. Scoped `README.md`.
 5. Existing implementation and tests as evidence of current behavior.
 
-If those conflict materially, surface the conflict rather than silently preserving whichever implementation is easiest.
+If those conflict materially, surface the conflict rather than silently preserving whichever implementation is easiest. External project/chat context may bootstrap navigation, but it does not outrank current repository authority.
 
 ## Durable product rules
 
@@ -83,6 +86,8 @@ README files explain what a directory is, how it fits the product, its public se
 Do not use README/AGENTS as an issue tracker. Concrete bugs, temporary migrations, exact one-off acceptance fixes, and sprint ownership belong in GitHub Issues, tests, or dated design/handoff records.
 
 The canonical daedalOS parity ledger under `apps/plasmon/docs/` is an evidence index, not a second work queue. Keep implementation, headless verification, packaged/browser verification, and human/manual acceptance as separate claims. Never upgrade one column merely because another layer passed, and never count an open implementation PR as integrated behavior. Link the canonical Issue when work or acceptance remains; use direct reference inspection before adding new parity claims.
+
+Durable discoveries must be committed back to the appropriate repository documentation, test, contract, or implementation. Do not leave information needed by future implementers only in chat, external project context, or an agent handoff.
 
 ## Escalate instead of assuming
 

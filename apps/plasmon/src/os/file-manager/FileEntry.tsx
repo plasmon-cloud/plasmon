@@ -21,6 +21,11 @@ import {
   renameKeyAction,
   type InlineRenameState,
 } from "./rename.ts";
+import {
+  boundedInlineRenameWidth,
+  inlineRenamePresentation,
+  inlineRenameStyleVariables,
+} from "./rename-presentation.ts";
 import { shortcutTypeLabel } from "./shortcut.ts";
 import { useFileEntryResolvedPresentation } from "./use-file-entry-presentation.ts";
 import "./polish.scss";
@@ -74,6 +79,11 @@ function iconContext(presentation: FileEntryPresentation): IconContext {
   return "file-list";
 }
 
+function cssPixels(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export const FileEntry = memo(function FileEntry({
   fs,
   associations,
@@ -95,7 +105,7 @@ export const FileEntry = memo(function FileEntry({
   onRenameCommit,
   onRenameCancel,
 }: FileEntryProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
   const suppressBlurCommitRef = useRef(false);
@@ -109,6 +119,14 @@ export const FileEntry = memo(function FileEntry({
     renameNodeId: rename?.nodeId ?? null,
   });
   const resolvedPresentation = useFileEntryResolvedPresentation(fs, node, associations, entryRef);
+  const renameValue = rename?.value;
+  const renamePresentation = inlineRenamePresentation(presentation);
+  const entryStyle = renderState.isRenaming
+    ? {
+        ...(renderState.style ?? {}),
+        ...inlineRenameStyleVariables(renamePresentation),
+      }
+    : renderState.style;
 
   useLayoutEffect(() => {
     if (!renderState.isRenaming || !rename || !inputRef.current) {
@@ -125,6 +143,46 @@ export const FileEntry = memo(function FileEntry({
     );
   }, [renderState.isRenaming, rename?.initialName, rename?.session, node.kind]);
 
+  useLayoutEffect(() => {
+    const editor = inputRef.current;
+    if (!editor || !renderState.isRenaming) return;
+    if (!renamePresentation.autoGrow) {
+      editor.style.width = "";
+      editor.style.height = "";
+      return;
+    }
+
+    const style = getComputedStyle(editor);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.font = style.font;
+      const textWidth = Math.max(
+        ...editor.value.split(/\r?\n/).map((line) => context.measureText(line || " ").width),
+      );
+      const horizontalChrome = cssPixels(style.paddingLeft)
+        + cssPixels(style.paddingRight)
+        + cssPixels(style.borderLeftWidth)
+        + cssPixels(style.borderRightWidth);
+      const minimum = renamePresentation.minWidthPx ?? 0;
+      const gridInset = renamePresentation.gridInlineInsetPx ?? 0;
+      const entryWidth = entryRef.current?.getBoundingClientRect().width ?? minimum;
+      const maximum = renamePresentation.desktopMaxWidthPx
+        ?? Math.max(minimum, entryWidth - (gridInset * 2));
+      editor.style.width = `${boundedInlineRenameWidth(textWidth, horizontalChrome, minimum, maximum)}px`;
+    }
+
+    editor.style.height = "0px";
+    editor.style.height = `${editor.scrollHeight}px`;
+  }, [
+    renamePresentation.autoGrow,
+    renamePresentation.desktopMaxWidthPx,
+    renamePresentation.gridInlineInsetPx,
+    renamePresentation.minWidthPx,
+    renderState.isRenaming,
+    renameValue,
+  ]);
+
   return (
     <div
       ref={(element) => {
@@ -132,7 +190,7 @@ export const FileEntry = memo(function FileEntry({
         setRef(element);
       }}
       className={renderState.className}
-      style={renderState.style as CSSProperties | undefined}
+      style={entryStyle as CSSProperties | undefined}
       role="option"
       tabIndex={-1}
       aria-selected={selected}
@@ -156,21 +214,23 @@ export const FileEntry = memo(function FileEntry({
       <span className="fm-entry__name" title={renderState.showCollapsedNameTitle ? node.name : undefined}>
         {renderState.isRenaming && rename ? (
           <>
-            <input
+            <textarea
               ref={inputRef}
+              rows={renamePresentation.rows}
+              wrap={renamePresentation.wrap}
               value={rename.value}
               aria-label={`Rename ${node.name}`}
               disabled={rename.busy}
-              onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
+              onPointerDown={(event: ReactPointerEvent<HTMLTextAreaElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
+              onChange={(event: ReactChangeEvent<HTMLTextAreaElement>) => {
                 suppressBlurCommitRef.current = false;
                 onRenameChange(event.target.value);
               }}
               onBlur={() => {
                 if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit();
               }}
-              onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+              onKeyDown={(event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
                 const action = renameKeyAction(event.key);
                 if (!action) return;
                 event.preventDefault();
