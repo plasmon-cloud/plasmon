@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -18,13 +18,13 @@ async function launchPlasmon(page: Page) {
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #44 shortcut creation",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #44 shortcut creation",
       },
     ],
@@ -66,6 +66,18 @@ async function openExplorer(app: ReturnType<Page["frameLocator"]>) {
 function nameFromRenameLabel(label: string | null): string {
   if (!label?.startsWith("Rename ")) throw new Error(`Unexpected rename label: ${String(label)}`);
   return label.slice("Rename ".length);
+}
+
+async function expectResolvedDirectoryShortcut(shortcut: Locator) {
+  // Node-target shortcut presentation resolves asynchronously through the
+  // authoritative target NodeId. Waiting for the folder art proves the visible
+  // shortcut has completed that resolution before another filesystem command is
+  // issued, instead of overlapping the presentation fs.stat with the next write.
+  await expect(shortcut.locator(".plasmon-icon-art")).toHaveAttribute(
+    "src",
+    /(?:^|\/)folder\.svg$/,
+  );
+  await expect(shortcut.locator(".plasmon-shortcut-overlay")).toBeVisible();
 }
 
 /**
@@ -116,7 +128,7 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(firstShortcutName.startsWith(targetName)).toBe(true);
 
     await expect(firstRenamingShortcut).toHaveAttribute("aria-selected", "true");
-    await expect(firstRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
+    await expectResolvedDirectoryShortcut(firstRenamingShortcut);
     const firstShortcutId = await firstRenamingShortcut.getAttribute("data-fm-node-id");
     if (!firstShortcutId) throw new Error("First packaged shortcut has no stable NodeId");
     await firstRename.press("Escape");
@@ -147,7 +159,7 @@ test("#44 — packaged FileManager exposes and activates Create Shortcut", async
     expect(secondShortcutName.startsWith(targetName)).toBe(true);
 
     await expect(secondRenamingShortcut).toHaveAttribute("aria-selected", "true");
-    await expect(secondRenamingShortcut.locator(".fm-entry__icon")).toBeVisible();
+    await expectResolvedDirectoryShortcut(secondRenamingShortcut);
     const secondShortcutId = await secondRenamingShortcut.getAttribute("data-fm-node-id");
     if (!secondShortcutId) throw new Error("Second packaged shortcut has no stable NodeId");
     await secondRename.press("Escape");
