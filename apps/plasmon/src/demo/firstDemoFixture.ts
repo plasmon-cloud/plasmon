@@ -1,7 +1,9 @@
-import type { FilesystemSeedSpec } from "../os/fs/index.ts";
-
-export const FIRST_DEMO_FIXTURE_PARAM = "plasmon-fixture";
-export const FIRST_DEMO_FIXTURE_VALUE = "first-demo";
+import type { FsService } from "../os/contracts/index.ts";
+import {
+  nodeShortcutSeedSpec,
+  reconcileSeedManifest,
+  type FilesystemSeedSpec,
+} from "../os/fs/index.ts";
 
 export const FIRST_DEMO_TEXT_PATH = "/Documents/First Demo Notes.txt";
 export const FIRST_DEMO_MARKDOWN_PATH = "/Documents/First Demo Guide.md";
@@ -9,17 +11,17 @@ export const FIRST_DEMO_IMAGE_PATH = "/Pictures/First Demo Artwork.svg";
 
 const FIRST_DEMO_TEXT = `Plasmon First Demo Notes
 
-This document is authored for the Plasmon acceptance environment.
-Use FileManager, Search, and Text Editor to discover and open it through normal filesystem associations.
+This document is authored for the Plasmon demo environment.
+Use FileManager, Search, Desktop, and Text Editor to discover and open it through normal filesystem associations.
 `;
 
 const FIRST_DEMO_MARKDOWN = `# Plasmon First Demo
 
-This redistribution-safe Markdown fixture is authored in the Plasmon repository.
+This redistribution-safe Markdown demo document is authored in the Plasmon repository.
 
-- Open it from FileManager or Search.
+- Open it from Desktop, FileManager, or Search.
 - Edit it with the native Markdown application.
-- Keep demo content opt-in; normal production boot remains empty of these fixtures.
+- Demo content is selected by the demo deployment, not browser URL state.
 `;
 
 const FIRST_DEMO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Plasmon first demo artwork">
@@ -32,19 +34,8 @@ const FIRST_DEMO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="960" heig
 
 const encode = (value: string): Uint8Array => new TextEncoder().encode(value);
 
-/** Normal production boot does not receive first-demo content. */
-export function firstDemoFixtureRequested(pageUrl: string | URL): boolean {
-  return new URL(pageUrl).searchParams.get(FIRST_DEMO_FIXTURE_PARAM) === FIRST_DEMO_FIXTURE_VALUE;
-}
-
-/**
- * Explicit acceptance/demo content expressed only through the production
- * filesystem seed contract. All bytes below are authored in this repository;
- * there are no third-party media payloads or game/runtime fixture ownership.
- */
-export function createFirstDemoSeeds(pageUrl: string | URL): readonly FilesystemSeedSpec[] {
-  if (!firstDemoFixtureRequested(pageUrl)) return [];
-
+/** Demo-deployment content expressed only through production filesystem seeds. */
+export function createFirstDemoSeeds(): readonly FilesystemSeedSpec[] {
   return [
     {
       key: "demo.first.documents-directory.v1",
@@ -88,4 +79,24 @@ export function createFirstDemoSeeds(pageUrl: string | URL): readonly Filesystem
       bytes: encode(FIRST_DEMO_SVG),
     },
   ];
+}
+
+const FIRST_DEMO_DESKTOP_SHORTCUTS = [
+  { key: "demo.first.desktop.notes.v1", name: "First Demo Notes.txt", targetPath: FIRST_DEMO_TEXT_PATH },
+  { key: "demo.first.desktop.guide.v1", name: "First Demo Guide.md", targetPath: FIRST_DEMO_MARKDOWN_PATH },
+  { key: "demo.first.desktop.artwork.v1", name: "First Demo Artwork.svg", targetPath: FIRST_DEMO_IMAGE_PATH },
+] as const;
+
+/** Reconcile stable NodeId-backed Desktop shortcuts after demo files exist. */
+export async function reconcileFirstDemoDesktopShortcuts(fs: FsService): Promise<void> {
+  const specs = (await Promise.all(
+    FIRST_DEMO_DESKTOP_SHORTCUTS.map((shortcut) => nodeShortcutSeedSpec(fs, {
+      key: shortcut.key,
+      seedClass: "demo-temporary",
+      parentPath: "/Desktop",
+      name: shortcut.name,
+      targetPath: shortcut.targetPath,
+    })),
+  )).filter((spec): spec is FilesystemSeedSpec => spec !== null);
+  await reconcileSeedManifest(fs, specs);
 }
