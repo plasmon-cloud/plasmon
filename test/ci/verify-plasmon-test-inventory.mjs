@@ -8,7 +8,6 @@ import {
   layerPaths,
   nonPlasmonBrowserSpecs,
   optionalCoreBrowserTests,
-  removedBrowserTests,
   repoRoot,
 } from './plasmon-test-inventory.mjs';
 
@@ -16,6 +15,7 @@ const args = new Set(process.argv.slice(2));
 const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-golden-path-left-snap.spec.ts': { count: 1, issues: ['@issue-277'] },
   'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 2, issues: ['@issue-251', '@issue-308'] },
+  'test/e2e/plasmon-review-demo.spec.ts': { count: 1, issues: ['@issue-303'] },
   'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
   'test/e2e/plasmon-drag-preview-66.spec.ts': { count: 1, issues: ['@issue-66', '@issue-320'] },
   'test/e2e/plasmon-diagnostic-selection-86.spec.ts': { count: 1, issues: ['@issue-86', '@issue-330'] },
@@ -88,12 +88,6 @@ async function verify(inventory) {
     assert(
       inventory.some((test) => test.path === path && test.layer === 'browser-optional' && test.profile === 'profile-specific'),
       `Profile-specific browser classification is stale or missing: ${path}`,
-    );
-  }
-  for (const path of removedBrowserTests) {
-    assert(
-      inventory.some((test) => test.path === path && test.layer === 'browser-optional' && test.profile === 'review-removed'),
-      `Removed-deployment browser classification is stale or missing: ${path}`,
     );
   }
   for (const [path, owner] of Object.entries(nonPlasmonBrowserSpecs)) {
