@@ -3,9 +3,9 @@ import { collisionFreeName, normalizedSiblingName } from "./naming.ts";
 
 export type NewDocumentKind = "text" | "markdown";
 
-const DOCUMENT_SPECS: Record<NewDocumentKind, { name: string; mime: string }> = {
-  text: { name: "New Text Document.txt", mime: "text/plain" },
-  markdown: { name: "New Markdown Document.md", mime: "text/markdown" },
+const DOCUMENT_NAMES: Record<NewDocumentKind, string> = {
+  text: "New Text Document.txt",
+  markdown: "New Markdown Document.md",
 };
 
 async function siblingNames(fs: FsService, directoryId: NodeId): Promise<Set<string>> {
@@ -21,15 +21,21 @@ export async function createGeneratedFolder(
   return fs.mkdir(directoryId, name);
 }
 
-/** Creates a normal filesystem document with a collision-free generated name. */
+/**
+ * Creates a normal filesystem document with a collision-free generated name.
+ *
+ * The generated filename is the type authority for these blank documents. Do
+ * not persist the filename-derived MIME as explicit metadata: FileManager
+ * immediately offers inline rename, and a later `.txt -> .js` / `.md -> .js`
+ * rename must remain eligible for canonical #189 filename classification.
+ */
 export async function createDocument(
   fs: FsService,
   directoryId: NodeId,
   kind: NewDocumentKind,
 ): Promise<FsNode> {
-  const spec = DOCUMENT_SPECS[kind];
-  const name = collisionFreeName(spec.name, false, await siblingNames(fs, directoryId));
-  return fs.createFile(directoryId, name, { mime: spec.mime });
+  const name = collisionFreeName(DOCUMENT_NAMES[kind], false, await siblingNames(fs, directoryId));
+  return fs.createFile(directoryId, name);
 }
 
 export const IMPORT_CHUNK_BYTES = 256 * 1024;
