@@ -115,11 +115,14 @@ test(
     const heading = preview.getByRole("heading", { name: "Big Heading", exact: true, level: 1 });
     const paragraph = preview.getByText("Normal paragraph.", { exact: true });
     const list = preview.getByRole("list");
+    const listItems = list.locator("li");
 
     await expect(heading).toBeVisible();
     await expect(paragraph).toBeVisible();
-    await expect(list.getByRole("listitem", { name: "one", exact: true })).toBeVisible();
-    await expect(list.getByRole("listitem", { name: "two", exact: true })).toBeVisible();
+    await expect(list).toBeVisible();
+    await expect(listItems).toHaveCount(2);
+    await expect(listItems.nth(0)).toHaveText("one");
+    await expect(listItems.nth(1)).toHaveText("two");
     await expect(preview).not.toContainText("# Big Heading");
 
     const presentation = await preview.evaluate((article) => {
