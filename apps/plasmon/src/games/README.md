@@ -16,9 +16,18 @@ Keep game support data- and association-driven so new bundle formats or runtimes
 
 Temporary/demo/bootstrap content must remain separable from durable product defaults and must preserve licensing/redistribution metadata.
 
-## Explicit packaged demo fixture
+## Deferred full-profile demo fixture
 
-Plasmon ships one deliberately opt-in js-dos fixture for development, demos, and installed-package acceptance. The build deterministically generates `fixtures/PlasmonDemo.jsdos` from `demoFixtureBundle.ts`. The bundle contains only a tiny Plasmon-authored keyboard DOS program, its `dosbox.conf`, and a provenance/readme file; it contains no commercial or third-party game data and is distributed under the repository GNU GPL version 3 license.
+The hackathon core r2 package deliberately omits js-dos/EmulatorJS runtimes,
+ROMs, and demo game bundles. The source and acceptance fixture remain available
+as deferred full-profile evidence for a later optional-runtime distribution;
+they are not materialized by the core package build.
+
+When the full profile is intentionally restored, the build deterministically
+generates `fixtures/PlasmonDemo.jsdos` from `demoFixtureBundle.ts`. The bundle
+contains only a tiny Plasmon-authored keyboard DOS program, its `dosbox.conf`,
+and a provenance/readme file; it contains no commercial or third-party game
+data and is distributed under the repository GNU GPL version 3 license.
 
 The demo creates `SCORE.DAT` inside the emulated filesystem on first run and updates it on SPACE. When that file arrives through a restored js-dos change set, the program announces restored progress. This behavior exists solely so installed-package acceptance can exercise a real legal filesystem mutation and save/close/reopen path; it does not create a privileged Product save format or game-title-specific runtime rule.
 

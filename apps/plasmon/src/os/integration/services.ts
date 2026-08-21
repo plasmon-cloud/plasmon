@@ -72,6 +72,7 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
+import { isGameRuntimeProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -173,16 +174,19 @@ function registerWave2Applications(
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  // EmulatorJS and js-dos are normal association/runtime handlers. Their
-  // process-host definitions exist only because OpenService routes local React
-  // hosts through NativeProcessController; they do not create runtime .sys apps.
-  associations.registerHandler(emulatorJsHandler);
-  for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
-  nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+  // The hackathon core package intentionally omits optional emulator payloads
+  // and their handlers, so opening a game cannot create missing-runtime
+  // requests. The full test/service graph retains these registrations when the
+  // build profile is not hackathon-core.
+  if (isGameRuntimeProfile) {
+    associations.registerHandler(emulatorJsHandler);
+    for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
+    nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
 
-  associations.registerHandler(jsDosHandler);
-  for (const rule of jsDosAssociationRules) associations.registerRule(rule);
-  nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+    associations.registerHandler(jsDosHandler);
+    for (const rule of jsDosAssociationRules) associations.registerRule(rule);
+    nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+  }
 
   const contentLoaders = createContentAppLoaders();
   for (const definition of contentAppDefinitions) {
