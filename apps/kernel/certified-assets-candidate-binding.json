@@ -503,12 +503,12 @@
   },
   "runner": {
     "fingerprint_schema": "neutron.kernel.certified-assets-qualification-runner.v2",
-    "source_set_sha256": "01e5b0af43a0f4618a76d748a1a2461f86a1a5a118223d3be6d143295f946b22",
+    "source_set_sha256": "7dc345637bd03bca4d8f1ed5c73e95845e8bae2db48f9d2b5f25903a4dc92648",
     "sources": [
       {
-        "bytes": 19779,
+        "bytes": 19806,
         "path": "apps/kernel/evidence/certified_assets_candidate_binding.ts",
-        "sha256": "c18522c22db298b39b5a3a8337c8c0ef7e47d096b058209b39529195d301423c"
+        "sha256": "9a27f422228a4b4e4f4f3def24de9e817d0e83afeaa2e4853576bf2265a070eb"
       },
       {
         "bytes": 13245,
@@ -591,6 +591,11 @@
         "sha256": "7909480bb7dcd1b4dcb7ca15b4c8d9cc734cf54f10447fb9e8a0f14e4744f888"
       },
       {
+        "bytes": 29272,
+        "path": "apps/kernel/mops.lock",
+        "sha256": "ed568dc2e184e1ead53933683e6cbd0f30393e880732337aa2f98dcd9f1f85d6"
+      },
+      {
         "bytes": 160,
         "path": "apps/kernel/mops.toml",
         "sha256": "4880a36eb6d34ac23f94eca0e44d0cefd16fe7b4fed95cb63d140ba0248eb4ed"
@@ -611,9 +616,9 @@
         "sha256": "6960a6572cd610716e1a6efa78a1f5c9f78f48af2ed49684cc630fe7a2ee4017"
       },
       {
-        "bytes": 8366,
+        "bytes": 8468,
         "path": "apps/kernel/test/motoko/run.ts",
-        "sha256": "6961a502aeec62ddd8da68e42361364082fb168381860fe833f64ba8c928a78e"
+        "sha256": "6004a4de8006d8c652bcfe925f5c454c2649b886650cbba27ba00792418328a8"
       },
       {
         "bytes": 567,
@@ -621,9 +626,9 @@
         "sha256": "678a097122c417e10f0870a035d4d52cb8a52ac4d63e490f464b77281085c4d7"
       },
       {
-        "bytes": 2480,
+        "bytes": 2486,
         "path": "flake.nix",
-        "sha256": "73ac2a67832ece344842efbeacf4d493aae6c5ebacb2e34fe299ae66484ef79c"
+        "sha256": "4fa98aa7d04fd255132da6051e58459b5dee94b3717c0c91bc64bc0a2f711e2d"
       },
       {
         "bytes": 760,
@@ -801,9 +806,9 @@
         "sha256": "6394967f1eaef4e9614b6489f36f73fe8e17e1bb304b3e07a4f312e4fba73ba6"
       },
       {
-        "bytes": 6065,
+        "bytes": 6186,
         "path": "packages/neutron-scripts/src/compile_motoko.ts",
-        "sha256": "f2d5e7cb73c0cf78ee3d66ef7e4cc3e73653c275b5cc7302786aa52134a54c59"
+        "sha256": "81876db9f6a1971e8d6c56c0206b1f86867754baf8ade7263c98e3e36a7e57f2"
       },
       {
         "bytes": 11933,

@@ -17,8 +17,10 @@ These are Bun-run TypeScript scripts for Neutron app packaging.
 - `src/compile_motoko.ts` compiles an actor with Neutron's exact vendored
   Motoko WebAssembly compiler and emits its matching Candid sidecar. Pass
   `--emit-stable-types` when the matching stable-types sidecar is also needed.
-  It invokes `mops sources` only to resolve package roots and never resolves or
-  executes a host `moc`.
+  It explicitly runs `mops install --locked` followed by
+  `mops sources --no-install` to resolve package roots and never resolves or
+  executes a host `moc`. Mops 3 verifies downloads against the committed lock;
+  `mops verify` is the explicit audit for an already-materialized `.mops` tree.
 
 Apps should call these through `bun ../../packages/neutron-scripts/src/*.ts`
 from their `package.json` scripts.
