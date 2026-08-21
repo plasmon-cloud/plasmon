@@ -158,6 +158,29 @@ authorized workspace; the hamburger remains only on the
 authenticated-but-unauthorized screen so that principal and Logout stay
 available there.
 
+## Motoko dependencies and Mops state
+
+The repository pins the Mops CLI to exactly `ic-mops@3.1.0` in the root
+`flake.nix`. Kernel dependency resolution uses Mops only to materialize package
+sources before the repository's vendored `neutron-motoko-wasm` compiler runs;
+Kernel does not invoke a Mops compiler, PocketIC test command, or host `moc`, so
+there is no Mops `[toolchain] moc` or `pocket-ic` pin to maintain here.
+
+`mops.lock` is authoritative release input and is committed at
+`apps/kernel/mops.lock`. It records the complete Mops v3 dependency graph,
+GitHub revisions, and file hashes needed for reproducible Kernel CI. Mops
+libraries' locks do not constrain downstream consumers, so this lock belongs
+to the Kernel project that consumes the dependencies. CI first runs
+`mops install --locked` and then `mops sources --no-install`; the latter is
+intentionally read-only and preserves the explicit materialization boundary
+introduced for #161. Mops 3 verifies bytes as they are downloaded against the
+lock; it does not re-hash an existing `.mops` tree on every install. Use
+`mops verify` for a deliberate full audit.
+
+`apps/kernel/.mops/` remains ignored ephemeral materialization/cache state. It
+may be removed and recreated from the committed lock without changing tracked
+files.
+
 ## Local install
 
 Install dependencies once, then use the repository provisioner from the
