@@ -143,10 +143,11 @@ export async function resolveMopsPackages(
 ): Promise<PackageMap> {
   // `mops sources` installs implicitly, but clean CI has demonstrated that an
   // incompletely materialized package tree can still reach the compiler walk.
-  // Perform the integrity-checking install explicitly, then make source
+  // Materialize from the committed Mops v3 lock explicitly, then make source
   // resolution read-only so compilation never consumes a partially installed
-  // dependency tree.
-  await run("mops", ["install", "--lock", "update"], { cwd });
+  // dependency tree. Mops verifies downloaded bytes against the lock; it does
+  // not re-hash an already-populated .mops tree on every install.
+  await run("mops", ["install", "--locked"], { cwd });
   const { stdout } = await run("mops", ["sources", "--no-install"], { cwd });
   return parsePackageString(stdout.replace(/\n/g, " ").trim());
 }
