@@ -41,7 +41,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text keeps its live Monaco model while Save As changes canonical language", async ({ page }) => {
+test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -87,10 +87,52 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
+    const windows = app.locator(".plasmon-window-layer [data-window-id]");
+
+    // Reproduce the screenshot boundary: FileManager creates a blank text document,
+    // immediately renames the same NodeId to .js, and Text must open real JavaScript.
+    const generatedName = `Issue 415 Generated ${Date.now()}.js`;
+    await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    const generatedRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
+    await expect(generatedRename).toBeVisible();
+    await generatedRename.fill(generatedName);
+    await generatedRename.press("Enter");
+
+    const generatedEntry = documentsExplorer.locator("[data-fm-node-id]", { hasText: generatedName }).first();
+    await expect(generatedEntry).toBeVisible({ timeout: 20_000 });
+    const beforeGeneratedText = await windows.count();
+    await generatedEntry.dblclick();
+    await expect(windows).toHaveCount(beforeGeneratedText + 1, { timeout: 20_000 });
+
+    const generatedWindow = windows.last();
+    const generatedSurface = generatedWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
+    await expect(generatedWindow).toHaveAttribute("aria-label", `${generatedName} - Monaco Editor`);
+    await expect(generatedSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expect(generatedSurface).toHaveAttribute("data-editor-language", "javascript");
+    await expect(generatedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
+
+    const generatedInput = generatedWindow.getByRole("textbox", {
+      name: "Text content",
+      exact: true,
+      includeHidden: true,
+    }).first();
+    const generatedFirstLine = generatedWindow.locator(".monaco-editor .view-line").first();
+    await generatedFirstLine.click({ position: { x: 8, y: 10 } });
+    await expect(generatedInput).toBeFocused();
+    await page.keyboard.insertText("const generated = 42;\nfunction twiceGenerated(value) { return value * 2; }");
+    await expect(generatedWindow.getByText("Modified", { exact: true })).toBeVisible();
+    await expectJavaScriptTokenization(
+      generatedWindow,
+      "a FileManager text document renamed to .js should render real JavaScript tokenization",
+    );
+
+    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    await filesTask.click();
+    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+
     const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
 
-    const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const beforeText = await windows.count();
     await notes.dblclick();
     await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
@@ -132,7 +174,6 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await textWindow.getByRole("button", { name: "Save", exact: true }).click();
     await expect(textWindow.getByText("Saved", { exact: true })).toBeVisible();
 
-    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await filesTask.click();
     await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
     const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
