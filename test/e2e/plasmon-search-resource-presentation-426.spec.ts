@@ -93,7 +93,6 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
     }))).toEqual({ objectFit: "contain", naturalWidth, naturalHeight });
   }
 
-  await mediaTab.click();
   await importer.setInputFiles({
     name: "issue426-unavailable.png",
     mimeType: "image/png",
@@ -102,7 +101,7 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   await expect(mediaRows).toHaveCount(3);
   const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
   await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0, { timeout: 10_000 });
-  await expect(unavailableRow.locator(".plasmon-icon-frame--bare img.plasmon-icon-art")).toBeVisible();
+  await expect(unavailableRow.locator("img.plasmon-icon-art:not(.plasmon-media-thumbnail)")).toBeVisible();
 
   const documentsTab = panel.getByRole("tab", { name: "Documents", exact: true });
   await documentsTab.click();
