@@ -96,11 +96,11 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   await importer.setInputFiles({
     name: "issue426-unavailable.png",
     mimeType: "image/png",
-    buffer: Buffer.from("not an image"),
+    buffer: Buffer.alloc(0),
   });
   await expect(mediaRows).toHaveCount(3);
   const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
-  await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0, { timeout: 10_000 });
+  await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
   await expect(unavailableRow.locator("img.plasmon-icon-art:not(.plasmon-media-thumbnail)")).toBeVisible();
 
   const documentsTab = panel.getByRole("tab", { name: "Documents", exact: true });
