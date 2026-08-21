@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -13,7 +13,7 @@ function pathname(value: string): string {
   return new URL(value).pathname;
 }
 
-async function expectReviewArtwork(locator: ReturnType<ReturnType<typeof test>["locator"]>): Promise<void> {
+async function expectReviewArtwork(locator: Locator): Promise<void> {
   const image = locator.locator("img.plasmon-native-app-icon");
   await expect(image).toHaveCount(1);
   const src = await image.getAttribute("src");
