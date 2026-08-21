@@ -30,7 +30,7 @@ test("compile-motoko CLI requires explicit source and output", () => {
   );
 });
 
-test("Mops packages are integrity-installed before read-only source resolution", async () => {
+test("Mops packages are locked-installed before read-only source resolution", async () => {
   const calls: Array<{ command: string; args: string[]; cwd: string }> = [];
   const run: MopsCommandRunner = async (command, args, options) => {
     calls.push({ command, args, cwd: options.cwd });
@@ -50,7 +50,7 @@ test("Mops packages are integrity-installed before read-only source resolution",
   expect(calls).toEqual([
     {
       command: "mops",
-      args: ["install", "--lock", "update"],
+      args: ["install", "--locked"],
       cwd: "/workspace/apps/kernel",
     },
     {
