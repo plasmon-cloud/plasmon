@@ -5,6 +5,7 @@ import type {
   NativeAppDefinition,
   OpenService,
 } from "../../os/contracts/index.ts";
+import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import type { NativeAppComponent, NativeAppLoader } from "../../os/process/index.ts";
 import type {
   FileManagerOpenAuthority,
@@ -33,6 +34,7 @@ export interface ExplorerNativeDependencies {
   openAuthority: FileManagerOpenAuthority;
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
+  hiddenVisibility: HiddenVisibilityPreferenceStore;
 }
 
 export function createExplorerNativeLoader(dependencies: ExplorerNativeDependencies): NativeAppLoader {
@@ -44,6 +46,7 @@ export function createExplorerNativeLoader(dependencies: ExplorerNativeDependenc
       openService: dependencies.openService,
       openAuthority: dependencies.openAuthority,
       trashAuthority: dependencies.trashAuthority,
+      hiddenVisibility: dependencies.hiddenVisibility,
       ...(dependencies.fsEvents ? { fsEvents: dependencies.fsEvents } : {}),
       ...(dependencies.clipboard ? { clipboard: dependencies.clipboard } : {}),
     });
