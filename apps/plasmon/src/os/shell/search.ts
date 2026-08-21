@@ -37,19 +37,77 @@ export const SEARCH_CATEGORY_LIMITS: Readonly<Record<Exclude<SearchTab, "all">, 
   atoms: 10,
 });
 
-export interface NativeAppSearchResult { kind: "native-app"; id: string; category: "apps"; title: string; subtitle: string; app: NativeAppDefinition; }
-export interface ElementSearchResult { kind: "element"; id: string; category: "apps"; title: string; subtitle: string; element: ExternalElement; }
-export interface NeutronProjectionSearchResult { kind: "neutron-projection"; id: string; category: "apps"; title: string; subtitle: string; icon?: string; elementId: string; node: FsNode; }
-export interface StartShortcutSearchResult { kind: "start-shortcut"; id: string; category: "apps"; title: string; subtitle: string; node: FsNode; target: StartShortcutTarget; }
-export interface DirectorySearchResult { kind: "directory"; id: string; category: "documents"; title: string; subtitle: "Folder"; node: FsNode; }
-export interface FileSearchResult { kind: "file"; id: string; category: FileSearchCategory; title: string; subtitle: string; node: FsNode; }
+export interface NativeAppSearchResult {
+  kind: "native-app";
+  id: string;
+  category: "apps";
+  title: string;
+  subtitle: string;
+  app: NativeAppDefinition;
+}
 
-export type ShellSearchResult = NativeAppSearchResult | ElementSearchResult | NeutronProjectionSearchResult | StartShortcutSearchResult | DirectorySearchResult | FileSearchResult;
+export interface ElementSearchResult {
+  kind: "element";
+  id: string;
+  category: "apps";
+  title: string;
+  subtitle: string;
+  element: ExternalElement;
+}
+
+export interface NeutronProjectionSearchResult {
+  kind: "neutron-projection";
+  id: string;
+  category: "apps";
+  title: string;
+  subtitle: string;
+  icon?: string;
+  elementId: string;
+  node: FsNode;
+}
+
+export interface StartShortcutSearchResult {
+  kind: "start-shortcut";
+  id: string;
+  category: "apps";
+  title: string;
+  subtitle: string;
+  node: FsNode;
+  target: StartShortcutTarget;
+}
+
+export interface DirectorySearchResult {
+  kind: "directory";
+  id: string;
+  category: "documents";
+  title: string;
+  subtitle: "Folder";
+  node: FsNode;
+}
+
+export interface FileSearchResult {
+  kind: "file";
+  id: string;
+  category: FileSearchCategory;
+  title: string;
+  subtitle: string;
+  node: FsNode;
+}
+
+export type ShellSearchResult =
+  | NativeAppSearchResult
+  | ElementSearchResult
+  | NeutronProjectionSearchResult
+  | StartShortcutSearchResult
+  | DirectorySearchResult
+  | FileSearchResult;
 
 export interface SearchBatch {
   results: ShellSearchResult[];
   warnings: string[];
+  /** True only when filesystem traversal stopped before the searchable tree was exhausted. */
   truncated: boolean;
+  /** True when otherwise valid matches were omitted only by normal presentation caps. */
   capped: boolean;
 }
 
@@ -65,15 +123,32 @@ export interface ShellSearchOptions extends FilesystemSearchOptions {
   pinnedElements?: readonly string[];
 }
 
-function abortError(): Error { const error = new Error("Search cancelled"); error.name = "AbortError"; return error; }
-function checkAbort(signal?: AbortSignal): void { if (signal?.aborted) throw abortError(); }
-function normalize(value: string): string { return value.toLocaleLowerCase(); }
-function atomRecord(node: FsNode): Record<string, JsonValue> | null { const value = node.metadata.atom; return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, JsonValue> : null; }
+function abortError(): Error {
+  const error = new Error("Search cancelled");
+  error.name = "AbortError";
+  return error;
+}
+
+function checkAbort(signal?: AbortSignal): void {
+  if (signal?.aborted) throw abortError();
+}
+
+function normalize(value: string): string {
+  return value.toLocaleLowerCase();
+}
+
+function atomRecord(node: FsNode): Record<string, JsonValue> | null {
+  const value = node.metadata.atom;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  return value as Record<string, JsonValue>;
+}
 
 function categorizeNonApplicationFsNode(node: FsNode): NonApplicationSearchCategory {
   const classification = classifyResource(node);
   const atom = atomRecord(node);
-  if (classification.kind === "atom" || atom?.format === "plasmon.atom" || classification.type.extension === ".atom") return "atoms";
+  if (classification.kind === "atom" || atom?.format === "plasmon.atom" || classification.type.extension === ".atom") {
+    return "atoms";
+  }
   if (["audio", "image", "video"].includes(classification.type.contentKind)) return "media";
   return "documents";
 }
@@ -87,10 +162,21 @@ export function categorizeFsNode(node: FsNode): FsSearchCategory {
 function metadataStrings(value: JsonValue, output: string[], budget: { remaining: number }): void {
   if (budget.remaining <= 0 || value === null) return;
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    const text = String(value); if (text.length) output.push(text.slice(0, budget.remaining)); budget.remaining -= Math.min(text.length, budget.remaining); return;
+    const text = String(value);
+    if (text.length) output.push(text.slice(0, budget.remaining));
+    budget.remaining -= Math.min(text.length, budget.remaining);
+    return;
   }
-  if (Array.isArray(value)) { for (const item of value) metadataStrings(item, output, budget); return; }
-  for (const [key, item] of Object.entries(value)) { if (budget.remaining <= 0) break; output.push(key); budget.remaining -= Math.min(key.length, budget.remaining); metadataStrings(item, output, budget); }
+  if (Array.isArray(value)) {
+    for (const item of value) metadataStrings(item, output, budget);
+    return;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    if (budget.remaining <= 0) break;
+    output.push(key);
+    budget.remaining -= Math.min(key.length, budget.remaining);
+    metadataStrings(item, output, budget);
+  }
 }
 
 export function searchableNodeText(node: FsNode): string {
@@ -104,22 +190,58 @@ export function searchableNodeText(node: FsNode): string {
 function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
   const classification = classifyResource(node);
   if (category === "apps" && classification.kind === "system-app") return "Plasmon application";
-  if (category === "atoms") { const atom = atomRecord(node); const title = typeof atom?.title === "string" ? atom.title : null; const atomType = typeof atom?.atomType === "string" ? atom.atomType : null; return [title, atomType, "Atom"].filter(Boolean).join(" · "); }
+  if (category === "atoms") {
+    const atom = atomRecord(node);
+    const title = typeof atom?.title === "string" ? atom.title : null;
+    const atomType = typeof atom?.atomType === "string" ? atom.atomType : null;
+    return [title, atomType, "Atom"].filter(Boolean).join(" · ");
+  }
   if (classification.type.mime) return classification.type.mime;
   return category === "media" ? "Media" : "Document";
 }
 
-function elementSubtitle(element: ExternalElement): string { return element.description.trim() || "Neutron application"; }
-function projectionSearchResult(node: FsNode, metadata: NeutronAppMetadata): NeutronProjectionSearchResult { return { kind: "neutron-projection", id: `element:${metadata.elementId}`, category: "apps", title: metadata.name ?? metadata.elementId, subtitle: metadata.description ?? "Neutron application", ...(metadata.icon ? { icon: metadata.icon } : {}), elementId: metadata.elementId, node }; }
-function withElementPresentation(projection: NeutronProjectionSearchResult, element: ExternalElement | undefined): NeutronProjectionSearchResult { return element ? { ...projection, title: element.name, subtitle: elementSubtitle(element), ...(element.icon ? { icon: element.icon } : {}) } : projection; }
+function elementSubtitle(element: ExternalElement): string {
+  return element.description.trim() || "Neutron application";
+}
 
-export function searchApplicationIcon(result: ShellSearchResult): NativeAppDefinition["icon"] | string | ResourceIconPresentation | undefined {
+function projectionSearchResult(node: FsNode, metadata: NeutronAppMetadata): NeutronProjectionSearchResult {
+  return {
+    kind: "neutron-projection",
+    id: `element:${metadata.elementId}`,
+    category: "apps",
+    title: metadata.name ?? metadata.elementId,
+    subtitle: metadata.description ?? "Neutron application",
+    ...(metadata.icon ? { icon: metadata.icon } : {}),
+    elementId: metadata.elementId,
+    node,
+  };
+}
+
+function withElementPresentation(
+  projection: NeutronProjectionSearchResult,
+  element: ExternalElement | undefined,
+): NeutronProjectionSearchResult {
+  if (!element) return projection;
+  return {
+    ...projection,
+    title: element.name,
+    subtitle: elementSubtitle(element),
+    ...(element.icon ? { icon: element.icon } : {}),
+  };
+}
+
+export function searchApplicationIcon(
+  result: ShellSearchResult,
+): NativeAppDefinition["icon"] | string | ResourceIconPresentation | undefined {
   switch (result.kind) {
     case "native-app": return result.app.icon;
     case "element": return result.element.icon;
     case "neutron-projection": return result.icon;
     case "directory":
-    case "file": return resourcePresentationForClassification(classifyResource(result.node), { artwork: readResourceArtworkMetadata(result.node) });
+    case "file":
+      return resourcePresentationForClassification(classifyResource(result.node), {
+        artwork: readResourceArtworkMetadata(result.node),
+      });
     default: return undefined;
   }
 }
@@ -132,25 +254,75 @@ function shortcutSubtitle(target: StartShortcutTarget): string {
     case "url": return "Start shortcut · URL";
   }
 }
-function matches(haystack: string, needle: string): boolean { const terms = normalize(needle).trim().split(/\s+/u).filter(Boolean); return terms.length === 0 || terms.every((term) => haystack.includes(term)); }
-function pinnedRank(id: string, pinned: readonly string[] | undefined): number { if (!pinned) return Number.MAX_SAFE_INTEGER; const index = pinned.indexOf(id); return index < 0 ? Number.MAX_SAFE_INTEGER : index; }
 
-export function searchApplicationEntries(nativeApps: readonly NativeAppDefinition[], elements: readonly ExternalElement[], query: string, options: Pick<ShellSearchOptions, "pinnedNative" | "pinnedElements"> = {}): ShellSearchResult[] {
-  const native = nativeApps.filter((app) => app.runtimeOnly !== true).filter((app) => matches(normalize(`${app.name}\n${app.id}\n${app.handlerId}`), query)).sort((left, right) => { const rank = pinnedRank(left.handlerId, options.pinnedNative) - pinnedRank(right.handlerId, options.pinnedNative); return rank || left.name.localeCompare(right.name); }).map<NativeAppSearchResult>((app) => ({ kind: "native-app", id: `native:${app.handlerId}`, category: "apps", title: app.name, subtitle: "Plasmon application", app }));
-  const neutron = elements.filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}`), query)).sort((left, right) => { const rank = pinnedRank(left.id, options.pinnedElements) - pinnedRank(right.id, options.pinnedElements); return rank || left.name.localeCompare(right.name); }).map<ElementSearchResult>((element) => ({ kind: "element", id: `element:${element.id}`, category: "apps", title: element.name, subtitle: elementSubtitle(element), element }));
+function matches(haystack: string, needle: string): boolean {
+  const terms = normalize(needle).trim().split(/\s+/u).filter(Boolean);
+  return terms.length === 0 || terms.every((term) => haystack.includes(term));
+}
+
+function pinnedRank(id: string, pinned: readonly string[] | undefined): number {
+  if (!pinned) return Number.MAX_SAFE_INTEGER;
+  const index = pinned.indexOf(id);
+  return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+export function searchApplicationEntries(
+  nativeApps: readonly NativeAppDefinition[],
+  elements: readonly ExternalElement[],
+  query: string,
+  options: Pick<ShellSearchOptions, "pinnedNative" | "pinnedElements"> = {},
+): ShellSearchResult[] {
+  const native = nativeApps
+    .filter((app) => app.runtimeOnly !== true)
+    .filter((app) => matches(normalize(`${app.name}\n${app.id}\n${app.handlerId}`), query))
+    .sort((left, right) => {
+      const rank = pinnedRank(left.handlerId, options.pinnedNative) - pinnedRank(right.handlerId, options.pinnedNative);
+      return rank || left.name.localeCompare(right.name);
+    })
+    .map<NativeAppSearchResult>((app) => ({
+      kind: "native-app",
+      id: `native:${app.handlerId}`,
+      category: "apps",
+      title: app.name,
+      subtitle: "Plasmon application",
+      app,
+    }));
+
+  const neutron = elements
+    .filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}`), query))
+    .sort((left, right) => {
+      const rank = pinnedRank(left.id, options.pinnedElements) - pinnedRank(right.id, options.pinnedElements);
+      return rank || left.name.localeCompare(right.name);
+    })
+    .map<ElementSearchResult>((element) => ({
+      kind: "element",
+      id: `element:${element.id}`,
+      category: "apps",
+      title: element.name,
+      subtitle: elementSubtitle(element),
+      element,
+    }));
+
   return [...native, ...neutron];
 }
 
-export async function searchFilesystem(fs: FsService, query: string, options: FilesystemSearchOptions = {}): Promise<Pick<SearchBatch, "results" | "warnings" | "truncated">> {
+export async function searchFilesystem(
+  fs: FsService,
+  query: string,
+  options: FilesystemSearchOptions = {},
+): Promise<Pick<SearchBatch, "results" | "warnings" | "truncated">> {
   const maxNodes = Math.max(1, options.maxNodes ?? 5_000);
   const maxWarnings = Math.max(0, options.maxWarnings ?? 8);
   const hasQuery = query.trim().length > 0;
-  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
+  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles
+    ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
   checkAbort(options.signal);
+
   const root = await fs.resolvePath("/");
   checkAbort(options.signal);
   if (!root) throw new Error("Filesystem root is unavailable");
   if (root.kind !== "directory") throw new Error("Filesystem root is not a directory");
+
   const queue: FsNode[] = [root];
   const visited = new Set<string>();
   const appShortcuts: StartShortcutSearchResult[] = [];
@@ -159,66 +331,184 @@ export async function searchFilesystem(fs: FsService, query: string, options: Fi
   const files: FileSearchResult[] = [];
   const warnings: string[] = [];
   let examined = 0;
+
   while (queue.length > 0 && examined < maxNodes) {
     checkAbort(options.signal);
     const directory = queue.shift();
     if (!directory || visited.has(directory.id)) continue;
     visited.add(directory.id);
+
     let children: FsNode[];
-    try { children = await fs.list(directory.id, { includeHidden: alwaysShowHiddenFiles, sort: "name" }); }
-    catch (error: unknown) { if (warnings.length < maxWarnings) { const message = error instanceof Error ? error.message : String(error); warnings.push(`Could not search ${directory.name || "/"}: ${message}`); } continue; }
+    try {
+      children = await fs.list(directory.id, { includeHidden: alwaysShowHiddenFiles, sort: "name" });
+    } catch (error: unknown) {
+      if (warnings.length < maxWarnings) {
+        const message = error instanceof Error ? error.message : String(error);
+        warnings.push(`Could not search ${directory.name || "/"}: ${message}`);
+      }
+      continue;
+    }
     checkAbort(options.signal);
+
     for (const node of children) {
       if (examined >= maxNodes) break;
       examined += 1;
       if (node.kind === "directory") {
         if (!visited.has(node.id)) queue.push(node);
-        if (hasQuery && matches(searchableNodeText(node), query)) directories.push({ kind: "directory", id: `directory:${node.id}`, category: "documents", title: node.name, subtitle: "Folder", node });
+        if (hasQuery && matches(searchableNodeText(node), query)) {
+          directories.push({
+            kind: "directory",
+            id: `directory:${node.id}`,
+            category: "documents",
+            title: node.name,
+            subtitle: "Folder",
+            node,
+          });
+        }
         continue;
       }
+
       const shortcut = parseStartShortcut(node);
       if (shortcut && matches(`${searchableNodeText(node)}\n${normalize(startShortcutTargetIdentity(shortcut.target))}`, query)) {
-        if (await isShortcutTargetEligibleForHiddenVisibility(fs, shortcut.target, alwaysShowHiddenFiles)) appShortcuts.push({ kind: "start-shortcut", id: `shortcut:${node.id}`, category: "apps", title: node.name, subtitle: shortcutSubtitle(shortcut.target), node, target: shortcut.target });
+        if (await isShortcutTargetEligibleForHiddenVisibility(fs, shortcut.target, alwaysShowHiddenFiles)) {
+          appShortcuts.push({
+            kind: "start-shortcut",
+            id: `shortcut:${node.id}`,
+            category: "apps",
+            title: node.name,
+            subtitle: shortcutSubtitle(shortcut.target),
+            node,
+            target: shortcut.target,
+          });
+        }
         continue;
       }
+
       if (!matches(searchableNodeText(node), query)) continue;
+
       const classification = classifyResource(node);
-      if (classification.kind === "neutron-app" && classification.neutronApp) { projections.push(projectionSearchResult(node, classification.neutronApp)); continue; }
+      if (classification.kind === "neutron-app" && classification.neutronApp) {
+        projections.push(projectionSearchResult(node, classification.neutronApp));
+        continue;
+      }
+
       const category = categorizeFsNode(node);
-      files.push({ kind: "file", id: `node:${node.id}`, category, title: node.name, subtitle: fileSubtitle(node, category), node });
+      files.push({
+        kind: "file",
+        id: `node:${node.id}`,
+        category,
+        title: node.name,
+        subtitle: fileSubtitle(node, category),
+        node,
+      });
     }
   }
-  const recent = <T extends { node: FsNode }>(left: T, right: T) => right.node.modifiedAt - left.node.modifiedAt || left.node.name.localeCompare(right.node.name);
-  appShortcuts.sort(recent); projections.sort(recent); directories.sort(recent); files.sort(recent);
+
+  const recent = <T extends { node: FsNode }>(left: T, right: T) =>
+    right.node.modifiedAt - left.node.modifiedAt || left.node.name.localeCompare(right.node.name);
+  appShortcuts.sort(recent);
+  projections.sort(recent);
+  directories.sort(recent);
+  files.sort(recent);
   return { results: [...appShortcuts, ...projections, ...directories, ...files], warnings, truncated: queue.length > 0 };
 }
 
 function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; capped: boolean } {
-  const output: ShellSearchResult[] = []; let capped = false;
-  for (const category of ["apps", "documents", "media", "atoms"] as const) { const matchesCategory = results.filter((result) => result.category === category); const limit = SEARCH_CATEGORY_LIMITS[category]; output.push(...matchesCategory.slice(0, limit)); if (matchesCategory.length > limit) capped = true; }
-  if (output.length > SEARCH_TOTAL_LIMIT) return { results: output.slice(0, SEARCH_TOTAL_LIMIT), capped: true };
+  const output: ShellSearchResult[] = [];
+  let capped = false;
+  for (const category of ["apps", "documents", "media", "atoms"] as const) {
+    const matchesCategory = results.filter((result) => result.category === category);
+    const limit = SEARCH_CATEGORY_LIMITS[category];
+    output.push(...matchesCategory.slice(0, limit));
+    if (matchesCategory.length > limit) capped = true;
+  }
+  if (output.length > SEARCH_TOTAL_LIMIT) {
+    capped = true;
+    return { results: output.slice(0, SEARCH_TOTAL_LIMIT), capped };
+  }
   return { results: output, capped };
 }
 
-export async function searchShell(fs: FsService, nativeApps: readonly NativeAppDefinition[], elements: readonly ExternalElement[], query: string, options: ShellSearchOptions = {}): Promise<SearchBatch> {
-  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
+export async function searchShell(
+  fs: FsService,
+  nativeApps: readonly NativeAppDefinition[],
+  elements: readonly ExternalElement[],
+  query: string,
+  options: ShellSearchOptions = {},
+): Promise<SearchBatch> {
+  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles
+    ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
   const eligibleNativeApps: NativeAppDefinition[] = [];
-  for (const app of nativeApps) if (app.runtimeOnly !== true && await isNativeAppEligibleForHiddenVisibility(fs, app.handlerId, alwaysShowHiddenFiles)) eligibleNativeApps.push(app);
+  for (const app of nativeApps) {
+    if (app.runtimeOnly === true) continue;
+    if (await isNativeAppEligibleForHiddenVisibility(fs, app.handlerId, alwaysShowHiddenFiles)) {
+      eligibleNativeApps.push(app);
+    }
+  }
   const effectiveOptions: ShellSearchOptions = { ...options, alwaysShowHiddenFiles };
   const apps = searchApplicationEntries(eligibleNativeApps, elements, query, effectiveOptions);
   const filesystem = await searchFilesystem(fs, query, effectiveOptions);
-  const projections = filesystem.results.filter((result): result is NeutronProjectionSearchResult => result.kind === "neutron-projection");
+  const projections = filesystem.results.filter(
+    (result): result is NeutronProjectionSearchResult => result.kind === "neutron-projection",
+  );
   const projectionByElement = new Map(projections.map((projection) => [projection.elementId, projection] as const));
   const elementsById = new Map(elements.map((element) => [element.id, element] as const));
   const emittedProjectionIds = new Set<string>();
-  const applicationResults = apps.map<ShellSearchResult>((result) => { if (result.kind !== "element") return result; const projection = projectionByElement.get(result.element.id); if (!projection) return result; emittedProjectionIds.add(projection.elementId); return withElementPresentation(projection, result.element); });
-  for (const projection of projections) { if (emittedProjectionIds.has(projection.elementId)) continue; applicationResults.push(withElementPresentation(projection, elementsById.get(projection.elementId))); emittedProjectionIds.add(projection.elementId); }
-  const directNativeHandlers = new Set(applicationResults.filter((result): result is NativeAppSearchResult => result.kind === "native-app").map((result) => result.app.handlerId));
-  const nonProjectionFilesystemResults = filesystem.results.filter((result) => { if (result.kind === "neutron-projection") return false; if (result.kind !== "file") return true; const classification = classifyResource(result.node); return classification.kind !== "system-app" || !classification.systemApp || !directNativeHandlers.has(classification.systemApp.handlerId); });
+
+  const applicationResults = apps.map<ShellSearchResult>((result) => {
+    if (result.kind !== "element") return result;
+    const projection = projectionByElement.get(result.element.id);
+    if (!projection) return result;
+    emittedProjectionIds.add(projection.elementId);
+    return withElementPresentation(projection, result.element);
+  });
+
+  for (const projection of projections) {
+    if (emittedProjectionIds.has(projection.elementId)) continue;
+    applicationResults.push(withElementPresentation(projection, elementsById.get(projection.elementId)));
+    emittedProjectionIds.add(projection.elementId);
+  }
+
+  const directNativeHandlers = new Set(
+    applicationResults
+      .filter((result): result is NativeAppSearchResult => result.kind === "native-app")
+      .map((result) => result.app.handlerId),
+  );
+  const nonProjectionFilesystemResults = filesystem.results.filter((result) => {
+    if (result.kind === "neutron-projection") return false;
+    if (result.kind !== "file") return true;
+    const classification = classifyResource(result.node);
+    return classification.kind !== "system-app"
+      || !classification.systemApp
+      || !directNativeHandlers.has(classification.systemApp.handlerId);
+  });
   const limited = applyResultLimits([...applicationResults, ...nonProjectionFilesystemResults]);
-  return { results: limited.results, warnings: filesystem.warnings, truncated: filesystem.truncated, capped: limited.capped };
+  return {
+    results: limited.results,
+    warnings: filesystem.warnings,
+    truncated: filesystem.truncated,
+    capped: limited.capped,
+  };
 }
 
-export function filterSearchResults(results: readonly ShellSearchResult[], tab: SearchTab): ShellSearchResult[] { return tab === "all" ? [...results] : results.filter((result) => result.category === tab); }
-export function subscribeSearchInvalidation(source: FsEventSource | undefined, invalidate: () => void): () => void { return source?.subscribe(() => invalidate()) ?? (() => undefined); }
-export class LatestSearchController<T> { private sequence = 0; cancel(): void { this.sequence += 1; } async run(task: () => Promise<T>, apply: (value: T) => void): Promise<boolean> { const request = ++this.sequence; const value = await task(); if (request !== this.sequence) return false; apply(value); return true; } }
+export function filterSearchResults(results: readonly ShellSearchResult[], tab: SearchTab): ShellSearchResult[] {
+  if (tab === "all") return [...results];
+  return results.filter((result) => result.category === tab);
+}
+
+/** Small Shell-owned adapter so React only observes one invalidation callback. */
+export function subscribeSearchInvalidation(source: FsEventSource | undefined, invalidate: () => void): () => void {
+  return source?.subscribe(() => invalidate()) ?? (() => undefined);
+}
+
+export class LatestSearchController<T> {
+  private sequence = 0;
+  cancel(): void { this.sequence += 1; }
+  async run(task: () => Promise<T>, apply: (value: T) => void): Promise<boolean> {
+    const request = ++this.sequence;
+    const value = await task();
+    if (request !== this.sequence) return false;
+    apply(value);
+    return true;
+  }
+}
