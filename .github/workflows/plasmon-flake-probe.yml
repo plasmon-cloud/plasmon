@@ -1,0 +1,289 @@
+name: Plasmon Flake Probe
+
+on:
+  # The workflow must exist for every relevant PR event because
+  # "Flake probe summary" is a required check. A cheap detector preserves
+  # the old optimization by skipping the expensive ten-attempt matrix when
+  # none of the probe trigger paths changed.
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Optional branch, tag, or SHA to probe; defaults to the dispatched ref
+        required: false
+        type: string
+      target:
+        description: Test boundary to probe
+        required: true
+        default: specialist
+        type: choice
+        options:
+          - all
+          - specialist
+          - right-snap
+          - left-snap
+          - window-lifetime
+          - monaco
+          - emulatorjs
+          - saved-preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  applicability:
+    name: Determine flake probe applicability
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+      reason: ${{ steps.detect.outputs.reason }}
+    steps:
+      - name: Checkout exact probe ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Detect changed probe inputs
+        id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p flake-probe-applicability
+          : > flake-probe-applicability/changed-files.txt
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "applicable=true" >> "$GITHUB_OUTPUT"
+            echo "reason=manual-dispatch" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+            | sed '/^$/d' \
+            | sort -u \
+            | tee flake-probe-applicability/changed-files.txt
+
+          applicable=false
+          while IFS= read -r changed_file; do
+            case "$changed_file" in
+              apps/plasmon/src/*.test.*|\
+              apps/plasmon/src/*.spec.*|\
+              apps/plasmon/test/*|\
+              test/e2e/*|\
+              test/ci/*|\
+              playwright.config.ts|\
+              package.json|\
+              package-lock.json|\
+              flake.nix|\
+              flake.lock|\
+              .github/workflows/plasmon-flake-probe.yml)
+                applicable=true
+                break
+                ;;
+            esac
+          done < flake-probe-applicability/changed-files.txt
+
+          echo "applicable=$applicable" >> "$GITHUB_OUTPUT"
+          if [ "$applicable" = true ]; then
+            echo "reason=probe-input-changed" >> "$GITHUB_OUTPUT"
+          else
+            echo "reason=no-probe-input-changed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload applicability evidence
+        uses: actions/upload-artifact@v4
+        with:
+          # Stable for this workflow run so a summary re-run can consume the
+          # original detector output when the successful detector is not rerun.
+          name: flake-probe-applicability-${{ github.run_id }}
+          path: flake-probe-applicability/changed-files.txt
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  probe:
+    if: needs.applicability.outputs.applicable == 'true'
+    needs: applicability
+    name: Flake probe ${{ matrix.attempt }}/10
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    env:
+      # Automatic test-change probes cover both the fast and packaged browser
+      # boundaries. Manual dispatch remains available for a single boundary.
+      PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'all' }}
+
+    steps:
+      - name: Checkout exact probe ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Record exact probe identity
+        run: |
+          set -euxo pipefail
+          echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "attempt=${{ matrix.attempt }}/10"
+          echo "run_id=${{ github.run_id }}"
+          echo "run_attempt=${{ github.run_attempt }}"
+          echo "target=$PROBE_TARGET"
+          git rev-parse HEAD
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run fresh Plasmon probe
+        id: probe
+        run: |
+          set -o pipefail
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET"
+          ' 2>&1 | tee flake-probe-output.log
+
+      - name: Record attempt result
+        if: always()
+        run: |
+          set -u
+          mkdir -p flake-probe-result
+          {
+            echo "run_id=${{ github.run_id }}"
+            echo "run_attempt=${{ github.run_attempt }}"
+            echo "attempt=${{ matrix.attempt }}"
+            echo "outcome=${{ steps.probe.outcome }}"
+            echo "sha=${PROBE_SHA:-unknown}"
+            echo "target=${PROBE_TARGET:-unknown}"
+          } > flake-probe-result/result.txt
+
+      - name: Upload attempt result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          # One logical artifact per matrix slot. Re-running a failed slot
+          # replaces only that slot while the other nine remain available.
+          name: flake-probe-result-${{ github.run_id }}-${{ matrix.attempt }}
+          path: flake-probe-result/result.txt
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: Collect failed-attempt diagnostics
+        if: always() && steps.probe.outcome != 'success'
+        run: |
+          set -u
+          mkdir -p flake-probe-diagnostics
+          cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt 2>/dev/null || true
+          cp flake-probe-output.log flake-probe-diagnostics/probe-output.log 2>/dev/null || true
+          cp /tmp/plasmon-pocketic.log flake-probe-diagnostics/pocketic.log 2>/dev/null || true
+          if [ -d playwright-report ]; then
+            cp -R playwright-report flake-probe-diagnostics/playwright-report
+          fi
+          if [ -d test-results ]; then
+            cp -R test-results flake-probe-diagnostics/test-results
+          fi
+
+      - name: Upload failed-attempt diagnostics
+        if: always() && steps.probe.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}
+          path: flake-probe-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
+
+      - name: Report observed probe failure
+        if: always() && steps.probe.outcome != 'success'
+        run: |
+          set -u
+          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}"
+          context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
+
+          {
+            echo "## Plasmon flake probe attempt failure"
+            echo
+            echo "- Attempt: ${{ matrix.attempt }}/10"
+            echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
+            echo "- Target: \`${PROBE_TARGET:-unknown}\`"
+            echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
+            echo
+            echo "The failing command is the \`Run fresh Plasmon probe\` step above; expand it for the original stdout/stderr."
+            echo
+            if [ -n "$context_file" ]; then
+              echo "### First Playwright error context"
+              echo
+              sed -n '1,120p' "$context_file"
+            else
+              echo "No Playwright error-context.md was produced. The failure may have occurred before Playwright; use the failed probe step for the original error."
+            fi
+            echo
+            echo "The diagnostic artifact also includes \`probe-output.log\` when probe output was produced."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  summary:
+    # Job-level skipping is intentional: GitHub creates the required check and
+    # accepts a skipped conclusion, unlike a workflow suppressed by paths.
+    if: ${{ always() && (needs.applicability.result != 'success' || needs.applicability.outputs.applicable == 'true') }}
+    name: Flake probe summary
+    needs: [applicability, probe]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful applicability detection
+        env:
+          APPLICABILITY_RESULT: ${{ needs.applicability.result }}
+        run: |
+          set -euo pipefail
+          if [ "$APPLICABILITY_RESULT" != success ]; then
+            echo "Flake probe applicability detection did not complete successfully: $APPLICABILITY_RESULT" >&2
+            exit 1
+          fi
+
+      - name: Checkout exact probe ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Download applicability evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: flake-probe-applicability-${{ github.run_id }}
+          path: flake-probe-applicability
+
+      - name: Download attempt results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: flake-probe-result-${{ github.run_id }}-*
+          path: flake-probe-results
+
+      - name: Download failed-attempt diagnostics
+        if: needs.probe.result != 'success'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: flake-probe-diagnostics-${{ github.run_id }}-*
+          path: flake-probe-diagnostics
+
+      - name: Summarize exact-head stability
+        run: |
+          set -o pipefail
+          node test/ci/summarize-flake-probe.mjs \
+            flake-probe-results \
+            flake-probe-diagnostics \
+            flake-probe-applicability/changed-files.txt \
+            | tee -a "$GITHUB_STEP_SUMMARY"

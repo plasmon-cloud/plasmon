@@ -4,15 +4,17 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "apps/plasmon/**"
+      - release/0.1.0-r2
   pull_request:
   workflow_dispatch:
 
 jobs:
-  kernel:
+  kernel_scope:
+    name: Determine Kernel CI applicability
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 5
+    outputs:
+      run_kernel: ${{ steps.kernel_scope.outputs.run_kernel }}
 
     steps:
       - name: Checkout
@@ -20,13 +22,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Verify Kernel CI skip contract
+        run: node test/ci/verify-kernel-ci.mjs
+
       - name: Detect kernel-relevant changes
         id: kernel_scope
         shell: bash
         run: |
           set -euo pipefail
 
-          # Push/main and manual runs preserve the existing full Kernel lane.
+          # Push/main, release integration, and manual runs preserve the full Kernel lane.
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "run_kernel=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -67,17 +72,34 @@ jobs:
 
           echo "run_kernel=$run_kernel" >> "$GITHUB_OUTPUT"
           if [ "$run_kernel" != "true" ]; then
-            echo "No kernel-relevant changes; satisfying required Kernel CI without full kernel build."
+            echo "No kernel-relevant changes; required kernel job will be skipped."
           fi
 
+  kernel:
+    name: kernel
+    needs: kernel_scope
+    if: ${{ always() && (needs.kernel_scope.result != 'success' || needs.kernel_scope.outputs.run_kernel == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Fail if applicability detection failed
+        if: ${{ needs.kernel_scope.result != 'success' }}
+        run: |
+          echo "Kernel scope detection failed; refusing to satisfy required Kernel CI as not applicable." >&2
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - name: Install Nix
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show toolchain
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -88,7 +110,6 @@ jobs:
           '
 
       - name: Install dependencies
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -99,7 +120,6 @@ jobs:
       # artifacts produced by the normal packaging pipeline. Do not run a
       # separate build here: package already performs the build.
       - name: Kernel package
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -107,7 +127,6 @@ jobs:
           '
 
       - name: Kernel tests
-        if: steps.kernel_scope.outputs.run_kernel == 'true'
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail

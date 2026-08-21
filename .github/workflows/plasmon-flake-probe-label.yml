@@ -1,0 +1,47 @@
+name: Plasmon Flake Probe Label Trigger
+
+on:
+  # Labels are an explicit opt-in for suspected flakes caused by production
+  # changes. This bridge is separate from the path-filtered probe workflow so
+  # a label can trigger a probe even when no test file changed.
+  pull_request:
+    types: [labeled]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    name: Dispatch opted-in flake probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch exact-head probe when ci:flake-probe is present
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pullRequest = context.payload.pull_request;
+            const labels = pullRequest.labels.map((label) => label.name);
+
+            if (!labels.includes('ci:flake-probe')) {
+              core.info('Label event was not ci:flake-probe; no probe dispatched.');
+              return;
+            }
+            if (pullRequest.base.ref !== 'release/0.1.0-r2') {
+              core.info(`Base branch ${pullRequest.base.ref} is outside r2; no probe dispatched.`);
+              return;
+            }
+
+            const headSha = pullRequest.head.sha;
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'plasmon-flake-probe.yml',
+              ref: headSha,
+              inputs: {
+                ref: headSha,
+                target: 'all',
+              },
+            });
+            core.info(`Dispatched exact-head Plasmon Flake Probe for ${headSha}.`);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AssociationRegistry,
   FsEventSource,
@@ -17,16 +17,23 @@ import {
   type FileManagerTrashAuthority,
 } from "../file-manager/index.ts";
 import {
-  allocateDesktopPositions,
-  defaultDesktopPosition,
-  hasDesktopPositionsForNodes,
+  applyDesktopDragDelta,
+  applyIncomingDesktopDropPositions,
+  desktopPositionsEqual,
+  reconcileDesktopPositions,
   type DesktopPositions,
+  type DesktopWorkspace,
 } from "./layout.ts";
 
 export const DESKTOP_PATH = "/Desktop";
 export const DESKTOP_POSITIONS_METADATA_KEY = "plasmon.desktop.positions.v1";
-export { allocateDesktopPositions, defaultDesktopPosition } from "./layout.ts";
-export type { DesktopPositions } from "./layout.ts";
+export {
+  allocateDesktopPositions,
+  defaultDesktopPosition,
+  reconcileDesktopPositions,
+  repositionDesktopNodes,
+} from "./layout.ts";
+export type { DesktopPositions, DesktopWorkspace } from "./layout.ts";
 
 function jsonObject(value: JsonValue | undefined): Record<string, JsonValue> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -47,29 +54,6 @@ export function parseDesktopPositions(value: JsonValue | undefined): DesktopPosi
     }
   }
   return positions;
-}
-
-export function repositionDesktopNodes(
-  current: Readonly<DesktopPositions>,
-  orderedNodes: readonly FsNode[],
-  ids: readonly NodeId[],
-  delta: { dx: number; dy: number },
-  bounds: { width: number; height: number },
-): DesktopPositions {
-  const next: DesktopPositions = { ...current };
-  const indexById = new Map(orderedNodes.map((node, index) => [node.id, index] as const));
-  const maxX = Math.max(0, bounds.width - 92);
-  const maxY = Math.max(0, bounds.height - 88);
-  for (const id of ids) {
-    const index = indexById.get(id);
-    if (index === undefined) continue;
-    const origin = current[id] ?? defaultDesktopPosition(index);
-    next[id] = {
-      x: Math.max(0, Math.min(maxX, origin.x + delta.dx)),
-      y: Math.max(0, Math.min(maxY, origin.y + delta.dy)),
-    };
-  }
-  return next;
 }
 
 export async function ensureDesktopDirectory(fs: FsService): Promise<FsNode> {
@@ -122,9 +106,13 @@ export function Desktop({
   className,
 }: DesktopProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
+  const workspaceRef = useRef<HTMLElement | null>(null);
+  const activeIdsRef = useRef<readonly NodeId[]>([]);
   const [desktop, setDesktop] = useState<FsNode | null>(null);
   const [positions, setPositions] = useState<DesktopPositions>({});
-  const [orderedNodes, setOrderedNodes] = useState<readonly FsNode[]>([]);
+  const [orderedIds, setOrderedIds] = useState<readonly NodeId[]>([]);
+  const [incumbentIds, setIncumbentIds] = useState<readonly NodeId[]>([]);
+  const [workspace, setWorkspace] = useState<DesktopWorkspace | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const initialize = useCallback(async () => {
@@ -142,6 +130,23 @@ export function Desktop({
   useEffect(() => { void initialize(); }, [initialize]);
 
   useEffect(() => {
+    const element = workspaceRef.current;
+    if (!element) return undefined;
+    const measure = () => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      setWorkspace((current) => current?.width === rect.width && current.height === rect.height
+        ? current
+        : { width: rect.width, height: rect.height });
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!fsEvents || !desktop) return undefined;
     return fsEvents.subscribe((event) => {
       if (event.type === "reset" || event.type === "changed" && event.node.id === desktop.id) {
@@ -152,22 +157,33 @@ export function Desktop({
     });
   }, [desktop, fs, fsEvents]);
 
+  const resolvedPositions = useMemo(
+    () => reconcileDesktopPositions(positions, orderedIds, workspace, incumbentIds),
+    [incumbentIds, orderedIds, positions, workspace],
+  );
+
   useEffect(() => {
-    if (!desktop || orderedNodes.length === 0 || hasDesktopPositionsForNodes(positions, orderedNodes)) return;
-    const next = allocateDesktopPositions(positions, orderedNodes);
-    setPositions(next);
-    void persistDesktopPositions(fs, desktop.id, next)
+    if (!desktop || orderedIds.length === 0 || desktopPositionsEqual(positions, resolvedPositions)) return;
+    setPositions(resolvedPositions);
+    void persistDesktopPositions(fs, desktop.id, resolvedPositions)
       .then(() => setError(null))
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
-  }, [desktop, fs, orderedNodes, positions]);
+  }, [desktop, fs, orderedIds.length, positions, resolvedPositions]);
 
   const handleSnapshot = useCallback((snapshot: FileManagerSnapshot) => {
-    setOrderedNodes(snapshot.nodes);
+    const nextIds = snapshot.nodes.map((node) => node.id);
+    const previousIds = activeIdsRef.current;
+    if (previousIds.length === nextIds.length && previousIds.every((id, index) => id === nextIds[index])) return;
+    setIncumbentIds(previousIds);
+    activeIdsRef.current = nextIds;
+    setOrderedIds(nextIds);
   }, []);
+
+  const sectionClassName = `plasmon-desktop${className ? ` ${className}` : ""}`;
 
   if (!desktop) {
     return (
-      <section className={`plasmon-desktop${className ? ` ${className}` : ""}`} aria-label="Desktop">
+      <section ref={workspaceRef} className={sectionClassName} aria-label="Desktop">
         {error ? (
           <div className="fm-error-banner" role="alert">
             <span>{error}</span>
@@ -182,7 +198,7 @@ export function Desktop({
   }
 
   return (
-    <section className={`plasmon-desktop${className ? ` ${className}` : ""}`} aria-label="Desktop">
+    <section ref={workspaceRef} className={sectionClassName} aria-label="Desktop">
       <FileManager
         directoryId={desktop.id}
         fs={fs}
@@ -194,11 +210,29 @@ export function Desktop({
         process={process}
         clipboard={clipboard}
         presentation="desktop"
-        positions={positions}
+        positions={resolvedPositions}
         onSnapshot={handleSnapshot}
+        onIncomingDropPlacement={async (intent) => {
+          const next = applyIncomingDesktopDropPositions(
+            resolvedPositions,
+            orderedIds,
+            intent.placements,
+            intent.workspace,
+          );
+          try {
+            await persistDesktopPositions(fs, desktop.id, next);
+            setPositions(next);
+            setError(null);
+          } catch (cause: unknown) {
+            setError(cause instanceof Error ? cause.message : String(cause));
+            throw cause;
+          }
+        }}
         onDesktopReposition={async (ids, delta, bounds) => {
-          const base = allocateDesktopPositions(positions, orderedNodes);
-          const next = repositionDesktopNodes(base, orderedNodes, ids, delta, bounds);
+          const candidates = applyDesktopDragDelta(resolvedPositions, orderedIds, ids, delta, bounds);
+          const movedIds = new Set(ids);
+          const stationaryIds = orderedIds.filter((id) => !movedIds.has(id));
+          const next = reconcileDesktopPositions(candidates, orderedIds, bounds, stationaryIds);
           setPositions(next);
           try {
             await persistDesktopPositions(fs, desktop.id, next);

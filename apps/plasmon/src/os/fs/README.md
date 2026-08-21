@@ -29,6 +29,18 @@ Hosted Plasmon keeps durable browser filesystem ownership behind the application
 - Generic resource opening and shortcut dereference are shared OS behavior rather than UI-owned dispatch.
 - Bootstrap/reconciliation must be versionable and idempotent so upgrades can repair expected managed state without destroying user state.
 
+## Resource classification
+
+`resourcePolicy.ts` is the canonical derived-classification seam. Stronger persisted `FsNode` resource and MIME metadata is authoritative. When stronger metadata is absent, the classifier may derive MIME, content family, and language hints from the current filename; otherwise it falls back safely to unknown.
+
+The normal precedence is: **stronger explicit resource/MIME metadata > filename-derived inference > unknown fallback**. Specific explicit MIME is never replaced by a filename guess. Rename preserves `NodeId`; a derived classification may change with the filename when no stronger metadata pins it.
+
+One enduring compatibility rule keeps generic `text/plain` from becoming false source-language authority: when the current filename is a source extension recognized by the canonical table, `text/plain` may be refined to that filename-derived source MIME/language. This covers both generic text transport metadata and older Plasmon-authored resources that persisted `text/plain` before a later rename. The rule is intentionally narrow: Markdown/plain precedence is unchanged, media is not inferred through a conflicting explicit MIME, and specific values such as `application/octet-stream` or an explicit source MIME remain authoritative. Consumers must use this centralized result rather than adding their own exception.
+
+System and installed-application identity remains metadata-backed. A `.sys` or `.neutron` suffix by itself does not create application authority.
+
+Classification does not choose handlers or presentation. `AssociationRegistry` and `OpenService` remain responsible for matching/default-open policy. Visual and application surfaces consume classification and may apply their own bounded capability rules, but they must not keep a competing global extension-to-MIME/type table.
+
 ## Program Files boundary
 
 `/System/Program Files` is the canonical filesystem location for curated packaged runtime/application resources. Filesystem owns the durable directory identity, managed/protected semantics, and versioned root reconciliation; it does **not** own runtime asset semantics or application installation state.

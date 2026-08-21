@@ -11,6 +11,9 @@
 - Atomic commit semantics and monotonic revision behavior.
 - Versionable, idempotent bootstrap/reconciliation that preserves user-owned state.
 - Centralized resource classification/protection; generic consumers must not bypass it through private storage access.
+- Classification precedence is stronger explicit persisted resource/MIME metadata, then canonical filename-derived inference, then safe unknown fallback. Filename inference must never replace stronger explicit MIME metadata; any MIME treated as generic/non-authoritative must be defined centrally by `resourcePolicy.ts`, not by a consumer.
+- Derived classification is not resource identity: rename preserves `NodeId` and may change derived type only when stronger metadata is absent.
+- `AssociationRegistry`/`OpenService` retain handler and default-open authority. Visual and application consumers may map canonical classification to local behavior but must not create another global MIME/type authority.
 - Shared resource opening/shortcut resolution rather than per-surface dispatch tables.
 - A clear distinction between durable product initialization and temporary demo/fixture data.
 - `/System/Program Files` is a Filesystem-managed curated runtime/resource location, not Neutron installation authority. Runtime owners consume the shared Program Files seam and retain semantics for their own subtrees; do not infer `.sys` applications from Program Files entries.
@@ -23,6 +26,6 @@ Prefer small policy/services around one filesystem authority. Separate storage/r
 
 ## Tests
 
-Keep deterministic coverage for identity, revision/atomicity, naming, protected operations, migration/reconciliation, projections, Trash, shortcut/open resolution, persistence, and RPC behavior. Use packaged/browser tests only where browser storage/background transport or visible cross-surface behavior is material.
+Keep deterministic coverage for identity, revision/atomicity, naming, protected operations, migration/reconciliation, projections, Trash, shortcut/open resolution, persistence, and RPC behavior. Classification coverage should be behavioral rather than source-shape based. Use packaged/browser tests only where browser storage/background transport or visible cross-surface behavior is material.
 
 Escalate persistent representation/schema changes and shared-contract changes before implementation.

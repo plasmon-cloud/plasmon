@@ -8,6 +8,7 @@ import type {
   ProcessController,
   ProcessId,
   ProcessRecord,
+  WindowId,
   WindowManager,
 } from "../contracts/index.ts";
 import { ProcessStore } from "./store.ts";
@@ -16,6 +17,8 @@ export interface NativeProcessControllerOptions {
   processIdFactory?: (app: NativeAppDefinition, ordinal: number) => ProcessId;
   onStartupError?: (error: unknown, app: NativeAppDefinition, target: OpenTarget) => void;
   onCloseError?: (error: unknown, process: ProcessRecord) => void;
+  /** Composition hook for window-owned post-create concerns such as durable placement restore. */
+  onWindowCreated?: (appId: string, windowId: WindowId) => void | Promise<void>;
 }
 
 const defaultProcessIdFactory = (app: NativeAppDefinition, ordinal: number): ProcessId =>
@@ -74,6 +77,7 @@ export class NativeProcessController implements ProcessController {
           ? { minHeight: app.defaultWindow.minHeight }
           : {}),
       });
+      await this.options.onWindowCreated?.(app.id, windowId);
       this.store.patch(id, { state: "running", windowId });
       return id;
     } catch (error: unknown) {

@@ -2,14 +2,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
+  useReducer,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import type {
-  ExternalElement,
   FsEventSource,
   FsNode,
   FsService,
@@ -17,56 +15,65 @@ import type {
   NeutronBridge,
   OpenService,
   ProcessController,
+  ProcessId,
   WindowManager,
 } from "../contracts/index.ts";
-import { PinIcon } from "../visual/primitives.tsx";
+import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import {
   activateSearchFilesystemResult,
   activateStartFilesystemNode,
   type ShellFilesystemOpener,
 } from "./activation.ts";
 import { addCalendarMonths, buildCalendarMonth, startOfCalendarMonth } from "./calendar.ts";
-import { ShellIcon } from "./icon.tsx";
 import {
+  closeNativeTaskContextProcess,
+  placeShellContextMenu,
   resolveShellContextMenuPolicy,
+  shellContextMenuHeight,
   shouldDismissShellFlyout,
   taskbarPinAction,
-  type ShellContextMenuPolicy,
 } from "./interactions.ts";
 import {
   deriveTaskbarEntries,
   deriveTrayEntries,
   executeNativeTaskbarAction,
+  focusNativeTaskbarMember,
   focusedWindow,
-  type TaskbarEntry,
+  type PresentedTaskbarEntry,
 } from "./model.ts";
 import {
   cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
   saveShellPreferencesNonDestructive,
-  SHELL_THEME_IDS,
   ShellPreferenceStore,
   togglePinned,
   type ShellPreferences,
+  type ShellTaskbarAlignment,
   type ShellThemeId,
 } from "./preferences.ts";
+import { SearchSurface } from "./SearchSurface.tsx";
+import type { ShellSearchResult } from "./search.ts";
 import {
-  filterSearchResults,
-  LatestSearchController,
-  searchApplicationIcon,
-  searchShell,
-  subscribeSearchInvalidation,
-  type SearchBatch,
-  type SearchTab,
-  type ShellSearchResult,
-} from "./search.ts";
+  INITIAL_SHELL_COORDINATION_STATE,
+  reduceShellCoordination,
+} from "./shell-coordination.ts";
 import {
-  listStartMenuFolder,
-  parseStartShortcut,
-  reconcileStartMenu,
-  type StartShortcutTarget,
-} from "./startMenu.ts";
-import { subscribeToNativeShellState } from "./subscriptions.ts";
+  CalendarSurface,
+  ContextMenuSurface,
+  SearchMark,
+  SettingsSurface,
+  ShellMessages,
+  TaskbarSurface,
+  TraySurface,
+  type ShellContextPin,
+} from "./ShellSurfaces.tsx";
+import { useExternalElementSnapshot, useNativeShellSnapshots } from "./shell-runtime.ts";
+import type { StartItemPresentation } from "./StartSurface.tsx";
+import { StartSurfaceController } from "./StartSurfaceController.tsx";
+import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
+import { parseStartShortcut, type StartShortcutTarget } from "./startMenu.ts";
+import { TaskbarGroupChooser } from "./TaskbarGroupChooser.tsx";
+import { useSearchSurfaceController } from "./use-search-surface-controller.ts";
 import "./shell.scss";
 
 export interface ShellProps {
@@ -78,137 +85,43 @@ export interface ShellProps {
   nativeApps: NativeAppRegistry;
   filesystemOpen: ShellFilesystemOpener;
   openService?: OpenService;
+  startMenu: StartMenuReconciliationController;
   children?: ReactNode;
   now?: () => Date;
 }
-
-type Flyout = "start" | "search" | "calendar" | "tray" | "settings" | null;
-type StartTrailItem = { id: string; name: string };
-type ShellContextMenuState = {
-  x: number;
-  y: number;
-  policy: Exclude<ShellContextMenuPolicy, "none">;
-  handlerId?: string;
-  elementId?: string;
-} | null;
-
-const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false };
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function StartMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 32 32" aria-hidden="true">
-    <ellipse cx="16" cy="16" rx="13" ry="5" />
-    <ellipse cx="16" cy="16" rx="13" ry="5" transform="rotate(60 16 16)" />
-    <ellipse cx="16" cy="16" rx="13" ry="5" transform="rotate(120 16 16)" />
-    <circle cx="16" cy="16" r="2.3" className="plasmon-shell__system-icon-fill" />
-  </svg>;
-}
-
-function SearchMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" />
-  </svg>;
-}
-
-function TrayMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M5 8h14l2 8H3l2-8Z" /><path d="M8 13h2a2 2 0 0 0 4 0h2" />
-  </svg>;
-}
-
-function useNativeSnapshots(process: ProcessController, windows: WindowManager) {
-  const [revision, setRevision] = useState(0);
-  useEffect(() => subscribeToNativeShellState(process, windows, () => setRevision((value) => value + 1)), [process, windows]);
-  return useMemo(() => ({ processes: process.list(), windowStates: windows.list() }), [process, windows, revision]);
-}
-
-/** Keep one discovered Element snapshot in Shell; ordinary interactions never call loadElements directly. */
-function useExternalElements(neutron: NeutronBridge) {
-  const [elements, setElements] = useState<ExternalElement[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const generation = useRef(0);
-  const load = useCallback(async (quiet = false): Promise<void> => {
-    const request = ++generation.current;
-    try {
-      const next = await neutron.loadElements();
-      if (request !== generation.current) return;
-      setElements(next);
-      if (!quiet) setError(null);
-    } catch (cause: unknown) {
-      if (request === generation.current && !quiet) setError(formatError(cause));
-    }
-  }, [neutron]);
-
-  useEffect(() => {
-    void load();
-    const unsubscribe = neutron.subscribe(() => { void load(true); });
-    const onVisibility = () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      void neutron.refreshRuntimeState().catch(() => load(true));
-    };
-    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
-    if (typeof window !== "undefined") window.addEventListener("focus", onVisibility);
-    return () => {
-      generation.current += 1;
-      unsubscribe();
-      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
-      if (typeof window !== "undefined") window.removeEventListener("focus", onVisibility);
-    };
-  }, [load, neutron]);
-
-  return { elements, error };
-}
-
-function focusRelative(event: ReactKeyboardEvent<HTMLElement>, selector: string): void {
-  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-  const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(selector));
-  if (!items.length) return;
-  const active = typeof document === "undefined" ? null : document.activeElement;
-  const index = active instanceof HTMLElement ? items.indexOf(active) : -1;
-  let next = 0;
-  if (event.key === "End") next = items.length - 1;
-  else if (event.key === "ArrowUp") next = index <= 0 ? items.length - 1 : index - 1;
-  else if (event.key === "ArrowDown") next = index < 0 || index >= items.length - 1 ? 0 : index + 1;
-  event.preventDefault();
-  items[next]?.focus();
-}
-
-function contextPosition(client: number, viewport: number, size: number): number {
-  return Math.max(8, Math.min(client, Math.max(8, viewport - size - 8)));
-}
-
 export function Shell({
-  process, windows, fs, fsEvents, neutron, nativeApps, filesystemOpen, openService,
-  children, now = () => new Date(),
+  process,
+  windows,
+  fs,
+  fsEvents,
+  neutron,
+  nativeApps,
+  filesystemOpen,
+  openService,
+  startMenu,
+  children,
+  now = () => new Date(),
 }: ShellProps) {
   const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
   const [preferences, setPreferences] = useState<ShellPreferences | null>(null);
-  const [flyout, setFlyout] = useState<Flyout>(null);
-  const [contextMenu, setContextMenu] = useState<ShellContextMenuState>(null);
-  const [startQuery, setStartQuery] = useState("");
-  const [startTrail, setStartTrail] = useState<StartTrailItem[]>([]);
-  const [startItems, setStartItems] = useState<FsNode[]>([]);
-  const [startBusy, setStartBusy] = useState(false);
-  const [startError, setStartError] = useState<string | null>(null);
-  const [startSeedRevision, setStartSeedRevision] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchTab, setSearchTab] = useState<SearchTab>("all");
-  const [searchBatch, setSearchBatch] = useState<SearchBatch>(EMPTY_SEARCH);
-  const [searchBusy, setSearchBusy] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
+  const [coordination, dispatchCoordination] = useReducer(
+    reduceShellCoordination,
+    INITIAL_SHELL_COORDINATION_STATE,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [clock, setClock] = useState(() => now());
   const [calendarAnchor, setCalendarAnchor] = useState(() => startOfCalendarMonth(now()));
-  const [fsEpoch, setFsEpoch] = useState(0);
-  const latestSearch = useRef(new LatestSearchController<SearchBatch>());
-  const searchAbort = useRef<AbortController | null>(null);
-  const { processes, windowStates } = useNativeSnapshots(process, windows);
-  const { elements, error: neutronError } = useExternalElements(neutron);
+  const [startFsRevision, setStartFsRevision] = useState(0);
+  const { flyout, contextMenu, openTaskbarGroupHandlerId } = coordination;
+  const { processes, windowStates, focusedWindowId } = useNativeShellSnapshots(process, windows);
+  const { elements, error: neutronError } = useExternalElementSnapshot(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const preferencesReady = preferences !== null;
 
@@ -226,10 +139,23 @@ export function Shell({
   }, [preferenceStore]);
 
   const nativeDefinitions = useMemo(() => nativeApps.list(), [nativeApps]);
-  const nativeByHandler = useMemo(() => new Map(nativeDefinitions.map((app) => [app.handlerId, app] as const)), [nativeDefinitions]);
-  const elementsById = useMemo(() => new Map(elements.map((element) => [element.id, element] as const)), [elements]);
-  const nativeSeedKey = useMemo(() => nativeDefinitions.map((app) => `${app.handlerId}:${app.name}`).sort().join("\u0000"), [nativeDefinitions]);
-  const elementSeedKey = useMemo(() => elements.map((element) => `${element.id}:${element.name}`).sort().join("\u0000"), [elements]);
+  const nativeByHandler = useMemo(
+    () => new Map(nativeDefinitions.map((app) => [app.handlerId, app] as const)),
+    [nativeDefinitions],
+  );
+  const elementsById = useMemo(
+    () => new Map(elements.map((element) => [element.id, element] as const)),
+    [elements],
+  );
+  const searchController = useSearchSurfaceController({
+    open: flyout === "search",
+    fs,
+    fsEvents,
+    nativeApps: nativeDefinitions,
+    elements,
+    pinnedNative: effectivePreferences.pinnedNative,
+    pinnedElements: effectivePreferences.pinnedElements,
+  });
   const taskbarEntries = useMemo(
     () => deriveTaskbarEntries({
       preferences: effectivePreferences,
@@ -237,53 +163,34 @@ export function Shell({
       processes,
       elements,
       windows: windowStates,
+      focusedWindowId,
       busyTaskId: busyId,
     }),
-    [busyId, effectivePreferences, elements, nativeDefinitions, processes, windowStates],
+    [busyId, effectivePreferences, elements, focusedWindowId, nativeDefinitions, processes, windowStates],
   );
+  const openTaskbarGroup = useMemo(() => {
+    const entry = taskbarEntries.find(
+      (candidate) => candidate.kind === "native" && candidate.handlerId === openTaskbarGroupHandlerId,
+    );
+    return entry?.kind === "native" && entry.members.length > 1 ? entry : null;
+  }, [openTaskbarGroupHandlerId, taskbarEntries]);
   const trayEntries = useMemo(() => deriveTrayEntries(elements), [elements]);
-  const filteredSearch = useMemo(() => filterSearchResults(searchBatch.results, searchTab), [searchBatch.results, searchTab]);
-  const filteredStartItems = useMemo(() => {
-    const needle = startQuery.trim().toLocaleLowerCase();
-    return needle ? startItems.filter((node) => node.name.toLocaleLowerCase().includes(needle)) : startItems;
-  }, [startItems, startQuery]);
   const calendar = useMemo(() => buildCalendarMonth(calendarAnchor, clock), [calendarAnchor, clock]);
-  const focused = useMemo(() => focusedWindow(windowStates), [windowStates]);
-  const currentStartFolder = startTrail[startTrail.length - 1] ?? null;
-
-  useEffect(() => subscribeSearchInvalidation(fsEvents, () => setFsEpoch((value) => value + 1)), [fsEvents]);
-
-  useEffect(() => {
-    let active = true;
-    void reconcileStartMenu(fs, nativeDefinitions, elements)
-      .then(({ root }) => {
-        if (!active) return;
-        setStartTrail((current) => current.length ? current : [{ id: root.id, name: root.name || "Start Menu" }]);
-        setStartSeedRevision((value) => value + 1);
-      })
-      .catch((cause: unknown) => {
-        if (active) setStartError(`Start Menu could not be reconciled: ${formatError(cause)}`);
-      });
-    return () => { active = false; };
-    // Stable identity keys prevent running-state-only Element updates from reseeding Start.
-  }, [elementSeedKey, fs, nativeSeedKey]);
+  const focused = useMemo(
+    () => focusedWindow(windowStates, focusedWindowId),
+    [focusedWindowId, windowStates],
+  );
 
   useEffect(() => {
-    if (flyout !== "start" || !currentStartFolder) return undefined;
-    let active = true;
-    setStartBusy(true);
-    void listStartMenuFolder(fs, currentStartFolder.id)
-      .then((nodes) => {
-        if (!active) return;
-        setStartItems(nodes);
-        setStartError(null);
-      })
-      .catch((cause: unknown) => {
-        if (active) setStartError(formatError(cause));
-      })
-      .finally(() => { if (active) setStartBusy(false); });
-    return () => { active = false; };
-  }, [currentStartFolder?.id, flyout, fs, fsEpoch, startSeedRevision]);
+    if (openTaskbarGroupHandlerId && !openTaskbarGroup) {
+      dispatchCoordination({ type: "dismiss-taskbar-group" });
+    }
+  }, [openTaskbarGroup, openTaskbarGroupHandlerId]);
+
+  useEffect(
+    () => fsEvents?.subscribe(() => setStartFsRevision((value) => value + 1)) ?? (() => undefined),
+    [fsEvents],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -295,15 +202,12 @@ export function Shell({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.key === "Escape") {
         event.preventDefault();
-        setContextMenu(null);
-        setFlyout((current) => current === "start" ? null : "start");
+        dispatchCoordination({ type: "toggle-flyout", flyout: "start" });
       } else if (event.key === "Escape") {
-        setContextMenu(null);
-        setFlyout(null);
+        dispatchCoordination({ type: "dismiss-transient" });
       } else if (event.ctrlKey && event.code === "Space") {
         event.preventDefault();
-        setContextMenu(null);
-        setFlyout("search");
+        dispatchCoordination({ type: "open-flyout", flyout: "search" });
       }
     };
     if (typeof window !== "undefined") window.addEventListener("keydown", onKeyDown);
@@ -319,43 +223,21 @@ export function Shell({
         insideToggle: !!target.closest("[data-shell-flyout-toggle]"),
         insideContextMenu: !!target.closest("[data-shell-context-menu]"),
       };
-      if (shouldDismissShellFlyout(flyout !== null, hit)) setFlyout(null);
-      if (contextMenu && !hit.insideContextMenu) setContextMenu(null);
+      if (shouldDismissShellFlyout(flyout !== null, hit)) {
+        dispatchCoordination({ type: "dismiss-flyout" });
+      }
+      if (contextMenu && !hit.insideContextMenu) {
+        dispatchCoordination({ type: "dismiss-context-menu" });
+      }
+      if (openTaskbarGroupHandlerId
+        && !target.closest("[data-shell-task-group-toggle]")
+        && !target.closest("[data-shell-task-group-chooser]")) {
+        dispatchCoordination({ type: "dismiss-taskbar-group" });
+      }
     };
     if (typeof document !== "undefined") document.addEventListener("pointerdown", onPointerDown, true);
     return () => { if (typeof document !== "undefined") document.removeEventListener("pointerdown", onPointerDown, true); };
-  }, [contextMenu, flyout]);
-
-  useEffect(() => {
-    latestSearch.current.cancel();
-    searchAbort.current?.abort();
-    searchAbort.current = null;
-    setSearchError(null);
-    if (flyout !== "search") {
-      setSearchBusy(false);
-      return undefined;
-    }
-    setSearchBusy(true);
-    const delay = searchQuery.trim() ? 140 : 0;
-    const timer = typeof window === "undefined" ? null : window.setTimeout(() => {
-      const controller = new AbortController();
-      searchAbort.current = controller;
-      void latestSearch.current.run(
-        () => searchShell(fs, nativeDefinitions, elements, searchQuery, {
-          signal: controller.signal,
-          pinnedNative: effectivePreferences.pinnedNative,
-          pinnedElements: effectivePreferences.pinnedElements,
-        }),
-        (batch) => { setSearchBatch(batch); setSearchBusy(false); setSearchError(null); },
-      ).catch((cause: unknown) => {
-        if (controller.signal.aborted || (cause instanceof Error && cause.name === "AbortError")) return;
-        setSearchBusy(false);
-        setSearchError(formatError(cause));
-      });
-    }, delay);
-    if (timer === null) { setSearchBusy(false); return undefined; }
-    return () => { window.clearTimeout(timer); searchAbort.current?.abort(); };
-  }, [effectivePreferences.pinnedElements, effectivePreferences.pinnedNative, elements, flyout, fs, fsEpoch, nativeDefinitions, searchQuery]);
+  }, [contextMenu, flyout, openTaskbarGroupHandlerId]);
 
   const persistPreferences = useCallback((next: ShellPreferences) => {
     if (!preferencesReady) {
@@ -378,14 +260,21 @@ export function Shell({
     ...effectivePreferences,
     pinnedElements: togglePinned(effectivePreferences.pinnedElements, elementId),
   }), [effectivePreferences, persistPreferences]);
-  const selectTheme = useCallback((themeId: ShellThemeId) => persistPreferences({ ...effectivePreferences, themeId }), [effectivePreferences, persistPreferences]);
+  const selectTheme = useCallback(
+    (themeId: ShellThemeId) => persistPreferences({ ...effectivePreferences, themeId }),
+    [effectivePreferences, persistPreferences],
+  );
+  const selectTaskbarAlignment = useCallback(
+    (taskbarAlignment: ShellTaskbarAlignment) => persistPreferences({ ...effectivePreferences, taskbarAlignment }),
+    [effectivePreferences, persistPreferences],
+  );
 
   const openElement = useCallback(async (elementId: string, options?: { tileId?: string; view?: string }) => {
     setActionError(null);
     setBusyId(`element:${elementId}`);
     try {
       await neutron.openElement(elementId, options);
-      setFlyout(null);
+      dispatchCoordination({ type: "dismiss-flyout" });
     } catch (cause: unknown) {
       setActionError(`Could not open Element: ${formatError(cause)}`);
     } finally {
@@ -395,15 +284,10 @@ export function Shell({
 
   const openStartNode = useCallback(async (node: FsNode) => {
     setActionError(null);
-    if (node.kind === "directory") {
-      setStartTrail((current) => [...current, { id: node.id, name: node.name }]);
-      setStartQuery("");
-      return;
-    }
     setBusyId(`start:${node.id}`);
     try {
       await activateStartFilesystemNode(filesystemOpen, node);
-      setFlyout(null);
+      dispatchCoordination({ type: "dismiss-flyout" });
     } catch (cause: unknown) {
       setActionError(`Could not open ${node.name}: ${formatError(cause)}`);
     } finally {
@@ -411,16 +295,22 @@ export function Shell({
     }
   }, [filesystemOpen]);
 
-  const activateTaskbar = useCallback(async (entry: TaskbarEntry) => {
+  const activateTaskbar = useCallback(async (entry: PresentedTaskbarEntry) => {
     setActionError(null);
     if (entry.kind === "element") {
+      dispatchCoordination({ type: "dismiss-taskbar-group" });
       await openElement(entry.elementId);
       return;
     }
-    const launching = entry.process === null;
+    const launching = entry.members.length === 0;
     if (launching) setBusyId(entry.id);
     try {
-      await executeNativeTaskbarAction(entry, process, windows);
+      const action = await executeNativeTaskbarAction(entry, process, windows);
+      if (action === "choose") {
+        dispatchCoordination({ type: "toggle-taskbar-group", handlerId: entry.handlerId });
+      } else {
+        dispatchCoordination({ type: "dismiss-taskbar-group" });
+      }
     } catch (cause: unknown) {
       setActionError(`Taskbar action failed: ${formatError(cause)}`);
     } finally {
@@ -443,7 +333,7 @@ export function Shell({
       } else {
         await activateSearchFilesystemResult(filesystemOpen, result);
       }
-      setFlyout(null);
+      dispatchCoordination({ type: "dismiss-flyout" });
     } catch (cause: unknown) {
       setActionError(`Could not open ${result.title}: ${formatError(cause)}`);
     } finally {
@@ -451,11 +341,16 @@ export function Shell({
     }
   }, [filesystemOpen, neutron, openService, process]);
 
-  const shortcutPresentation = useCallback((target: StartShortcutTarget): { icon?: string; pinned?: boolean; pinId?: string; pinKind?: "native" | "element" } => {
+  const shortcutPresentation = useCallback((target: StartShortcutTarget): {
+    icon?: string;
+    pinned?: boolean;
+    pinId?: string;
+    pinKind?: "native" | "element";
+  } => {
     if (target.kind === "native") {
       const app = nativeByHandler.get(target.handlerId);
       return {
-        ...(app?.icon ? { icon: app.icon } : {}),
+        icon: app?.icon ?? SYSTEM_ICON_ASSETS.application,
         pinned: effectivePreferences.pinnedNative.includes(target.handlerId),
         pinId: target.handlerId,
         pinKind: "native",
@@ -464,19 +359,45 @@ export function Shell({
     if (target.kind === "element") {
       const element = elementsById.get(target.elementId);
       return {
-        ...(element?.icon ? { icon: element.icon } : {}),
+        icon: element?.icon ?? SYSTEM_ICON_ASSETS.application,
         pinned: effectivePreferences.pinnedElements.includes(target.elementId),
         pinId: target.elementId,
         pinKind: "element",
       };
     }
-    return { icon: target.kind === "url" ? "↗" : "□" };
+    return { icon: FILE_TYPE_ICON_ASSETS.file };
   }, [effectivePreferences.pinnedElements, effectivePreferences.pinnedNative, elementsById, nativeByHandler]);
 
-  const toggleFlyout = (next: Exclude<Flyout, null>) => {
-    setContextMenu(null);
-    setFlyout((current) => current === next ? null : next);
-  };
+  const presentStartItem = useCallback((node: FsNode): StartItemPresentation => {
+    const shortcut = parseStartShortcut(node);
+    const presentation = shortcut
+      ? shortcutPresentation(shortcut.target)
+      : {
+        icon: node.kind === "directory" ? FILE_TYPE_ICON_ASSETS.folder : FILE_TYPE_ICON_ASSETS.file,
+        pinned: undefined,
+        pinId: undefined,
+        pinKind: undefined,
+      };
+    const pinAction = presentation.pinned === undefined ? null : taskbarPinAction(presentation.pinned);
+    const context = presentation.pinId && presentation.pinKind
+      ? { kind: presentation.pinKind, id: presentation.pinId }
+      : undefined;
+    const pin = pinAction && presentation.pinId && presentation.pinKind
+      ? {
+        kind: presentation.pinKind,
+        id: presentation.pinId,
+        label: pinAction.label,
+        pinned: pinAction.pinned,
+      }
+      : undefined;
+    return {
+      icon: presentation.icon,
+      shortcut: shortcut !== null,
+      subtitle: node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind,
+      ...(context ? { context } : {}),
+      ...(pin ? { pin } : {}),
+    };
+  }, [shortcutPresentation]);
 
   const onShellContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
     const target = event.target;
@@ -484,6 +405,8 @@ export function Shell({
     if (target.closest("input,textarea,[contenteditable='true']")) return;
     const nativeTask = target.closest<HTMLElement>("[data-shell-context-native]");
     const elementTask = target.closest<HTMLElement>("[data-shell-context-element]");
+    const taskbar = target.closest<HTMLElement>("[data-shell-taskbar]");
+    const taskbarBackground = !!taskbar && !nativeTask && !elementTask && !target.closest("button");
     const policy = resolveShellContextMenuPolicy({
       shellOwned: !!target.closest("[data-shell-owned-surface]"),
       nativeTask: !!nativeTask,
@@ -492,25 +415,64 @@ export function Shell({
     if (policy === "none") return;
     event.preventDefault();
     event.stopPropagation();
-    setContextMenu({
-      x: contextPosition(event.clientX, typeof window === "undefined" ? 1024 : window.innerWidth, 230),
-      y: contextPosition(event.clientY, typeof window === "undefined" ? 768 : window.innerHeight, 180),
-      policy,
-      ...(nativeTask?.dataset.shellContextNative ? { handlerId: nativeTask.dataset.shellContextNative } : {}),
-      ...(elementTask?.dataset.shellContextElement ? { elementId: elementTask.dataset.shellContextElement } : {}),
+
+    const contextProcessId = nativeTask?.dataset.shellContextProcess as ProcessId | undefined;
+    const itemCount = taskbarBackground
+      ? 2
+      : policy === "native-task"
+        ? (contextProcessId ? 2 : 1)
+        : policy === "element-task"
+          ? 1
+          : 3;
+    const source = nativeTask ?? elementTask;
+    const sourceRect = source?.getBoundingClientRect();
+    const position = placeShellContextMenu(
+      sourceRect
+        ? { left: sourceRect.left, top: sourceRect.top, width: sourceRect.width, height: sourceRect.height }
+        : { left: event.clientX, top: event.clientY, width: 0, height: 0 },
+      {
+        width: typeof window === "undefined" ? 1024 : window.innerWidth,
+        height: typeof window === "undefined" ? 768 : window.innerHeight,
+      },
+      { width: 230, height: shellContextMenuHeight(itemCount) },
+    );
+
+    dispatchCoordination({
+      type: "set-context-menu",
+      contextMenu: {
+        ...position,
+        policy,
+        ...(nativeTask?.dataset.shellContextNative ? { handlerId: nativeTask.dataset.shellContextNative } : {}),
+        ...(contextProcessId ? { processId: contextProcessId } : {}),
+        ...(elementTask?.dataset.shellContextElement ? { elementId: elementTask.dataset.shellContextElement } : {}),
+        ...(taskbarBackground ? { taskbarBackground: true } : {}),
+      },
     });
   };
 
   const clockText = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(clock);
   const dateText = new Intl.DateTimeFormat(undefined, { month: "numeric", day: "numeric", year: "2-digit" }).format(clock);
   const fullDateTime = new Intl.DateTimeFormat(undefined, {
-    weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(clock);
 
-  const contextPin = contextMenu?.policy === "native-task" && contextMenu.handlerId
-    ? { kind: "native" as const, id: contextMenu.handlerId, action: taskbarPinAction(effectivePreferences.pinnedNative.includes(contextMenu.handlerId)) }
+  const contextPin: ShellContextPin | null = contextMenu?.policy === "native-task" && contextMenu.handlerId
+    ? {
+      kind: "native",
+      id: contextMenu.handlerId,
+      action: taskbarPinAction(effectivePreferences.pinnedNative.includes(contextMenu.handlerId)),
+    }
     : contextMenu?.policy === "element-task" && contextMenu.elementId
-      ? { kind: "element" as const, id: contextMenu.elementId, action: taskbarPinAction(effectivePreferences.pinnedElements.includes(contextMenu.elementId)) }
+      ? {
+        kind: "element",
+        id: contextMenu.elementId,
+        action: taskbarPinAction(effectivePreferences.pinnedElements.includes(contextMenu.elementId)),
+      }
       : null;
 
   return <div
@@ -519,83 +481,125 @@ export function Shell({
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
-    <div className="plasmon-shell__wallpaper" aria-hidden="true"><span className="plasmon-shell__aurora plasmon-shell__aurora--one" /><span className="plasmon-shell__aurora plasmon-shell__aurora--two" /></div>
+    <div className="plasmon-shell__wallpaper" aria-hidden="true">
+      <span className="plasmon-shell__aurora plasmon-shell__aurora--one" />
+      <span className="plasmon-shell__aurora plasmon-shell__aurora--two" />
+    </div>
     <div className="plasmon-shell__workspace" data-shell-workspace="true">{children}</div>
 
-    {(actionError || neutronError) ? <div className="plasmon-shell__error" data-shell-owned-surface role="alert">{actionError ?? `Neutron discovery: ${neutronError}`}<button type="button" onClick={() => setActionError(null)}>Dismiss</button></div> : null}
-    {notice ? <div className="plasmon-shell__notice" data-shell-owned-surface role="status">{notice}<button type="button" onClick={() => setNotice(null)}>Dismiss</button></div> : null}
+    <ShellMessages
+      actionError={actionError}
+      neutronError={neutronError}
+      notice={notice}
+      onDismissError={() => setActionError(null)}
+      onDismissNotice={() => setNotice(null)}
+    />
 
-    {flyout === "start" ? <section className="plasmon-shell__panel plasmon-shell__start-panel" data-shell-owned-surface data-shell-flyout aria-label="Start menu">
-      <header><span>Filesystem-backed</span><h2>Start</h2></header>
-      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={startQuery} onChange={(event) => setStartQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && startQuery.trim()) { setSearchQuery(startQuery); setFlyout("search"); } }} placeholder="Filter this folder; Enter searches everywhere" aria-label="Search Start" /></div>
-      <div className="plasmon-shell__section">
-        <div className="plasmon-shell__row">
-          <button type="button" disabled={startTrail.length <= 1} onClick={() => { setStartTrail((current) => current.slice(0, -1)); setStartQuery(""); }}>← Back</button>
-          <span><strong>{startTrail.map((item) => item.name).join(" / ") || "Start Menu"}</strong><small>Folders and shortcuts are ordinary filesystem nodes.</small></span>
-        </div>
-        {startError ? <p role="alert">{startError}</p> : null}
-        {startBusy ? <p role="status">Loading Start Menu…</p> : null}
-        <div className="plasmon-shell__list" onKeyDown={(event) => focusRelative(event, "[data-start-item]")}>{filteredStartItems.map((node) => {
-          const shortcut = parseStartShortcut(node);
-          const presentation = shortcut ? shortcutPresentation(shortcut.target) : { icon: node.kind === "directory" ? "▰" : "□" };
-          const pinAction = presentation.pinned === undefined ? null : taskbarPinAction(presentation.pinned);
-          return <div className="plasmon-shell__row" key={node.id}>
-            <button
-              type="button"
-              data-start-item
-              {...(presentation.pinKind === "native" ? { "data-shell-context-native": presentation.pinId } : {})}
-              {...(presentation.pinKind === "element" ? { "data-shell-context-element": presentation.pinId } : {})}
-              onClick={() => void openStartNode(node)}
-              disabled={busyId === `start:${node.id}`}
-            ><ShellIcon icon={presentation.icon} label={node.name} /><span><strong>{node.name}</strong><small>{node.kind === "directory" ? "Folder" : shortcut ? `Shortcut · ${shortcut.target.kind}` : node.mime ?? node.kind}</small></span></button>
-            {pinAction && presentation.pinId && presentation.pinKind ? <button
-              type="button"
-              disabled={!preferencesReady}
-              title={pinAction.label}
-              aria-label={pinAction.label}
-              aria-pressed={pinAction.pinned}
-              onClick={() => presentation.pinKind === "native" ? toggleNativePin(presentation.pinId!) : toggleElementPin(presentation.pinId!)}
-            ><PinIcon pinned={pinAction.pinned} /></button> : null}
-          </div>;
-        })}{!startBusy && filteredStartItems.length === 0 ? <p>This Start Menu folder is empty.</p> : null}</div>
-      </div>
-      <footer><button type="button" onClick={() => setFlyout("settings")}>Settings</button></footer>
-    </section> : null}
+    <StartSurfaceController
+      active={flyout === "start"}
+      fs={fs}
+      reconciliation={startMenu}
+      fsRevision={startFsRevision}
+      busyId={busyId}
+      preferencesReady={preferencesReady}
+      presentItem={presentStartItem}
+      onActivate={openStartNode}
+      onSearchEverywhere={(query) => {
+        searchController.setQuery(query);
+        dispatchCoordination({ type: "open-flyout", flyout: "search" });
+      }}
+      onPin={(kind, id) => { if (kind === "native") toggleNativePin(id); else toggleElementPin(id); }}
+      onSettings={() => dispatchCoordination({ type: "open-flyout", flyout: "settings" })}
+    />
 
-    {flyout === "search" ? <section className="plasmon-shell__panel plasmon-shell__search-panel" data-shell-owned-surface data-shell-flyout aria-label="Search">
-      <div className="plasmon-shell__search-box"><SearchMark /><input autoFocus value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search apps, files, media, Atoms, and Start shortcuts" aria-label="Search Plasmon" />{searchBusy ? <span role="status">Searching…</span> : null}</div>
-      <div className="plasmon-shell__tabs" role="tablist">{(["all", "apps", "documents", "media", "atoms"] as const).map((tab) => <button key={tab} type="button" role="tab" aria-selected={searchTab === tab} onClick={() => setSearchTab(tab)}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}</div>
-      <div className="plasmon-shell__results" onKeyDown={(event) => focusRelative(event, "[data-search-result]")}>{searchError ? <p role="alert">{searchError}</p> : null}{searchBatch.warnings.map((warning) => <p key={warning}>{warning}</p>)}{searchBatch.truncated ? <p>Search reached its local safety/result limit; refine the query for more matches.</p> : null}{filteredSearch.map((result) => {
-        const presentation = result.kind === "start-shortcut" ? shortcutPresentation(result.target) : null;
-        const icon = searchApplicationIcon(result) ?? presentation?.icon;
-        return <button key={result.id} type="button" data-search-result onClick={() => void openSearchResult(result)} disabled={busyId === result.id}>{icon ? <ShellIcon icon={icon} label={result.title} /> : null}<span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.category}</em></button>;
-      })}{!searchBusy && filteredSearch.length === 0 ? <p>No results in this category.</p> : null}</div>
-    </section> : null}
+    {flyout === "search" ? <SearchSurface
+      controller={searchController}
+      searchMark={<SearchMark />}
+      activationBusyId={busyId}
+      resolveShortcutPresentation={shortcutPresentation}
+      onActivate={openSearchResult}
+    /> : null}
 
-    {flyout === "calendar" ? <section className="plasmon-shell__panel plasmon-shell__calendar-panel" data-shell-owned-surface data-shell-flyout aria-label="Clock and calendar"><div className="plasmon-shell__calendar-time"><strong>{clockText}</strong><span>{fullDateTime}</span></div><div className="plasmon-shell__calendar-header"><button type="button" aria-label="Previous month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, -1))}>‹</button><h2>{calendar.label}</h2><button type="button" aria-label="Next month" onClick={() => setCalendarAnchor((value) => addCalendarMonths(value, 1))}>›</button></div><div className="plasmon-shell__calendar-grid">{calendar.weekdays.map((weekday) => <span key={weekday}>{weekday}</span>)}{calendar.days.map((day) => <span key={day.key} className={`${day.inMonth ? "" : "is-outside"}${day.isToday ? " is-today" : ""}`} aria-current={day.isToday ? "date" : undefined}>{day.day}</span>)}</div><button type="button" onClick={() => setCalendarAnchor(startOfCalendarMonth(clock))}>Today</button></section> : null}
+    {flyout === "calendar" ? <CalendarSurface
+      calendar={calendar}
+      clockText={clockText}
+      fullDateTime={fullDateTime}
+      onPrevious={() => setCalendarAnchor((value) => addCalendarMonths(value, -1))}
+      onNext={() => setCalendarAnchor((value) => addCalendarMonths(value, 1))}
+      onToday={() => setCalendarAnchor(startOfCalendarMonth(clock))}
+    /> : null}
 
-    {flyout === "tray" ? <section className="plasmon-shell__panel plasmon-shell__tray-panel" data-shell-owned-surface data-shell-flyout aria-label="Neutron trays"><header><span>Kernel-owned surfaces</span><h2>Neutron trays</h2></header><p>Plasmon lists declared trays and opens their Elements. Interactive tray surfaces remain in Neutron.</p><div className="plasmon-shell__list">{trayEntries.map((entry) => { const owner = elementsById.get(entry.elementId); return <button key={entry.elementId} type="button" data-shell-context-element={entry.elementId} onClick={() => void openElement(entry.elementId)}><ShellIcon icon={owner?.icon} label={owner?.name ?? entry.title} /><span><strong>{entry.title}</strong><small>Element running state: {entry.running}</small></span></button>; })}{trayEntries.length === 0 ? <p>No installed Elements declare a tray title.</p> : null}</div></section> : null}
+    {flyout === "tray" ? <TraySurface
+      entries={trayEntries}
+      elementsById={elementsById}
+      onOpenElement={(elementId) => { void openElement(elementId); }}
+    /> : null}
 
-    {flyout === "settings" ? <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings"><header><span>Plasmon storage</span><h2>Settings</h2></header><h3>Theme</h3><div className="plasmon-shell__grid">{SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.themeId === themeId} onClick={() => selectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}</div><h3>Wallpaper</h3><button type="button" disabled={!preferencesReady} aria-pressed={effectivePreferences.wallpaper === "aurora"} onClick={() => persistPreferences({ ...effectivePreferences, wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora" })}>Aurora background: {effectivePreferences.wallpaper === "aurora" ? "On" : "Off"}</button><p>Pins and appearance persist through the Plasmon filesystem service. Taskbar pins are preferences, not Start shortcuts.</p></section> : null}
+    {flyout === "settings" ? <SettingsSurface
+      preferences={effectivePreferences}
+      preferencesReady={preferencesReady}
+      onSelectTheme={selectTheme}
+      onToggleWallpaper={() => persistPreferences({
+        ...effectivePreferences,
+        wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora",
+      })}
+      onSelectTaskbarAlignment={selectTaskbarAlignment}
+    /> : null}
 
-    {contextMenu ? <section
-      className="plasmon-shell__panel"
-      data-shell-owned-surface
-      data-shell-context-menu
-      role="menu"
-      aria-label="Shell context menu"
-      style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, bottom: "auto", transform: "none", width: 230, padding: 8 }}
-    ><div className="plasmon-shell__list">{contextPin ? <button type="button" role="menuitem" title={contextPin.action.label} aria-label={contextPin.action.label} onClick={() => { if (contextPin.kind === "native") toggleNativePin(contextPin.id); else toggleElementPin(contextPin.id); setContextMenu(null); }}><PinIcon pinned={contextPin.action.pinned} /><span><strong>{contextPin.action.label}</strong></span></button> : <><button type="button" role="menuitem" onClick={() => { setFlyout("start"); setContextMenu(null); }}>Start</button><button type="button" role="menuitem" onClick={() => { setFlyout("search"); setContextMenu(null); }}>Search</button><button type="button" role="menuitem" onClick={() => { setFlyout("settings"); setContextMenu(null); }}>Settings</button></>}</div></section> : null}
+    {openTaskbarGroup ? <TaskbarGroupChooser
+      entry={openTaskbarGroup}
+      windows={windowStates}
+      focusedWindowId={focusedWindowId}
+      onSelect={(member) => {
+        setActionError(null);
+        if (!focusNativeTaskbarMember(openTaskbarGroup, member.id, process)) {
+          setActionError(`${member.title} is not ready to focus.`);
+        }
+        dispatchCoordination({ type: "dismiss-taskbar-group" });
+      }}
+    /> : null}
 
-    <nav className="plasmon-shell__taskbar" data-shell-owned-surface aria-label="Taskbar"><div className="plasmon-shell__taskbar-main"><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => toggleFlyout("start")}><StartMark /></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => toggleFlyout("search")}><SearchMark /></button><div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => {
-      const task = entry.presentation;
-      const className = `plasmon-shell__task-button${task.running ? " is-running" : ""}${task.active ? " is-focused" : ""}`;
-      const badge = task.badge ? <small aria-hidden="true">{task.badge}</small> : null;
-      return entry.kind === "element"
-        ? <button key={entry.id} type="button" data-shell-context-element={entry.elementId} className={className} aria-label={task.accessibilityLabel} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>
-        : <button key={entry.id} type="button" data-shell-context-native={entry.handlerId} className={className} aria-label={task.accessibilityLabel} aria-pressed={task.active} aria-busy={task.launching || undefined} data-task-state={task.state} disabled={task.launching} onClick={() => void activateTaskbar(entry)}><ShellIcon icon={entry.icon} label={entry.name} />{badge}</button>;
-    })}</div></div><div className="plasmon-shell__taskbar-status">{!preferencesReady ? <span className="plasmon-shell__preference-loading" role="status">Loading settings…</span> : null}<button type="button" data-shell-flyout-toggle className="plasmon-shell__tray-button" aria-label={`Neutron trays; ${trayEntries.length} declared`} aria-expanded={flyout === "tray"} onClick={() => toggleFlyout("tray")}><TrayMark /><span>{trayEntries.length}</span></button><button type="button" data-shell-flyout-toggle className="plasmon-shell__clock-button" aria-label={`Clock and calendar, ${fullDateTime}`} aria-expanded={flyout === "calendar"} onClick={() => { setCalendarAnchor(startOfCalendarMonth(clock)); toggleFlyout("calendar"); }}><span>{clockText}</span><span>{dateText}</span></button></div></nav>
-    <span className="plasmon-shell__sr-only" aria-live="polite">{focused ? `Focused window ${focused.processId}` : "No focused native window"}</span>
+    {contextMenu ? <ContextMenuSurface
+      contextMenu={contextMenu}
+      contextPin={contextPin}
+      taskbarAlignment={effectivePreferences.taskbarAlignment}
+      onSelectTaskbarAlignment={(alignment) => {
+        selectTaskbarAlignment(alignment);
+        dispatchCoordination({ type: "dismiss-context-menu" });
+      }}
+      onTogglePin={(pin) => {
+        if (pin.kind === "native") toggleNativePin(pin.id);
+        else toggleElementPin(pin.id);
+        dispatchCoordination({ type: "dismiss-context-menu" });
+      }}
+      onCloseProcess={() => {
+        if (contextMenu.processId) closeNativeTaskContextProcess(process, contextMenu.processId);
+        dispatchCoordination({ type: "dismiss-context-menu" });
+      }}
+      onOpenFlyout={(next) => dispatchCoordination({ type: "open-flyout", flyout: next })}
+    /> : null}
+
+    <TaskbarSurface
+      preferencesReady={preferencesReady}
+      taskbarAlignment={effectivePreferences.taskbarAlignment}
+      flyout={flyout}
+      taskbarEntries={taskbarEntries}
+      openTaskbarGroupHandlerId={openTaskbarGroupHandlerId}
+      trayCount={trayEntries.length}
+      fullDateTime={fullDateTime}
+      clockText={clockText}
+      dateText={dateText}
+      onToggleFlyout={(next) => dispatchCoordination({ type: "toggle-flyout", flyout: next })}
+      onActivateTaskbar={(entry) => { void activateTaskbar(entry); }}
+      onOpenCalendar={() => {
+        setCalendarAnchor(startOfCalendarMonth(clock));
+        dispatchCoordination({ type: "toggle-flyout", flyout: "calendar" });
+      }}
+    />
+
+    <span className="plasmon-shell__sr-only" aria-live="polite">
+      {focused ? `Focused window ${focused.processId}` : "No focused native window"}
+    </span>
   </div>;
 }
 

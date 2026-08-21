@@ -40,6 +40,11 @@ export interface HeadlessPlasmonEnvironment {
  * viewport are deterministic. Filesystem policy, bootstrap, associations,
  * opening, native app registration, process behavior, and window behavior all
  * come from the same production implementations used by PlasmonOS.
+ *
+ * Service construction assembles but does not launch the Start reconciliation
+ * runtime. Pure/headless tests can therefore stage fixtures and invoke
+ * reconciliation explicitly. renderPlasmon starts the same controller before
+ * React renders, matching the production bootstrap lifecycle.
  */
 export function createHeadlessPlasmonEnvironment(
   options: HeadlessPlasmonEnvironmentOptions = {},
@@ -79,6 +84,7 @@ export function createHeadlessPlasmonEnvironment(
     processes: () => services.process.list(),
     windows: () => services.windows.list(),
     dispose: () => {
+      services.startMenu.dispose();
       for (const process of services.process.list()) services.process.close(process.id);
       services.filesystem.dispose();
       windows.dispose();

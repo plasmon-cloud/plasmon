@@ -14,4 +14,7 @@ playwright-report
 test-results
 tmp/
 .assetgen/
+/apps/plasmon/public/runtime/monaco/worker-sources.js
+/apps/plasmon/public/runtime/monaco/*.worker.js
+/apps/plasmon/public/System/Program Files/MonacoEditor/*.worker.js
 /wagyu-alpha-*.png

@@ -32,10 +32,9 @@ import {
   type FileManagerSnapshot,
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
+import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
 import { ExplorerNavigationModel, resolveExplorerAddress } from "./navigation.ts";
-
-const FAVORITE_PATHS = ["/Desktop", "/Documents", "/Downloads", "/Pictures", "/Videos"] as const;
 
 export interface ExplorerAppProps {
   processId: ProcessId;
@@ -164,14 +163,32 @@ export function ExplorerApp({
 
   useEffect(() => {
     let active = true;
-    void Promise.all(FAVORITE_PATHS.map(async (path) => fs.resolvePath(path)))
-      .then((nodes) => {
-        if (!active) return;
-        setFavorites(nodes.filter((node): node is FsNode => Boolean(node && node.kind === "directory")));
-      })
-      .catch(() => { if (active) setFavorites([]); });
-    return () => { active = false; };
-  }, [fs]);
+    let unsubscribe: (() => void) | undefined;
+    const refreshFavorites = async (): Promise<NodeId | null> => {
+      try {
+        const snapshot = await readDefaultExplorerFavorites(fs);
+        if (!active) return null;
+        setFavorites(snapshot.nodes);
+        return snapshot.rootId;
+      } catch {
+        if (active) setFavorites([]);
+        return null;
+      }
+    };
+
+    void refreshFavorites().then((rootId) => {
+      if (!active || !rootId || !fsEvents) return;
+      unsubscribe = fsEvents.subscribe((event) => {
+        if (!explorerFavoritesAffectedByEvent(event, rootId)) return;
+        void refreshFavorites();
+      });
+    });
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [fs, fsEvents]);
 
   useEffect(() => {
     if (!location) return;

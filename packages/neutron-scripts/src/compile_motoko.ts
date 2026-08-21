@@ -117,8 +117,7 @@ async function compileIsolated({
       fs.writeFile(wasmPath, compiled.wasm),
       fs.writeFile(candidPath, compiled.candid, "utf8"),
       ...(emitStableTypes
-        ? [fs.writeFile(stableTypesPath, compiled.stable, "utf8")]
-        : []),
+        ? [fs.writeFile(stableTypesPath, compiled.stable, "utf8")] : []),
     ]);
 
     return {
@@ -138,11 +137,18 @@ async function compileIsolated({
   }
 }
 
-async function resolveMopsPackages(
+export async function resolveMopsPackages(
   cwd: string,
   run: MopsCommandRunner,
 ): Promise<PackageMap> {
-  const { stdout } = await run("mops", ["sources"], { cwd });
+  // `mops sources` installs implicitly, but clean CI has demonstrated that an
+  // incompletely materialized package tree can still reach the compiler walk.
+  // Materialize from the committed Mops v3 lock explicitly, then make source
+  // resolution read-only so compilation never consumes a partially installed
+  // dependency tree. Mops verifies downloaded bytes against the lock; it does
+  // not re-hash an already-populated .mops tree on every install.
+  await run("mops", ["install", "--locked"], { cwd });
+  const { stdout } = await run("mops", ["sources", "--no-install"], { cwd });
   return parsePackageString(stdout.replace(/\n/g, " ").trim());
 }
 

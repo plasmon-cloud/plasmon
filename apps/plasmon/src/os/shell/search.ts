@@ -6,7 +6,13 @@ import type {
   JsonValue,
   NativeAppDefinition,
 } from "../contracts/index.ts";
-import { classifyResource, type NeutronAppMetadata } from "../fs/index.ts";
+import {
+  classifyResource,
+  readResourceArtworkMetadata,
+  type NeutronAppMetadata,
+} from "../fs/index.ts";
+import type { ResourceIconPresentation } from "../visual/primitives.tsx";
+import { resourcePresentationForClassification } from "../visual/resource-presentation.ts";
 import {
   parseStartShortcut,
   startShortcutTargetIdentity,
@@ -15,7 +21,8 @@ import {
 
 export type SearchTab = "all" | "apps" | "documents" | "media" | "atoms";
 export type FsSearchCategory = Exclude<SearchTab, "all">;
-export type FileSearchCategory = Exclude<FsSearchCategory, "apps">;
+export type FileSearchCategory = FsSearchCategory;
+type NonApplicationSearchCategory = Exclude<FsSearchCategory, "apps">;
 
 export const SEARCH_TOTAL_LIMIT = 48;
 export const SEARCH_CATEGORY_LIMITS: Readonly<Record<Exclude<SearchTab, "all">, number>> = Object.freeze({
@@ -93,7 +100,10 @@ export type ShellSearchResult =
 export interface SearchBatch {
   results: ShellSearchResult[];
   warnings: string[];
+  /** True only when filesystem traversal stopped before the searchable tree was exhausted. */
   truncated: boolean;
+  /** True when otherwise valid matches were omitted only by normal presentation caps. */
+  capped: boolean;
 }
 
 export interface FilesystemSearchOptions {
@@ -121,35 +131,25 @@ function normalize(value: string): string {
   return value.toLocaleLowerCase();
 }
 
-function extension(name: string): string {
-  const index = name.lastIndexOf(".");
-  return index > 0 ? name.slice(index).toLocaleLowerCase() : "";
-}
-
-const MEDIA_EXTENSIONS = new Set([
-  ".aac", ".avi", ".bmp", ".flac", ".gif", ".heic", ".heif", ".jpeg", ".jpg", ".m4a", ".m4v", ".mkv",
-  ".mov", ".mp3", ".mp4", ".ogg", ".ogv", ".opus", ".png", ".svg", ".wav", ".webm", ".webp",
-]);
-
 function atomRecord(node: FsNode): Record<string, JsonValue> | null {
   const value = node.metadata.atom;
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   return value as Record<string, JsonValue>;
 }
 
-function categorizeNonApplicationFsNode(node: FsNode): FileSearchCategory {
+function categorizeNonApplicationFsNode(node: FsNode): NonApplicationSearchCategory {
+  const classification = classifyResource(node);
   const atom = atomRecord(node);
-  if (node.kind === "atom" || atom?.format === "plasmon.atom" || extension(node.name) === ".atom") {
+  if (classification.kind === "atom" || atom?.format === "plasmon.atom" || classification.type.extension === ".atom") {
     return "atoms";
   }
-  if (node.mime?.startsWith("audio/") || node.mime?.startsWith("image/") || node.mime?.startsWith("video/") || MEDIA_EXTENSIONS.has(extension(node.name))) {
-    return "media";
-  }
+  if (["audio", "image", "video"].includes(classification.type.contentKind)) return "media";
   return "documents";
 }
 
 export function categorizeFsNode(node: FsNode): FsSearchCategory {
-  if (classifyResource(node).kind === "neutron-app") return "apps";
+  const classification = classifyResource(node);
+  if (classification.kind === "system-app" || classification.kind === "neutron-app") return "apps";
   return categorizeNonApplicationFsNode(node);
 }
 
@@ -174,34 +174,28 @@ function metadataStrings(value: JsonValue, output: string[], budget: { remaining
 }
 
 export function searchableNodeText(node: FsNode): string {
-  const parts = [node.name, node.kind, node.mime ?? ""];
+  const classification = classifyResource(node);
+  const parts = [node.name, node.kind, node.mime ?? classification.type.mime ?? ""];
   const budget = { remaining: 4096 };
   metadataStrings(node.metadata, parts, budget);
   return normalize(parts.join("\n"));
 }
 
 function fileSubtitle(node: FsNode, category: FileSearchCategory): string {
+  const classification = classifyResource(node);
+  if (category === "apps" && classification.kind === "system-app") return "Plasmon application";
   if (category === "atoms") {
     const atom = atomRecord(node);
     const title = typeof atom?.title === "string" ? atom.title : null;
     const atomType = typeof atom?.atomType === "string" ? atom.atomType : null;
     return [title, atomType, "Atom"].filter(Boolean).join(" · ");
   }
-  if (node.mime) return node.mime;
+  if (classification.type.mime) return classification.type.mime;
   return category === "media" ? "Media" : "Document";
 }
 
-function elementRuntimeLabel(running: ExternalElement["running"]): string {
-  switch (running) {
-    case "yes": return "Running";
-    case "no": return "Not running";
-    case "unknown": return "Runtime status unavailable";
-  }
-}
-
 function elementSubtitle(element: ExternalElement): string {
-  const description = element.description.trim() || "Neutron application";
-  return `${description} · ${elementRuntimeLabel(element.running)}`;
+  return element.description.trim() || "Neutron application";
 }
 
 function projectionSearchResult(node: FsNode, metadata: NeutronAppMetadata): NeutronProjectionSearchResult {
@@ -230,11 +224,18 @@ function withElementPresentation(
   };
 }
 
-export function searchApplicationIcon(result: ShellSearchResult): NativeAppDefinition["icon"] | string | undefined {
+export function searchApplicationIcon(
+  result: ShellSearchResult,
+): NativeAppDefinition["icon"] | string | ResourceIconPresentation | undefined {
   switch (result.kind) {
     case "native-app": return result.app.icon;
     case "element": return result.element.icon;
     case "neutron-projection": return result.icon;
+    case "directory":
+    case "file":
+      return resourcePresentationForClassification(classifyResource(result.node), {
+        artwork: readResourceArtworkMetadata(result.node),
+      });
     default: return undefined;
   }
 }
@@ -282,7 +283,7 @@ export function searchApplicationEntries(
     }));
 
   const neutron = elements
-    .filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}\n${element.running}`), query))
+    .filter((element) => matches(normalize(`${element.name}\n${element.id}\n${element.description}`), query))
     .sort((left, right) => {
       const rank = pinnedRank(left.id, options.pinnedElements) - pinnedRank(right.id, options.pinnedElements);
       return rank || left.name.localeCompare(right.name);
@@ -381,7 +382,7 @@ export async function searchFilesystem(
         continue;
       }
 
-      const category = categorizeNonApplicationFsNode(node);
+      const category = categorizeFsNode(node);
       files.push({
         kind: "file",
         id: `node:${node.id}`,
@@ -402,20 +403,20 @@ export async function searchFilesystem(
   return { results: [...appShortcuts, ...projections, ...directories, ...files], warnings, truncated: queue.length > 0 };
 }
 
-function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; truncated: boolean } {
+function applyResultLimits(results: readonly ShellSearchResult[]): { results: ShellSearchResult[]; capped: boolean } {
   const output: ShellSearchResult[] = [];
-  let truncated = false;
+  let capped = false;
   for (const category of ["apps", "documents", "media", "atoms"] as const) {
     const matchesCategory = results.filter((result) => result.category === category);
     const limit = SEARCH_CATEGORY_LIMITS[category];
     output.push(...matchesCategory.slice(0, limit));
-    if (matchesCategory.length > limit) truncated = true;
+    if (matchesCategory.length > limit) capped = true;
   }
   if (output.length > SEARCH_TOTAL_LIMIT) {
-    truncated = true;
-    return { results: output.slice(0, SEARCH_TOTAL_LIMIT), truncated };
+    capped = true;
+    return { results: output.slice(0, SEARCH_TOTAL_LIMIT), capped };
   }
-  return { results: output, truncated };
+  return { results: output, capped };
 }
 
 export async function searchShell(
@@ -448,12 +449,25 @@ export async function searchShell(
     emittedProjectionIds.add(projection.elementId);
   }
 
-  const nonProjectionFilesystemResults = filesystem.results.filter((result) => result.kind !== "neutron-projection");
+  const directNativeHandlers = new Set(
+    applicationResults
+      .filter((result): result is NativeAppSearchResult => result.kind === "native-app")
+      .map((result) => result.app.handlerId),
+  );
+  const nonProjectionFilesystemResults = filesystem.results.filter((result) => {
+    if (result.kind === "neutron-projection") return false;
+    if (result.kind !== "file") return true;
+    const classification = classifyResource(result.node);
+    return classification.kind !== "system-app"
+      || !classification.systemApp
+      || !directNativeHandlers.has(classification.systemApp.handlerId);
+  });
   const limited = applyResultLimits([...applicationResults, ...nonProjectionFilesystemResults]);
   return {
     results: limited.results,
     warnings: filesystem.warnings,
-    truncated: filesystem.truncated || limited.truncated,
+    truncated: filesystem.truncated,
+    capped: limited.capped,
   };
 }
 

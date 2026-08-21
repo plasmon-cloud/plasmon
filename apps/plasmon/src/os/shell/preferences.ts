@@ -8,12 +8,16 @@ export type ShellThemeId = (typeof SHELL_THEME_IDS)[number];
 export const SHELL_WALLPAPERS = ["aurora", "plain"] as const;
 export type ShellWallpaper = (typeof SHELL_WALLPAPERS)[number];
 
+export const SHELL_TASKBAR_ALIGNMENTS = ["center", "left"] as const;
+export type ShellTaskbarAlignment = (typeof SHELL_TASKBAR_ALIGNMENTS)[number];
+
 export interface ShellPreferences {
   version: 1;
   pinnedNative: string[];
   pinnedElements: string[];
   themeId: ShellThemeId;
   wallpaper: ShellWallpaper;
+  taskbarAlignment: ShellTaskbarAlignment;
 }
 
 export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
@@ -22,6 +26,7 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   pinnedElements: [],
   themeId: "plasmon-dark",
   wallpaper: "aurora",
+  taskbarAlignment: "center",
 });
 
 export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SHELL_PREFERENCES): ShellPreferences {
@@ -31,6 +36,7 @@ export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SH
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
     wallpaper: preferences.wallpaper,
+    taskbarAlignment: preferences.taskbarAlignment,
   };
 }
 
@@ -60,11 +66,22 @@ function isWallpaper(value: unknown): value is ShellWallpaper {
   return typeof value === "string" && (SHELL_WALLPAPERS as readonly string[]).includes(value);
 }
 
+function isTaskbarAlignment(value: unknown): value is ShellTaskbarAlignment {
+  return typeof value === "string" && (SHELL_TASKBAR_ALIGNMENTS as readonly string[]).includes(value);
+}
+
 export function validateShellPreferences(value: unknown): ShellPreferences | null {
   if (!isRecord(value) || value.version !== 1) return null;
   const pinnedNative = stringList(value.pinnedNative);
   const pinnedElements = stringList(value.pinnedElements);
-  if (!pinnedNative || !pinnedElements || !isTheme(value.themeId) || !isWallpaper(value.wallpaper)) {
+  const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
+  if (
+    !pinnedNative
+    || !pinnedElements
+    || !isTheme(value.themeId)
+    || !isWallpaper(value.wallpaper)
+    || !isTaskbarAlignment(taskbarAlignment)
+  ) {
     return null;
   }
   return {
@@ -73,6 +90,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     pinnedElements,
     themeId: value.themeId,
     wallpaper: value.wallpaper,
+    taskbarAlignment,
   };
 }
 
@@ -91,6 +109,7 @@ function preferenceMetadataValue(preferences: ShellPreferences): JsonValue {
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
     wallpaper: preferences.wallpaper,
+    taskbarAlignment: preferences.taskbarAlignment,
   };
 }
 

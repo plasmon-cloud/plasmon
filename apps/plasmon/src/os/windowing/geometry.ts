@@ -23,6 +23,13 @@ export interface GeometryConstraints {
   reachableTitlebarHeight: number;
 }
 
+export interface ReachablePositionBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
 const finite = (value: number, fallback: number): number => Number.isFinite(value) ? value : fallback;
 const positive = (value: number, fallback: number): number => Math.max(1, finite(value, fallback));
 export const clamp = (value: number, minimum: number, maximum: number): number =>
@@ -52,6 +59,29 @@ export function normalizeConstraints(constraints: Partial<GeometryConstraints> =
   };
 }
 
+/**
+ * Returns the manager-compatible position range that keeps the required
+ * titlebar segment reachable for an already-sized floating rectangle.
+ */
+export function reachablePositionBounds(
+  geometry: Pick<WindowGeometry, "width" | "height">,
+  viewportInput: WindowViewport,
+  constraintsInput: Partial<GeometryConstraints> = {},
+): ReachablePositionBounds {
+  const viewport = normalizeViewport(viewportInput);
+  const constraints = normalizeConstraints(constraintsInput);
+  const width = positive(geometry.width, DEFAULT_WINDOW_WIDTH);
+  const height = positive(geometry.height, DEFAULT_WINDOW_HEIGHT);
+  const reachableWidth = Math.min(width, constraints.reachableTitlebarWidth, viewport.width);
+  const reachableHeight = Math.min(height, constraints.reachableTitlebarHeight, viewport.height);
+  return {
+    minX: viewport.x - width + reachableWidth,
+    maxX: viewport.x + viewport.width - reachableWidth,
+    minY: viewport.y,
+    maxY: viewport.y + viewport.height - reachableHeight,
+  };
+}
+
 export function constrainGeometry(
   geometry: WindowGeometry,
   viewportInput: WindowViewport,
@@ -63,16 +93,11 @@ export function constrainGeometry(
   const maxHeight = Math.max(constraints.minHeight, viewport.height);
   const width = clamp(finite(geometry.width, DEFAULT_WINDOW_WIDTH), constraints.minWidth, maxWidth);
   const height = clamp(finite(geometry.height, DEFAULT_WINDOW_HEIGHT), constraints.minHeight, maxHeight);
-  const reachableWidth = Math.min(width, constraints.reachableTitlebarWidth, viewport.width);
-  const reachableHeight = Math.min(height, constraints.reachableTitlebarHeight, viewport.height);
-  const minX = viewport.x - width + reachableWidth;
-  const maxX = viewport.x + viewport.width - reachableWidth;
-  const minY = viewport.y;
-  const maxY = viewport.y + viewport.height - reachableHeight;
+  const bounds = reachablePositionBounds({ width, height }, viewport, constraints);
 
   return {
-    x: clamp(finite(geometry.x, viewport.x), minX, maxX),
-    y: clamp(finite(geometry.y, viewport.y), minY, maxY),
+    x: clamp(finite(geometry.x, viewport.x), bounds.minX, bounds.maxX),
+    y: clamp(finite(geometry.y, viewport.y), bounds.minY, bounds.maxY),
     width,
     height,
   };

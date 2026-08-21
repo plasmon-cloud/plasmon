@@ -1,4 +1,4 @@
-export const PLASMON_VISUAL_ASSET_ROOT = "/static/plasmon";
+export const PLASMON_VISUAL_ASSET_ROOT = "static/plasmon";
 export const PLASMON_ICON_ASSET_ROOT = `${PLASMON_VISUAL_ASSET_ROOT}/icons`;
 
 export type FileTypeIconName =
