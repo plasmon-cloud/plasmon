@@ -193,32 +193,43 @@ function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
  * moved, deleted, content-bearing, metadata-customized, or user-created entries
  * are intentionally preserved because their managed ownership is not provable
  * from the durable reconciliation state.
+ *
+ * Once an identity is retired from the managed inventory, consume its old ledger
+ * entry. The inventory filter already prevents recreation, while dropping stale
+ * target-only provenance prevents a future user-created exact equivalent from
+ * being falsely claimed as the old managed node.
  */
 async function retireManagedNativeSeeds(
   fs: FsService,
   root: FsNode,
   nativeApps: readonly NativeAppDefinition[],
-  seeded: ReadonlySet<string>,
-): Promise<void> {
+  seeded: Set<string>,
+): Promise<boolean> {
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  let changedManifest = false;
 
   for (const app of nativeApps) {
     if (!shouldRetireManagedNativeSeed(app)) continue;
     const spec = nativeSeedSpec(app);
     if (!seeded.has(spec.identity)) continue;
 
-    let parent = root;
+    let parent: FsNode | null = root;
     if (spec.folder !== null) {
       const folder = rootChildren.find((node) => node.name === spec.folder);
-      if (!folder || folder.kind !== "directory") continue;
-      parent = folder;
+      parent = folder?.kind === "directory" ? folder : null;
     }
 
-    const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
-    const candidate = children.find((node) => node.name === spec.name);
-    if (!candidate || !isExactManagedSeed(candidate, spec)) continue;
-    await fs.remove(candidate.id);
+    if (parent) {
+      const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
+      const candidate = children.find((node) => node.name === spec.name);
+      if (candidate && isExactManagedSeed(candidate, spec)) await fs.remove(candidate.id);
+    }
+
+    seeded.delete(spec.identity);
+    changedManifest = true;
   }
+
+  return changedManifest;
 }
 
 /**
@@ -242,12 +253,11 @@ export async function reconcileStartMenu(
   // The v1 seed ledger records shortcut identities, not the NodeId of the old
   // `System` directory. Shape alone cannot prove directory ownership, so legacy
   // folders are scanned in place and never moved/deleted by reconciliation.
-  await retireManagedNativeSeeds(fs, root, nativeApps, seeded);
+  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded);
   const existing = await scanStartTree(fs, root);
   let created = 0;
   let preserved = 0;
   let skippedDeleted = 0;
-  let changedManifest = false;
   const folders = new Map<string, FsNode | null>();
 
   for (const spec of desiredSeeds(nativeApps, elements)) {
