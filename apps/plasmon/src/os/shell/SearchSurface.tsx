@@ -20,7 +20,6 @@ export interface SearchShortcutPresentation {
 
 export interface SearchSurfaceProps {
   controller: SearchSurfaceController;
-  fs: FsService;
   searchMark: ReactNode;
   activationBusyId: string | null;
   resolveShortcutPresentation(target: StartShortcutTarget): SearchShortcutPresentation;
@@ -47,7 +46,8 @@ function SearchResultRow({
   activationBusyId,
   resolveShortcutPresentation,
   onActivate,
-}: Pick<SearchSurfaceProps, "fs" | "activationBusyId" | "resolveShortcutPresentation" | "onActivate"> & {
+}: Pick<SearchSurfaceProps, "activationBusyId" | "resolveShortcutPresentation" | "onActivate"> & {
+  fs: FsService;
   result: ShellSearchResult;
 }) {
   const rowRef = useRef<HTMLButtonElement | null>(null);
@@ -83,13 +83,12 @@ function SearchResultRow({
 
 export function SearchSurface({
   controller,
-  fs,
   searchMark,
   activationBusyId,
   resolveShortcutPresentation,
   onActivate,
 }: SearchSurfaceProps) {
-  const { query, setQuery, tab, setTab, view } = controller;
+  const { fs, query, setQuery, tab, setTab, view } = controller;
 
   return <section
     className="plasmon-shell__panel plasmon-shell__search-panel"
