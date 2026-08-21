@@ -40,7 +40,7 @@
           # mops command inside the development shell so CI and local
           # development use the same toolchain entry point.
           mops = pkgs.writeShellScriptBin "mops" ''
-            exec ${pkgs.nodejs_24}/bin/npx --yes --package ic-mops mops "$@"
+            exec ${pkgs.nodejs_24}/bin/npx --yes --package ic-mops@3.1.0 mops "$@"
           '';
         in
         {
