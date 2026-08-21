@@ -25,6 +25,8 @@
     "test:e2e:plasmon:specialist": "node test/ci/run-plasmon-specialist.mjs",
     "test:e2e:plasmon:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon",
     "test:e2e:plasmon:smoke:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon:smoke",
+    "test:e2e:plasmon:demo:first-demo": "NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json playwright test test/e2e/plasmon-first-demo.spec.ts",
+    "test:e2e:plasmon:demo:first-demo:fresh": "npm run plasmon:demo:prepare && npm run plasmon:demo:reinstall && npm run test:e2e:plasmon:demo:first-demo",
     "test:plasmon:deployment-commands": "bun test test/e2e/plasmon-deployment-environment.test.ts",
     "plasmon:local:prepare": "bun test/e2e/plasmon-deployment-environment.ts local prepare",
     "plasmon:local:serve": "bun test/e2e/plasmon-deployment-environment.ts local serve",
