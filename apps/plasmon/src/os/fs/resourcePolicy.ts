@@ -229,20 +229,32 @@ function explicitType(extensionValue: string, mime: string): ResourceTypeClassif
   return { extension: extensionValue, mime, contentKind: "unknown", language: null, source: "explicit-mime" };
 }
 
+function filenameType(extensionValue: string, inferred: TypeHint): ResourceTypeClassification {
+  return {
+    extension: extensionValue,
+    mime: inferred.mime,
+    contentKind: inferred.contentKind,
+    language: inferred.language,
+    source: "filename",
+  };
+}
+
 function classifyType(node: Pick<ClassifiableResource, "name" | "mime">): ResourceTypeClassification {
   const extensionValue = extension(node.name);
-  const declared = node.mime?.trim();
-  if (declared) return explicitType(extensionValue, normalizedMime(declared));
   const inferred = TYPE_BY_EXTENSION[extensionValue];
-  if (inferred) {
-    return {
-      extension: extensionValue,
-      mime: inferred.mime,
-      contentKind: inferred.contentKind,
-      language: inferred.language,
-      source: "filename",
-    };
+  const declared = node.mime?.trim();
+  if (declared) {
+    const mime = normalizedMime(declared);
+    // `text/plain` is a generic text transport/fallback rather than a stronger
+    // source-language identity. Older Plasmon Text/FileManager paths persisted
+    // it before a later filename mutation, so allow a recognized source suffix
+    // to refine that one generic MIME. Specific explicit MIME remains stronger.
+    if (mime === "text/plain" && inferred?.contentKind === "source") {
+      return filenameType(extensionValue, inferred);
+    }
+    return explicitType(extensionValue, mime);
   }
+  if (inferred) return filenameType(extensionValue, inferred);
   return { extension: extensionValue, mime: null, contentKind: "unknown", language: null, source: "fallback" };
 }
 
@@ -301,10 +313,13 @@ export function readNeutronAppMetadata(node: ClassifiableResource): NeutronAppMe
 /**
  * Canonical resource classifier.
  *
- * Persisted semantic/MIME metadata remains authoritative. Filename inference is
- * deterministic derived state and is consulted only when no explicit MIME is
- * present. Association/default-open and visual presentation policy are not part
- * of this result.
+ * Specific persisted semantic/MIME metadata remains authoritative. Filename
+ * inference is deterministic derived state and otherwise applies when no
+ * explicit MIME is present. The one compatibility refinement is generic
+ * `text/plain` on a recognized source filename: that MIME carries no language
+ * identity and historically could be persisted by Plasmon before a rename, so
+ * the source suffix owns the effective source MIME/language. Association/default-
+ * open and visual presentation policy are not part of this result.
  */
 export function classifyResource(node: ClassifiableResource): ResourceClassification {
   const systemApp = readSystemAppMetadata(node);
