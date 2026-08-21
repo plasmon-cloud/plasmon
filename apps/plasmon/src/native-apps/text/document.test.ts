@@ -8,7 +8,7 @@ import type {
   Revision,
   WriteOptions,
 } from "../../os/contracts/index.ts";
-import { DocumentSession } from "./document.ts";
+import { DocumentSession, textSaveAsMime } from "./document.ts";
 
 class TinyFs implements FsService {
   private rev = 0n;
@@ -189,6 +189,40 @@ test("Save As creates a new node and preserves the original", async () => {
   expect(new TextDecoder().decode(await fs.read(id))).toBe("original");
   expect(new TextDecoder().decode(await fs.read(copy.id))).toBe("copy text");
   session.dispose();
+});
+
+test("#415 Save As follows destination classification across txt -> js -> txt", async () => {
+  const fs = new TinyFs();
+  const original = fs.seed("notes.txt", "const answer = 42;");
+  const session = new DocumentSession(fs);
+  await session.setTarget(original);
+
+  const javascript = await session.saveAs("example.js");
+  expect(javascript.mime).toBe("application/javascript");
+  expect(session.snapshot()).toMatchObject({
+    nodeId: javascript.id,
+    name: "example.js",
+    mime: "application/javascript",
+    status: "ready",
+    dirty: false,
+  });
+
+  const text = await session.saveAs("example.txt");
+  expect(text.mime).toBe("text/plain");
+  expect(session.snapshot()).toMatchObject({
+    nodeId: text.id,
+    name: "example.txt",
+    mime: "text/plain",
+    status: "ready",
+    dirty: false,
+  });
+  session.dispose();
+});
+
+test("#415 unsupported Save As names intentionally fall back to plain text", async () => {
+  expect(textSaveAsMime("notes.unknown")).toBe("text/plain");
+  expect(textSaveAsMime("example.js")).toBe("application/javascript");
+  expect(textSaveAsMime("example.txt")).toBe("text/plain");
 });
 
 test("target switching cancels stale autosave", async () => {
