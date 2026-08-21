@@ -1,8 +1,12 @@
 import { createRoot } from "react-dom/client";
-import { createFirstDemoSeeds } from "./demo/firstDemoFixture.ts";
+import {
+  createFirstDemoSeeds,
+  reconcileFirstDemoDesktopShortcuts,
+} from "./demo/firstDemoFixture.ts";
 import { installAppIconFallbacks } from "./iconFallback.ts";
 import { PlasmonOS } from "./os/PlasmonOS.tsx";
 import { createPlasmonServices } from "./os/integration/services.ts";
+import { isDemoProfile } from "./os/integration/packageProfile.ts";
 import "./style.scss";
 import "./os/integration/visual-tokens.scss";
 
@@ -12,9 +16,12 @@ const container = document.getElementById("root");
 if (!container) throw new Error("Root element not found");
 
 async function start(): Promise<void> {
-  const pageUrl = window.location.href;
-  const demoSeeds = createFirstDemoSeeds(pageUrl);
+  const demoSeeds = isDemoProfile ? createFirstDemoSeeds() : [];
   const services = createPlasmonServices({ ...(demoSeeds.length > 0 ? { demoSeeds } : {}) });
+  if (isDemoProfile) {
+    await services.filesystem.ready;
+    await reconcileFirstDemoDesktopShortcuts(services.fs);
+  }
   services.startMenu.start();
   createRoot(container).render(<PlasmonOS services={services} />);
 }
