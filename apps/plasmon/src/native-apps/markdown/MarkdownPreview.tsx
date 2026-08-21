@@ -1,10 +1,120 @@
 import { useMemo, type CSSProperties, type MouseEvent } from "react";
 import { isSafeMarkdownHref, renderSafeMarkdown } from "./render.ts";
-export interface MarkdownPreviewProps { source: string; visible?: boolean; }
+
+export interface MarkdownPreviewProps {
+  source: string;
+  visible?: boolean;
+}
+
 export function MarkdownPreview({ source, visible = true }: MarkdownPreviewProps) {
   const safeHtml = useMemo(() => renderSafeMarkdown(source), [source]);
-  const onClick = (event: MouseEvent<HTMLElement>) => { const target = event.target; if (!(target instanceof Element)) return; const anchor = target.closest("a"); if (!anchor) return; event.preventDefault(); const href = anchor.getAttribute("href") ?? ""; if (!isSafeMarkdownHref(href)) return; if (/^https?:/iu.test(href) && typeof window !== "undefined") window.open(href, "_blank", "noopener,noreferrer"); else if (/^mailto:/iu.test(href) && typeof window !== "undefined") window.location.href = href; };
-  return <div style={{ ...styles.root, display: visible ? "block" : "none" }}><style>{previewCss}</style><article className="plasmon-markdown-preview" aria-label="Markdown preview" onClick={onClick} dangerouslySetInnerHTML={{ __html: safeHtml }}/></div>;
+
+  const onClick = (event: MouseEvent<HTMLElement>) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const anchor = target.closest("a");
+    if (!anchor) return;
+    event.preventDefault();
+    const href = anchor.getAttribute("href") ?? "";
+    if (!isSafeMarkdownHref(href)) return;
+    if (/^https?:/iu.test(href) && typeof window !== "undefined") {
+      window.open(href, "_blank", "noopener,noreferrer");
+    } else if (/^mailto:/iu.test(href) && typeof window !== "undefined") {
+      window.location.href = href;
+    }
+  };
+
+  return (
+    <div style={{ ...styles.root, display: visible ? "block" : "none" }}>
+      <style>{MARKDOWN_PREVIEW_CSS}</style>
+      <article
+        className="plasmon-markdown-preview"
+        aria-label="Markdown preview"
+        onClick={onClick}
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
+      />
+    </div>
+  );
 }
-const styles: Record<string, CSSProperties> = { root: { width: "100%", height: "100%", minWidth: 0, minHeight: 0, overflow: "auto", background: "#171a1f" } };
-const previewCss = `.plasmon-markdown-preview{box-sizing:border-box;min-height:100%;margin:0;padding:20px 26px 36px;color:#e4e8ee;background:#171a1f;font:15px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-wrap:anywhere}.plasmon-markdown-preview>:first-child{margin-top:0}.plasmon-markdown-preview>:last-child{margin-bottom:0}.plasmon-markdown-preview h1,.plasmon-markdown-preview h2{border-bottom:1px solid #3c4450;padding-bottom:.3em}.plasmon-markdown-preview h1{font-size:2em}.plasmon-markdown-preview h2{font-size:1.5em}.plasmon-markdown-preview h3{font-size:1.25em}.plasmon-markdown-preview a{color:#70b7ff;text-decoration:none}.plasmon-markdown-preview a:hover{text-decoration:underline}.plasmon-markdown-preview blockquote{margin-left:0;padding:.15em 1em;border-left:4px solid #596273;color:#b7bfca}.plasmon-markdown-preview pre{overflow:auto;padding:14px 16px;border:1px solid #303743;border-radius:6px;background:#0f1216;color:#edf1f6;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.plasmon-markdown-preview code:not(pre code){padding:.16em .35em;border-radius:4px;background:#2a3039;color:#f0d7a4;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.plasmon-markdown-preview table{border-collapse:collapse;display:block;overflow-x:auto}.plasmon-markdown-preview th,.plasmon-markdown-preview td{border:1px solid #434b57;padding:6px 10px}.plasmon-markdown-preview th{background:#252b33}.plasmon-markdown-preview tr:nth-child(even){background:#1d2127}.plasmon-markdown-preview hr{border:0;border-top:1px solid #3c4450}.plasmon-markdown-preview img{max-width:100%}`;
+
+const styles: Record<string, CSSProperties> = {
+  root: {
+    width: "100%",
+    height: "100%",
+    minWidth: 0,
+    minHeight: 0,
+    overflow: "auto",
+    background: "#171a1f",
+  },
+};
+
+export const MARKDOWN_PREVIEW_CSS = `
+.plasmon-markdown-preview {
+  box-sizing: border-box;
+  min-height: 100%;
+  margin: 0;
+  padding: 20px 26px 36px;
+  color: #e4e8ee;
+  background: #171a1f;
+  font: 15px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-wrap: anywhere;
+}
+.plasmon-markdown-preview > :first-child { margin-top: 0; }
+.plasmon-markdown-preview > :last-child { margin-bottom: 0; }
+.plasmon-markdown-preview h1,
+.plasmon-markdown-preview h2,
+.plasmon-markdown-preview h3 {
+  margin: 1.35em 0 0.6em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.plasmon-markdown-preview h1,
+.plasmon-markdown-preview h2 {
+  border-bottom: 1px solid #3c4450;
+  padding-bottom: 0.3em;
+}
+.plasmon-markdown-preview h1 { font-size: 2em; }
+.plasmon-markdown-preview h2 { font-size: 1.5em; }
+.plasmon-markdown-preview h3 { font-size: 1.25em; }
+.plasmon-markdown-preview p { margin: 0 0 1em; }
+.plasmon-markdown-preview ul,
+.plasmon-markdown-preview ol {
+  margin: 0 0 1em;
+  padding-left: 2em;
+}
+.plasmon-markdown-preview ul { list-style: disc outside; }
+.plasmon-markdown-preview ol { list-style: decimal outside; }
+.plasmon-markdown-preview li { display: list-item; }
+.plasmon-markdown-preview li + li { margin-top: 0.2em; }
+.plasmon-markdown-preview a { color: #70b7ff; text-decoration: none; }
+.plasmon-markdown-preview a:hover { text-decoration: underline; }
+.plasmon-markdown-preview blockquote {
+  margin-left: 0;
+  padding: 0.15em 1em;
+  border-left: 4px solid #596273;
+  color: #b7bfca;
+}
+.plasmon-markdown-preview pre {
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid #303743;
+  border-radius: 6px;
+  background: #0f1216;
+  color: #edf1f6;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.plasmon-markdown-preview code:not(pre code) {
+  padding: 0.16em 0.35em;
+  border-radius: 4px;
+  background: #2a3039;
+  color: #f0d7a4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.plasmon-markdown-preview table { border-collapse: collapse; display: block; overflow-x: auto; }
+.plasmon-markdown-preview th,
+.plasmon-markdown-preview td { border: 1px solid #434b57; padding: 6px 10px; }
+.plasmon-markdown-preview th { background: #252b33; }
+.plasmon-markdown-preview tr:nth-child(even) { background: #1d2127; }
+.plasmon-markdown-preview hr { border: 0; border-top: 1px solid #3c4450; }
+.plasmon-markdown-preview img { max-width: 100%; }
+`;
