@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { MemoryFsRepository } from "../os/fs/index.ts";
+import { MemoryFsRepository, readSharedShortcut } from "../os/fs/index.ts";
 import { createPlasmonServices } from "../os/integration/services.ts";
 import { MockNeutronBridge } from "../os/neutron/index.ts";
 import { searchFilesystem } from "../os/shell/search.ts";
@@ -9,11 +9,8 @@ import {
   FIRST_DEMO_MARKDOWN_PATH,
   FIRST_DEMO_TEXT_PATH,
   createFirstDemoSeeds,
-  firstDemoFixtureRequested,
+  reconcileFirstDemoDesktopShortcuts,
 } from "./firstDemoFixture.ts";
-
-const pageUrl = "https://example.test/app/plasmon/index.html";
-const flaggedUrl = `${pageUrl}?plasmon-fixture=first-demo`;
 
 function deterministicWindows(): NativeWindowManager {
   let nextWindowId = 0;
@@ -24,10 +21,7 @@ function deterministicWindows(): NativeWindowManager {
   });
 }
 
-test("normal production URL does not request first-demo content", async () => {
-  expect(firstDemoFixtureRequested(pageUrl)).toBe(false);
-  expect(createFirstDemoSeeds(pageUrl)).toEqual([]);
-
+test("ordinary production composition remains free of first-demo resources", async () => {
   const windows = deterministicWindows();
   const services = createPlasmonServices({
     filesystemRepository: new MemoryFsRepository(),
@@ -39,16 +33,20 @@ test("normal production URL does not request first-demo content", async () => {
     expect(await services.fs.resolvePath(FIRST_DEMO_TEXT_PATH)).toBeNull();
     expect(await services.fs.resolvePath(FIRST_DEMO_MARKDOWN_PATH)).toBeNull();
     expect(await services.fs.resolvePath(FIRST_DEMO_IMAGE_PATH)).toBeNull();
+    const desktop = await services.fs.resolvePath("/Desktop");
+    if (!desktop) throw new Error("Desktop missing");
+    const desktopNames = (await services.fs.list(desktop.id)).map(({ name }) => name);
+    expect(desktopNames).not.toContain("First Demo Notes.txt");
+    expect(desktopNames).not.toContain("First Demo Guide.md");
+    expect(desktopNames).not.toContain("First Demo Artwork.svg");
   } finally {
     services.filesystem.dispose();
     windows.dispose();
   }
 });
 
-test("the explicit first-demo flag creates authored redistribution-safe document and image seeds", () => {
-  const seeds = createFirstDemoSeeds(flaggedUrl);
-
-  expect(firstDemoFixtureRequested(flaggedUrl)).toBe(true);
+test("demo profile seeds are authored redistribution-safe document and image resources", () => {
+  const seeds = createFirstDemoSeeds();
   expect(seeds).toHaveLength(5);
   expect(seeds.map(({ key }) => key)).toEqual([
     "demo.first.documents-directory.v1",
@@ -60,42 +58,29 @@ test("the explicit first-demo flag creates authored redistribution-safe document
   expect(seeds.some((seed) => seed.parentPath === "/Games")).toBe(false);
 
   const byName = new Map(seeds.map((seed) => [seed.name, seed] as const));
-  expect(byName.get("First Demo Notes.txt")).toMatchObject({
-    seedClass: "demo-temporary",
-    parentPath: "/Documents",
-    kind: "file",
-    mime: "text/plain",
-  });
-  expect(byName.get("First Demo Guide.md")).toMatchObject({
-    seedClass: "demo-temporary",
-    parentPath: "/Documents",
-    kind: "file",
-    mime: "text/markdown",
-  });
-  expect(byName.get("First Demo Artwork.svg")).toMatchObject({
-    seedClass: "demo-temporary",
-    parentPath: "/Pictures",
-    kind: "file",
-    mime: "image/svg+xml",
-  });
+  expect(byName.get("First Demo Notes.txt")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/plain" });
+  expect(byName.get("First Demo Guide.md")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/markdown" });
+  expect(byName.get("First Demo Artwork.svg")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Pictures", kind: "file", mime: "image/svg+xml" });
 
   const decoder = new TextDecoder();
-  expect(decoder.decode(byName.get("First Demo Notes.txt")?.bytes)).toContain("authored for the Plasmon acceptance environment");
-  expect(decoder.decode(byName.get("First Demo Guide.md")?.bytes)).toContain("redistribution-safe Markdown fixture");
+  expect(decoder.decode(byName.get("First Demo Notes.txt")?.bytes)).toContain("authored for the Plasmon demo environment");
+  expect(decoder.decode(byName.get("First Demo Guide.md")?.bytes)).toContain("redistribution-safe Markdown demo document");
   expect(decoder.decode(byName.get("First Demo Artwork.svg")?.bytes)).toContain("Plasmon First Demo");
 });
 
-test("first-demo resources traverse production bootstrap, Search classification, and native associations", async () => {
+test("demo resources and Desktop shortcuts traverse production bootstrap and opening", async () => {
   const windows = deterministicWindows();
   const services = createPlasmonServices({
     filesystemRepository: new MemoryFsRepository(),
     neutron: new MockNeutronBridge({ elements: [] }),
     windows,
-    demoSeeds: createFirstDemoSeeds(flaggedUrl),
+    demoSeeds: createFirstDemoSeeds(),
   });
 
   try {
     await services.filesystem.ready;
+    await reconcileFirstDemoDesktopShortcuts(services.fs);
+    await reconcileFirstDemoDesktopShortcuts(services.fs);
 
     const expected = [
       { path: FIRST_DEMO_TEXT_PATH, name: "First Demo Notes.txt", mime: "text/plain", handler: "native:text", category: "documents" },
@@ -108,18 +93,27 @@ test("first-demo resources traverse production bootstrap, Search classification,
     expect(search.truncated).toBe(false);
     const searchFiles = search.results.filter((result) => result.kind === "file");
 
+    const desktop = await services.fs.resolvePath("/Desktop");
+    if (!desktop) throw new Error("Desktop missing");
+    const desktopEntries = await services.fs.list(desktop.id, { sort: "name" });
+    const demoShortcuts = desktopEntries.filter((entry) => expected.some(({ name }) => name === entry.name));
+    expect(demoShortcuts).toHaveLength(3);
+
     for (const item of expected) {
       const node = await services.fs.resolvePath(item.path);
       expect(node).toMatchObject({ name: item.name, kind: "file", mime: item.mime });
-      if (!node) throw new Error(`Missing first-demo fixture ${item.path}`);
+      if (!node) throw new Error(`Missing first-demo resource ${item.path}`);
 
       const result = searchFiles.find((entry) => entry.node.id === node.id);
       expect(result).toMatchObject({ title: item.name, category: item.category });
-
       const handlers = (await services.associations.resolve(node)).map(({ id }) => id);
       expect(handlers[0]).toBe(item.handler);
 
-      await services.filesystem.open.openNode(node.id);
+      const shortcut = demoShortcuts.find((entry) => entry.name === item.name);
+      if (!shortcut) throw new Error(`Missing Desktop shortcut for ${item.path}`);
+      expect(readSharedShortcut(shortcut)).toEqual({ format: "plasmon.shortcut", version: 1, target: { kind: "node", nodeId: node.id } });
+
+      await services.filesystem.open.openNode(shortcut.id);
       const process = services.process.list().find((candidate) => candidate.target.nodeId === node.id);
       expect(process).toMatchObject({ handlerId: item.handler, target: { nodeId: node.id } });
       if (!process) throw new Error(`No process opened for ${item.path}`);
