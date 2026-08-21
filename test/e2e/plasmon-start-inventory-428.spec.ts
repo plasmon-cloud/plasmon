@@ -66,14 +66,14 @@ test("#428 — packaged Start omits managed Settings and Properties while keepin
 
     // Ordinary managed application inventory remains available under the same
     // Accessories category rather than being moved or replaced by #428.
-    const accessories = startItems.filter({ has: panel.getByText("Accessories", { exact: true }) });
+    const accessories = startItems.filter({ hasText: "Accessories" });
     await accessories.click();
     await expect(panel.locator("[data-start-item]")).not.toHaveCount(0);
     await panel.getByRole("button", { name: "← Back" }).click();
 
     // Explorer is still an intended Start application, and activation must use
     // the real packaged filesystem-backed Start/open path.
-    const explorer = panel.locator("[data-start-item]").filter({ has: panel.getByText("Explorer", { exact: true }) });
+    const explorer = panel.locator("[data-start-item]").filter({ hasText: "Explorer" });
     await explorer.click();
     await expect(plasmon.getByLabel("File Explorer")).toBeVisible({ timeout: 10_000 });
 
