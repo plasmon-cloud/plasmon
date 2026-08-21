@@ -1,0 +1,74 @@
+name: Mops 3.1 Migration Probe
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Mops 3.1 locks from clean state
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix develop --command bash -lc '
+            set -euo pipefail
+            echo "node=$(node --version)"
+            mops31() {
+              npx --yes --package ic-mops@3.1.0 mops "$@"
+            }
+            echo "mops=$(mops31 --version | head -n 1)"
+
+            mapfile -t configs < <(find apps packages support -type f -name mops.toml -print | sort)
+            printf "MOPS_PROJECT_COUNT=%s\n" "${#configs[@]}"
+            printf "MOPS_PROJECT=%s\n" "${configs[@]}"
+
+            mkdir -p /tmp/mops-locks
+            for config in "${configs[@]}"; do
+              project="${config%/mops.toml}"
+              rm -rf "$project/.mops"
+              rm -f "$project/mops.lock"
+              (
+                cd "$project"
+                mops31 install
+                before="$(sha256sum mops.lock | awk "{print \\$1}")"
+                mops31 install --locked
+                after="$(sha256sum mops.lock | awk "{print \\$1}")"
+                test "$before" = "$after"
+                mops31 sources --no-install > /tmp/mops-sources.txt
+                printf "LOCK_STABLE=%s %s\n" "$project" "$after"
+              )
+              mkdir -p "/tmp/mops-locks/$project"
+              cp "$project/mops.lock" "/tmp/mops-locks/$project/mops.lock"
+              printf "MOPS_LOCK_BEGIN %s/mops.lock\n" "$project"
+              base64 -w0 "$project/mops.lock"
+              printf "\nMOPS_LOCK_END %s/mops.lock\n" "$project"
+            done
+
+            test -f apps/kernel/.mops/core@2.6.0/src/Error.mo
+            printf "ERROR_MO_SHA256=%s\n" "$(sha256sum apps/kernel/.mops/core@2.6.0/src/Error.mo | awk "{print \\$1}")"
+            (
+              cd apps/kernel
+              mops31 verify
+            )
+          '
+
+      - name: Upload generated locks
+        uses: actions/upload-artifact@v4
+        with:
+          name: mops-3.1-locks
+          path: /tmp/mops-locks
+          if-no-files-found: error
