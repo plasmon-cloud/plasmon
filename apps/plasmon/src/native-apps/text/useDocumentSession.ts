@@ -6,14 +6,30 @@ export interface DocumentSessionBinding { snapshot: DocumentSnapshot; sessionRef
 export function useDocumentSession(fs: FsService, nodeId: NodeId | undefined, options: { pollMs?: number; autosave?: boolean; autosaveMs?: number } = {}): DocumentSessionBinding {
   const [snapshot, setSnapshot] = useState<DocumentSnapshot>(EMPTY_SNAPSHOT);
   const sessionRef = useRef<DocumentSession | null>(null);
+  const targetRef = useRef<NodeId | undefined>(nodeId);
+  targetRef.current = nodeId;
   const pollMs = options.pollMs ?? 1500;
   const autosave = options.autosave ?? DEFAULT_DOCUMENT_AUTOSAVE;
   const autosaveMs = options.autosaveMs ?? 900;
+
   useEffect(() => {
-    const session = new DocumentSession(fs, { autosave, autosaveMs }); sessionRef.current = session;
-    const unsubscribe = session.subscribe(() => setSnapshot(session.snapshot())); setSnapshot(session.snapshot()); void session.setTarget(nodeId ?? null);
+    const session = new DocumentSession(fs, { autosave, autosaveMs });
+    sessionRef.current = session;
+    const unsubscribe = session.subscribe(() => setSnapshot(session.snapshot()));
+    setSnapshot(session.snapshot());
+    void session.setTarget(targetRef.current ?? null);
     const interval = setInterval(() => { void session.checkExternalChange(); }, pollMs);
-    return () => { clearInterval(interval); unsubscribe(); session.dispose({ flush: autosave }); if (sessionRef.current === session) sessionRef.current = null; };
-  }, [autosave, autosaveMs, fs, nodeId, pollMs]);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+      session.dispose({ flush: autosave });
+      if (sessionRef.current === session) sessionRef.current = null;
+    };
+  }, [autosave, autosaveMs, fs, pollMs]);
+
+  useEffect(() => {
+    void sessionRef.current?.setTarget(nodeId ?? null);
+  }, [nodeId]);
+
   return { snapshot, sessionRef };
 }
