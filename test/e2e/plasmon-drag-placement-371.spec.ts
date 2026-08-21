@@ -35,7 +35,7 @@ function containsPoint(
     && point.y <= box.y + box.height + margin;
 }
 
-test("#371 Explorer to Desktop drop commits the icon where the ghost is released", async ({ page }) => {
+test("#371 Explorer to Desktop drop commits the icon where the ghost is released", { tag: ["@r2-quarantine", "@issue-371", "@issue-406"] }, async ({ page }) => {
   const { frame, desktopFiles, health } = await launchPlasmon(page);
   try {
     const root = frame.locator('[data-fm-node-id]', { hasText: "Root" }).first();
