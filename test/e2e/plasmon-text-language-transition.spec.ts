@@ -1,4 +1,4 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Route } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -22,6 +22,15 @@ async function redirectToFirstDemo(route: Route): Promise<void> {
     status: 307,
     headers: { location: requestUrl.href, "cache-control": "no-store" },
   });
+}
+
+async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
+  await expect.poll(
+    async () => window.locator(".monaco-editor .view-line").evaluateAll((lines) =>
+      lines.some((line) => line.querySelectorAll('span[class*="mtk"]').length > 1),
+    ),
+    { message },
+  ).toBe(true);
 }
 
 test("#415 Text keeps its live Monaco model while Save As changes canonical language", async ({ page }) => {
@@ -111,9 +120,7 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
       await textWindow.locator(".monaco-editor").first().evaluate((current, original) => current === original, liveEditor),
       "Save As must update the existing Monaco surface/model instead of recreating it",
     ).toBe(true);
-
-    const javascriptTokens = textWindow.locator(".monaco-editor .view-line").first().locator('span[class*="mtk"]');
-    expect(await javascriptTokens.count(), "JavaScript source should be tokenized into multiple Monaco tokens").toBeGreaterThan(1);
+    await expectJavaScriptTokenization(textWindow, "JavaScript source should be tokenized into multiple Monaco tokens");
 
     await textWindow.locator(".monaco-editor .view-line").last().click({ position: { x: 160, y: 10 } });
     await page.keyboard.insertText("\nconst persisted = twice(answer);");
@@ -136,10 +143,10 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await expect(reopenedSurface).toHaveAttribute("data-editor-language", "javascript");
     await expect(reopenedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
     await expect(reopenedWindow.locator(".monaco-editor .view-lines")).toContainText("const persisted = twice(answer);");
-    expect(
-      await reopenedWindow.locator(".monaco-editor .view-line").first().locator('span[class*="mtk"]').count(),
+    await expectJavaScriptTokenization(
+      reopenedWindow,
       "an already-named .js resource should open with real JavaScript tokenization",
-    ).toBeGreaterThan(1);
+    );
 
     const reopenedEditor = await reopenedWindow.locator(".monaco-editor").first().elementHandle();
     expect(reopenedEditor).not.toBeNull();
