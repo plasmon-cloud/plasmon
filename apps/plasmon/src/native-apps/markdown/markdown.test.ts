@@ -22,7 +22,8 @@ test("Marked renders real headings, lists, blockquotes, code, emphasis, and GFM 
 
 test("basic Markdown Preview source produces semantic heading, paragraph, and list output", () => {
   const source = "# Big Heading\n\nNormal paragraph.\n\n- one\n- two";
-  const html = renderSafeMarkdown(source);
+  const identitySanitizer: MarkdownSanitizer = { sanitize: (value) => value };
+  const html = renderSafeMarkdown(source, identitySanitizer);
 
   expect(html).toContain("<h1>Big Heading</h1>");
   expect(html).toContain("<p>Normal paragraph.</p>");
