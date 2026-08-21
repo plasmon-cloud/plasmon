@@ -20,7 +20,6 @@ const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
 const isEditorProfile = packageProfile === "slim" || packageProfile === "full" || packageProfile === "demo";
 const isHackathonCoreProfile = !isEditorProfile;
 const isSlimMonacoProfile = packageProfile === "slim" || packageProfile === "demo";
-const includeGameRuntime = packageProfile === "full";
 
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(mainOutfile, "utf8");
@@ -91,7 +90,7 @@ const config: BuildOptions = {
   platform: "browser",
   define: {
     __PLASMON_HACKATHON_CORE__: JSON.stringify(isHackathonCoreProfile),
-    __PLASMON_GAME_RUNTIME__: JSON.stringify(includeGameRuntime),
+    __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
   },
   metafile: true,

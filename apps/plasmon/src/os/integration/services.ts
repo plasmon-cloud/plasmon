@@ -174,10 +174,9 @@ function registerWave2Applications(
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  // The hackathon core package intentionally omits optional emulator payloads
-  // and their handlers, so opening a game cannot create missing-runtime
-  // requests. The full test/service graph retains these registrations when the
-  // build profile is not hackathon-core.
+  // Game/emulator payloads and handlers are intentionally omitted from every
+  // shipped package profile, so opening a game cannot create missing-runtime
+  // requests. The source/runtime tests exercise those handlers directly.
   if (isGameRuntimeProfile) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);

@@ -1,6 +1,7 @@
 // Package builds replace these identifiers with explicit profile values.
-// Bun-based product tests do not define them and therefore exercise the full
-// service graph, including optional runtime/editor registrations.
+// Game/emulator payloads are not shipped by any profile, so package builds
+// explicitly disable those handlers. Unbundled tests retain the full service
+// graph through the fallback values below.
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
 const HACKATHON_CORE_DEFINE: boolean | undefined = typeof __PLASMON_HACKATHON_CORE__ === "undefined"
   ? undefined

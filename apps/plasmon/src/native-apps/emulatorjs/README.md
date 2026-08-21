@@ -1,20 +1,18 @@
 # EmulatorJS runtime host
 
 This directory integrates EmulatorJS as an association-backed Plasmon runtime.
-The hackathon core r2 package deliberately omits this optional runtime and its
-ROM payload; this source remains deferred full-profile evidence rather than a
-core-package request path. It is a runtime host, not a Games launcher or a
-`.sys` application.
+Every shipped Plasmon package profile omits this optional runtime and its ROM
+payload; this source remains deferred runtime/test evidence rather than a
+package request path. It is a runtime host, not a Games launcher or a `.sys`
+application.
 
 The initial supported resource is an iNES `.nes` ROM. Association matching selects `runtime:emulatorjs`; the normal OpenService, process, and window authorities create the host. `EmulatorJsPlayer.tsx` reads and validates the selected filesystem node through `FsService`, then gives the ROM bytes to an isolated child iframe running the packaged EmulatorJS browser engine.
 
 ## Runtime assets and lifecycle
 
-In a full optional profile, the managed runtime authority remains
-`/System/Program Files/EmulatorJS` and the build publishes the exact same
-pinned `data/` bytes at `/runtime/emulatorjs/data/` for browser execution. The
-hackathon core profile registers no EmulatorJS handler and materializes neither
-path, so missing runtime requests cannot occur.
+No shipped package profile registers EmulatorJS or materializes
+`/System/Program Files/EmulatorJS` or `/runtime/emulatorjs/data/`, so missing
+runtime requests cannot occur in an installed package.
 
 The iframe navigates to the package-local `emulatorjs-host.html`; that child host loads `emulatorjs-host.js`, creates the ROM Blob URL in its own browsing context, sets the `EJS_*` globals, and injects `/runtime/emulatorjs/data/loader.js`. `EJS_pathtodata` points at that same package-local URL-safe mirror, so EmulatorJS JavaScript, CSS, fceumm core data, compression worker, and optional core report all resolve from the installed package without remote fallback.
 

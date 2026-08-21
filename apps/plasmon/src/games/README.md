@@ -18,12 +18,12 @@ Temporary/demo/bootstrap content must remain separable from durable product defa
 
 ## Deferred full-profile demo fixture
 
-The hackathon core r2 package deliberately omits js-dos/EmulatorJS runtimes,
+Every shipped package profile deliberately omits js-dos/EmulatorJS runtimes,
 ROMs, and demo game bundles. The source and acceptance fixture remain available
-as deferred full-profile evidence for a later optional-runtime distribution;
-they are not materialized by the core package build.
+as deferred runtime/test evidence; they are not materialized by any package
+build.
 
-When the full profile is intentionally restored, the build deterministically
+When the fixture is intentionally restored for direct runtime testing, the build
 generates `fixtures/PlasmonDemo.jsdos` from `demoFixtureBundle.ts`. The bundle
 contains only a tiny Plasmon-authored keyboard DOS program, its `dosbox.conf`,
 and a provenance/readme file; it contains no commercial or third-party game

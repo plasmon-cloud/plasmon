@@ -1,9 +1,9 @@
 # js-dos runtime host
 
 This directory integrates the js-dos browser runtime and player as an
-association-backed content runtime. The hackathon core r2 package deliberately
+association-backed content runtime. Every shipped Plasmon package profile
 omits this optional runtime and its game payload; this source remains deferred
-full-profile evidence rather than a core-package request path.
+runtime/test evidence rather than a package request path.
 
 `runtime.ts` owns browser-side runtime asset loading, global readiness, loader caching/retry, runtime configuration, and the embedded-only volatile storage compatibility lease. `JsDosPlayer.tsx` owns the rendered game/runtime surface. `progress.ts` owns the durable js-dos change-set mapping onto canonical Plasmon filesystem state. Handler/application metadata is exported through `index.ts` and registered by OS integration.
 
@@ -11,11 +11,10 @@ Game bundles/content are data selected through the normal association/opening pa
 
 ## Installed package transport
 
-In a full optional profile, `/System/Program Files/js-dos` remains the logical
-managed runtime authority and the package mirrors the pinned release under
-`runtime/jsdos/` for browser execution. The hackathon core profile registers no
-js-dos handler and materializes neither path, so opening a game cannot create
-missing-runtime requests.
+No shipped package profile registers js-dos or materializes
+`/System/Program Files/js-dos` or `runtime/jsdos/`. The source remains available
+for direct runtime tests, while opening a game in an installed package cannot
+create a missing-runtime request.
 
 ## Embedded storage compatibility
 
