@@ -20,6 +20,7 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | Grouped Explorer chooser-title readiness | `test/e2e/plasmon-review-demo.spec.ts` — `#118 groups canonical Explorer processes and focuses individual members` — tags `@r2-quarantine @issue-303` | chooser opens after both Explorers exist, but `This Plasmon; Minimized` is not visible on first attempt; retry passes | #303 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
 | #66 drag-preview / directory-drop completion | `test/e2e/plasmon-drag-preview-66.spec.ts` — `#66 active multi-selection drag preview is above windows and transparent to hit testing` — tags `@r2-quarantine @issue-66 @issue-320` | independent retry-free probes `31926388328` attempt 9/10 and `31950894639` attempt 8/10: final Explorer directory-drop source expected count 0, received 1 | #320 |
+| #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
 | #86 diagnostic-selection / New Folder rename readiness | `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — `#86 diagnostic text selects without stealing FileEntry drag` — tags `@r2-quarantine @issue-86 @issue-330` | unrelated PR #328 flake probe `31976275024`, attempt 1/10: after `New Folder`, expected rename textbox never appears within 20s; Specialist result 1 failed / 8 passed | #330 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 
@@ -28,6 +29,8 @@ The #251 and #308 tests currently exhibit the same second-Explorer setup signatu
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
 The #320 quarantine is limited to the single #66 acceptance. The spec stays in Specialist inventory; only the tagged test is filtered. The two observed failures occur after the preview stacking/hit-testing checks, at the final canonical Explorer directory-drop completion assertion. Product Issue #66 remains the canonical behavior owner while #320 owns CI stability and restoration.
+
+The #406 quarantine is limited to the single #371 Explorer-to-Desktop placement acceptance. It is now present on `release/0.1.0-r2`, satisfying #406's integration boundary for temporary quarantine. The test body and its same-NodeId move, drop-target, grab-offset, ghost-release, committed-position, and strict BrowserHealth assertions remain unchanged; only the exact test is tagged. Product Issue #371 remains the behavior owner while #406 owns repair and restoration.
 
 The #330 quarantine is limited to the single #86 acceptance introduced by #274. The spec stays in Specialist inventory; only the tagged test is filtered. The archived unrelated-PR failure occurs during FileManager setup after choosing `New Folder`, before the diagnostic text-selection and post-dismissal drag contracts are reached. Product Issue #86 remains the canonical behavior owner while #330 owns CI stability and restoration.
 
@@ -79,6 +82,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required; #245 restores the production readiness/canvas/core-start proof while retaining loader/local-asset/network-safety coverage.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
 - `test/e2e/plasmon-drag-preview-66.spec.ts` — retained; its single #66/#320 acceptance is quarantined pending restoration proof.
+- `test/e2e/plasmon-drag-placement-371.spec.ts` — retained; its single #371/#406 placement acceptance is quarantined pending deterministic repair and restoration proof.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — retained; its single #86/#330 acceptance is quarantined pending restoration proof.
 - `test/e2e/plasmon-first-demo.spec.ts` — required.
 
@@ -93,6 +97,8 @@ A quarantined acceptance returns to required CI through its linked repair/restor
 For #304 specifically, the dedicated saved-preview acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the required `blob:` preview contract before this quarantine is removed. Static artwork remains a failure for that acceptance.
 
 For #320 specifically, the exact #66 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the final canonical Explorer directory-drop assertion before this quarantine is removed.
+
+For #406 specifically, the exact #371 acceptance must be run **unquarantined** with retries=0 and pass five consecutive clean first-attempt packaged Specialist executions while retaining same-NodeId move authority, canonical Desktop placement, grab-offset/ghost-release geometry, committed-position assertions, and strict BrowserHealth before this quarantine is removed.
 
 For #330 specifically, the exact #86 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the diagnostic text-selection, no-stolen-drag-state, and post-dismissal FileEntry drag assertions before this quarantine is removed.
 
