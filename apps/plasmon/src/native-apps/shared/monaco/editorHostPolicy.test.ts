@@ -50,6 +50,13 @@ describe("#200 shared Monaco editor-host policy", () => {
     expect(editorLanguageForResource("plain.unknown")).toBe("plaintext");
   });
 
+  test("#415 JavaScript and plaintext transitions follow the current canonical resource", () => {
+    expect(editorLanguageForResource("example.js", "application/javascript")).toBe("javascript");
+    expect(editorLanguageForResource("example.txt", "text/plain")).toBe("plaintext");
+    expect(editorLanguageForResource("example.js")).toBe("javascript");
+    expect(editorLanguageForResource("example.unknown")).toBe("plaintext");
+  });
+
   test("worker routing stays on #89 canonical Program Files authority", () => {
     expect(monacoWorkerFile("typescript")).toBe("ts.worker.js");
     expect(monacoWorkerPath("typescript")).toBe(`${MONACO_PROGRAM_FILES_RUNTIME_ROOT}/ts.worker.js`);
