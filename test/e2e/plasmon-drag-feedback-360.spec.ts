@@ -310,7 +310,7 @@ test("#360 Desktop item moves into an already-open folder window", { tag: ["@r2-
   }
 });
 
-test("#360 target feedback changes A to B to invalid and invalid, cancel, and unmount paths clear drag state", async ({ page }) => {
+test("#360 target feedback changes A to B to invalid and invalid, cancel, and unmount paths clear drag state", { tag: ["@r2-quarantine", "@issue-360", "@issue-420"] }, async ({ page }) => {
   const { frame, health } = await launchPlasmon(page);
   try {
     const { explorer, address, explorerFiles } = await openRootExplorer(frame);
