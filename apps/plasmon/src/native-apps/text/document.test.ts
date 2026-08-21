@@ -8,6 +8,7 @@ import type {
   Revision,
   WriteOptions,
 } from "../../os/contracts/index.ts";
+import { editorLanguageForResource } from "../shared/monaco/editorModel.ts";
 import { DocumentSession, textSaveAsMime } from "./document.ts";
 
 class TinyFs implements FsService {
@@ -30,7 +31,7 @@ class TinyFs implements FsService {
     });
   }
 
-  seed(name: string, text: string): string {
+  seed(name: string, text: string, mime?: string): string {
     const id = `n${++this.sequence}`;
     const data = new TextEncoder().encode(text);
     this.nodes.set(id, {
@@ -38,7 +39,7 @@ class TinyFs implements FsService {
       parentId: "root",
       name,
       kind: "file",
-      mime: name.toLowerCase().endsWith(".md") ? "text/markdown" : "text/plain",
+      ...(mime ? { mime } : {}),
       size: data.length,
       contentHash: `h:${text}`,
       createdAt: this.sequence,
@@ -70,13 +71,12 @@ class TinyFs implements FsService {
   }
 
   async createFile(parentId: NodeId, name: string, options: CreateFileOptions = {}) {
-    const id = this.seed(name, "");
+    const id = this.seed(name, "", options.mime);
     const node = this.nodes.get(id)!;
     this.nodes.set(id, {
       ...node,
       parentId,
       kind: options.kind ?? "file",
-      ...(options.mime ? { mime: options.mime } : {}),
     });
     return this.stat(id);
   }
@@ -191,38 +191,60 @@ test("Save As creates a new node and preserves the original", async () => {
   session.dispose();
 });
 
-test("#415 Save As follows destination classification across txt -> js -> txt", async () => {
+test("#415 Save As stays filename-derived and same-NodeId rename updates language", async () => {
   const fs = new TinyFs();
-  const original = fs.seed("notes.txt", "const answer = 42;");
+  const original = fs.seed("notes.txt", "const answer = 42;", "text/plain");
   const session = new DocumentSession(fs);
   await session.setTarget(original);
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("plaintext");
 
+  const statuses: string[] = [];
+  const unsubscribe = session.subscribe(() => statuses.push(session.snapshot().status));
+  statuses.length = 0;
   const javascript = await session.saveAs("example.js");
-  expect(javascript.mime).toBe("application/javascript");
+  expect(javascript.mime).toBeUndefined();
   expect(session.snapshot()).toMatchObject({
     nodeId: javascript.id,
     name: "example.js",
-    mime: "application/javascript",
+    mime: null,
     status: "ready",
     dirty: false,
   });
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("javascript");
+  expect(statuses).not.toContain("loading");
 
-  const text = await session.saveAs("example.txt");
-  expect(text.mime).toBe("text/plain");
+  await fs.rename(javascript.id, "example.txt");
+  expect(await session.checkExternalChange()).toBe(false);
   expect(session.snapshot()).toMatchObject({
-    nodeId: text.id,
+    nodeId: javascript.id,
     name: "example.txt",
-    mime: "text/plain",
+    mime: null,
     status: "ready",
-    dirty: false,
   });
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("plaintext");
+
+  await fs.rename(javascript.id, "example.js");
+  expect(await session.checkExternalChange()).toBe(false);
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("javascript");
+  unsubscribe();
   session.dispose();
 });
 
-test("#415 unsupported Save As names intentionally fall back to plain text", async () => {
+test("#415 unsupported Save As names intentionally pin the safe plaintext fallback", async () => {
+  expect(textSaveAsMime("example.js")).toBeUndefined();
+  expect(textSaveAsMime("example.txt")).toBeUndefined();
   expect(textSaveAsMime("notes.unknown")).toBe("text/plain");
-  expect(textSaveAsMime("example.js")).toBe("application/javascript");
-  expect(textSaveAsMime("example.txt")).toBe("text/plain");
+  expect(textSaveAsMime("image.png")).toBe("text/plain");
+
+  const fs = new TinyFs();
+  const original = fs.seed("already.js", "const ready = true;", "application/javascript");
+  const session = new DocumentSession(fs);
+  await session.setTarget(original);
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("javascript");
+  const unknown = await session.saveAs("notes.unknown");
+  expect(unknown.mime).toBe("text/plain");
+  expect(editorLanguageForResource(session.snapshot().name, session.snapshot().mime ?? undefined)).toBe("plaintext");
+  session.dispose();
 });
 
 test("target switching cancels stale autosave", async () => {

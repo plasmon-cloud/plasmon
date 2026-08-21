@@ -26,11 +26,19 @@ async function redirectToFirstDemo(route: Route): Promise<void> {
 
 async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
   await expect.poll(
-    async () => window.locator(".monaco-editor .view-line").evaluateAll((lines) =>
-      lines.some((line) => line.querySelectorAll('span[class*="mtk"]').length > 1),
-    ),
+    async () => window.locator(".monaco-editor .view-line").evaluateAll((lines) => {
+      const classes = new Set<string>();
+      for (const line of lines) {
+        for (const span of line.querySelectorAll('span[class*="mtk"]')) {
+          for (const className of span.classList) {
+            if (/^mtk\d+$/.test(className)) classes.add(className);
+          }
+        }
+      }
+      return classes.size;
+    }),
     { message },
-  ).toBe(true);
+  ).toBeGreaterThan(1);
 }
 
 test("#415 Text keeps its live Monaco model while Save As changes canonical language", async ({ page }) => {
@@ -91,6 +99,8 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await expect(textSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
     await expect(textSurface).toHaveAttribute("data-editor-language", "plaintext");
     await expect(textWindow.getByText("Plain Text", { exact: true })).toBeVisible();
+    const initialModelUri = await textSurface.getAttribute("data-editor-model-uri");
+    expect(initialModelUri, "initial Text Monaco model should expose concrete model identity").toBeTruthy();
 
     const browserInput = textWindow.getByRole("textbox", {
       name: "Text content",
@@ -105,9 +115,6 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await page.keyboard.insertText(javascriptSource);
     await expect(textWindow.getByText("Modified", { exact: true })).toBeVisible();
 
-    const liveEditor = await textWindow.locator(".monaco-editor").first().elementHandle();
-    expect(liveEditor).not.toBeNull();
-
     const scriptName = `Issue 415 ${Date.now()}.js`;
     await textWindow.getByRole("textbox", { name: "Save As file name" }).fill(scriptName);
     await textWindow.getByRole("button", { name: "Create copy", exact: true }).click();
@@ -116,11 +123,8 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await expect(textWindow.getByText("JavaScript", { exact: true })).toBeVisible();
     await expect(textSurface).toHaveAttribute("data-editor-ready", "true");
     await expect(textSurface).toHaveAttribute("data-editor-language", "javascript");
-    expect(
-      await textWindow.locator(".monaco-editor").first().evaluate((current, original) => current === original, liveEditor),
-      "Save As must update the existing Monaco surface/model instead of recreating it",
-    ).toBe(true);
-    await expectJavaScriptTokenization(textWindow, "JavaScript source should be tokenized into multiple Monaco tokens");
+    await expect(textSurface).toHaveAttribute("data-editor-model-uri", initialModelUri!);
+    await expectJavaScriptTokenization(textWindow, "JavaScript source should render multiple Monaco syntax token classes");
 
     await textWindow.locator(".monaco-editor .view-line").last().click({ position: { x: 160, y: 10 } });
     await page.keyboard.insertText("\nconst persisted = twice(answer);");
@@ -145,21 +149,18 @@ test("#415 Text keeps its live Monaco model while Save As changes canonical lang
     await expect(reopenedWindow.locator(".monaco-editor .view-lines")).toContainText("const persisted = twice(answer);");
     await expectJavaScriptTokenization(
       reopenedWindow,
-      "an already-named .js resource should open with real JavaScript tokenization",
+      "an already-named .js resource should reopen with real JavaScript tokenization",
     );
+    const reopenedModelUri = await reopenedSurface.getAttribute("data-editor-model-uri");
+    expect(reopenedModelUri, "reopened JavaScript should expose concrete Monaco model identity").toBeTruthy();
 
-    const reopenedEditor = await reopenedWindow.locator(".monaco-editor").first().elementHandle();
-    expect(reopenedEditor).not.toBeNull();
     const roundTripName = `Issue 415 ${Date.now()}.txt`;
     await reopenedWindow.getByRole("textbox", { name: "Save As file name" }).fill(roundTripName);
     await reopenedWindow.getByRole("button", { name: "Create copy", exact: true }).click();
     await expect(reopenedWindow).toHaveAttribute("aria-label", `${roundTripName} - Monaco Editor`);
     await expect(reopenedWindow.getByText("Plain Text", { exact: true })).toBeVisible();
     await expect(reopenedSurface).toHaveAttribute("data-editor-language", "plaintext");
-    expect(
-      await reopenedWindow.locator(".monaco-editor").first().evaluate((current, original) => current === original, reopenedEditor),
-      ".js -> .txt must also update the existing Monaco model",
-    ).toBe(true);
+    await expect(reopenedSurface).toHaveAttribute("data-editor-model-uri", reopenedModelUri!);
 
     health.assertClean();
   } finally {
