@@ -55,7 +55,9 @@ test("#428 — packaged Start omits managed Settings and Properties while keepin
 
     const startItems = panel.locator("[data-start-item]");
     const itemNames = await startItems.locator("strong").allTextContents();
-    expect(itemNames).toContain("Explorer");
+    // `native:explorer` is the Explorer application identity; its current
+    // product-facing native-app name is `Files`.
+    expect(itemNames).toContain("Files");
     expect(itemNames).not.toContain("Settings");
     expect(itemNames).not.toContain("Properties");
     expect(itemNames).toContain("Accessories");
@@ -71,9 +73,10 @@ test("#428 — packaged Start omits managed Settings and Properties while keepin
     await expect(panel.locator("[data-start-item]")).not.toHaveCount(0);
     await panel.getByRole("button", { name: "← Back" }).click();
 
-    // Explorer is still an intended Start application, and activation must use
-    // the real packaged filesystem-backed Start/open path.
-    const explorer = panel.locator("[data-start-item]").filter({ hasText: "Explorer" });
+    // Explorer (`native:explorer`, displayed as Files) remains an intended Start
+    // application, and activation must use the real packaged filesystem-backed
+    // Start/open path.
+    const explorer = panel.locator("[data-start-item]").filter({ hasText: "Files" });
     await explorer.click();
     await expect(plasmon.getByLabel("File Explorer")).toBeVisible({ timeout: 10_000 });
 
