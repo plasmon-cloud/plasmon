@@ -41,14 +41,19 @@ const REQUIRED_ENGINE_INPUT_FRAGMENTS = [
 ] as const;
 
 const MONACO_PROGRAM_FILES_OUTPUT_ROOT = "/dist/web/System/Program Files/MonacoEditor/";
-const REQUIRED_OUTPUT_SUFFIXES = [
+const REQUIRED_FRONTEND_OUTPUT_SUFFIXES = [
   "/dist/web/main.js",
   "/dist/web/main.bundle.css",
+] as const;
+const REQUIRED_MONACO_OUTPUT_SUFFIXES = [
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}json.worker.js`,
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}css.worker.js`,
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}html.worker.js`,
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}ts.worker.js`,
+] as const;
+const REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES = [
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
 ] as const;
 
 type MonacoProfile = "slim" | "full";
@@ -115,14 +120,10 @@ export function assertMatureNativeAppBundle(
   }
 
   const requiredOutputs = !requireEditors
-    ? REQUIRED_OUTPUT_SUFFIXES.slice(0, 2)
+    ? REQUIRED_FRONTEND_OUTPUT_SUFFIXES
     : monacoProfile === "slim"
-      ? [
-          REQUIRED_OUTPUT_SUFFIXES[0],
-          REQUIRED_OUTPUT_SUFFIXES[1],
-          REQUIRED_OUTPUT_SUFFIXES[2],
-        ]
-      : REQUIRED_OUTPUT_SUFFIXES;
+      ? [...REQUIRED_FRONTEND_OUTPUT_SUFFIXES, ...REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES]
+      : [...REQUIRED_FRONTEND_OUTPUT_SUFFIXES, ...REQUIRED_MONACO_OUTPUT_SUFFIXES];
   for (const suffix of requiredOutputs) {
     if (!hasSuffix(outputPaths, suffix)) {
       throw new Error(`Native app package build is missing required output ${suffix}`);

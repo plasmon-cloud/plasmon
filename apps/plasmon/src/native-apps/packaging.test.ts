@@ -89,6 +89,11 @@ test("package guard accepts the slim Monaco worker profile", () => {
     delete slim.outputs[`dist/web/System/Program Files/MonacoEditor/${worker}.worker.js`];
   }
   expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).not.toThrow();
+
+  delete slim.outputs["dist/web/System/Program Files/MonacoEditor/editor.worker.js"];
+  expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).toThrow(
+    "/dist/web/System/Program Files/MonacoEditor/editor.worker.js",
+  );
 });
 
 test("#89 package guard requires canonical Monaco Program Files worker outputs", () => {
