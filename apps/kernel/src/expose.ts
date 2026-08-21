@@ -609,9 +609,6 @@ function verifiedEndpoint(context: ExposedActionContext): RegisteredEndpoint {
 function assertCurrentEndpointVersion(endpoint: RegisteredEndpoint): void {
   assertFrontendAuthorityCommitted();
   assertEndpointAppScope(endpoint);
-  // Kernel-owned surfaces carry installation scope, manifest version, and a
-  // frontend registry generation. Scope is the authoritative reinstall
-  // boundary; version/generation also revoke compatible in-place UI changes.
   if (
     endpoint.appVersion === undefined &&
     endpoint.appGeneration === undefined
@@ -756,13 +753,7 @@ defineKernelTool(
         binding: callerBinding,
       });
     }
-    // Consent is only authorization to attempt this exact call. The source
-    // endpoint, private session, installation scope, registry generation, and
-    // global frontend authority must all still be current at dispatch time.
     assertCurrentSignedCallEndpoint(callerBinding, authBinding);
-    // A revoked caller receives neither successful nor rejected reply data.
-    // The call may still have executed, so the replacement error is explicit
-    // that its outcome is unknown.
     const rawResult = await dispatchSignedCallWithReplyFence(
       () => target[logicalMethod](...methodArgs),
       () => assertCurrentSignedCallEndpoint(callerBinding, authBinding),
@@ -1602,6 +1593,7 @@ function describeInstalledApp(appId: string): JsonObject {
     tiles: app.tiles.map((tile) => ({
       id: tile.id,
       title: safeDiscoveryText(tile.title, 80),
+      icon: tile.icon,
       ...(tile.description
         ? { description: safeDiscoveryText(tile.description, 280) }
         : {}),
@@ -1621,6 +1613,7 @@ function describeInstalledApp(appId: string): JsonObject {
     tray: app.tray
       ? {
           title: safeDiscoveryText(app.tray.title, 80),
+          icon: app.tray.icon,
         }
       : null,
     untrustedMetadata: true,
@@ -1713,10 +1706,6 @@ async function prepareBinarySelfMethod(
     blobs,
     candidMethod.argTypes,
   );
-  // icblast's generated JSON schema intentionally knows only its public
-  // blob shorthands (hex string or number array), not Uint8Array. Validate a
-  // live-Candid-derived structural shadow while encoding the separately bound
-  // immutable bytes below.
   assertValidCall(target, physicalMethod, materialized.validationArgs);
   const rawInput = Uint8Array.from(
     await target[`${physicalMethod}$`](...materialized.args),
@@ -2948,7 +2937,6 @@ expose("permissions.request", async (payload, context) => {
   );
 });
 
-// Agent mode is source-bound kernel control, not a model-visible kernel tool.
 expose("agent.mode.request", async (payload, context) => {
   const endpoint = verifiedEndpoint(context);
   if (
@@ -2996,8 +2984,6 @@ expose("agent.mode.disable", (_payload, context) => {
   return agentStatus(endpoint.context.appId);
 });
 
-// App-isolated vetKeys are private, source-bound kernel transport. They are
-// deliberately absent from tool discovery and model-visible audit records.
 expose("vetkeys.list", (payload, context) => {
   const endpoint = verifiedEndpoint(context);
   return withCallerConcurrency(endpoint, () =>
@@ -3046,8 +3032,6 @@ expose("vetkeys.derive.approve", (payload, context) => {
   });
 });
 
-// App state invalidation is source-bound and same-app only. It is transport
-// control on the existing message bus, not a model-visible kernel tool.
 expose("app.state.publish", (payload, context) => {
   const publisher = verifiedEndpoint(context);
   const change = assertAppStateChangePayload(payload);
@@ -3165,8 +3149,6 @@ function postAppStateChange(
   return true;
 }
 
-// Tray state is private, source-bound shell transport. It is intentionally
-// absent from model-visible kernel tools and can mutate only a numeric badge.
 expose("tray.set_state", (payload, context) =>
   setTrayStateForEndpoint(
     payload,
@@ -3183,8 +3165,6 @@ expose("tray.dismiss", (payload, context) =>
   ),
 );
 
-// Clipboard access stays in the trusted top-level page. This private action is
-// source-bound and absent from app/agent tool discovery.
 expose("clipboard.write_text", (payload, context) => {
   const endpoint = verifiedEndpoint(context);
   const auth = useAuthStore.getState();
@@ -3200,8 +3180,6 @@ expose("clipboard.write_text", (payload, context) => {
   );
 });
 
-// Browser-wallet providers stay in the trusted top-level page. Apps receive
-// only endpoint-bound JSON RPC sessions through these private actions.
 expose("ethereum_provider.begin", (payload, context) => {
   const endpoint = verifiedEndpoint(context);
   const auth = useAuthStore.getState();
@@ -3245,8 +3223,6 @@ expose("ethereum_provider.end", (payload, context) =>
   endEthereumProviderForEndpoint(payload, verifiedEndpoint(context)),
 );
 
-// Connections are private source-bound actions. They are deliberately absent
-// from kernelTools, tools.list, tools.call, and model-visible audit records.
 expose("connections.request", (payload, context) => {
   const endpoint = verifiedEndpoint(context);
   const invocation = resolveInvocation(endpoint, context.invocation);
@@ -3529,7 +3505,6 @@ async function handleEndpointSelfCallRequest(
           error: serializeActionError(error),
         });
       } catch {
-        // A disconnected/replaced endpoint cannot retain router resources.
       }
     }
   } finally {
@@ -3599,7 +3574,6 @@ async function handleEndpointAttachmentRequest(
           error: serializeActionError(error),
         });
       } catch {
-        // A disconnected/replaced endpoint cannot retain router resources.
       }
     }
   } finally {
