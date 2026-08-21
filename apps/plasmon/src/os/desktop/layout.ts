@@ -183,6 +183,36 @@ export function desktopPositionsEqual(
 }
 
 /**
+ * Apply a cross-FileManager drop proposal before the incoming NodeIds become
+ * visible on Desktop. Existing Desktop entries remain incumbents, while the
+ * incoming candidate coordinates are clamped/reconciled by the same canonical
+ * placement policy used everywhere else.
+ */
+export function applyIncomingDesktopDropPositions(
+  current: Readonly<DesktopPositions>,
+  orderedIds: readonly NodeId[],
+  placements: readonly { id: NodeId; x: number; y: number }[],
+  workspace: DesktopWorkspace,
+): DesktopPositions {
+  const candidates: DesktopPositions = { ...current };
+  const active = new Set(orderedIds);
+  const incomingIds: NodeId[] = [];
+  for (const placement of placements) {
+    candidates[placement.id] = clampDesktopPosition({ x: placement.x, y: placement.y }, workspace);
+    if (!active.has(placement.id)) {
+      active.add(placement.id);
+      incomingIds.push(placement.id);
+    }
+  }
+  return reconcileDesktopPositions(
+    candidates,
+    [...orderedIds, ...incomingIds],
+    workspace,
+    orderedIds,
+  );
+}
+
+/**
  * Browser input adapter for an explicit user drag. It translates the pointer
  * delta into bounded candidate persisted positions only; it does not perform
  * collision/restore reconciliation or absorb drag/drop command semantics.
