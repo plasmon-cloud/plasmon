@@ -8,6 +8,10 @@ Markdown does not own a second lifecycle or autosave policy. Like Text, it uses 
 
 Ordinary close remains Process-owned; Markdown supplies only the same document decision semantics as Text. Failed save/conflict keeps the deferred close pending, Discard suppresses persistence of the dirty edits for that close, and Cancel keeps the process/window alive.
 
+## Preview rendering
+
+Preview and Split render through Marked and then sanitize the generated HTML through DOMPurify. Plasmon additionally accepts one narrow forgiving compatibility form at the render boundary: a standalone top-level compact ATX heading such as `#hello` is treated as `# hello` for Preview parsing only. The editor/persisted source is not rewritten, inline `#tag` text is unchanged, and compact-heading normalization is not applied inside fenced or indented code. This compatibility rule does not replace Marked or authorize a broader Markdown dialect/plugin layer.
+
 ## Editor commands and formatting
 
 Markdown uses the shared Monaco command API for Find, Replace, and Go to line, plus the same app-controlled word-wrap and minimap options as Text. These are visible Markdown toolbar affordances; Markdown does not duplicate Monaco action IDs or browser/editor lifecycle logic.
