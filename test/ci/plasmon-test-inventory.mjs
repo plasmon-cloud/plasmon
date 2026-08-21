@@ -13,22 +13,31 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-file-entry-191.spec.ts',
   ]),
   specialist: Object.freeze([
-    'test/e2e/plasmon-golden-path.spec.ts',
     'test/e2e/plasmon-golden-path-left-snap.spec.ts',
     'test/e2e/plasmon-golden-path-right-snap.spec.ts',
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
-    'test/e2e/plasmon-monaco-packaged.spec.ts',
     'test/e2e/plasmon-review-demo.spec.ts',
-    'test/e2e/plasmon-emulatorjs-proof.spec.ts',
-    'test/e2e/plasmon-demo-game.spec.ts',
-    'test/e2e/plasmon-first-demo.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
   ]),
 });
+
+// The default slim package retains Monaco-backed Text and Markdown editing but
+// omits optional game/emulator payloads and language-service workers. Keep the
+// broader acceptance sources in the tree as deferred profile evidence rather
+// than placing unavailable game/full-worker paths in the required smoke lane.
+export const optionalCoreBrowserTests = Object.freeze([
+  'test/e2e/plasmon-golden-path.spec.ts',
+  'test/e2e/plasmon-monaco-packaged.spec.ts',
+  'test/e2e/plasmon-monaco-workers-89.spec.ts',
+  'test/e2e/plasmon-emulatorjs-proof.spec.ts',
+  'test/e2e/plasmon-demo-game.spec.ts',
+  'test/e2e/plasmon-first-demo.spec.ts',
+  'test/e2e/plasmon-markdown-commands-114.spec.ts',
+]);
 
 export const nonPlasmonBrowserSpecs = Object.freeze({
   'test/e2e/contacts-wallet.spec.ts': 'Contacts/Wallet application acceptance',
@@ -76,6 +85,9 @@ export function classifyPlasmonTest(path) {
   if (path.startsWith('apps/plasmon/test/rtl/')) return { layer: 'rtl' };
   if (path.startsWith('apps/plasmon/src/') || path.startsWith('apps/plasmon/test/')) return { layer: 'fast' };
   if (browserSpecPattern.test(path)) {
+    if (optionalCoreBrowserTests.includes(path)) {
+      return { layer: 'browser-optional', profile: 'profile-specific' };
+    }
     for (const [lane, paths] of Object.entries(browserLanes)) {
       if (paths.includes(path)) return { layer: 'browser', lane };
     }

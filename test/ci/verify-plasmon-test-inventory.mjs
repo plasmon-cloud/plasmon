@@ -7,6 +7,7 @@ import {
   inventoryOrphans,
   layerPaths,
   nonPlasmonBrowserSpecs,
+  optionalCoreBrowserTests,
   repoRoot,
 } from './plasmon-test-inventory.mjs';
 
@@ -84,6 +85,12 @@ async function verify(inventory) {
     for (const path of paths) {
       assert(inventory.some((test) => test.path === path && test.layer === 'browser' && test.lane === lane), `${lane} owns missing browser test ${path}`);
     }
+  }
+  for (const path of optionalCoreBrowserTests) {
+    assert(
+      inventory.some((test) => test.path === path && test.layer === 'browser-optional' && test.profile === 'profile-specific'),
+      `Profile-specific browser classification is stale or missing: ${path}`,
+    );
   }
   for (const [path, owner] of Object.entries(nonPlasmonBrowserSpecs)) {
     assert(owner.trim().length > 0, `Explicit non-Plasmon browser spec ${path} needs a documented owner`);

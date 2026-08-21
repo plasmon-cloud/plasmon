@@ -5,8 +5,7 @@ import type {
   NativeAppDefinition,
 } from "../os/contracts/index.ts";
 import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../os/visual/assets.ts";
-import TextEditor, { type TextEditorProps } from "./text/TextEditor.tsx";
-import MarkdownEditor, { type MarkdownEditorProps } from "./markdown/MarkdownEditor.tsx";
+import { isHackathonCoreProfile } from "../os/integration/packageProfile.ts";
 import type { PhotosProps } from "./photos/Photos.tsx";
 import type { VideoPlayerProps } from "./video/VideoPlayer.tsx";
 import type { BrowserProps } from "./browser/Browser.tsx";
@@ -48,32 +47,40 @@ export const videoAppDefinition: NativeAppDefinition = { id: "native:video", han
 export const browserAppDefinition: NativeAppDefinition = { id: "native:browser", handlerId: "native:browser", name: "Browser", icon: browserHandler.icon, singleton: false, defaultWindow: { width: 980, height: 680, minWidth: 560, minHeight: 360 }, associations: browserAssociationRules };
 export const settingsAppDefinition: NativeAppDefinition = { id: "native:settings", handlerId: "native:settings", name: "Settings", icon: settingsHandler.icon, singleton: true, defaultWindow: { width: 760, height: 620, minWidth: 520, minHeight: 380 }, associations: [] };
 
-export const contentAppDefinitions = [textAppDefinition, markdownAppDefinition, photosAppDefinition, videoAppDefinition, browserAppDefinition, settingsAppDefinition] as const;
-export const contentHandlerDefinitions = [textHandler, markdownHandler, photosHandler, videoHandler, browserHandler, settingsHandler, externalUrlHandler] as const;
-export const contentAssociationRules = [...textAssociationRules, ...markdownAssociationRules, ...photosAssociationRules, ...videoAssociationRules, ...browserAssociationRules] as const;
+const coreContentAppDefinitions = [photosAppDefinition, videoAppDefinition, browserAppDefinition, settingsAppDefinition] as const;
+const coreContentHandlerDefinitions = [photosHandler, videoHandler, browserHandler, settingsHandler, externalUrlHandler] as const;
+const coreContentAssociationRules = [...photosAssociationRules, ...videoAssociationRules, ...browserAssociationRules] as const;
 
-/**
- * Text and Markdown are deliberately bound to their imported mature components
- * here rather than leaving their registration behind a second lazy module path.
- * Monaco itself still loads through its own adapter, but the app registry cannot
- * accidentally resolve a legacy editor module.
- */
-export const loadTextComponent = async () => ({ default: TextEditor });
-export const loadMarkdownComponent = async () => ({ default: MarkdownEditor });
+export const contentAppDefinitions = isHackathonCoreProfile
+  ? coreContentAppDefinitions
+  : [textAppDefinition, markdownAppDefinition, ...coreContentAppDefinitions] as const;
+export const contentHandlerDefinitions = isHackathonCoreProfile
+  ? coreContentHandlerDefinitions
+  : [textHandler, markdownHandler, ...coreContentHandlerDefinitions] as const;
+export const contentAssociationRules = isHackathonCoreProfile
+  ? coreContentAssociationRules
+  : [...textAssociationRules, ...markdownAssociationRules, ...coreContentAssociationRules] as const;
+
+export const loadTextComponent = () => import("./text/TextEditor.tsx");
+export const loadMarkdownComponent = () => import("./markdown/MarkdownEditor.tsx");
 export const loadPhotosComponent = () => import("./photos/Photos.tsx");
 export const loadVideoComponent = () => import("./video/VideoPlayer.tsx");
 export const loadBrowserComponent = () => import("./browser/Browser.tsx");
 export function createSettingsLoader(dependencies: SettingsDependencies = {}): () => Promise<{ default: ComponentType<SettingsHostProps> }> {
   return async () => { const module = await import("./settings/Settings.tsx"); return { default: module.createSettingsComponent(dependencies) }; };
 }
-/** Convenience loader map for Coordinator A; it does not mutate the global registry. */
+
+/** Convenience loader map; editor loaders are absent from the core package profile. */
 export function createContentAppLoaders(settingsDependencies: SettingsDependencies = {}) {
-  return new Map<string, () => Promise<{ default: ComponentType<any> }>>([
-    [textAppDefinition.id, loadTextComponent as () => Promise<{ default: ComponentType<TextEditorProps> }>],
-    [markdownAppDefinition.id, loadMarkdownComponent as () => Promise<{ default: ComponentType<MarkdownEditorProps> }>],
+  const loaders = new Map<string, () => Promise<{ default: ComponentType<any> }>>([
     [photosAppDefinition.id, loadPhotosComponent as () => Promise<{ default: ComponentType<PhotosProps> }>],
     [videoAppDefinition.id, loadVideoComponent as () => Promise<{ default: ComponentType<VideoPlayerProps> }>],
     [browserAppDefinition.id, loadBrowserComponent as () => Promise<{ default: ComponentType<BrowserProps> }>],
     [settingsAppDefinition.id, createSettingsLoader(settingsDependencies)],
   ]);
+  if (!isHackathonCoreProfile) {
+    loaders.set(textAppDefinition.id, loadTextComponent);
+    loaders.set(markdownAppDefinition.id, loadMarkdownComponent);
+  }
+  return loaders;
 }
