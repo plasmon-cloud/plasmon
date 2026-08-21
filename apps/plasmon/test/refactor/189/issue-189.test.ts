@@ -64,9 +64,36 @@ test("#189 canonical classifier covers representative derived families and safe 
   expect(classifyResource(node("folder", { kind: "directory" })).kind).toBe("directory");
 });
 
+test("#415 compatibility — generic text/plain is weaker than a known source filename, while specific MIME remains explicit", () => {
+  expect(classifyResource(node("script.js", { mime: "text/plain" })).type).toMatchObject({
+    mime: "application/javascript",
+    contentKind: "source",
+    language: "javascript",
+    source: "filename",
+  });
+  expect(classifyResource(node("script.js", { mime: "text/plain; charset=utf-8" })).type).toMatchObject({
+    mime: "application/javascript",
+    language: "javascript",
+    source: "filename",
+  });
+  expect(classifyResource(node("script.js", { mime: "application/octet-stream" })).type).toMatchObject({
+    mime: "application/octet-stream",
+    contentKind: "unknown",
+    source: "explicit-mime",
+  });
+  expect(classifyResource(node("README.md", { mime: "text/plain" })).type).toMatchObject({
+    mime: "text/plain",
+    contentKind: "text",
+    language: "plaintext",
+    source: "explicit-mime",
+  });
+});
+
 test("#189 RED — Properties, Text, Photos, and Video consume the same explicit-over-derived type precedence", () => {
   expect(friendlyKind(node("script.js"))).toBe("application/javascript");
+  expect(friendlyKind(node("script.js", { mime: "text/plain" }))).toBe("application/javascript");
   expect(friendlyKind(node("script.js", { mime: "application/octet-stream" }))).toBe("application/octet-stream");
+  expect(editorLanguageForResource("script.js", "text/plain")).toBe("javascript");
   expect(editorLanguageForResource("README.md", "text/plain")).toBe("plaintext");
   expect(inferImageMime("poster.png")).toBe("image/png");
   expect(inferImageMime("poster.png", "application/octet-stream")).toBeNull();
