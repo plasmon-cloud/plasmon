@@ -25,7 +25,7 @@ test("kernel Motoko builds use vendored Wasm and never resolve a host moc", asyn
     if (args[0] !== "mops") {
       throw new Error(`Unexpected host command: ${args[0]} ${args[1].join(" ")}`);
     }
-    if (args[1].join(" ") === "install --lock update") {
+    if (args[1].join(" ") === "install --locked") {
       return { stdout: "", stderr: "" };
     }
     if (args[1].join(" ") === "sources --no-install") {
@@ -75,7 +75,7 @@ test("kernel Motoko builds use vendored Wasm and never resolve a host moc", asyn
     });
 
     expect(calls).toEqual([
-      ["mops", ["install", "--lock", "update"], { cwd: root }],
+      ["mops", ["install", "--locked"], { cwd: root }],
       ["mops", ["sources", "--no-install"], { cwd: root }],
     ]);
     expect(result).toEqual({
