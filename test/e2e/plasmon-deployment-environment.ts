@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 export const PLASMON_LOCAL_MANIFEST = "plasmon-local.ndeploy.json";
 export const PLASMON_DEMO_MANIFEST = "plasmon.ndeploy.json";
+export const PLASMON_WORKSPACE = "neutron-plasmon";
 
 export type PlasmonDeploymentScope = "local" | "demo";
 
@@ -43,6 +44,12 @@ export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): str
     case "demo":
       return PLASMON_DEMO_MANIFEST;
   }
+}
+
+export function packageScriptForDeployment(manifestPath: string, workspace: string): string {
+  return manifestPath === PLASMON_DEMO_MANIFEST && workspace === PLASMON_WORKSPACE
+    ? "package:demo"
+    : "package";
 }
 
 function repositoryRoot(): string {
@@ -94,8 +101,9 @@ export async function resolveDeploymentArtifacts(
     if (!workspace) {
       throw new Error(`Deployment artifact workspace has no package name: ${archivePath}`);
     }
-    if (!packageJson.scripts?.package) {
-      throw new Error(`Deployment artifact workspace has no production package command: ${workspace}`);
+    const script = packageScriptForDeployment(manifestPath, workspace);
+    if (!packageJson.scripts?.[script]) {
+      throw new Error(`Deployment artifact workspace has no ${script} command: ${workspace}`);
     }
     artifacts.push({
       archivePath,
@@ -143,9 +151,11 @@ export async function prepareDeploymentEnvironment(
   options: DeploymentEnvironmentOptions,
 ): Promise<DeploymentArtifact[]> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
+  const manifestPath = options.manifestPath;
+  if (!manifestPath) throw new Error("Deployment manifest must be selected explicitly");
   const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
   for (const workspace of workspacesToPackage(artifacts)) {
-    await runCommand(["npm", "--workspace", workspace, "run", "package"], repoRoot);
+    await runCommand(["npm", "--workspace", workspace, "run", packageScriptForDeployment(manifestPath, workspace)], repoRoot);
   }
   await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   return artifacts;
