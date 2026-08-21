@@ -103,6 +103,8 @@ Common stored paths are:
 | `dist/neutron.json` | `mopack.ts` | packaged manifest with its hashed backend entry |
 | `<id>.v<release>.neutron` | `neutron-scripts/src/pack.ts` | universal package archive |
 | `apps/kernel/backend/_neutron.mo` | Kernel assembly build | generated complete-actor source used by Kernel build checks |
+| `apps/kernel/mops.lock` | Mops 3.1.0 dependency resolution | tracked authoritative Kernel dependency graph, revisions, and file hashes; Mops libraries' locks do not constrain consumers |
+| `apps/kernel/.mops/**` | Mops install | ignored ephemeral materialization/cache state recreated from the committed Kernel lock |
 | `support/repository/mo/GeneratedRepository.mo` | repository generator | deterministic certified repository resources |
 | requested Wasm/Candid output paths | `neutron-cli compile` | explicit compile-only artifacts |
 | `.neutron/cache/compiled/**` | `neutron-provision` | verified local complete-actor compile cache |

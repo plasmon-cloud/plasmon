@@ -196,7 +196,12 @@ async function runParallelWorkers(
 async function resolvePackages(cwd: string): Promise<PackageMap> {
   const boundPackages = process.env.MOTOKO_PACKAGES_JSON;
   if (boundPackages === undefined) {
-    const sourceOutput = await execute("mops", ["sources"], { cwd });
+    await execute("mops", ["install", "--locked"], { cwd });
+    const sourceOutput = await execute(
+      "mops",
+      ["sources", "--no-install"],
+      { cwd },
+    );
     return parsePackageString(
       sourceOutput.stdout.replace(/\n/g, " ").trim(),
     );
