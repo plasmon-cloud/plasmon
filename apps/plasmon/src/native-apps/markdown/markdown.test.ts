@@ -4,6 +4,7 @@ import { MARKDOWN_PREVIEW_CSS } from "./MarkdownPreview.tsx";
 import {
   isSafeMarkdownHref,
   MARKDOWN_SANITIZE_CONFIG,
+  normalizeMarkdownPreviewSource,
   parseMarkdownHtml,
   renderSafeMarkdown,
   type MarkdownSanitizer,
@@ -31,6 +32,15 @@ test("basic Markdown Preview source produces semantic heading, paragraph, and li
   expect(html).toContain("<li>one</li>");
   expect(html).toContain("<li>two</li>");
   expect(html).not.toContain("# Big Heading");
+});
+
+test("compact standalone heading syntax is normalized only for Preview parsing", () => {
+  expect(normalizeMarkdownPreviewSource("#hello")).toBe("# hello");
+  expect(parseMarkdownHtml("#hello")).toContain("<h1>hello</h1>");
+  expect(normalizeMarkdownPreviewSource("Paragraph #hello")).toBe("Paragraph #hello");
+  expect(normalizeMarkdownPreviewSource("    #hello")).toBe("    #hello");
+  expect(normalizeMarkdownPreviewSource("```md\n#hello\n```")).toBe("```md\n#hello\n```");
+  expect(normalizeMarkdownPreviewSource("~~~md\n##hello\n~~~")).toBe("~~~md\n##hello\n~~~");
 });
 
 test("Markdown Preview presentation preserves heading hierarchy and visible list markers after resets", () => {
