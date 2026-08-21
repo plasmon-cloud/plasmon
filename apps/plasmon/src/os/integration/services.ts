@@ -112,6 +112,12 @@ function createAuthorizationService(): ResourceAuthorizationService {
     : new UnavailableResourceAuthorizationService();
 }
 
+/**
+ * Synchronous repository adapter for standalone preview. Repository selection
+ * itself is asynchronous because IndexedDB can exist while open() is denied by
+ * browser storage policy. createBrowserFsRepository probes it and safely falls
+ * back rather than treating presence of globalThis.indexedDB as availability.
+ */
 class BrowserSelectedFsRepository implements FsRepository {
   readonly kind = "browser-selected";
   private readonly selected = createBrowserFsRepository({
@@ -137,6 +143,11 @@ function detectFilesystemFrontendMode(): FilesystemFrontendMode {
     : "standalone";
 }
 
+/**
+ * Kernel-hosted Plasmon uses the existing foreground RPC client so durable
+ * browser storage remains owned by the privileged/persistent background
+ * surface. Standalone preview keeps an in-page filesystem for development.
+ */
 export function createFilesystemService(
   mode: FilesystemFrontendMode = detectFilesystemFrontendMode(),
 ): FsService & FsEventSource {
@@ -144,6 +155,11 @@ export function createFilesystemService(
   return new PersistentFsService(new BrowserSelectedFsRepository());
 }
 
+/**
+ * Association defaults follow the same hosted persistence boundary as Shell
+ * preferences: foreground code persists through FsService, which routes to the
+ * persistent Plasmon background surface when running inside Neutron.
+ */
 export function createAssociationDefaultStore(fs: FsService): AssociationDefaultStore {
   return new FsServiceAssociationDefaultStore(fs);
 }
@@ -161,6 +177,9 @@ function registerWave2Applications(
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
+  // Game/emulator payloads and handlers are intentionally omitted from every
+  // shipped package profile, so opening a game cannot create missing-runtime
+  // requests. The source/runtime tests exercise those handlers directly.
   if (isGameRuntimeProfile) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
@@ -195,9 +214,36 @@ function registerWave2Applications(
     createPropertiesNativeLoader({ fsEvents, associations, openService }),
   );
 
+  // Recycle Bin must be visible to filesystem bootstrap so RecycleBin.sys is
+  // reconciled as a real system application. Its loader is attached only after
+  // createFilesystemCore() exposes the canonical privileged Trash facade.
   nativeApps.register(recycleBinAppDefinition);
 }
 
+/**
+ * Wave 2 composition root. In Neutron, filesystem calls are routed to the
+ * persistent Plasmon background surface through FsRpcClient; standalone
+ * preview selects a browser-local repository with safe fallback. Association
+ * user defaults and native-window placement persist through that same raw
+ * FsService rather than foreground browser storage.
+ *
+ * Tests may inject only true external/runtime boundaries (for example an
+ * in-memory persistence repository, a mock Neutron bridge, or deterministic window
+ * manager). Registration, associations, opening, filesystem policy, process
+ * behavior, and all other OS semantics remain the same production composition.
+ *
+ * The returned public fs is the filesystem-core facade: it waits for migration
+ * and bootstrap to finish and applies dot-hidden listing semantics. The core
+ * itself still mutates only through FsService primitives, so persistence remains
+ * owned by the existing hosted/background boundary.
+ *
+ * Runtime controllers are assembled here but started by the outer application
+ * bootstrap before React renders. This keeps service construction deterministic
+ * for headless callers while keeping production reconciliation below React.
+ *
+ * Authenticated Neutron application surfaces remain Kernel-owned sibling
+ * tiles. Plasmon only discovers and opens them through NeutronBridge.
+ */
 export function createPlasmonServices(
   options: CreatePlasmonServicesOptions = {},
 ): PlasmonServices {
@@ -223,6 +269,10 @@ export function createPlasmonServices(
   const fileClipboard = new FileOperationClipboard();
   let filesystem: FilesystemCoreServices | null = null;
 
+  // Native Explorer registration happens before filesystem bootstrap so the
+  // canonical dispatcher can discover the Explorer handler during core setup.
+  // These lazy authorities preserve that order without rebuilding filesystem
+  // policy in FileManager or introducing policy dependencies into the UI.
   const fileManagerOpenAuthority: FileManagerOpenAuthority = {
     openNode: (nodeId, openOptions) => {
       if (!filesystem) return Promise.reject(new Error("Filesystem opening is not initialized"));
