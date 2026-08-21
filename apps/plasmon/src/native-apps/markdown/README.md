@@ -10,7 +10,7 @@ Ordinary close remains Process-owned; Markdown supplies only the same document d
 
 ## Preview rendering
 
-Preview and Split render through Marked and then sanitize the generated HTML through DOMPurify. Plasmon additionally accepts one narrow forgiving compatibility form at the render boundary: a standalone top-level compact ATX heading such as `#hello` is treated as `# hello` for Preview parsing only. The editor/persisted source is not rewritten, inline `#tag` text is unchanged, and compact-heading normalization is not applied inside fenced or indented code. This compatibility rule does not replace Marked or authorize a broader Markdown dialect/plugin layer.
+Preview and Split render standard Markdown through Marked and then sanitize the generated HTML through DOMPurify. Plasmon does not rewrite invalid Markdown syntax into a private dialect at the preview boundary.
 
 ## Editor commands and formatting
 
