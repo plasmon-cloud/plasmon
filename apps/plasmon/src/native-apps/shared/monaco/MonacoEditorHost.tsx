@@ -83,6 +83,7 @@ export function MonacoEditorHost({
   const onCommandApiChangeRef = useRef(onCommandApiChange);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modelLanguage, setModelLanguage] = useState<string | null>(null);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCursorChangeRef.current = onCursorChange; }, [onCursorChange]);
@@ -97,6 +98,7 @@ export function MonacoEditorHost({
     const disposables: MonacoDisposable[] = [];
     setLoading(true);
     setError(null);
+    setModelLanguage(null);
     onReadyChangeRef.current?.(false);
     onCommandApiChangeRef.current?.(null);
     onStateChangeRef.current?.({ phase: "loading", error: null });
@@ -135,6 +137,7 @@ export function MonacoEditorHost({
         editor = createdEditor;
         editorRef.current = createdEditor;
         modelRef.current = createdModel;
+        setModelLanguage(createdModel.getLanguageId());
         disposables.push(
           createdEditor.onDidChangeModelContent(() => {
             if (!applyingExternalValueRef.current) onChangeRef.current(createdModel.getValue());
@@ -166,6 +169,7 @@ export function MonacoEditorHost({
         if (!cancelled) {
           const message = reason instanceof Error ? reason.message : String(reason);
           setLoading(false);
+          setModelLanguage(null);
           onReadyChangeRef.current?.(false);
           onCommandApiChangeRef.current?.(null);
           onStateChangeRef.current?.({ phase: "error", error: message });
@@ -196,7 +200,9 @@ export function MonacoEditorHost({
   useEffect(() => {
     const monaco = monacoRef.current;
     const model = modelRef.current;
-    if (monaco && model && model.getLanguageId() !== language) monaco.editor.setModelLanguage(model, language);
+    if (!monaco || !model) return;
+    if (model.getLanguageId() !== language) monaco.editor.setModelLanguage(model, language);
+    setModelLanguage(model.getLanguageId());
   }, [language]);
 
   useEffect(() => {
@@ -221,6 +227,7 @@ export function MonacoEditorHost({
       data-editor-engine="monaco"
       data-editor-ready={loading || error ? "false" : "true"}
       data-editor-state={error ? "error" : loading ? "loading" : "ready"}
+      data-editor-language={modelLanguage ?? undefined}
     >
       <div ref={containerRef} style={styles.editor} />
       {loading && <div style={styles.overlay} role="status">Loading editor…</div>}
