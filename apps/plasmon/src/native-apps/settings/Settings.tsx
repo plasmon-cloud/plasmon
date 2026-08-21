@@ -6,6 +6,7 @@ import type {
   ProcessController,
   ProcessId,
 } from "../../os/contracts/index.ts";
+import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import { NativeAppContentSurface, NativeAppPanel } from "../../os/visual/index.ts";
 import {
   formatBytes,
@@ -20,6 +21,7 @@ export interface SettingsDependencies {
   setThemeName?: (theme: string) => void;
   getTaskbarMode?: () => string;
   setTaskbarMode?: (mode: string) => void;
+  hiddenVisibility?: HiddenVisibilityPreferenceStore;
 }
 
 export interface SettingsHostProps {
@@ -32,11 +34,41 @@ export interface SettingsHostProps {
 export function createSettingsComponent(dependencies: SettingsDependencies = {}) {
   return function Settings({ processId, fs, process }: SettingsHostProps) {
     const [storage, setStorage] = useState<StorageSummary | null>(null);
+    const [alwaysShowHiddenFiles, setAlwaysShowHiddenFiles] = useState(
+      () => dependencies.hiddenVisibility?.getSnapshot().alwaysShowHiddenFiles ?? false,
+    );
+    const [hiddenVisibilityReady, setHiddenVisibilityReady] = useState(!dependencies.hiddenVisibility);
+    const [hiddenVisibilityError, setHiddenVisibilityError] = useState<string | null>(null);
 
     useEffect(() => {
       process.setTitle(processId, "Settings");
       void summarizeStorage(fs).then(setStorage);
     }, [fs, process, processId]);
+
+    useEffect(() => {
+      const store = dependencies.hiddenVisibility;
+      if (!store) return undefined;
+      let active = true;
+      const unsubscribe = store.subscribe((preferences) => {
+        if (active) setAlwaysShowHiddenFiles(preferences.alwaysShowHiddenFiles);
+      });
+      void store.load()
+        .then((preferences) => {
+          if (!active) return;
+          setAlwaysShowHiddenFiles(preferences.alwaysShowHiddenFiles);
+          setHiddenVisibilityReady(true);
+          setHiddenVisibilityError(null);
+        })
+        .catch((cause: unknown) => {
+          if (!active) return;
+          setHiddenVisibilityReady(true);
+          setHiddenVisibilityError(cause instanceof Error ? cause.message : String(cause));
+        });
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }, []);
 
     const theme = dependencies.getThemeName?.();
     const taskbar = dependencies.getTaskbarMode?.();
@@ -53,6 +85,34 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
             <p role="status">Storage summary unavailable: {storage.unavailableReason}</p>
           ) : (
             <p>{storage.files} files · {storage.directories} folders · {formatBytes(storage.bytes)} logical file data</p>
+          )}
+        </NativeAppPanel>
+
+        <NativeAppPanel style={styles.card} aria-labelledby="files-heading">
+          <h2 id="files-heading" style={styles.subheading}>Files & Explorer</h2>
+          {dependencies.hiddenVisibility ? (
+            <>
+              <label style={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={alwaysShowHiddenFiles}
+                  disabled={!hiddenVisibilityReady}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    const next = event.currentTarget.checked;
+                    setHiddenVisibilityError(null);
+                    void dependencies.hiddenVisibility?.setAlwaysShowHiddenFiles(next)
+                      .catch((cause: unknown) => setHiddenVisibilityError(
+                        cause instanceof Error ? cause.message : String(cause),
+                      ));
+                  }}
+                />
+                Always show hidden files
+              </label>
+              <p style={styles.helpText}>Show hidden resources across Search, Start, and File Explorer.</p>
+              {hiddenVisibilityError ? <p role="alert">Hidden-file setting could not be saved: {hiddenVisibilityError}</p> : null}
+            </>
+          ) : (
+            <p>Global hidden-file visibility is unavailable.</p>
           )}
         </NativeAppPanel>
 
@@ -139,6 +199,19 @@ const styles: Record<string, CSSProperties> = {
     marginTop: 10,
     color: "var(--plasmon-text-primary)",
     fontWeight: 600,
+  },
+  checkboxRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    marginTop: 10,
+    color: "var(--plasmon-text-primary)",
+    fontWeight: 600,
+  },
+  helpText: {
+    margin: "6px 0 0 25px",
+    color: "var(--plasmon-text-secondary)",
+    fontSize: 13,
   },
   select: {
     minWidth: 150,
