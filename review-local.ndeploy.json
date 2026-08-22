@@ -12,8 +12,7 @@
     "kind": "inline",
     "kernel": { "path": "apps/kernel/kernel.v0.3.6.neutron" },
     "packages": [
-      { "path": "apps/vfs/files.v0.4.3.neutron" },
-      { "path": "apps/review/review.v0.1.0.neutron" }
+      { "path": "apps/review/review.v0.1.1.neutron" }
     ]
   }
 }

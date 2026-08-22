@@ -2,9 +2,29 @@
 set -euo pipefail
 
 target="${1:-specialist}"
+test_file="${2:-}"
+test_grep="${3:-}"
 
 case "$target" in
   all|specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
+    if [ -n "$test_file" ] || [ -n "$test_grep" ]; then
+      echo "Exact test file/grep scope is only valid with target=exact" >&2
+      exit 2
+    fi
+    ;;
+  exact)
+    case "$test_file" in
+      test/e2e/*.spec.*|test/e2e/*.test.*)
+        ;;
+      *)
+        echo "Exact flake-probe scope must be a test/e2e/**/*.spec.* or *.test.* file: $test_file" >&2
+        exit 2
+        ;;
+    esac
+    if [ ! -f "$test_file" ]; then
+      echo "Exact flake-probe file does not exist: $test_file" >&2
+      exit 2
+    fi
     ;;
   *)
     echo "Unsupported flake-probe target: $target" >&2
@@ -30,7 +50,7 @@ cleanup() {
 trap cleanup EXIT
 
 pocketic_ready=0
-for attempt in $(seq 1 180); do
+for poll in $(seq 1 180); do
   if ! kill -0 "$server_pid" 2>/dev/null; then
     echo "PocketIC serve exited before becoming ready" >&2
     cat /tmp/plasmon-pocketic.log >&2 || true
@@ -70,6 +90,13 @@ case "$target" in
     ;;
   specialist)
     npm run test:e2e:plasmon:specialist -- --retries=0
+    ;;
+  exact)
+    if [ -n "$test_grep" ]; then
+      run_one "$test_file" --grep "$test_grep"
+    else
+      run_one "$test_file"
+    fi
     ;;
   right-snap)
     run_one test/e2e/plasmon-golden-path-right-snap.spec.ts
