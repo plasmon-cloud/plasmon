@@ -91,20 +91,24 @@ packet setup, once
   -> mark the Playwright environment ready
 
 for each repetition
-  fresh Playwright process with workers=1, retries=0
+  if selected test scope requires persistent-state reset:
+    plasmon:local:reinstall
+  -> fresh Playwright process with workers=1, retries=0
   -> exact per-iteration result + diagnostics
 
 packet teardown, once
   stop/wait for the packet PocketIC process
 ```
 
-The package archives and installed bounded local deployment do not change between repetitions, so a packet does not reinstall them again. The packet runner exports `PLASMON_PLAYWRIGHT_ENV_READY=1` after setup; nested `test/ci/run-plasmon-flake-probe.sh` calls see that the environment is already ready and skip duplicate dependency install, package preparation, PocketIC startup/status, and deployment reinstall. Direct standalone uses of the Flake runner retain the older fully fresh setup path.
+Prepared-environment reuse is the default. The package archives and installed bounded local deployment do not change between ordinary repetitions, so normal targeted tests reuse the one packet install. `test/ci/plasmon-playwright-isolation.mjs` owns the exceptional reset classification. Tests that intentionally depend on mutating durable canister/filesystem state are listed there and receive a per-repetition `plasmon:local:reinstall` reset after the first observation. At present those explicit reset-required files are `test/e2e/plasmon-persistence.spec.ts` and `test/e2e/plasmon-demo-game.spec.ts`. If an `exact-set` contains any reset-required file, the selected packet uses the stronger reinstall isolation for the whole set.
 
-Browser/test isolation remains fresh because every repetition launches a new Playwright process rather than using `--repeat-each` inside one browser worker. A test that intentionally mutates persistent canister or installed filesystem state must own an explicit cleanup or namespacing boundary; the shared packet harness must not reinstall unchanged Kernel/Plasmon/Review packages merely as a generic per-test reset.
+The packet runner exports `PLASMON_PLAYWRIGHT_ENV_READY=1` after setup; nested `test/ci/run-plasmon-flake-probe.sh` calls see that the environment is already ready and skip duplicate dependency install, package preparation, PocketIC startup/status, and deployment install. Direct standalone uses of the Flake runner retain the older fully fresh setup path.
+
+Browser/test isolation remains fresh because every repetition launches a new Playwright process rather than using `--repeat-each` inside one browser worker. Persistent-state isolation is deliberately exceptional: ordinary tests pay no reinstall cost between repetitions, while tests whose acceptance contract relies on durable mutations are explicitly classified for reset. A reset failure is attributed to that specific iteration and does not silently continue as a clean observation.
 
 This changes setup cost, not evidence identity. Five repetitions in one prepared packet still produce five independent `iteration=<n>` result records and separate failure directories. A failed packet continues through its remaining repetitions so the aggregate summary can report the complete observed iteration set. GitHub rerunning that failed packet produces a newer `run_attempt` for all five slots; the summarizer keeps the newest result per iteration and retains superseded same-SHA evidence as provenance.
 
-The packet lifecycle is a general Plasmon Playwright/integration harness rather than a #409-only shortcut. Other repeated installed-browser checks may reuse it when sharing one prepared deployment is truthful. It must not be used when a test genuinely requires a newly created PocketIC process or newly packaged/installed archive for every observation.
+The packet lifecycle is a general Plasmon Playwright/integration harness rather than a #409-only shortcut. Other repeated installed-browser checks may reuse it when sharing one prepared deployment is truthful. Tests that genuinely require durable-state reset must be added to the explicit reset classification; tests that require a newly created PocketIC process or newly packaged archive for every observation must not use the reusable packet lifecycle.
 
 ## Identity, artifacts, reruns, and summaries
 
