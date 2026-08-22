@@ -117,6 +117,7 @@ test(
   const primaryId = await primary.getAttribute("data-window-id");
   if (!primaryId) throw new Error("Primary Explorer native window has no stable window id");
   const primaryWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${primaryId}"]`);
+  await expect(primaryWindow).toHaveAccessibleName("This Plasmon");
   await primaryWindow.locator(".plasmon-window__controls").getByRole("button", { name: "Minimize" }).click();
   await expect(primaryWindow).toHaveAttribute("aria-hidden", "true");
 
