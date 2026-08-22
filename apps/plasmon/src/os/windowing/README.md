@@ -1,5 +1,7 @@
 # Plasmon native windowing
 
+<!-- plasmon-docs-review:v1 sha256=b03fcb8963b87b8412e78917e26a3945d0a205b301a7b92444123a2ff09aad29 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 `windowing/**` owns Plasmon-local floating-window state and interaction behind the public `WindowManager` contract. It manages window identity, geometry, z-order, explicit focus/MRU history, minimize/maximize/restore state, deterministic left/right edge snapping, viewport constraints, subscriptions, and the browser interaction layer used to move/resize native windows.
 
 It does not own process records, application registration, filesystem state, Shell/taskbar state, or Neutron Kernel tiles.

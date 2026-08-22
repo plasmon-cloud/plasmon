@@ -1,5 +1,7 @@
 # Plasmon documentation map
 
+<!-- plasmon-docs-review:v1 sha256=e97c6e143860f302b9f032d413ccf53f8ffc015cdd62c9826f91afd3f5e1a26b base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 This directory is the durable cross-subsystem documentation home for Plasmon. The repository is authoritative for Plasmon architecture, terminology, testing rules, and implementation guidance; chat, handoffs, and external project context are coordination and bootstrap aids only.
 
 GitHub Issues are the canonical work and acceptance queue. Stable product knowledge belongs in scoped README/AGENTS files, canonical documents here, executable tests, contracts, or implementation.
@@ -28,6 +30,8 @@ Use the nearest meaningful documentation boundary rather than adding documentati
 - Canonical documents under this directory hold cross-subsystem architecture, accepted terminology, deeper rationale, compatibility constraints, and durable research that is too large or cross-cutting for a scoped README/AGENTS file.
 
 The machine-readable boundary inventory is [`documentation-boundaries.json`](documentation-boundaries.json). It is the single source for which Plasmon directories are documentation boundaries, whether they require local README/AGENTS files or inherit AGENTS ownership, and which roots require direct-child classification. Do not duplicate that inventory in prose or external project context.
+
+Review fingerprints make implementation drift visible at those boundaries. [`DOCUMENTATION_REVIEW.md`](DOCUMENTATION_REVIEW.md) defines the `docs:review:status` / `docs:review` workflow, nearest-boundary ownership, and the rule that refreshing a marker records deliberate review rather than proving semantic correctness.
 
 <!-- plasmon-documentation-boundaries:start -->
 <!-- Generated from documentation-boundaries.json by documentation-boundaries.mjs. Do not edit this table by hand. -->
@@ -115,7 +119,7 @@ Historical refactor test packets or old staging procedures are provenance, not c
 - [`DAEDALOS_PARITY_LEDGER.md`](DAEDALOS_PARITY_LEDGER.md) — evidence ledger for daedalOS feature-completeness reference behavior and Plasmon implementation, headless, packaged/browser, and human/manual acceptance state.
 - [`ACCEPTANCE_2026-08-11_BASELINE_GATE.md`](ACCEPTANCE_2026-08-11_BASELINE_GATE.md) — dated integrated disposition of the 2026-08-11 packaged/manual review findings.
 
-The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human review are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
+The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human/manual acceptance state are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
 
 ## Neutron / Kernel boundary
 
