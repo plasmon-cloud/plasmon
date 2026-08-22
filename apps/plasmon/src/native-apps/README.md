@@ -1,5 +1,7 @@
 # Plasmon native applications and runtime hosts
 
+<!-- plasmon-docs-review:v1 sha256=8a5a4cd154b75a4fae4b966b00f68bcb61615e171bfde5eb72f8da3e52f442f0 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 `native-apps/**` contains applications rendered through Plasmon's native process/window system plus association-backed browser/runtime hosts.
 
 ## Registration and boundaries
