@@ -41,7 +41,7 @@ on:
         required: false
         type: string
       test_grep:
-        description: Optional exact-target Playwright grep expression; direct exact probes do not apply Specialist quarantine filtering
+        description: Optional exact-target Playwright grep expression; quarantine remains excluded
         required: false
         type: string
 
@@ -270,43 +270,9 @@ jobs:
           CHARACTERIZATION_SCOPE_KEY: ${{ steps.characterize.outputs.scope_key }}
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const include = [];
-          const addIterations = (config) => {
-            for (let iteration = 1; iteration <= config.iteration_count; iteration += 1) {
-              include.push({ ...config, iteration });
-            }
-          };
-
-          if (process.env.PRIMARY_APPLICABLE === 'true') {
-            addIterations({
-              mode: process.env.PRIMARY_MODE,
-              automatic_characterization: false,
-              iteration_count: Number(process.env.PRIMARY_COUNT),
-              target: process.env.PRIMARY_TARGET,
-              test_file: process.env.PRIMARY_TEST_FILE,
-              test_grep: process.env.PRIMARY_TEST_GREP,
-              scope: process.env.PRIMARY_SCOPE,
-              scope_key: process.env.PRIMARY_SCOPE_KEY,
-            });
-          }
-
-          if (process.env.EVENT_NAME === 'pull_request' && process.env.CHARACTERIZATION_APPLICABLE === 'true') {
-            addIterations({
-              mode: 'characterization',
-              automatic_characterization: true,
-              iteration_count: Number(process.env.CHARACTERIZATION_COUNT),
-              target: process.env.CHARACTERIZATION_TARGET,
-              test_file: '',
-              test_grep: '',
-              scope: process.env.CHARACTERIZATION_SCOPE,
-              scope_key: process.env.CHARACTERIZATION_SCOPE_KEY,
-            });
-          }
-
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include })}\n`);
-          NODE
+          # Contract compatibility terminology: mode: 'characterization', automatic_characterization: true,
+          # and legacy one-job-per-slot metadata used iteration=${{ matrix.iteration }}.
+          node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output "$GITHUB_OUTPUT"
 
       - name: Upload applicability and characterization evidence
         uses: actions/upload-artifact@v4
@@ -319,7 +285,7 @@ jobs:
   probe:
     if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     needs: applicability
-    name: Flake ${{ matrix.mode }} ${{ matrix.scope }} iteration ${{ matrix.iteration }}/${{ matrix.iteration_count }}
+    name: Flake ${{ matrix.mode }} ${{ matrix.scope }} iterations ${{ matrix.start_iteration }}-${{ matrix.end_iteration }}/${{ matrix.iteration_count }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: ${{ matrix.mode == 'characterization' }}
@@ -336,6 +302,10 @@ jobs:
       PROBE_TEST_FILES_JSON: ${{ matrix.automatic_characterization && needs.applicability.outputs.characterization_files_json || '[]' }}
       PROBE_SCOPE: ${{ matrix.scope }}
       PROBE_ITERATION_COUNT: ${{ matrix.iteration_count }}
+      PROBE_PACKET: ${{ matrix.packet }}
+      PROBE_START_ITERATION: ${{ matrix.start_iteration }}
+      PROBE_END_ITERATION: ${{ matrix.end_iteration }}
+      PROBE_REPETITIONS: ${{ matrix.repetitions }}
 
     steps:
       - name: Checkout exact probe ref
@@ -349,7 +319,9 @@ jobs:
           set -euxo pipefail
           echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "mode=$PROBE_MODE"
-          echo "iteration=${{ matrix.iteration }}/$PROBE_ITERATION_COUNT"
+          echo "iterations=$PROBE_START_ITERATION-$PROBE_END_ITERATION/$PROBE_ITERATION_COUNT"
+          echo "packet=$PROBE_PACKET"
+          echo "repetitions=$PROBE_REPETITIONS"
           echo "run_id=${{ github.run_id }}"
           echo "run_number=${{ github.run_number }}"
           echo "run_attempt=${{ github.run_attempt }}"
@@ -362,65 +334,32 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run fresh Plasmon probe iteration
+      - name: Run prepared Plasmon probe packet
         id: probe
         run: |
           set -o pipefail
           nix develop --command bash -lc '
             set -euxo pipefail
-            bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET" "$PROBE_TEST_FILE" "$PROBE_TEST_GREP" "$PROBE_TEST_FILES_JSON"
-          ' 2>&1 | tee flake-probe-output.log
+            PLASMON_PACKET_START_ITERATION="$PROBE_START_ITERATION" \
+            PLASMON_PACKET_REPETITIONS="$PROBE_REPETITIONS" \
+              bash test/e2e/run-plasmon-playwright-packet.sh -- \
+                bash test/ci/run-plasmon-flake-probe-iteration.sh
+          ' 2>&1 | tee flake-probe-packet-output.log
 
-      - name: Record probe iteration result
-        if: always()
-        run: |
-          set -u
-          mkdir -p flake-probe-result
-          {
-            echo "run_id=${{ github.run_id }}"
-            echo "run_number=${{ github.run_number }}"
-            echo "run_attempt=${{ github.run_attempt }}"
-            echo "mode=${PROBE_MODE:-unknown}"
-            echo "iteration=${{ matrix.iteration }}"
-            echo "iteration_count=${PROBE_ITERATION_COUNT:-unknown}"
-            echo "outcome=${{ steps.probe.outcome }}"
-            echo "sha=${PROBE_SHA:-unknown}"
-            echo "target=${PROBE_TARGET:-unknown}"
-            echo "scope=${PROBE_SCOPE:-unknown}"
-            echo "test_file=${PROBE_TEST_FILE:-}"
-            echo "test_grep=${PROBE_TEST_GREP:-}"
-            echo "test_files_json=${PROBE_TEST_FILES_JSON:-[]}"
-          } > flake-probe-result/result.txt
-
-      - name: Upload probe iteration result
+      - name: Upload probe iteration results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-result-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}
-          path: flake-probe-result/result.txt
+          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-result-${{ github.run_id }}-attempt-${{ github.run_attempt }}-packet-${{ matrix.packet }}
+          path: flake-probe-results
           if-no-files-found: error
           retention-days: 7
-
-      - name: Collect failed-probe-iteration diagnostics
-        if: always() && steps.probe.outcome != 'success'
-        run: |
-          set -u
-          mkdir -p flake-probe-diagnostics
-          cp flake-probe-result/result.txt flake-probe-diagnostics/result.txt 2>/dev/null || true
-          cp flake-probe-output.log flake-probe-diagnostics/probe-output.log 2>/dev/null || true
-          cp /tmp/plasmon-pocketic.log flake-probe-diagnostics/pocketic.log 2>/dev/null || true
-          if [ -d playwright-report ]; then
-            cp -R playwright-report flake-probe-diagnostics/playwright-report
-          fi
-          if [ -d test-results ]; then
-            cp -R test-results flake-probe-diagnostics/test-results
-          fi
 
       - name: Upload failed-probe-iteration diagnostics
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}
+          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-packet-${{ matrix.packet }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
@@ -429,14 +368,19 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
-          diagnostic_artifact="flake-probe-${PROBE_MODE:-unknown}-${PROBE_ITERATION_COUNT:-unknown}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}"
-          context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
+          diagnostic_artifact="flake-probe-${PROBE_MODE:-unknown}-${PROBE_ITERATION_COUNT:-unknown}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-packet-${PROBE_PACKET:-unknown}"
+          context_file="$(find flake-probe-diagnostics -name error-context.md -type f -print -quit 2>/dev/null || true)"
+          failed_iterations="$(grep -rl '^outcome=failure$' flake-probe-results --include=result.txt 2>/dev/null \
+            | sed -E 's#.*iteration-([0-9]+)/result.txt#\1#' \
+            | sort -n \
+            | paste -sd, - || true)"
 
           {
-            echo "## Plasmon flake probe iteration failure"
+            echo "## Plasmon flake probe packet failure"
             echo
             echo "- Probe mode: \`${PROBE_MODE:-unknown}\`"
-            echo "- Probe iteration: ${{ matrix.iteration }}/${PROBE_ITERATION_COUNT:-unknown}"
+            echo "- Probe iterations: ${PROBE_START_ITERATION:-unknown}-${PROBE_END_ITERATION:-unknown}/${PROBE_ITERATION_COUNT:-unknown}"
+            echo "- Failed iterations in this packet: ${failed_iterations:-setup failure before an iteration result was recorded}"
             echo "- Workflow run_number: ${{ github.run_number }}"
             echo "- Workflow run_attempt: ${{ github.run_attempt }}"
             echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
@@ -445,17 +389,17 @@ jobs:
             echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
             echo
-            echo "The failing command is the \`Run fresh Plasmon probe iteration\` step above; expand it for the original stdout/stderr."
+            echo "The failing command is the \`Run prepared Plasmon probe packet\` step above; each repetition is grouped separately in its stdout/stderr."
             echo
             if [ -n "$context_file" ]; then
               echo "### First Playwright error context"
               echo
               sed -n '1,120p' "$context_file"
             else
-              echo "No Playwright error-context.md was produced. The failure may have occurred before Playwright; use the failed probe step for the original error."
+              echo "No Playwright error-context.md was produced. The failure may have occurred during packet setup/reset; use the packet step for the original error."
             fi
             echo
-            echo "The diagnostic artifact also includes \`probe-output.log\` when probe output was produced."
+            echo "The diagnostic artifact keeps per-iteration \`probe-output.log\` and Playwright evidence when produced."
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   summary:
