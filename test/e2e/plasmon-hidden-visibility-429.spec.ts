@@ -56,6 +56,13 @@ async function openSettings(plasmon: FrameLocator) {
   return dialog;
 }
 
+async function activateTaskbarWindow(plasmon: FrameLocator, label: string): Promise<void> {
+  const taskbar = plasmon.getByRole("navigation", { name: "Taskbar" });
+  const task = taskbar.getByRole("button", { name: new RegExp(`^${label};`) }).first();
+  await expect(task).toBeVisible({ timeout: 20_000 });
+  await task.click();
+}
+
 test("#429 — packaged hidden visibility composes global Settings with Explorer-local state", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
@@ -130,7 +137,11 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 
     // Global ON makes hidden resources eligible and forces Explorer's local
-    // checkbox without overwriting the persisted local preference.
+    // checkbox without overwriting the persisted local preference. Restore the
+    // existing Settings window through real taskbar ownership before interacting
+    // with controls that can otherwise be covered by the active Explorer.
+    await activateTaskbarWindow(plasmon, "Settings");
+    await expect(settings).toHaveClass(/plasmon-window--active/);
     await globalHidden.check();
     await expect(globalHidden).toBeChecked();
     await expect(localHidden).toBeChecked();
@@ -143,6 +154,8 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
 
     // Turning the global policy back off hides Search/Start immediately while
     // restoring Explorer's pre-existing local ON state as editable.
+    await activateTaskbarWindow(plasmon, "Settings");
+    await expect(settings).toHaveClass(/plasmon-window--active/);
     await globalHidden.uncheck();
     await expect(globalHidden).not.toBeChecked();
     await expectNoSearchResult(plasmon, "Properties", "Properties");
@@ -156,6 +169,8 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 
     // Persist a non-default global value through a real installed-app reload.
+    await activateTaskbarWindow(plasmon, "Settings");
+    await expect(settings).toHaveClass(/plasmon-window--active/);
     await globalHidden.check();
     await expect(globalHidden).toBeChecked();
     await page.reload({ waitUntil: "domcontentloaded" });
