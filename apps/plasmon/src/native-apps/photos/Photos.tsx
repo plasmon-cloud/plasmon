@@ -25,7 +25,7 @@ export interface PhotosProps {
   nativeWindow?: WorkspaceWindowControl;
 }
 
-type PhotoSource = { url: string; title: string; mime: string; release: () => void };
+type PhotoSource = { url: string; title: string; mime: string };
 type PanzoomInstance = ReturnType<typeof Panzoom>;
 type PanzoomChangeEvent = Event & { detail?: { scale?: number } };
 
@@ -47,6 +47,7 @@ export default function Photos({ processId, target, fs, process, nativeWindow }:
 
   useEffect(() => {
     let active = true;
+    let release = () => {};
     setSource(null);
     setImageReady(false);
     setScale(1);
@@ -70,12 +71,8 @@ export default function Photos({ processId, target, fs, process, nativeWindow }:
         lease.release();
         return;
       }
-      setSource({
-        url: lease.url,
-        title: node.name || "Photos",
-        mime: lease.mime,
-        release: lease.release,
-      });
+      release = lease.release;
+      setSource({ url: lease.url, title: node.name || "Photos", mime: lease.mime });
       setLoading(false);
       process.setTitle(processId, node.name || "Photos");
     })().catch((reason: unknown) => {
@@ -87,16 +84,9 @@ export default function Photos({ processId, target, fs, process, nativeWindow }:
 
     return () => {
       active = false;
+      release();
     };
   }, [fs, process, processId, target.nodeId]);
-
-  // Keep each object URL alive for as long as React can still render its <img>.
-  // Passive-effect cleanup runs after a replacement/removal commit, avoiding a
-  // race where dependency cleanup revokes a URL while the old image is loading.
-  useEffect(() => {
-    if (!source) return;
-    return source.release;
-  }, [source]);
 
   useEffect(() => {
     const image = imageRef.current;
