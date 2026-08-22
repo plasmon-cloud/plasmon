@@ -155,17 +155,15 @@ try {
   for (const result of results) {
     const iteration = probeIteration(result, result.path, resultsRoot);
     const iterationCount = resultIterationCount(result, result.path, resultsRoot);
-    const isLegacy = !result.iteration && Boolean(result.attempt);
+    const isLegacyAttempt = !result.iteration && Boolean(result.attempt);
+    const isHistoricalTenIteration = iterationCount === null;
     if (!result.sha || result.sha === "unknown") {
       throw new Error(`missing exact SHA in ${relative(resultsRoot, result.path)}`);
     }
     if (!result.target || result.target === "unknown") {
       throw new Error(`missing target in ${relative(resultsRoot, result.path)}`);
     }
-    if (!isLegacy) {
-      if (iterationCount === null) {
-        throw new Error(`missing iteration_count in ${relative(resultsRoot, result.path)}`);
-      }
+    if (!isHistoricalTenIteration) {
       if (!result.scope || result.scope === "unknown") {
         throw new Error(`missing scope in ${relative(resultsRoot, result.path)}`);
       }
@@ -180,9 +178,21 @@ try {
       runNumbers.add(result.run_number);
       runAttempts.add(result.run_attempt);
     } else {
-      legacyResults += 1;
       iterationCounts.add(10);
-      scopes.add(result.target);
+      scopes.add(result.scope && result.scope !== "unknown" ? result.scope : result.target);
+      if (result.run_number) {
+        if (!/^\d+$/.test(result.run_number)) {
+          throw new Error(`invalid workflow run_number in ${relative(resultsRoot, result.path)}`);
+        }
+        runNumbers.add(result.run_number);
+      }
+      if (result.run_attempt) {
+        if (!/^\d+$/.test(result.run_attempt)) {
+          throw new Error(`invalid workflow run_attempt in ${relative(resultsRoot, result.path)}`);
+        }
+        runAttempts.add(result.run_attempt);
+      }
+      if (isLegacyAttempt) legacyResults += 1;
     }
     iterations.add(iteration);
     shas.add(result.sha);
