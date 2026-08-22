@@ -32,7 +32,7 @@ export function useFileEntryResolvedPresentation(
   associations: AssociationRegistry | undefined,
   entryRef: RefObject<HTMLDivElement | null>,
 ): FileEntryResolvedPresentation {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [thumbnail, setThumbnail] = useState<LoadedImageThumbnail | null>(null);
   const [resourcePresentation, setResourcePresentation] = useState(
     () => fallbackFileResourcePresentation(node, associations),
   );
@@ -56,36 +56,36 @@ export function useFileEntryResolvedPresentation(
   useEffect(() => {
     let active = true;
     let observer: IntersectionObserver | null = null;
-    let loaded: LoadedImageThumbnail | null = null;
     const hasReferencedPreview = readResourcePreviewMetadata(node) !== null;
     const canLoadOwnImage = canLoadImageThumbnail(node);
     if (!hasReferencedPreview && !canLoadOwnImage) {
-      setThumbnailUrl(null);
+      setThumbnail(null);
       return undefined;
     }
 
     const load = () => {
       void (async () => {
-        const thumbnail = hasReferencedPreview
+        const loaded = hasReferencedPreview
           ? await loadResourcePreviewThumbnail(fs, node)
           : null;
-        return thumbnail ?? (canLoadOwnImage ? loadImageThumbnail(fs, node) : null);
+        return loaded ?? (canLoadOwnImage ? loadImageThumbnail(fs, node) : null);
       })()
-        .then((thumbnail) => {
-          if (!thumbnail) {
-            if (active) setThumbnailUrl(null);
+        .then((loaded) => {
+          if (!loaded) {
+            if (active) setThumbnail(null);
             return;
           }
           if (!active) {
-            thumbnail.revoke();
+            loaded.revoke();
             return;
           }
-          loaded?.revoke();
-          loaded = thumbnail;
-          setThumbnailUrl(thumbnail.url);
+          // Keep the previous lease alive until React commits this replacement.
+          // Revoking it in this loading effect's cleanup can leave a still-rendered
+          // <img> pointing at a revoked blob URL while FsNode snapshots re-resolve.
+          setThumbnail(loaded);
         })
         .catch(() => {
-          if (active) setThumbnailUrl(null);
+          if (active) setThumbnail(null);
         });
     };
 
@@ -105,15 +105,21 @@ export function useFileEntryResolvedPresentation(
     return () => {
       active = false;
       observer?.disconnect();
-      loaded?.revoke();
     };
   }, [fs, node.contentHash, node.id, node.metadata, node.mime, node.modifiedAt, node.name, node.size, entryRef]);
 
+  // The rendered thumbnail owns its object URL. Cleanup therefore follows a
+  // replacement/removal commit instead of racing ahead of the <img> lifecycle.
+  useEffect(() => {
+    if (!thumbnail) return;
+    return thumbnail.revoke;
+  }, [thumbnail]);
+
   return {
     visualKind: fileVisualKind(node),
-    iconPresentation: thumbnailUrl
-      ? { kind: "thumbnail", src: thumbnailUrl, mediaKind: "image" }
+    iconPresentation: thumbnail
+      ? { kind: "thumbnail", src: thumbnail.url, mediaKind: "image" }
       : resourcePresentation.presentation,
-    shortcut: !thumbnailUrl && resourcePresentation.shortcut,
+    shortcut: !thumbnail && resourcePresentation.shortcut,
   };
 }
