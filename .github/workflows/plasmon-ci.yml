@@ -40,7 +40,12 @@ jobs:
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
 
       - name: Verify flake-probe workflow contract
-        run: node test/ci/verify-flake-probe.mjs
+        run: |
+          set -euxo pipefail
+          node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
+          node test/ci/verify-flake-summary-human.mjs
+          node test/ci/verify-playwright-packet-lifecycle.mjs
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2

@@ -54,9 +54,11 @@ Testing / Integration owns shared A-D harness repairs. Domain implementors shoul
 
 ## Installed Plasmon acceptance environment
 
-`plasmon-local.ndeploy.json` is the source of truth for required production archives. The repository-owned `test/e2e/plasmon-demo-environment.ts` path derives the required workspaces from that manifest, packages only those artifacts, verifies the archives, and delegates lifecycle work to existing `neutron-provision`.
+The canonical deployment rules are in [`../TESTING.md`](../TESTING.md). The repository-owned coordinator is `../../test/e2e/plasmon-deployment-environment.ts`; it requires an explicit `local` or `demo` scope and derives the required workspaces from that scope's manifest.
 
-Do not add a second hand-maintained package list, a second PocketIC implementation, or test-only product behavior. Preserve the real boundary:
+`plasmon-local.ndeploy.json` is the bounded local/CI source of truth used by the required Plasmon packaged browser lanes. `plasmon.ndeploy.json` is the fuller demo deployment. Do not interchange the `plasmon:local:*` and `plasmon:demo:*` command families, and do not add a second hand-maintained package list, a second PocketIC implementation, or test-only product behavior.
+
+Preserve the real boundary:
 
 ```text
 package
