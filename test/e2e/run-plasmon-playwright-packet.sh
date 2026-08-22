@@ -59,28 +59,19 @@ if [ "$pocketic_ready" -ne 1 ]; then
 fi
 
 npm run plasmon:local:status
+npm run plasmon:local:reinstall
+
+# Everything below this boundary runs against the already prepared package,
+# PocketIC process, and installed local deployment. Nested runners use this
+# readiness flag to skip duplicate environment setup.
+export PLASMON_PLAYWRIGHT_ENV_READY=1
+export PLASMON_PACKET_POCKETIC_LOG="$pocketic_log"
 
 overall_status=0
 for ((offset = 0; offset < repetitions; offset += 1)); do
   iteration=$((start_iteration + offset))
-  reset_log="/tmp/plasmon-packet-reset-${iteration}.log"
-  : > "$reset_log"
-
-  echo "::group::Plasmon Playwright repetition ${iteration} reset"
-  reset_failed=0
-  if ! npm run plasmon:local:reinstall 2>&1 | tee "$reset_log"; then
-    reset_failed=1
-    overall_status=1
-  fi
-  echo "::endgroup::"
-
   echo "::group::Plasmon Playwright repetition ${iteration} execution"
-  if ! PLASMON_PLAYWRIGHT_ENV_READY=1 \
-    PLASMON_PACKET_ITERATION="$iteration" \
-    PLASMON_PACKET_RESET_FAILED="$reset_failed" \
-    PLASMON_PACKET_RESET_LOG="$reset_log" \
-    PLASMON_PACKET_POCKETIC_LOG="$pocketic_log" \
-    "${command[@]}"; then
+  if ! PLASMON_PACKET_ITERATION="$iteration" "${command[@]}"; then
     overall_status=1
   fi
   echo "::endgroup::"
