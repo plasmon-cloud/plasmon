@@ -21,3 +21,17 @@ test("#200 shared Monaco host does not absorb document or Process authority", ()
   expect(host).not.toContain("useDocumentSession");
   expect(host).not.toContain("saveAs(");
 });
+
+test("#415 Text keeps one Monaco surface while Save As rebinds filesystem identity", () => {
+  const text = read("src/native-apps/text/TextEditor.tsx");
+  expect(text).toContain('modelKey={`text:${processId}`}');
+  expect(text).not.toContain("snapshot.nodeId ?? target.nodeId");
+});
+
+test("#415 shared Monaco host exposes the actual live model language and identity", () => {
+  const host = read("src/native-apps/shared/monaco/MonacoEditorHost.tsx");
+  expect(host).toContain('data-editor-language={modelLanguage ?? ""}');
+  expect(host).toContain('data-editor-model-uri={modelUri ?? ""}');
+  expect(host).toContain("setModelLanguage(model.getLanguageId())");
+  expect(host).toContain("syncEditorModelLanguage(");
+});
