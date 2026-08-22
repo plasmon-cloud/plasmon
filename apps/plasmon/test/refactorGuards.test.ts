@@ -263,7 +263,7 @@ describe("Plasmon refactor guards", () => {
       const startShortcuts = await collectStartShortcuts(environment);
       expect(startShortcuts.filter(
         ({ target }) => target.kind === "native" && target.handlerId === settingsDefinition.handlerId,
-      )).toHaveLength(1);
+      )).toHaveLength(0);
       expect(startShortcuts.filter(
         ({ target }) => target.kind === "element" && target.elementId === reviewElement.id,
       )).toHaveLength(1);
