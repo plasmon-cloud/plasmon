@@ -1,5 +1,7 @@
 # Shared Monaco browser-runtime host
 
+<!-- plasmon-docs-review:v1 sha256=4807afceb014367a021628aa7dc0651adeba6b8decb697018baaca8a4f098804 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 This directory is the single Monaco browser adapter consumed by the first-party Text and Markdown document applications.
 
 - `MonacoEditorHost.tsx` owns the concrete browser/editor lifecycle: Monaco import/create/dispose, per-live-surface model ownership, loading/ready/error presentation, focus/layout, value synchronization, and language updates.

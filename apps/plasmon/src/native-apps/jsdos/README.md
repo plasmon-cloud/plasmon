@@ -1,5 +1,7 @@
 # js-dos runtime host
 
+<!-- plasmon-docs-review:v1 sha256=fe99c3f2a344ea44ae694270c278fb688009f89d2564a93acd255269fbb2a004 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 This directory integrates the js-dos browser runtime and player as an
 association-backed content runtime. Every shipped Plasmon package profile
 omits this optional runtime and its game payload; this source remains deferred

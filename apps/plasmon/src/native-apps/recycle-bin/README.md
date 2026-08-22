@@ -1,5 +1,7 @@
 # Recycle Bin
 
+<!-- plasmon-docs-review:v1 sha256=e12efd7d0cd85bf42c433012360f9e042f15b23846b284a53d9e90c08711800a base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 `native:recycle-bin` is the first-class Plasmon surface for filesystem Trash operations.
 
 ## Authority boundary
