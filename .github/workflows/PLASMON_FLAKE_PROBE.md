@@ -27,6 +27,8 @@ The selector handles these inputs:
 - a modified helper/fixture under `test/e2e/**` is mapped to the relevant Playwright tests that statically import it, including transitive relative imports;
 - shared Playwright configuration and runner/inventory/workflow files use the documented fallback below.
 
+This is deliberately a static relative-import impact analysis: it follows source-controlled relative imports only and never executes test code merely to decide what CI should run.
+
 The target is an internal `exact-set`: every selected file is passed directly to one Playwright invocation per fresh probe iteration. This avoids multiplying package/PocketIC setup by the number of impacted files while still running the entire selected set with `--workers=1 --retries=0`.
 
 ### Shared-support fallback
