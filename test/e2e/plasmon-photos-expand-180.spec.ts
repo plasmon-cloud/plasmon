@@ -1,9 +1,13 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Route } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
-const SVG_FIXTURE = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64"><rect width="96" height="64" fill="#4969d8"/><circle cx="48" cy="32" r="18" fill="#f2f4ff"/></svg>`;
+const APP_ID = "plasmon";
+const TILE_ID = "main";
+const FIXTURE_PARAM = "plasmon-fixture";
+const FIXTURE_VALUE = "first-demo";
+const FIXTURE_NAME = "First Demo Artwork.svg";
 const GEOMETRY_TOLERANCE_PX = 1;
 
 function geometryMatches(
@@ -43,6 +47,29 @@ async function hasMaximizedManagerGeometry(window: Locator): Promise<boolean> {
 test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
+  const fixtureRoute = `**/app/${APP_ID}/**`;
+  let fixtureRedirected = false;
+  let fixtureRouteInstalled = false;
+  const redirectInitialPlasmonDocument = async (route: Route) => {
+    const requestUrl = new URL(route.request().url());
+    const appRoot = `/app/${APP_ID}/`;
+    const isMainDocument = route.request().resourceType() === "document"
+      && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
+    if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
+      await route.continue();
+      return;
+    }
+
+    fixtureRedirected = true;
+    requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
+    await route.fulfill({
+      status: 307,
+      headers: {
+        location: requestUrl.href,
+        "cache-control": "no-store",
+      },
+    });
+  };
   const health = installPlasmonBrowserHealth(page, {
     firstPartyOrigins: [kernelUrl],
     allow: [
@@ -70,51 +97,60 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
   try {
     await page.goto(kernelUrl);
     await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
-    await page.evaluate(
+    const principal = await page.evaluate(
       (seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed),
       runtime.developerIdentitySeed,
     );
+    expect(principal).toBe(runtime.developerIdentityPrincipal);
+
+    // Reuse the repository-authored first-demo image through the production
+    // demo seed contract. This avoids the unrelated Neutron Files import RPC
+    // while preserving filesystem -> association -> Process/Windowing -> Photos.
+    await page.route(fixtureRoute, redirectInitialPlasmonDocument);
+    fixtureRouteInstalled = true;
+    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
+      try {
+        const url = new URL(candidate.url());
+        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
+          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
+      } catch {
+        return false;
+      }
+    });
 
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
-    await page.locator('[data-tid="launcher-tile-plasmon-main"]').click();
+    await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
+    await fixtureNavigation;
+    expect(fixtureRedirected, "installed Plasmon should boot with the explicit first-demo flag").toBe(true);
 
-    const plasmonSelector = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
-    await expect(page.locator(plasmonSelector)).toBeVisible();
-    const plasmon = page.frameLocator(plasmonSelector);
+    const plasmonSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
+    await expect(page.locator(plasmonSelector).first()).toBeAttached();
+    const plasmon = page.frameLocator(plasmonSelector).first();
+    await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+    const activeAppUrl = new URL(await plasmon.locator("html").evaluate(() => window.location.href));
+    expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
+    await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
+    fixtureRouteInstalled = false;
+
     const windowLayer = plasmon.locator(".plasmon-window-layer").first();
     await expect(windowLayer).toBeVisible({ timeout: 30_000 });
 
-    // Import a real image through Explorer so activation continues through the
-    // normal filesystem -> association -> Process/Windowing -> Photos path.
-    const windows = windowLayer.locator("[data-window-id]");
-    const initialWindowCount = await windows.count();
-    const rootShortcut = plasmon.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-    await rootShortcut.dblclick();
-    await expect(windows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
+    // Open the authored image through normal Search -> AssociationRegistry ->
+    // OpenService dispatch. #180 does not depend on Files import behavior.
+    await plasmon.getByRole("button", { name: "Search" }).click();
+    const search = plasmon.getByLabel("Search Plasmon");
+    await expect(search).toBeVisible();
+    await search.fill("First Demo Artwork");
+    const artworkResult = plasmon.locator("[data-search-result]", { hasText: FIXTURE_NAME }).first();
+    await expect(artworkResult).toBeVisible({ timeout: 15_000 });
+    await artworkResult.click();
 
-    const explorer = windows.last();
-    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-    const fixtureName = `photos-expand-${Date.now()}.svg`;
-    const chooserPromise = page.waitForEvent("filechooser");
-    await explorer.getByRole("button", { name: "Import Files…" }).click();
-    const chooser = await chooserPromise;
-    await chooser.setFiles({
-      name: fixtureName,
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from(SVG_FIXTURE),
-    });
-
-    const fixture = explorer.locator("[data-fm-node-id]", { hasText: fixtureName }).first();
-    await expect(fixture).toBeVisible({ timeout: 20_000 });
-    await fixture.dblclick();
-
-    const photosWindow = plasmon.getByRole("dialog", { name: fixtureName }).last();
+    const photosWindow = plasmon.getByRole("dialog", { name: FIXTURE_NAME }).last();
     await expect(photosWindow).toBeVisible({ timeout: 20_000 });
     const photos = photosWindow.locator("[data-photos-display-mode]");
     await expect(photos).toHaveAttribute("data-photos-display-mode", "normal");
-    await expect(photosWindow.getByRole("img", { name: fixtureName })).toBeVisible();
+    await expect(photosWindow.getByRole("img", { name: FIXTURE_NAME })).toBeVisible();
 
     // This is the actual installed Neutron feature policy, not a stubbed browser
     // API. The fallback must stay inside Plasmon and leave document fullscreen empty.
@@ -165,6 +201,7 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
 
     health.assertClean();
   } finally {
+    if (fixtureRouteInstalled) await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
     health.dispose();
   }
 });
