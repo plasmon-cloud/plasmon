@@ -112,6 +112,14 @@ function resolveRelativeImport(importer, specifier, root) {
   return null;
 }
 
+function repositoryPathReferences(source, sourcePaths) {
+  // Some browser fixtures are intentionally handed to bundlers/runners by a
+  // repository-root string path rather than a JS import. Treat an exact source
+  // path literal as a dependency edge so those helpers still get the narrowest
+  // resolvable characterization scope.
+  return sourcePaths.filter((candidate) => source.includes(candidate));
+}
+
 function buildSourceGraph(root) {
   const e2eRoot = resolve(root, "test/e2e");
   const sources = new Map();
@@ -120,12 +128,18 @@ function buildSourceGraph(root) {
     if (isSourcePath(path)) sources.set(path, readFileSync(file, "utf8"));
   }
 
+  const sourcePaths = [...sources.keys()];
   const graph = new Map();
   for (const [path, source] of sources) {
-    const dependencies = staticImportSpecifiers(source)
-      .map((specifier) => resolveRelativeImport(path, specifier, root))
-      .filter(Boolean);
-    graph.set(path, new Set(dependencies));
+    const dependencies = new Set(
+      staticImportSpecifiers(source)
+        .map((specifier) => resolveRelativeImport(path, specifier, root))
+        .filter(Boolean),
+    );
+    for (const dependency of repositoryPathReferences(source, sourcePaths)) {
+      if (dependency !== path) dependencies.add(dependency);
+    }
+    graph.set(path, dependencies);
   }
   return { sources, graph };
 }
@@ -176,9 +190,15 @@ function isRelevantPlaywrightTest(path, graph, sources, playwrightMemo) {
 function supportPathNeedsFallback(path, root, impactedCount) {
   if (impactedCount > 0) return false;
   const absolute = resolve(root, path);
-  if (path.startsWith("test/e2e/plasmon-")) return true;
-  if (!existsSync(absolute) && deletedSharedHelperFallbacks.has(path)) return true;
-  return false;
+  if (!path.startsWith("test/e2e/") || playwrightTestPattern.test(path) || !isSourcePath(path)) {
+    return false;
+  }
+  // Any changed E2E source helper/fixture whose Plasmon consumers cannot be
+  // resolved must fail closed. Filename prefixes are not an ownership proof:
+  // helpers such as permission-dialog.fixture.tsx can be reached through
+  // runner/bundler path strings instead of static imports.
+  if (existsSync(absolute)) return true;
+  return deletedSharedHelperFallbacks.has(path);
 }
 
 function selectionHash(files) {
