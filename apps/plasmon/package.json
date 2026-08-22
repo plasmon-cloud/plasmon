@@ -13,7 +13,7 @@
     "docs:review": "bun docs/documentation-review.mjs review",
     "mogen": "bun ../../packages/neutron-scripts/src/mogen.ts",
     "mopack": "bun ../../packages/neutron-scripts/src/mopack.ts",
-    "schema": "bun ../../packages/neutron-scripts/src/mogen.ts",
+    "schema": "bun ../../packages/neutron-scripts/src/method_schema.ts",
     "validate": "bun ../../packages/neutron-scripts/src/validate.ts",
     "package": "npm run validate && npm run build && npm run mopack && npm run schema && bun ../../packages/neutron-scripts/src/pack.ts",
     "watch": "bun monacoWorkerTransport.ts generate && bun build.ts watch",
