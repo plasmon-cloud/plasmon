@@ -107,9 +107,10 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     // ready, so submitting the address before this point can be silently ignored.
     await expect(files).toBeVisible({ timeout: 20_000 });
     const address = explorer.getByRole("textbox", { name: "Address" });
+    const breadcrumb = explorer.getByRole("navigation", { name: "Location breadcrumb" });
     await address.fill("/System");
     await address.press("Enter");
-    await expect(files.getByRole("option").filter({ hasText: "RecycleBin.sys" })).toBeVisible({ timeout: 20_000 });
+    await expect(breadcrumb.getByRole("button", { name: "System", exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(address).toHaveValue("/System");
 
     const localHidden = explorer.getByRole("checkbox", { name: "Show hidden files" });
