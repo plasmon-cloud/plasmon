@@ -130,13 +130,13 @@ export async function isNodeEligibleForHiddenVisibility(
   nodeId: NodeId,
   alwaysShowHiddenFiles: boolean,
 ): Promise<boolean> {
-  if (alwaysShowHiddenFiles) return true;
   let node: FsNode;
   try {
     node = await fs.stat(nodeId);
   } catch {
     return false;
   }
+  if (alwaysShowHiddenFiles) return true;
   if (!node.parentId) return true;
   try {
     const visible = await fs.list(node.parentId, { includeHidden: false, sort: "name" });
