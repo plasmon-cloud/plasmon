@@ -1,0 +1,92 @@
+.start-panel .primary-button { margin-top: 2px; }
+.empty-review-option summary,
+.optional-files summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 680;
+}
+.empty-review-option[open] summary,
+.optional-files[open] summary { color: var(--text); }
+.empty-review-option .secondary-button { margin-top: 8px; }
+
+.snapshot-action { margin-top: 8px; }
+.submission-preview-wrap { margin-top: 10px; }
+.submission-preview-wrap textarea {
+  min-height: 160px;
+  max-height: 300px;
+  resize: vertical;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--surface-soft);
+}
+.optional-files {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.optional-files input { margin-bottom: 7px; }
+.collaboration-note { margin: 10px 0 0; }
+.first-run-cta { margin-top: 16px; }
+
+.review-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 12, 18, .56);
+  backdrop-filter: blur(2px);
+}
+.review-dialog {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 40px));
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+  padding: 18px;
+}
+.dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.dialog-heading h2 { margin: 4px 0 5px; font-size: 22px; }
+.dialog-heading p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; max-width: 630px; }
+.dialog-close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+}
+.plan-textarea {
+  min-height: 300px;
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.optional-label { color: var(--faint); font-weight: 500; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.import-files { margin-top: 16px; }
+.file-path-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.file-path-row input { margin: 0; }
+
+@media (min-width: 1160px) {
+  .review-shell { grid-template-columns: 225px minmax(560px, 1fr) 300px; }
+}
+
+@media (max-width: 780px) {
+  /* On a narrow screen the thing being reviewed is more important than the
+     catalog/start controls. First-run still has its own primary paste CTA. */
+  .review-workspace { order: 1; }
+  .review-nav { order: 2; }
+  .review-inspector { order: 3; }
+  .review-dialog-backdrop { padding: 8px; align-items: stretch; }
+  .review-dialog { max-height: calc(100vh - 16px); margin: auto 0; }
+  .plan-textarea { min-height: 240px; }
+  .dialog-actions { flex-direction: column-reverse; }
+  .dialog-actions button { width: 100%; }
+  .file-path-row { grid-template-columns: 1fr; }
+}
