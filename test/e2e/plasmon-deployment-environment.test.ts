@@ -77,7 +77,7 @@ describe("Plasmon deployment command semantics", () => {
     expect(actual.map((artifact) => artifact.archivePath)).toEqual([
       "apps/kernel/kernel.v0.3.6.neutron",
       "apps/plasmon/plasmon.v0.1.0.neutron",
-      "apps/review/review.v0.1.0.neutron",
+      "apps/review/review.v0.1.1.neutron",
     ]);
   });
 
