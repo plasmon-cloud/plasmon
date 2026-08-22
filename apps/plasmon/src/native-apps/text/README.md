@@ -18,18 +18,22 @@ Monaco worker executables are packaged beneath the canonical `/System/Program Fi
 
 The host does not own FsService reads/writes, document dirty/conflict state, Save/Save As, autosave, Process close negotiation, Markdown preview, or app-specific commands/chrome. A semantic document key is not a Monaco model ownership key: each live editor surface gets a distinct concrete model URI and disposes only its own model.
 
+Text keeps one Monaco surface for the lifetime of one native Text process. Save As may rebind that document session to a new filesystem `NodeId`, but it does not replace the live Monaco model merely because resource identity changed. The shared host synchronizes the canonical language onto that same model with Monaco's language-update API, preserving the editor-owned live state instead of recreating the model.
+
 ## Refactor direction
 
 Continue sharing document-session, close-decision, command, status, and editor-chrome infrastructure with Markdown/other document apps. Keep Monaco-specific browser lifecycle isolated in the shared host and expose mature editor capabilities through reusable command models/UI rather than app-specific shortcuts only.
 
-Shared language/type metadata comes from canonical resource classification rather than a Text-only extension table.
+Shared language/type metadata comes from canonical resource classification rather than a Text-only extension table. Text Save As keeps recognized text/source/markup destination types filename-derived instead of copying the source resource's MIME onto the new node; unsupported destinations receive Text's explicit safe plaintext fallback. This preserves #189 precedence while allowing later filename changes such as `.js` to `.txt` to change derived language again.
 
 When a typed shared preference store becomes an accepted OS capability, editor autosave preference persistence should be injected through that authority rather than added as Text/Markdown-private storage.
 
 ## Testing
 
-Use fast tests for document sessions, dirty-close decisions, conflicts/save/reopen, discard/flush behavior, shared editor-model ownership, language/type mapping, worker route selection, and adapter policy. Use real-browser/package tests for Monaco creation/readiness, workers/assets, focus/selection, keyboard commands, and the actual rendered close interaction.
+Use fast tests for document sessions, dirty-close decisions, conflicts/save/reopen, discard/flush behavior, Save As target/classification transitions, shared editor-model ownership, in-place language updates, language/type mapping, worker route selection, and adapter policy. Use real-browser/package tests for Monaco creation/readiness, workers/assets, focus/selection, keyboard commands, language/tokenization behavior, and the actual rendered close interaction.
 
-The packaged golden-path acceptance creates a real `.txt` document through Explorer, opens it through normal filesystem association/process/window routing, waits for the semantic Monaco readiness contract (`data-editor-engine="monaco"`, `data-editor-ready="true"`, and the `Text content` editor label), edits and saves through the production document session, then closes/reopens and verifies the persisted text from the rendered Monaco model. Keep deterministic save/conflict/session cases in fast tests rather than expanding that browser journey.
+The packaged golden-path acceptance creates or opens real filesystem documents through Explorer, normal association/process/window routing, and the production document session. It waits for the semantic Monaco readiness contract (`data-editor-engine="monaco"`, `data-editor-ready="true"`, and the editor's accessible source label), edits and saves, then closes/reopens and verifies persisted text from the rendered Monaco model. The host also exposes the actual live model language and concrete model URI as semantic test signals so packaged acceptance can distinguish a real `setModelLanguage()` transition from a status-label-only change without relying on screenshot colors.
+
+The #415 regression path specifically starts from a plain `.txt` Text document, saves it as `.js`, proves the same live Monaco model changes to JavaScript and renders representative syntax token classes, remains editable, saves, and reopens through the resulting canonical filesystem identity with JavaScript recognition intact. Keep `.txt -> .js -> .txt`, explicit-MIME precedence, and unsupported fallback semantics in fast deterministic tests.
 
 The #89 packaged worker acceptance separately runs in installed Chromium. Package coverage proves both browser transport forms remain byte-identical to the canonical Program Files workers; browser coverage verifies the installed preload, opaque-origin `blob:` classic-Worker construction, real editor/TypeScript worker message exchange, zero worker errors/fallback warnings, and strict BrowserHealth during worker startup.
