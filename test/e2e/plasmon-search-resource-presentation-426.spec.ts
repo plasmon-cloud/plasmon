@@ -22,6 +22,10 @@ async function finishElementAnimations(locator: Locator): Promise<void> {
   });
 }
 
+async function expectDesktopFixture(plasmon: ReturnType<Page["frameLocator"]>, name: string): Promise<void> {
+  await expect(plasmon.getByRole("option").filter({ hasText: name })).toBeVisible();
+}
+
 function expectNear(actual: number, expected: number, label: string): void {
   expect(Math.abs(actual - expected), label).toBeLessThanOrEqual(1);
 }
@@ -52,6 +56,9 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
     { name: "issue426-tall.png", mimeType: "image/png", buffer: TALL_PNG },
     { name: "issue426-note.txt", mimeType: "text/plain", buffer: Buffer.from("issue 426 document") },
   ]);
+  await expectDesktopFixture(plasmon, "issue426-wide.png");
+  await expectDesktopFixture(plasmon, "issue426-tall.png");
+  await expectDesktopFixture(plasmon, "issue426-note.txt");
 
   await plasmon.getByRole("button", { name: "Search" }).click();
   const panel = plasmon.getByRole("region", { name: "Search" });
@@ -98,6 +105,7 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
     mimeType: "image/png",
     buffer: Buffer.alloc(0),
   });
+  await expectDesktopFixture(plasmon, "issue426-unavailable.png");
   await expect(mediaRows).toHaveCount(3);
   const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
   await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
