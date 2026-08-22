@@ -59,7 +59,17 @@ if [ "$pocketic_ready" -ne 1 ]; then
 fi
 
 npm run plasmon:local:status
-npm run plasmon:local:reinstall
+
+isolation_json="$(node test/ci/plasmon-playwright-isolation.mjs)"
+isolation_mode="$(printf '%s' "$isolation_json" | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => process.stdout.write(JSON.parse(s).mode));')"
+echo "Prepared Playwright isolation: $isolation_json"
+
+initial_reset_log="/tmp/plasmon-packet-reset-${start_iteration}.log"
+: > "$initial_reset_log"
+initial_reset_failed=0
+if ! npm run plasmon:local:reinstall 2>&1 | tee "$initial_reset_log"; then
+  initial_reset_failed=1
+fi
 
 # Everything below this boundary runs against the already prepared package,
 # PocketIC process, and installed local deployment. Nested runners use this
@@ -70,8 +80,28 @@ export PLASMON_PACKET_POCKETIC_LOG="$pocketic_log"
 overall_status=0
 for ((offset = 0; offset < repetitions; offset += 1)); do
   iteration=$((start_iteration + offset))
+  reset_failed="$initial_reset_failed"
+  reset_log="$initial_reset_log"
+
+  # Files explicitly marked @plasmon-prepared-env-reuse are responsible for
+  # not mutating persistent canister/filesystem state. Everything else fails
+  # closed to a reinstall reset between observations.
+  if [ "$offset" -gt 0 ] && [ "$isolation_mode" = "reinstall" ]; then
+    reset_log="/tmp/plasmon-packet-reset-${iteration}.log"
+    : > "$reset_log"
+    reset_failed=0
+    echo "::group::Plasmon Playwright repetition ${iteration} persistent-state reset"
+    if ! npm run plasmon:local:reinstall 2>&1 | tee "$reset_log"; then
+      reset_failed=1
+    fi
+    echo "::endgroup::"
+  fi
+
   echo "::group::Plasmon Playwright repetition ${iteration} execution"
-  if ! PLASMON_PACKET_ITERATION="$iteration" "${command[@]}"; then
+  if ! PLASMON_PACKET_ITERATION="$iteration" \
+    PLASMON_PACKET_RESET_FAILED="$reset_failed" \
+    PLASMON_PACKET_RESET_LOG="$reset_log" \
+    "${command[@]}"; then
     overall_status=1
   fi
   echo "::endgroup::"
