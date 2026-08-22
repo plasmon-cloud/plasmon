@@ -27,7 +27,7 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 
 ## #279 left-snap / snap-preview restoration proof
 
-Issue #279 restores `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap` — to required serialized Specialist execution. The test retains `@issue-277` history and adds `@issue-279`; it no longer carries `@r2-quarantine` on the restoration head.
+Issue #279 restores `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap` — to required serialized Specialist execution. This is the restoration owner for the quarantine created under #277. The test retains `@issue-277` history and adds `@issue-279`; it no longer carries `@r2-quarantine` on the restoration head.
 
 The restored acceptance uses the shared real-titlebar pointer helper: Playwright first establishes titlebar actionability, the helper then derives a currently hit-testable non-control point, raw mouse input establishes the production `data-interacting="drag"` lifecycle, and release waits for that lifecycle to clear. Visible left preview, preview geometry, usable-workspace containment, and committed `data-window-snap="left"` remain required.
 
