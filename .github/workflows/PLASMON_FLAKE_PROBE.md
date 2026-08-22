@@ -58,6 +58,23 @@ If all changed Playwright acceptances are quarantined, automatic 50-iteration ch
 
 The same product rule applies to the `ci:flake-probe` label work owned by #410: a label must not bypass quarantine.
 
+## `ci:flake-probe` labeled probes
+
+The `ci:flake-probe` label requests a fresh **50-iteration** targeted diagnostic run for the exact current PR head. It is not a second broad Specialist run and it never bypasses quarantine.
+
+Target selection is deliberately narrow:
+
+1. An explicit PR-body directive may name `Flake-Probe-Target: test/e2e/<file>.spec.ts` and optionally `Flake-Probe-Grep: <title-or-tag>`.
+2. The bounded named direct targets `right-snap`, `left-snap`, `window-lifetime`, `monaco`, `emulatorjs`, and `saved-preview` are also accepted.
+3. Without an explicit directive, the label selector may reuse #409 selection only when exactly one Playwright file is resolved.
+4. If the target is absent or ambiguous, the label workflow fails closed and asks for an explicit target rather than launching fifty broad runs.
+
+`all` and `specialist` are rejected as label targets. Every exact or named direct target reaches the shared probe runner, which applies `--workers=1 --retries=0 --grep-invert @r2-quarantine`; therefore a quarantine tag remains an absolute execution exclusion even when the containing file or named boundary is requested.
+
+GitHub workflow dispatch requires a branch or tag as its transport ref. The label bridge therefore dispatches through the same-repository PR head branch while passing the immutable PR head SHA as the probe workflow's `ref` input. The probe checks out that exact SHA.
+
+While the label remains present, every later `synchronize` event requests another fresh 50-iteration probe for the new exact head. Removing the label prevents future synchronize-triggered labeled probes but does not cancel a run already dispatched. Removing and re-adding the label can request another fresh probe on the same SHA.
+
 ## Setup lifecycle and follow-up optimization
 
 #409 intentionally keeps the current per-iteration package/provision lifecycle so the targeting correction does not expand into a broader harness refactor.

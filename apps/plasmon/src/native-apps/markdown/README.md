@@ -1,5 +1,7 @@
 # Markdown editor
 
+<!-- plasmon-docs-review:v1 sha256=8013e32b8e78baa848c3d5ca4ce99b43901762a92b10a95bec1dad378223ded7 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 Markdown is a Plasmon native document application built on the shared Monaco browser-runtime host in `../shared/monaco/`, the shared document session from `../text/`, and a sanitized rendered preview.
 
 `MarkdownEditor.tsx` coordinates edit/split/preview presentation. `MarkdownPreview.tsx` and `render.ts` own rendered Markdown presentation/sanitization. Loading, dirty state, save/conflict behavior, persistence, and dirty-close decisions reuse the shared Text document infrastructure, including the same deterministic close model and Save / Discard / Cancel prompt. Monaco editor/model/worker lifecycle is not Text- or Markdown-owned; both apps consume `MonacoEditorHost`.

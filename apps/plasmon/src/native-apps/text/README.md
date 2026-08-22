@@ -1,5 +1,7 @@
 # Text / Monaco editor
 
+<!-- plasmon-docs-review:v1 sha256=978bbfbd0d366b62ae81c51cd83529ce60b277576a019b120a83676fb9834187 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 Text is the Plasmon native text/code editor built around the shared Monaco browser-runtime host and an FsService-backed document session.
 
 `document.ts` owns document loading, stable reads, dirty/save/autosave, conflict detection, reload/overwrite, Save As, persistence semantics, and the bounded autosave/flush controls needed while a dirty close is being decided. `documentClose.ts` owns the shared deterministic dirty-close decision model used by both Text and Markdown. `useDocumentSession.ts` and `useDocumentCloseProtection.ts` adapt those production models to React; `DocumentClosePrompt.tsx` is the shared visible Save / Discard / Cancel presentation. Monaco engine/model/worker lifecycle is owned by `../shared/monaco/`; Text owns only its document commands, chrome, status, and session policy. `editorChrome.ts` remains shared presentation used by the document apps without becoming Monaco authority.

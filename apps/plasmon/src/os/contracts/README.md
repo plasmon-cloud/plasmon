@@ -1,5 +1,7 @@
 # OS contracts
 
+<!-- plasmon-docs-review:v1 sha256=39878d53c54e419adab95063248439b79c888cb8ef16d7cfd1091f5f6aa94c5a base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 This directory defines the public TypeScript interfaces and stable identifiers shared by Plasmon OS subsystems. It is the vocabulary boundary between filesystem, associations, native applications, process/windowing, Neutron integration, authorization/sharing, backup, and composition.
 
 Contracts describe capabilities and identities. They should not contain React UI, concrete repositories, browser-storage choices, Kernel transport code, or subsystem orchestration.
