@@ -1,5 +1,7 @@
 # Plasmon backend
 
+<!-- plasmon-docs-review:v1 sha256=a1c96f6a6774583c3e2ea4d843dc773ca51fd64e89d773ba9aa24b14f68f2871 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 This directory contains the Motoko backend packaged with the Plasmon Neutron application.
 
 The backend currently exposes the original `hello_world` method plus the Sharing provider's same-AppScope stable-storage methods. The browser-local Plasmon filesystem is **not** implemented here. In Kernel-hosted Plasmon, filesystem persistence remains owned by the app's persistent background surface and the filesystem RPC/repository code under `../src/os/fs/`.

@@ -1,5 +1,7 @@
 # Photos
 
+<!-- plasmon-docs-review:v1 sha256=08e36d4845ec2a29d44a5c646b726b545aef0bee8318285046495961e62e5f24 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 Photos is the native image viewer for browser-supported image resources.
 
 `media.ts` owns deterministic image classification/object-URL and sibling-navigation helpers. `fullscreen.ts` wraps optional browser fullscreen behavior. `Photos.tsx` renders the viewer and navigation UI.

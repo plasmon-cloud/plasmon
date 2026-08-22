@@ -1,10 +1,12 @@
 # Plasmon native applications and runtime hosts
 
+<!-- plasmon-docs-review:v1 sha256=8a5a4cd154b75a4fae4b966b00f68bcb61615e171bfde5eb72f8da3e52f442f0 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 `native-apps/**` contains applications rendered through Plasmon's native process/window system plus association-backed browser/runtime hosts.
 
 ## Registration and boundaries
 
-`content-apps.ts` defines shared built-in application metadata, handlers, and association rules. Integration registers those definitions with the native application and association registries. Individual apps should not create hidden parallel registries or own generic file-opening policy.
+`content-apps.ts` defines shared built-in application metadata, handlers, and association rules. Integration registers those definitions with the native application and association registries. Optional game/emulator runtime handlers are separately gated by `src/os/integration/packageProfile.ts`; current shipped package profiles deliberately omit those payloads and handlers, while unbundled/direct runtime tests retain the full source service graph. Individual apps should not create hidden parallel registries or own generic file-opening policy.
 
 Native application UI consumes the same OS authorities as other surfaces:
 
@@ -16,7 +18,7 @@ Native application UI consumes the same OS authorities as other surfaces:
 
 The shared Visual content-chrome vocabulary applies only inside the native window. It provides common content-surface, toolbar/button, status, loading/error/empty-state, panel, spacing, and theme-token presentation where multiple apps demonstrate the same need. Native Apps still choose their controls, labels, workflow, document/media semantics, accessible roles, and domain-specific presentation. Windowing continues to own the outer title bar, border, focus, and geometry; the content-chrome primitives are not another application framework or window implementation.
 
-An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns. Such definitions declare `runtimeOnly: true` on their existing `NativeAppDefinition`; that classification does not unregister the Process host or association handler, and consumers that specifically need user-launchable application inventory exclude runtime-only definitions. js-dos and EmulatorJS use this shared classification rather than a parallel catalog or handler-name rule.
+An association-backed runtime host can use a native process/window without automatically becoming a first-class user-launchable system application. Product identity and execution mechanism are separate concerns. Such definitions declare `runtimeOnly: true` on their existing `NativeAppDefinition`; that classification does not itself unregister the Process host or association handler, and consumers that specifically need user-launchable application inventory exclude runtime-only definitions. js-dos and EmulatorJS use this shared classification rather than a parallel catalog or handler-name rule. Whether those optional handlers are actually registered in a built package is a separate package-profile decision owned by Integration.
 
 Document applications consume Process close negotiation rather than replacing it. Text and Markdown share a Native Apps close-decision model: a clean document allows ordinary close immediately; a dirty document defers the Process request while Native Apps presents Save / Discard / Cancel. Save completes the same request only after persistence succeeds, failed save/conflict keeps it pending, Discard suppresses document autosave/unmount flush for that close, and Cancel restores normal document-session behavior.
 
@@ -31,8 +33,8 @@ Document applications consume Process close negotiation rather than replacing it
 - `settings/` — settings/status surface over injected shared services.
 - `properties/` — native wrapper for shared filesystem/resource inspection.
 - `recycle-bin/` — native restore/permanent-delete/empty surface over the canonical filesystem Trash service.
-- `jsdos/` — association-backed packaged runtime/player integration.
-- `emulatorjs/` — association-backed packaged EmulatorJS runtime for the initial NES (`.nes`) slice.
+- `jsdos/` — optional association-backed js-dos runtime host source; omitted from current shipped profiles.
+- `emulatorjs/` — optional association-backed EmulatorJS runtime host source for the initial NES (`.nes`) slice; omitted from current shipped profiles.
 
 Representative editor, media, and utility/system surfaces consume the shared content-chrome vocabulary while retaining their specialized controls. Future migrations should reuse the same small primitives when the presentation is genuinely common rather than copying local palettes or forcing unrelated workflows into one toolbar shape.
 
@@ -40,7 +42,7 @@ Representative editor, media, and utility/system surfaces consume the shared con
 
 `packaging.ts` validates the esbuild metafile for the accepted user-launchable first-party native app component inputs: Text, Markdown, Photos, Video, Browser, Settings, Explorer, Properties, and Recycle Bin. The assertion searches the complete build graph rather than depending on generated chunk filenames, so eager and dynamically imported loaders remain covered without freezing bundler output naming.
 
-This structural check proves that required application code is represented in the package build graph; it does **not** prove application UI behavior, browser APIs, focus/input behavior, or successful user interaction. Those claims remain in focused/headless/browser/manual layers as appropriate. Runtime-only hosts such as js-dos and EmulatorJS are not treated as launchable native apps by this package inventory; they keep dedicated packaged-runtime asset and browser acceptance contracts.
+This structural check proves that required application code is represented in the package build graph; it does **not** prove application UI behavior, browser APIs, focus/input behavior, or successful user interaction. Those claims remain in focused/headless/browser/manual layers as appropriate. Runtime-only hosts such as js-dos and EmulatorJS are not part of this launchable native-app package inventory, and current shipped profiles omit their runtime payloads/handlers entirely. Their retained source and direct runtime tests are deferred evidence, not proof that the released package exposes those runtimes.
 
 ## Refactor direction
 
@@ -52,4 +54,4 @@ Concrete titles, menu omissions, file-type corrections, runtime paths, and curre
 
 ## Testing
 
-Use fast model/domain tests for document sessions, document close decisions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, and other deterministic semantics. Use RTL/component tests for deterministic shared content-chrome consumption. Use real-browser/package tests for Monaco/workers, visible document-close interaction, iframe/media behavior, fullscreen, object URLs, packaged runtime scripts/assets, native application rendering, focus/keyboard integration, and other browser-engine behavior. Manual review remains useful for application UX/polish.
+Use fast model/domain tests for document sessions, document close decisions, parsing/classification, navigation, settings summaries, URL/media normalization, Trash-surface actions, optional runtime source policy, and other deterministic semantics. Use RTL/component tests for deterministic shared content-chrome consumption. Use real-browser/package tests for shipped browser-owned boundaries such as Monaco/workers, visible document-close interaction, iframe/media behavior, fullscreen, object URLs, native application rendering, focus/keyboard integration, and other browser-engine behavior. Optional js-dos/EmulatorJS browser/package evidence applies only when an explicit direct runtime fixture/profile is under test; it must not be reported as shipped-package support while current package profiles omit those runtimes. Manual review remains useful for application UX/polish.

@@ -1,5 +1,7 @@
 # Plasmon Neutron bridge
 
+<!-- plasmon-docs-review:v1 sha256=0e7439131a0fddc5592067973827c433605c392a10dbfb990630a7e0fa41bb82 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 `neutron/**` is Plasmon's adapter to verified vanilla Neutron capabilities behind the public `NeutronBridge` contract.
 
 ## Boundary
