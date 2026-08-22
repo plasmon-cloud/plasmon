@@ -61,6 +61,7 @@ compiler, shared-tools, or provisioner source change.
 | Understand the package | [App Package Format](./app-package-format.md) |
 | Understand capabilities | [Kernel Capability Inventory](./kernel-capability-inventory.md) |
 | Understand compilation and installation | [Compiler And Actor Assembly](./compiler-and-actor-assembly.md) |
+| Diagnose install-commit instruction pressure | [Install Commit Instruction Diagnostics](./install-commit-instruction-diagnostics.md) |
 | Understand browser messaging | [Kernel-App Message Bus](./kernel-app-communication.md) |
 | Publish certified content | [Certified HTTP And Certified Assets](./kernel-http-v2-and-certified-assets.md) |
 | Release app updates | [App Package Updates](./package-updates.md#maintainer-release-workflow) |
@@ -123,6 +124,9 @@ compiler, shared-tools, or provisioner source change.
   provisioner contract.
 - [Local Development And Deployment](./bootstrap-local-development-and-deployment.md)
   is the PocketIC workflow.
+- [Install Commit Instruction Diagnostics](./install-commit-instruction-diagnostics.md)
+  records the disposable PocketIC performance-counter procedure for measuring
+  one install commit without inferring from cycle balance.
 - [Production Provisioning](./production-provisioning.md) covers IC creation,
   adoption, destructive reinstall, and deployment evidence.
 - [Dispenser And Provisioning](./dispenser-and-provisioning.md) describes the
