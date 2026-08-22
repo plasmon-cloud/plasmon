@@ -1,16 +1,21 @@
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 
-const [resultsRoot, diagnosticsRoot, changedFilesPath] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const [resultsRoot, diagnosticsRoot, changedFilesPath] = args;
+const jsonFileIndex = args.indexOf("--json-file");
+const jsonFilePath = jsonFileIndex === -1 ? null : args[jsonFileIndex + 1] ?? null;
 
-if (!resultsRoot || !diagnosticsRoot || !changedFilesPath) {
+if (!resultsRoot || !diagnosticsRoot || !changedFilesPath || (jsonFileIndex !== -1 && !jsonFilePath)) {
   console.error(
-    "usage: node test/ci/summarize-flake-probe.mjs <results-root> <diagnostics-root> <changed-files>",
+    "usage: node test/ci/summarize-flake-probe.mjs <results-root> <diagnostics-root> <changed-files> [--json-file <path>]",
   );
   process.exit(2);
 }
@@ -66,6 +71,77 @@ function resultIterationCount(result, path, root) {
     );
   }
   return Number(result.iteration_count);
+}
+
+function resultMode(result, path, root) {
+  const mode = result.mode || "baseline";
+  if (!/^(?:baseline|manual|characterization)$/.test(mode)) {
+    throw new Error(`invalid probe mode in ${relative(root, path)}: ${mode}`);
+  }
+  return mode;
+}
+
+function numericMetadata(value, label, path, root, { required = false } = {}) {
+  if (!value) {
+    if (required) throw new Error(`missing ${label} in ${relative(root, path)}`);
+    return null;
+  }
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`invalid ${label} in ${relative(root, path)}: ${value}`);
+  }
+  return Number(value);
+}
+
+function normalizeResult(path, root) {
+  const result = parseResult(path);
+  const iteration = probeIteration(result, path, root);
+  const configuredCount = resultIterationCount(result, path, root);
+  const historicalTenIteration = configuredCount === null;
+  const iterationCount = historicalTenIteration ? 10 : configuredCount;
+  const mode = resultMode(result, path, root);
+
+  if (!result.sha || result.sha === "unknown") {
+    throw new Error(`missing exact SHA in ${relative(root, path)}`);
+  }
+  if (!result.target || result.target === "unknown") {
+    throw new Error(`missing target in ${relative(root, path)}`);
+  }
+
+  const scope = result.scope && result.scope !== "unknown" ? result.scope : result.target;
+  if (!historicalTenIteration && (!result.scope || result.scope === "unknown")) {
+    throw new Error(`missing scope in ${relative(root, path)}`);
+  }
+
+  const runNumber = numericMetadata(
+    result.run_number,
+    "workflow run_number",
+    path,
+    root,
+    { required: !historicalTenIteration },
+  );
+  const runAttempt = numericMetadata(
+    result.run_attempt,
+    "workflow run_attempt",
+    path,
+    root,
+    { required: !historicalTenIteration },
+  );
+
+  return {
+    path,
+    raw: result,
+    iteration,
+    iterationCount,
+    mode,
+    sha: result.sha,
+    target: result.target,
+    scope,
+    runNumber,
+    runAttempt: runAttempt ?? 0,
+    outcome: result.outcome || "unknown",
+    isLegacyAttempt: !result.iteration && Boolean(result.attempt),
+    historicalTenIteration,
+  };
 }
 
 function stripAnsi(value) {
@@ -138,88 +214,126 @@ function iterationsText(iterations) {
   return [...iterations].sort((a, b) => a - b).join(", ");
 }
 
-try {
-  const resultFiles = walkFiles(resultsRoot, "result.txt");
-  const results = resultFiles.map((path) => ({ path, ...parseResult(path) }));
-  const iterations = new Set();
-  const iterationCounts = new Set();
-  const shas = new Set();
-  const targets = new Set();
-  const scopes = new Set();
-  const runNumbers = new Set();
-  const runAttempts = new Set();
-  const failedIterations = [];
-  let legacyResults = 0;
-  let passed = 0;
+function summaryHeading(mode) {
+  if (mode === "characterization") return "## Plasmon 50-iteration characterization probe";
+  if (mode === "manual") return "## Plasmon manual flake probe";
+  return "## Plasmon 10-iteration baseline flake probe";
+}
 
-  for (const result of results) {
-    const iteration = probeIteration(result, result.path, resultsRoot);
-    const iterationCount = resultIterationCount(result, result.path, resultsRoot);
-    const isLegacyAttempt = !result.iteration && Boolean(result.attempt);
-    const isHistoricalTenIteration = iterationCount === null;
-    if (!result.sha || result.sha === "unknown") {
-      throw new Error(`missing exact SHA in ${relative(resultsRoot, result.path)}`);
+function requireSingle(values, label) {
+  if (values.size !== 1) throw new Error(`probe result artifacts disagree on ${label}`);
+  return [...values][0];
+}
+
+function samePacketIdentity(a, b) {
+  return a.iterationCount === b.iterationCount &&
+    a.mode === b.mode &&
+    a.sha === b.sha &&
+    a.target === b.target &&
+    a.scope === b.scope &&
+    a.runNumber === b.runNumber;
+}
+
+function selectLatestIterationResults(candidates) {
+  const selected = new Map();
+  const superseded = [];
+  for (const candidate of candidates) {
+    const previous = selected.get(candidate.iteration);
+    if (!previous) {
+      selected.set(candidate.iteration, candidate);
+      continue;
     }
-    if (!result.target || result.target === "unknown") {
-      throw new Error(`missing target in ${relative(resultsRoot, result.path)}`);
+    if (candidate.runAttempt === previous.runAttempt) {
+      throw new Error(
+        `duplicate probe iteration ${candidate.iteration} for run_attempt ${candidate.runAttempt || "historical"}`,
+      );
     }
-    if (!isHistoricalTenIteration) {
-      if (!result.scope || result.scope === "unknown") {
-        throw new Error(`missing scope in ${relative(resultsRoot, result.path)}`);
-      }
-      if (!/^\d+$/.test(result.run_number ?? "")) {
-        throw new Error(`missing workflow run_number in ${relative(resultsRoot, result.path)}`);
-      }
-      if (!/^\d+$/.test(result.run_attempt ?? "")) {
-        throw new Error(`missing workflow run_attempt in ${relative(resultsRoot, result.path)}`);
-      }
-      iterationCounts.add(iterationCount);
-      scopes.add(result.scope);
-      runNumbers.add(result.run_number);
-      runAttempts.add(result.run_attempt);
+    if (candidate.runAttempt > previous.runAttempt) {
+      superseded.push(previous);
+      selected.set(candidate.iteration, candidate);
     } else {
-      iterationCounts.add(10);
-      scopes.add(result.scope && result.scope !== "unknown" ? result.scope : result.target);
-      if (result.run_number) {
-        if (!/^\d+$/.test(result.run_number)) {
-          throw new Error(`invalid workflow run_number in ${relative(resultsRoot, result.path)}`);
-        }
-        runNumbers.add(result.run_number);
-      }
-      if (result.run_attempt) {
-        if (!/^\d+$/.test(result.run_attempt)) {
-          throw new Error(`invalid workflow run_attempt in ${relative(resultsRoot, result.path)}`);
-        }
-        runAttempts.add(result.run_attempt);
-      }
-      if (isLegacyAttempt) legacyResults += 1;
+      superseded.push(candidate);
     }
-    iterations.add(iteration);
-    shas.add(result.sha);
-    targets.add(result.target);
-    if (result.outcome === "success") passed += 1;
-    else failedIterations.push(iteration);
+  }
+  return {
+    selected: [...selected.values()].sort((a, b) => a.iteration - b.iteration),
+    superseded: superseded.sort((a, b) => a.iteration - b.iteration || a.runAttempt - b.runAttempt),
+  };
+}
+
+// run_attempt provenance is retained per selected probe iteration so a partial
+// workflow rerun can combine fresh slots without destroying same-SHA history.
+function attemptProvenance(results) {
+  const byAttempt = new Map();
+  for (const result of results) {
+    const key = result.runAttempt;
+    let iterations = byAttempt.get(key);
+    if (!iterations) byAttempt.set(key, (iterations = []));
+    iterations.push(result.iteration);
+  }
+  return [...byAttempt.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([runAttempt, iterations]) => ({
+      run_attempt: runAttempt || null,
+      iterations: iterations.sort((a, b) => a - b),
+    }));
+}
+
+try {
+  const candidateFiles = walkFiles(resultsRoot, "result.txt");
+  const candidates = candidateFiles.map((path) => normalizeResult(path, resultsRoot));
+  if (candidates.length === 0) throw new Error("no probe result artifacts found");
+
+  const first = candidates[0];
+  for (const candidate of candidates.slice(1)) {
+    if (!samePacketIdentity(first, candidate)) {
+      throw new Error("probe result artifacts disagree on evidence-packet identity");
+    }
   }
 
-  if (iterationCounts.size !== 1) {
-    throw new Error("probe result artifacts disagree on iteration_count");
+  const iterationCounts = new Set(candidates.map((result) => result.iterationCount));
+  const modes = new Set(candidates.map((result) => result.mode));
+  const shas = new Set(candidates.map((result) => result.sha));
+  const targets = new Set(candidates.map((result) => result.target));
+  const scopes = new Set(candidates.map((result) => result.scope));
+  const runNumbers = new Set(candidates.map((result) => result.runNumber).filter((value) => value !== null));
+
+  const expectedCount = requireSingle(iterationCounts, "iteration_count");
+  const mode = requireSingle(modes, "probe mode");
+  const sha = requireSingle(shas, "exact SHA");
+  const target = requireSingle(targets, "target");
+  const scope = requireSingle(scopes, "scope");
+  if (runNumbers.size > 1) throw new Error("probe result artifacts disagree on workflow run_number");
+  const runNumber = [...runNumbers][0] ?? null;
+
+  if (mode === "characterization" && expectedCount !== 50) {
+    throw new Error(`characterization mode requires 50 probe iterations; saw ${expectedCount}`);
   }
-  const expectedCount = [...iterationCounts][0];
-  if (results.length !== expectedCount || iterations.size !== expectedCount) {
+  if (mode === "baseline" && expectedCount !== 10) {
+    throw new Error(`baseline mode requires 10 probe iterations; saw ${expectedCount}`);
+  }
+
+  const { selected, superseded } = selectLatestIterationResults(candidates);
+  if (selected.length !== expectedCount) {
     throw new Error(
-      `expected ${expectedCount} unique fresh probe iteration results; saw ${results.length} files and ${iterations.size} unique probe iterations`,
+      `expected ${expectedCount} unique fresh probe iteration results after run-attempt reconciliation; saw ${selected.length}`,
     );
   }
   for (let iteration = 1; iteration <= expectedCount; iteration += 1) {
-    if (!iterations.has(iteration)) {
+    if (!selected.some((result) => result.iteration === iteration)) {
       throw new Error(`missing probe iteration ${iteration}/${expectedCount}`);
     }
   }
-  if (shas.size !== 1) throw new Error("probe result artifacts disagree on exact SHA");
-  if (targets.size !== 1) throw new Error("probe result artifacts disagree on target");
-  if (scopes.size !== 1) throw new Error("probe result artifacts disagree on scope");
-  if (runNumbers.size > 1) throw new Error("probe result artifacts disagree on workflow run_number");
-  if (runAttempts.size > 1) throw new Error("probe result artifacts disagree on workflow run_attempt");
+
+  const failedResults = selected.filter((result) => result.outcome !== "success");
+  const failedIterations = failedResults.map((result) => result.iteration);
+  const passed = selected.length - failedResults.length;
+  const selectedFailureKeys = new Set(
+    failedResults.map((result) => `${result.iteration}:${result.runAttempt}`),
+  );
+  const legacyResults = selected.filter((result) => result.isLegacyAttempt).length;
+  const provenance = attemptProvenance(selected);
+  const supersededFailures = superseded.filter((result) => result.outcome !== "success");
 
   const changedFiles = new Set(
     existsSync(changedFilesPath)
@@ -229,16 +343,19 @@ try {
   const failuresByFile = new Map();
   const unparsedIterations = [];
   for (const resultPath of walkFiles(diagnosticsRoot, "result.txt")) {
-    const result = parseResult(resultPath);
-    const iteration = probeIteration(result, resultPath, diagnosticsRoot);
-    if (!failedIterations.includes(iteration)) continue;
+    const result = normalizeResult(resultPath, diagnosticsRoot);
+    if (!selectedFailureKeys.has(`${result.iteration}:${result.runAttempt}`)) continue;
     const diagnosticDirectory = dirname(resultPath);
     const outputPath = join(diagnosticDirectory, "probe-output.log");
     const extracted = existsSync(outputPath)
       ? extractFailures(readFileSync(outputPath, "utf8"))
       : [];
     if (extracted.length === 0) {
-      unparsedIterations.push({ iteration, artifact: basename(diagnosticDirectory) });
+      unparsedIterations.push({
+        iteration: result.iteration,
+        runAttempt: result.runAttempt,
+        artifact: basename(diagnosticDirectory),
+      });
       continue;
     }
     for (const failure of extracted) {
@@ -246,7 +363,7 @@ try {
       if (!tests) failuresByFile.set(failure.file, (tests = new Map()));
       let failureIterations = tests.get(failure.title);
       if (!failureIterations) tests.set(failure.title, (failureIterations = new Set()));
-      failureIterations.add(iteration);
+      failureIterations.add(result.iteration);
     }
   }
 
@@ -261,26 +378,35 @@ try {
     (total, tests) => total + tests.size,
     0,
   );
-  const sha = [...shas][0];
-  const target = [...targets][0];
-  const scope = [...scopes][0];
-  const runNumber = [...runNumbers][0];
-  const runAttempt = [...runAttempts][0];
   const failedList = failedIterations.length === 0
     ? "none"
     : failedIterations.sort((a, b) => a - b).join(", ");
 
-  console.log("## Plasmon flake probe");
+  console.log(summaryHeading(mode));
   console.log();
+  console.log(`- Probe mode: ${markdownCode(mode)}`);
   console.log(`- Exact SHA: ${markdownCode(sha)}`);
   console.log(`- Target: ${markdownCode(target)}`);
   console.log(`- Scope: ${markdownCode(scope)}`);
   console.log(`- Configured probe iterations: ${expectedCount}`);
-  if (runNumber) console.log(`- Workflow \`run_number\`: ${markdownCode(runNumber)}`);
-  if (runAttempt) console.log(`- Workflow \`run_attempt\`: ${markdownCode(runAttempt)}`);
-  console.log(`- Fresh probe iterations reported: ${results.length}/${expectedCount}`);
+  if (runNumber !== null) console.log(`- Workflow \`run_number\`: ${markdownCode(runNumber)}`);
+  if (provenance.length === 1 && provenance[0].run_attempt !== null) {
+    console.log(`- Workflow \`run_attempt\`: ${markdownCode(provenance[0].run_attempt)}`);
+  } else if (provenance.length > 1) {
+    console.log("- Workflow `run_attempt` provenance:");
+    for (const entry of provenance) {
+      console.log(
+        `  - ${markdownCode(entry.run_attempt ?? "historical")}: probe iteration(s) ${entry.iterations.join(", ")}`,
+      );
+    }
+  }
+  console.log(`- Fresh probe iterations reported: ${selected.length}/${expectedCount}`);
   console.log(`- Iteration-1 passes: ${passed}/${expectedCount}`);
   console.log(`- Failed probe iterations: ${failedList}`);
+  console.log(`- Superseded same-run attempt results retained: ${superseded.length}`);
+  if (supersededFailures.length > 0) {
+    console.log(`- Superseded same-SHA failures retained as provenance: ${supersededFailures.length}`);
+  }
   if (legacyResults > 0) console.log(`- Legacy result files parsed: ${legacyResults}`);
   console.log(`- Failure occurrences parsed: ${failureOccurrences}`);
   console.log(`- Unique failing tests parsed: ${uniqueFailingTests}`);
@@ -312,19 +438,56 @@ try {
   if (unparsedIterations.length > 0) {
     console.log("### Failed probe iterations without a parsed test identity");
     console.log();
-    for (const { iteration, artifact } of unparsedIterations.sort((a, b) => a.iteration - b.iteration)) {
+    for (const { iteration, runAttempt, artifact } of unparsedIterations.sort((a, b) => a.iteration - b.iteration)) {
       console.log(
-        `- Probe iteration ${iteration}: inspect diagnostic artifact ${markdownCode(artifact)} and ${markdownCode("probe-output.log")}.`,
+        `- Probe iteration ${iteration} from run_attempt ${runAttempt || "historical"}: inspect diagnostic artifact ${markdownCode(artifact)} and ${markdownCode("probe-output.log")}.`,
       );
     }
     console.log();
   }
 
+  const packet = {
+    sha,
+    mode,
+    scope,
+    target,
+    iteration_count: expectedCount,
+    run_number: runNumber,
+    run_attempts: provenance,
+    iteration_results: selected.map((result) => ({
+      iteration: result.iteration,
+      run_attempt: result.runAttempt || null,
+      outcome: result.outcome,
+    })),
+    superseded_results: superseded.map((result) => ({
+      iteration: result.iteration,
+      run_attempt: result.runAttempt || null,
+      outcome: result.outcome,
+    })),
+    passed,
+    failed_iterations: failedIterations.sort((a, b) => a - b),
+    status: passed === expectedCount ? "stable-observed" : "failure-observed",
+  };
+
+  if (jsonFilePath) {
+    mkdirSync(dirname(jsonFilePath), { recursive: true });
+    writeFileSync(
+      jsonFilePath,
+      `${JSON.stringify({ schema: "plasmon-flake-summary-v1", evidence_packets: [packet] }, null, 2)}\n`,
+    );
+  }
+
   if (passed === expectedCount) {
-    console.log(`**STABILITY OBSERVED: ${expectedCount}/${expectedCount} fresh probe iterations passed.**`);
+    if (expectedCount === 50) {
+      console.log(
+        "**STABILITY EVIDENCE: 50/50 fresh probe iterations passed for this exact SHA and scope. This is evidence, not proof that the target cannot flake.**",
+      );
+    } else {
+      console.log(`**STABILITY OBSERVED: ${expectedCount}/${expectedCount} fresh probe iterations passed.**`);
+    }
   } else {
     console.log(
-      `**FLAKE/FAILURE OBSERVED: only ${passed}/${expectedCount} fresh probe iterations passed (${results.length}/${expectedCount} reported).**`,
+      `**FLAKE/FAILURE OBSERVED: only ${passed}/${expectedCount} fresh probe iterations passed (${selected.length}/${expectedCount} reported).**`,
     );
     process.exitCode = 1;
   }
