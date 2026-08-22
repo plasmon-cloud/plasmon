@@ -1,14 +1,18 @@
 import esbuild from "esbuild";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-const MONACO_WORKERS = [
+const ALL_MONACO_WORKERS = [
   ["editor.worker.js", "monaco-editor/esm/vs/editor/editor.worker.js"],
   ["json.worker.js", "monaco-editor/esm/vs/language/json/json.worker.js"],
   ["css.worker.js", "monaco-editor/esm/vs/language/css/css.worker.js"],
   ["html.worker.js", "monaco-editor/esm/vs/language/html/html.worker.js"],
   ["ts.worker.js", "monaco-editor/esm/vs/language/typescript/ts.worker.js"],
 ] as const;
+const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
+const MONACO_WORKERS = packageProfile === "slim" || packageProfile === "demo"
+  ? ALL_MONACO_WORKERS.slice(0, 1)
+  : ALL_MONACO_WORKERS;
 
 const GENERATED_RUNTIME_ROOT = "./public/runtime/monaco";
 const GENERATED_CANONICAL_ROOT = "./public/System/Program Files/MonacoEditor";
@@ -67,6 +71,10 @@ const script = [
 // deliberately replaces those transport copies with these canonical IIFE bytes.
 // That leaves Program Files, the URL-safe mirror, and the opaque-frame preload
 // derived from one exact byte stream while keeping main.js in ESM format.
+await Promise.all([
+  rm(GENERATED_CANONICAL_ROOT, { recursive: true, force: true }),
+  rm(GENERATED_RUNTIME_ROOT, { recursive: true, force: true }),
+]);
 await Promise.all([
   mkdir(GENERATED_CANONICAL_ROOT, { recursive: true }),
   mkdir(GENERATED_RUNTIME_ROOT, { recursive: true }),
