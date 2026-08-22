@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,6 +10,7 @@ import {
   documentationReviewStatus,
   nearestBoundaryForPath,
   parseReviewMarker,
+  printStatus,
   reviewDocumentationBoundary,
   upsertReviewMarker,
 } from "../docs/documentation-review.mjs";
@@ -143,6 +144,47 @@ test("status stales only the nearest boundary and review previews before refresh
   }
 });
 
+test("status formatter emits actionable stale output and a nonzero result", () => {
+  const error = spyOn(console, "error").mockImplementation(() => {});
+  const log = spyOn(console, "log").mockImplementation(() => {});
+  try {
+    const result = printStatus([
+      {
+        boundary: "apps/plasmon/src/os/windowing",
+        digest: "1".repeat(64),
+        marker: { digest: "0".repeat(64), base: "2".repeat(40) },
+        stale: true,
+        changedFiles: ["apps/plasmon/src/os/windowing/model.ts"],
+      },
+    ]);
+
+    expect(result).toBe(1);
+    expect(error).toHaveBeenCalledWith("STALE apps/plasmon/src/os/windowing: owned implementation changed");
+    expect(error).toHaveBeenCalledWith("  - apps/plasmon/src/os/windowing/model.ts");
+    expect(error).toHaveBeenCalledWith(
+      "  run: npm --workspace neutron-plasmon run docs:review -- apps/plasmon/src/os/windowing",
+    );
+    expect(log).not.toHaveBeenCalled();
+
+    error.mockClear();
+    log.mockClear();
+    expect(printStatus([
+      {
+        boundary: "apps/plasmon/src/os/windowing",
+        digest: "1".repeat(64),
+        marker: { digest: "1".repeat(64), base: "2".repeat(40) },
+        stale: false,
+        changedFiles: [],
+      },
+    ])).toBe(0);
+    expect(log).toHaveBeenCalledWith("Documentation review fingerprints current: 1 boundaries.");
+    expect(error).not.toHaveBeenCalled();
+  } finally {
+    error.mockRestore();
+    log.mockRestore();
+  }
+});
+
 test("equivalent working trees produce the same fingerprint", () => {
   const registry = fixtureRegistry();
   const left = createFixture();
@@ -167,6 +209,13 @@ test("current repository review fingerprints are computable", () => {
     console.log(
       `DOCUMENTATION_REVIEW_BASELINES=${JSON.stringify(
         status.map((entry) => ({ boundary: entry.boundary, digest: entry.digest })),
+      )}`,
+    );
+  }
+  if (status.some((entry) => entry.stale)) {
+    console.log(
+      `DOCUMENTATION_REVIEW_STALE=${JSON.stringify(
+        status.filter((entry) => entry.stale).map((entry) => ({ boundary: entry.boundary, digest: entry.digest })),
       )}`,
     );
   }
