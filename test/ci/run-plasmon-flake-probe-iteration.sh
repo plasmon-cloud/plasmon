@@ -16,9 +16,10 @@ run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
 
 result_dir="flake-probe-results/iteration-${iteration}"
 diagnostic_dir="flake-probe-diagnostics/iteration-${iteration}"
-output_path="$result_dir/probe-output.log"
+output_path="/tmp/flake-probe-output-${iteration}.log"
 mkdir -p "$result_dir"
 rm -rf playwright-report test-results
+: > "$output_path"
 
 status=0
 if [ "${PLASMON_PACKET_RESET_FAILED:-0}" = "1" ]; then
@@ -76,4 +77,5 @@ if [ "$status" -ne 0 ]; then
   fi
 fi
 
+rm -f "$output_path"
 exit "$status"
