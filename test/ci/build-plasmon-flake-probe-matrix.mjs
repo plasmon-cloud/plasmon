@@ -37,6 +37,7 @@ export function addProbePackets(include, config) {
     include.push({
       ...config,
       packet,
+      iteration: startIteration,
       start_iteration: startIteration,
       end_iteration: startIteration + repetitions - 1,
       repetitions,
