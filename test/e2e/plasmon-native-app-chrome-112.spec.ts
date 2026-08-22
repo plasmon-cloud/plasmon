@@ -5,7 +5,6 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const SVG_FIXTURE = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100" viewBox="0 0 160 100"><rect width="160" height="100" fill="#253047"/><circle cx="80" cy="50" r="28" fill="#d6e1ff"/></svg>`;
 
 async function redirectToFirstDemo(route: Route): Promise<void> {
   const url = new URL(route.request().url());
@@ -117,19 +116,12 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     expect(await surfacePalette(textSurface)).toEqual(sharedPalette);
     await testInfo.attach("112-text-current-theme.png", { body: await text.screenshot(), contentType: "image/png" });
 
-    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
-    await filesTask.click();
-    await expect(documents).toHaveClass(/plasmon-window--active/);
-    const fixtureName = `native-app-chrome-${Date.now()}.svg`;
-    const chooserPromise = page.waitForEvent("filechooser");
-    await documents.getByRole("button", { name: "Import Files…" }).click();
-    const chooser = await chooserPromise;
-    await chooser.setFiles({ name: fixtureName, mimeType: "image/svg+xml", buffer: Buffer.from(SVG_FIXTURE) });
-    const fixture = documents.locator("[data-fm-node-id]", { hasText: fixtureName }).first();
-    await expect(fixture).toBeVisible({ timeout: 20_000 });
-    await fixture.dblclick();
-
-    const photos = app.getByRole("dialog", { name: fixtureName }).last();
+    // Reuse the repository-authored first-demo media fixture instead of importing
+    // a new file. Creating a new node legitimately transitions from generic file
+    // presentation to media presentation, which can cancel the superseded icon
+    // request and adds an unrelated BrowserHealth race to this visual-review proof.
+    await openSearchResult(app, "First Demo Artwork");
+    const photos = app.getByRole("dialog", { name: "First Demo Artwork.svg" }).last();
     await expect(photos).toBeVisible({ timeout: 20_000 });
     const photosSurface = photos.locator(".plasmon-native-app-surface");
     await expect(photosSurface).toBeVisible();
