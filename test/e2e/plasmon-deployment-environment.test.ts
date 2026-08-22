@@ -58,11 +58,16 @@ describe("Plasmon deployment command semantics", () => {
       repoRoot,
       manifestPath: manifestForPlasmonDeployment("demo"),
     });
+    const archivePaths = actual.map((artifact) => artifact.archivePath);
 
-    expect(actual.map((artifact) => artifact.archivePath)).toEqual(expected);
-    expect(actual.map((artifact) => artifact.archivePath)).toContain(
-      "apps/plasmon/plasmon.v0.1.0.neutron",
-    );
+    expect(archivePaths).toEqual(expected);
+    expect(archivePaths).toContain("apps/plasmon/plasmon.v0.1.0.neutron");
+    expect(archivePaths).toContain("apps/review/review.v0.1.0.neutron");
+    expect(
+      archivePaths.filter(
+        (archivePath) => archivePath === "apps/review/review.v0.1.0.neutron",
+      ),
+    ).toHaveLength(1);
     expect(actual.length).toBeGreaterThan(3);
   });
 
