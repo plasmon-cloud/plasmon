@@ -77,7 +77,8 @@ esac
 
 # Standalone callers retain the original fresh-environment behavior. Repeated
 # packet callers set PLASMON_PLAYWRIGHT_ENV_READY=1 after the shared harness has
-# already prepared packages, started PocketIC, checked status, and reset state.
+# already prepared packages, started PocketIC, checked status, and installed the
+# bounded local deployment once for the packet.
 if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
   npm ci
   npm run plasmon:local:prepare
