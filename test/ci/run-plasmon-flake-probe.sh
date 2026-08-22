@@ -75,45 +75,50 @@ case "$target" in
     ;;
 esac
 
-npm ci
-npm run plasmon:local:prepare
+# Standalone callers retain the original fresh-environment behavior. Repeated
+# packet callers set PLASMON_PLAYWRIGHT_ENV_READY=1 after the shared harness has
+# already prepared packages, started PocketIC, checked status, and reset state.
+if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
+  npm ci
+  npm run plasmon:local:prepare
 
-npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
-server_pid=$!
+  npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
+  server_pid=$!
 
-cleanup() {
-  status=$?
-  kill "$server_pid" 2>/dev/null || true
-  wait "$server_pid" 2>/dev/null || true
-  if [ "$status" -ne 0 ]; then
-    cat /tmp/plasmon-pocketic.log || true
-  fi
-  exit "$status"
-}
-trap cleanup EXIT
+  cleanup() {
+    status=$?
+    kill "$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
+    if [ "$status" -ne 0 ]; then
+      cat /tmp/plasmon-pocketic.log || true
+    fi
+    exit "$status"
+  }
+  trap cleanup EXIT
 
-pocketic_ready=0
-for poll in $(seq 1 180); do
-  if ! kill -0 "$server_pid" 2>/dev/null; then
-    echo "PocketIC serve exited before becoming ready" >&2
+  pocketic_ready=0
+  for poll in $(seq 1 180); do
+    if ! kill -0 "$server_pid" 2>/dev/null; then
+      echo "PocketIC serve exited before becoming ready" >&2
+      cat /tmp/plasmon-pocketic.log >&2 || true
+      exit 1
+    fi
+    if grep -q "^PocketIC .* is ready$" /tmp/plasmon-pocketic.log 2>/dev/null; then
+      pocketic_ready=1
+      break
+    fi
+    sleep 1
+  done
+
+  if [ "$pocketic_ready" -ne 1 ]; then
+    echo "PocketIC serve did not complete startup" >&2
     cat /tmp/plasmon-pocketic.log >&2 || true
     exit 1
   fi
-  if grep -q "^PocketIC .* is ready$" /tmp/plasmon-pocketic.log 2>/dev/null; then
-    pocketic_ready=1
-    break
-  fi
-  sleep 1
-done
 
-if [ "$pocketic_ready" -ne 1 ]; then
-  echo "PocketIC serve did not complete startup" >&2
-  cat /tmp/plasmon-pocketic.log >&2 || true
-  exit 1
+  npm run plasmon:local:status
+  npm run plasmon:local:reinstall
 fi
-
-npm run plasmon:local:status
-npm run plasmon:local:reinstall
 
 run_one() {
   NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json \
