@@ -5,23 +5,23 @@ import { MockNeutronBridge } from "../os/neutron/index.ts";
 import { searchFilesystem } from "../os/shell/search.ts";
 import { NativeWindowManager } from "../os/windowing/index.ts";
 import {
-  FIRST_DEMO_IMAGE_PATH,
-  FIRST_DEMO_MARKDOWN_PATH,
-  FIRST_DEMO_TEXT_PATH,
-  createFirstDemoSeeds,
-  reconcileFirstDemoDesktopShortcuts,
-} from "./firstDemoFixture.ts";
+  DEMO_IMAGE_PATH,
+  DEMO_MARKDOWN_PATH,
+  DEMO_TEXT_PATH,
+  createDemoSeeds,
+  reconcileDemoDesktopShortcuts,
+} from "./demoContent.ts";
 
 function deterministicWindows(): NativeWindowManager {
   let nextWindowId = 0;
   return new NativeWindowManager({
-    idFactory: () => `window:first-demo:${++nextWindowId}`,
+    idFactory: () => `window:demo:${++nextWindowId}`,
     viewport: () => ({ x: 0, y: 0, width: 1280, height: 720 }),
     listenForViewportChanges: false,
   });
 }
 
-test("ordinary production composition remains free of first-demo resources", async () => {
+test("ordinary production composition remains free of demo resources", async () => {
   const windows = deterministicWindows();
   const services = createPlasmonServices({
     filesystemRepository: new MemoryFsRepository(),
@@ -30,42 +30,42 @@ test("ordinary production composition remains free of first-demo resources", asy
   });
   try {
     await services.filesystem.ready;
-    expect(await services.fs.resolvePath(FIRST_DEMO_TEXT_PATH)).toBeNull();
-    expect(await services.fs.resolvePath(FIRST_DEMO_MARKDOWN_PATH)).toBeNull();
-    expect(await services.fs.resolvePath(FIRST_DEMO_IMAGE_PATH)).toBeNull();
+    expect(await services.fs.resolvePath(DEMO_TEXT_PATH)).toBeNull();
+    expect(await services.fs.resolvePath(DEMO_MARKDOWN_PATH)).toBeNull();
+    expect(await services.fs.resolvePath(DEMO_IMAGE_PATH)).toBeNull();
     const desktop = await services.fs.resolvePath("/Desktop");
     if (!desktop) throw new Error("Desktop missing");
     const desktopNames = (await services.fs.list(desktop.id)).map(({ name }) => name);
-    expect(desktopNames).not.toContain("First Demo Notes.txt");
-    expect(desktopNames).not.toContain("First Demo Guide.md");
-    expect(desktopNames).not.toContain("First Demo Artwork.svg");
+    expect(desktopNames).not.toContain("Demo Notes.txt");
+    expect(desktopNames).not.toContain("Demo Guide.md");
+    expect(desktopNames).not.toContain("Demo Artwork.svg");
   } finally {
     services.filesystem.dispose();
     windows.dispose();
   }
 });
 
-test("demo profile seeds are authored redistribution-safe document and image resources", () => {
-  const seeds = createFirstDemoSeeds();
+test("demo profile seeds authored redistribution-safe document and image resources", () => {
+  const seeds = createDemoSeeds();
   expect(seeds).toHaveLength(5);
   expect(seeds.map(({ key }) => key)).toEqual([
-    "demo.first.documents-directory.v1",
-    "demo.first.pictures-directory.v1",
-    "demo.first.notes.v1",
-    "demo.first.guide.v1",
-    "demo.first.artwork.v1",
+    "demo.documents-directory.v1",
+    "demo.pictures-directory.v1",
+    "demo.notes.v1",
+    "demo.guide.v1",
+    "demo.artwork.v1",
   ]);
   expect(seeds.some((seed) => seed.parentPath === "/Games")).toBe(false);
 
   const byName = new Map(seeds.map((seed) => [seed.name, seed] as const));
-  expect(byName.get("First Demo Notes.txt")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/plain" });
-  expect(byName.get("First Demo Guide.md")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/markdown" });
-  expect(byName.get("First Demo Artwork.svg")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Pictures", kind: "file", mime: "image/svg+xml" });
+  expect(byName.get("Demo Notes.txt")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/plain" });
+  expect(byName.get("Demo Guide.md")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Documents", kind: "file", mime: "text/markdown" });
+  expect(byName.get("Demo Artwork.svg")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Pictures", kind: "file", mime: "image/svg+xml" });
 
   const decoder = new TextDecoder();
-  expect(decoder.decode(byName.get("First Demo Notes.txt")?.bytes)).toContain("authored for the Plasmon demo environment");
-  expect(decoder.decode(byName.get("First Demo Guide.md")?.bytes)).toContain("redistribution-safe Markdown demo document");
-  expect(decoder.decode(byName.get("First Demo Artwork.svg")?.bytes)).toContain("Plasmon First Demo");
+  expect(decoder.decode(byName.get("Demo Notes.txt")?.bytes)).toContain("authored for the Plasmon demo environment");
+  expect(decoder.decode(byName.get("Demo Guide.md")?.bytes)).toContain("redistribution-safe Markdown demo document");
+  expect(decoder.decode(byName.get("Demo Artwork.svg")?.bytes)).toContain("Plasmon Demo");
 });
 
 test("demo resources and Desktop shortcuts traverse production bootstrap and opening", async () => {
@@ -74,21 +74,21 @@ test("demo resources and Desktop shortcuts traverse production bootstrap and ope
     filesystemRepository: new MemoryFsRepository(),
     neutron: new MockNeutronBridge({ elements: [] }),
     windows,
-    demoSeeds: createFirstDemoSeeds(),
+    demoSeeds: createDemoSeeds(),
   });
 
   try {
     await services.filesystem.ready;
-    await reconcileFirstDemoDesktopShortcuts(services.fs);
-    await reconcileFirstDemoDesktopShortcuts(services.fs);
+    await reconcileDemoDesktopShortcuts(services.fs);
+    await reconcileDemoDesktopShortcuts(services.fs);
 
     const expected = [
-      { path: FIRST_DEMO_TEXT_PATH, name: "First Demo Notes.txt", mime: "text/plain", handler: "native:text", category: "documents" },
-      { path: FIRST_DEMO_MARKDOWN_PATH, name: "First Demo Guide.md", mime: "text/markdown", handler: "native:markdown", category: "documents" },
-      { path: FIRST_DEMO_IMAGE_PATH, name: "First Demo Artwork.svg", mime: "image/svg+xml", handler: "native:photos", category: "media" },
+      { path: DEMO_TEXT_PATH, name: "Demo Notes.txt", mime: "text/plain", handler: "native:text", category: "documents" },
+      { path: DEMO_MARKDOWN_PATH, name: "Demo Guide.md", mime: "text/markdown", handler: "native:markdown", category: "documents" },
+      { path: DEMO_IMAGE_PATH, name: "Demo Artwork.svg", mime: "image/svg+xml", handler: "native:photos", category: "media" },
     ] as const;
 
-    const search = await searchFilesystem(services.fs, "First Demo");
+    const search = await searchFilesystem(services.fs, "Demo");
     expect(search.warnings).toEqual([]);
     expect(search.truncated).toBe(false);
     const searchFiles = search.results.filter((result) => result.kind === "file");
@@ -102,7 +102,7 @@ test("demo resources and Desktop shortcuts traverse production bootstrap and ope
     for (const item of expected) {
       const node = await services.fs.resolvePath(item.path);
       expect(node).toMatchObject({ name: item.name, kind: "file", mime: item.mime });
-      if (!node) throw new Error(`Missing first-demo resource ${item.path}`);
+      if (!node) throw new Error(`Missing demo resource ${item.path}`);
 
       const result = searchFiles.find((entry) => entry.node.id === node.id);
       expect(result).toMatchObject({ title: item.name, category: item.category });
