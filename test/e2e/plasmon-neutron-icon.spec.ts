@@ -1,3 +1,6 @@
+// @plasmon-prepared-env-reuse
+// This acceptance only reads installed package/browser presentation state. It
+// must not mutate persistent PocketIC canister/filesystem state between runs.
 import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
