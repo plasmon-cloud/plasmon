@@ -29,12 +29,15 @@ async function openSearch(plasmon: FrameLocator, query: string) {
   await expect(panel).toBeVisible();
   const input = panel.getByRole("textbox", { name: "Search Plasmon" });
   await input.fill(query);
+  const searching = panel.getByRole("status").filter({ hasText: "Searching…" });
+  await expect(searching).toBeVisible({ timeout: 5_000 });
+  await expect(searching).toHaveCount(0, { timeout: 20_000 });
   return { panel, input, results: panel.locator("[data-search-result]") };
 }
 
 async function expectNoSearchResult(plasmon: FrameLocator, query: string, title: string): Promise<void> {
   const search = await openSearch(plasmon, query);
-  await expect(search.panel.getByText("No results in this category.")).toBeVisible({ timeout: 20_000 });
+  await expect(search.panel.getByRole("alert")).toHaveCount(0);
   await expect(search.results.filter({ hasText: title })).toHaveCount(0);
 }
 
