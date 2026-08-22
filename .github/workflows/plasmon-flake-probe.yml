@@ -172,10 +172,12 @@ jobs:
                 echo "Exact probe file does not exist at checked-out ref: $test_file" >&2
                 exit 2
               fi
-              if printf '%s%s' "$test_file" "$test_grep" | grep -q $'[\r\n]'; then
-                echo "Exact probe scope may not contain newlines" >&2
-                exit 2
-              fi
+              case "$test_file$test_grep" in
+                *$'\n'*|*$'\r'*)
+                  echo "Exact probe scope may not contain newlines" >&2
+                  exit 2
+                  ;;
+              esac
               scope="exact:$test_file"
               if [ -n "$test_grep" ]; then
                 scope="$scope::grep=$test_grep"
