@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readlinkSync, statSync, writeFileSync } from "node:fs";
-import { dirname, relative, resolve, sep } from "node:path";
+import { existsSync, lstatSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadDocumentationBoundaryRegistry } from "./documentation-boundaries.mjs";
 
@@ -33,7 +33,7 @@ function gitZ(repoRoot, args) {
 }
 
 function fileBytes(path) {
-  const stat = statSync(path);
+  const stat = lstatSync(path);
   return stat.isSymbolicLink() ? Buffer.from(readlinkSync(path)) : readFileSync(path);
 }
 
@@ -81,7 +81,12 @@ export function ownedImplementationFiles(boundaryPath, registry, files) {
     .sort();
 }
 
-export function computeOwnedFingerprint(boundaryPath, registry, repoRoot = defaultRepoRoot, files = listRepositoryFiles(repoRoot)) {
+export function computeOwnedFingerprint(
+  boundaryPath,
+  registry,
+  repoRoot = defaultRepoRoot,
+  files = listRepositoryFiles(repoRoot),
+) {
   const hash = createHash("sha256");
   const ownedFiles = ownedImplementationFiles(boundaryPath, registry, files);
   for (const path of ownedFiles) {
@@ -162,7 +167,7 @@ export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) 
   return status;
 }
 
-export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = defaultRepoRoot) {
+export function prepareDocumentationReview(boundaryPath, registry, repoRoot = defaultRepoRoot) {
   const boundary = registry.boundaries.find((entry) => entry.path === boundaryPath);
   if (!boundary) throw new Error(`${boundaryPath}: not a declared documentation boundary`);
 
@@ -173,8 +178,22 @@ export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = d
   const state = computeOwnedFingerprint(boundary.path, registry, repoRoot, files);
   const changedFiles = representativeChangedFiles(boundary.path, registry, repoRoot, previous, state.files, 20);
   const base = headSha(repoRoot);
-  writeFileSync(readmePath, upsertReviewMarker(readme, state.digest, base));
-  return { boundary: boundary.path, digest: state.digest, base, changedFiles, previous };
+  return {
+    boundary: boundary.path,
+    digest: state.digest,
+    base,
+    changedFiles,
+    previous,
+    readmePath,
+    updatedReadme: upsertReviewMarker(readme, state.digest, base),
+  };
+}
+
+export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = defaultRepoRoot, options = {}) {
+  const review = prepareDocumentationReview(boundaryPath, registry, repoRoot);
+  options.beforeWrite?.(review);
+  writeFileSync(review.readmePath, review.updatedReadme);
+  return review;
 }
 
 function printStatus(status) {
@@ -193,6 +212,15 @@ function printStatus(status) {
   return 1;
 }
 
+function printReviewSurface(review) {
+  console.log(`Review surface for ${review.boundary}:`);
+  if (review.changedFiles.length === 0) {
+    console.log("  (no owned implementation changes since the previous review base)");
+  }
+  for (const path of review.changedFiles) console.log(`  - ${path}`);
+  console.log("If the README/AGENTS remain accurate, refreshing the marker is a valid marker-only acknowledgement.");
+}
+
 function runCli() {
   const registry = loadDocumentationBoundaryRegistry();
   const command = process.argv[2] ?? "status";
@@ -209,10 +237,9 @@ function runCli() {
       process.exitCode = 2;
       return;
     }
-    const result = reviewDocumentationBoundary(boundaryPath, registry);
-    console.log(`Review surface for ${result.boundary}:`);
-    if (result.changedFiles.length === 0) console.log("  (no owned implementation changes since the previous review base)");
-    for (const path of result.changedFiles) console.log(`  - ${path}`);
+    const result = reviewDocumentationBoundary(boundaryPath, registry, defaultRepoRoot, {
+      beforeWrite: printReviewSurface,
+    });
     console.log(`Updated ${result.boundary}/README.md`);
     console.log(`  sha256=${result.digest}`);
     console.log(`  base=${result.base}`);
