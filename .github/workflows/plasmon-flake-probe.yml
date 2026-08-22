@@ -3,8 +3,8 @@ name: Plasmon Flake Probe
 on:
   # The workflow must exist for every relevant PR event because
   # "Flake probe summary" is a required check. A cheap detector preserves
-  # the old optimization by skipping the expensive ten-iteration matrix when
-  # none of the probe trigger paths changed.
+  # the old optimization by skipping the expensive matrix when none of the
+  # probe trigger paths changed.
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
@@ -13,6 +13,14 @@ on:
         description: Optional branch, tag, or SHA to probe; defaults to the dispatched ref
         required: false
         type: string
+      iterations:
+        description: Number of fresh probe iterations
+        required: true
+        default: '10'
+        type: choice
+        options:
+          - '10'
+          - '50'
       target:
         description: Test boundary to probe
         required: true
@@ -21,12 +29,21 @@ on:
         options:
           - all
           - specialist
+          - exact
           - right-snap
           - left-snap
           - window-lifetime
           - monaco
           - emulatorjs
           - saved-preview
+      test_file:
+        description: Exact test/e2e Playwright file when target=exact
+        required: false
+        type: string
+      test_grep:
+        description: Optional exact-target Playwright grep expression; direct exact probes do not apply Specialist quarantine filtering
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -37,11 +54,18 @@ concurrency:
 
 jobs:
   applicability:
-    name: Determine flake probe applicability
+    name: Determine flake probe applicability and configuration
     runs-on: ubuntu-latest
     outputs:
       applicable: ${{ steps.detect.outputs.applicable }}
       reason: ${{ steps.detect.outputs.reason }}
+      iteration_count: ${{ steps.configure.outputs.iteration_count }}
+      iterations: ${{ steps.configure.outputs.iterations }}
+      target: ${{ steps.configure.outputs.target }}
+      test_file: ${{ steps.configure.outputs.test_file }}
+      test_grep: ${{ steps.configure.outputs.test_grep }}
+      scope: ${{ steps.configure.outputs.scope }}
+      scope_key: ${{ steps.configure.outputs.scope_key }}
     steps:
       - name: Checkout exact probe ref
         uses: actions/checkout@v6
@@ -97,6 +121,89 @@ jobs:
             echo "reason=no-probe-input-changed" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Configure probe count and scope
+        id: configure
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ITERATIONS: ${{ inputs.iterations }}
+          INPUT_TARGET: ${{ inputs.target }}
+          INPUT_TEST_FILE: ${{ inputs.test_file }}
+          INPUT_TEST_GREP: ${{ inputs.test_grep }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            iteration_count="${INPUT_ITERATIONS:-10}"
+            target="${INPUT_TARGET:-specialist}"
+            test_file="${INPUT_TEST_FILE:-}"
+            test_grep="${INPUT_TEST_GREP:-}"
+          else
+            iteration_count=10
+            target=all
+            test_file=""
+            test_grep=""
+          fi
+
+          case "$iteration_count" in
+            10|50) ;;
+            *)
+              echo "Unsupported probe iteration count: $iteration_count" >&2
+              exit 2
+              ;;
+          esac
+
+          case "$target" in
+            all|specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
+              if [ -n "$test_file" ] || [ -n "$test_grep" ]; then
+                echo "test_file/test_grep are only valid with target=exact" >&2
+                exit 2
+              fi
+              scope="$target"
+              ;;
+            exact)
+              case "$test_file" in
+                test/e2e/*.spec.*|test/e2e/*.test.*) ;;
+                *)
+                  echo "target=exact requires test/e2e/**/*.spec.* or *.test.*" >&2
+                  exit 2
+                  ;;
+              esac
+              if [ ! -f "$test_file" ]; then
+                echo "Exact probe file does not exist at checked-out ref: $test_file" >&2
+                exit 2
+              fi
+              if printf '%s%s' "$test_file" "$test_grep" | grep -q $'[\r\n]'; then
+                echo "Exact probe scope may not contain newlines" >&2
+                exit 2
+              fi
+              scope="exact:$test_file"
+              if [ -n "$test_grep" ]; then
+                scope="$scope::grep=$test_grep"
+              fi
+              ;;
+            *)
+              echo "Unsupported flake-probe target: $target" >&2
+              exit 2
+              ;;
+          esac
+
+          iterations="$(node -e 'const n=Number(process.argv[1]); process.stdout.write(JSON.stringify(Array.from({length:n}, (_, index) => index + 1)))' "$iteration_count")"
+          scope_key="$(printf '%s' "$scope" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//; s/-$//' | cut -c1-80)"
+          if [ -z "$scope_key" ]; then
+            echo "Unable to derive probe scope key" >&2
+            exit 2
+          fi
+
+          {
+            echo "iteration_count=$iteration_count"
+            echo "iterations=$iterations"
+            echo "target=$target"
+            echo "test_file=$test_file"
+            echo "test_grep=$test_grep"
+            echo "scope=$scope"
+            echo "scope_key=$scope_key"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload applicability evidence
         uses: actions/upload-artifact@v4
         with:
@@ -109,17 +216,21 @@ jobs:
   probe:
     if: needs.applicability.outputs.applicable == 'true'
     needs: applicability
-    name: Flake probe iteration ${{ matrix.iteration }}/10
+    name: Flake probe ${{ needs.applicability.outputs.scope }} iteration ${{ matrix.iteration }}/${{ needs.applicability.outputs.iteration_count }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 10
       matrix:
-        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        iteration: ${{ fromJSON(needs.applicability.outputs.iterations) }}
 
     env:
-      PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'all' }}
+      PROBE_TARGET: ${{ needs.applicability.outputs.target }}
+      PROBE_TEST_FILE: ${{ needs.applicability.outputs.test_file }}
+      PROBE_TEST_GREP: ${{ needs.applicability.outputs.test_grep }}
+      PROBE_SCOPE: ${{ needs.applicability.outputs.scope }}
+      PROBE_ITERATION_COUNT: ${{ needs.applicability.outputs.iteration_count }}
 
     steps:
       - name: Checkout exact probe ref
@@ -132,11 +243,12 @@ jobs:
         run: |
           set -euxo pipefail
           echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "iteration=${{ matrix.iteration }}/10"
+          echo "iteration=${{ matrix.iteration }}/$PROBE_ITERATION_COUNT"
           echo "run_id=${{ github.run_id }}"
           echo "run_number=${{ github.run_number }}"
           echo "run_attempt=${{ github.run_attempt }}"
           echo "target=$PROBE_TARGET"
+          echo "scope=$PROBE_SCOPE"
           git rev-parse HEAD
 
       - name: Install Nix
@@ -150,7 +262,7 @@ jobs:
           set -o pipefail
           nix develop --command bash -lc '
             set -euxo pipefail
-            bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET"
+            bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET" "$PROBE_TEST_FILE" "$PROBE_TEST_GREP"
           ' 2>&1 | tee flake-probe-output.log
 
       - name: Record probe iteration result
@@ -163,16 +275,20 @@ jobs:
             echo "run_number=${{ github.run_number }}"
             echo "run_attempt=${{ github.run_attempt }}"
             echo "iteration=${{ matrix.iteration }}"
+            echo "iteration_count=${PROBE_ITERATION_COUNT:-unknown}"
             echo "outcome=${{ steps.probe.outcome }}"
             echo "sha=${PROBE_SHA:-unknown}"
             echo "target=${PROBE_TARGET:-unknown}"
+            echo "scope=${PROBE_SCOPE:-unknown}"
+            echo "test_file=${PROBE_TEST_FILE:-}"
+            echo "test_grep=${PROBE_TEST_GREP:-}"
           } > flake-probe-result/result.txt
 
       - name: Upload probe iteration result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}
+          name: flake-probe-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
@@ -197,7 +313,7 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}
+          name: flake-probe-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
@@ -207,17 +323,18 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
-          diagnostic_artifact="flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}"
+          diagnostic_artifact="flake-probe-${PROBE_ITERATION_COUNT:-unknown}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}"
           context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
 
           {
             echo "## Plasmon flake probe iteration failure"
             echo
-            echo "- Probe iteration: ${{ matrix.iteration }}/10"
+            echo "- Probe iteration: ${{ matrix.iteration }}/${PROBE_ITERATION_COUNT:-unknown}"
             echo "- Workflow run_number: ${{ github.run_number }}"
             echo "- Workflow run_attempt: ${{ github.run_attempt }}"
             echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
             echo "- Target: \`${PROBE_TARGET:-unknown}\`"
+            echo "- Scope: \`${PROBE_SCOPE:-unknown}\`"
             echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
             echo
@@ -265,14 +382,14 @@ jobs:
       - name: Download probe iteration results
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-iteration-result-${{ github.run_id }}-*
+          pattern: flake-probe-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-*
           path: flake-probe-results
 
       - name: Download failed-probe-iteration diagnostics
         if: needs.probe.result != 'success'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-iteration-diagnostics-${{ github.run_id }}-*
+          pattern: flake-probe-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-*
           path: flake-probe-diagnostics
 
       - name: Summarize exact-head stability
