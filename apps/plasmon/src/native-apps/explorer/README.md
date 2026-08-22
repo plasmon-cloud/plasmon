@@ -1,5 +1,7 @@
 # Explorer
 
+<!-- plasmon-docs-review:v1 sha256=f614b7392ad1d2f1e1322bb1582d45b0c7c7c32cc9ac3a515b52606d48e4a7a5 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 Explorer is the native application wrapper around the shared FileManager UI. It owns window-level filesystem navigation and view chrome while file operations and entry interaction remain in `os/file-manager/**`.
 
 `history.ts` and `navigation.ts` provide the production navigation model. History is transient per Explorer instance and keyed by stable filesystem `NodeId`; paths are refreshed from `FsService` when a location is revisited. Folder activation, favorites, breadcrumbs, direct address navigation, and Up all enter the same push history. Back/Forward move the history cursor only after the filesystem proves the historical target still resolves to a directory; deleted or otherwise unreachable historical entries are discarded while searching for the next valid location. Re-navigating to the current `NodeId` refreshes its path without adding a duplicate entry.

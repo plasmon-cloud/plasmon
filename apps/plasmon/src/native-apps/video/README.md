@@ -1,5 +1,7 @@
 # Video
 
+<!-- plasmon-docs-review:v1 sha256=83aa658e346da43f7edf5910e2fc572a0daa0fc857257dc0c38836178b56d63f base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 Video is the native browser-media player for association-selected video files and supported web media targets.
 
 `media.ts` owns deterministic URL validation, media-type hints, native codec capability interpretation, playback error classification, supported web-video normalization, and object-URL lifetime. `VideoPlayer.tsx` owns media/iframe presentation and browser event handling.
