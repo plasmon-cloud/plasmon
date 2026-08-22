@@ -105,13 +105,15 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     await address.fill("/System");
     await address.press("Enter");
     await expect(address).toHaveValue("/System");
+    const files = explorer.getByRole("listbox", { name: "Files" });
+    await expect(files.getByRole("option").filter({ hasText: "FileManager.sys" })).toBeVisible({ timeout: 20_000 });
 
     const localHidden = explorer.getByRole("checkbox", { name: "Show hidden files" });
     await expect(localHidden).toBeEnabled();
     await expect(localHidden).not.toBeChecked();
     await localHidden.check();
     await expect(localHidden).toBeChecked();
-    await expect(explorer.getByText(".Properties.sys", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(files.getByRole("option").filter({ hasText: ".Properties.sys" })).toBeVisible({ timeout: 20_000 });
 
     // Explorer-local visibility never leaks into global Search or Start.
     await expectNoSearchResult(plasmon, "Properties", "Properties");
