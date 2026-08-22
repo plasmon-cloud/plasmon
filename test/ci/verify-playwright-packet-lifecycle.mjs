@@ -4,11 +4,17 @@ import {
   packetSizeForProbe,
   TARGETED_PACKET_SIZE,
 } from "./build-plasmon-flake-probe-matrix.mjs";
+import {
+  isolationForProbe,
+  PREPARED_ENV_REUSE_MARKER,
+} from "./plasmon-playwright-isolation.mjs";
 
 const workflow = readFileSync(".github/workflows/plasmon-flake-probe.yml", "utf8");
 const packetRunner = readFileSync("test/e2e/run-plasmon-playwright-packet.sh", "utf8");
 const iterationRunner = readFileSync("test/ci/run-plasmon-flake-probe-iteration.sh", "utf8");
 const flakeRunner = readFileSync("test/ci/run-plasmon-flake-probe.sh", "utf8");
+const safeProbeFile = "test/e2e/plasmon-neutron-icon.spec.ts";
+const resetProbeFile = "test/e2e/plasmon-demo-game.spec.ts";
 
 function requireFragment(source, fragment, label) {
   if (!source.includes(fragment)) {
@@ -33,7 +39,7 @@ function primaryEnv({ count, target }) {
     PRIMARY_MODE: "manual",
     PRIMARY_COUNT: String(count),
     PRIMARY_TARGET: target,
-    PRIMARY_TEST_FILE: target === "exact" ? "test/e2e/plasmon-neutron-icon.spec.ts" : "",
+    PRIMARY_TEST_FILE: target === "exact" ? safeProbeFile : "",
     PRIMARY_TEST_GREP: "",
     PRIMARY_SCOPE: target,
     PRIMARY_SCOPE_KEY: target,
@@ -120,6 +126,26 @@ if (combined.length !== 20) {
   throw new Error(`baseline plus characterization should schedule 10 baseline jobs + 10 prepared packets; saw ${combined.length}`);
 }
 
+const safeSource = readFileSync(safeProbeFile, "utf8");
+if (!safeSource.includes(PREPARED_ENV_REUSE_MARKER)) {
+  throw new Error(`${safeProbeFile} must explicitly opt into prepared-environment reuse`);
+}
+const safeIsolation = isolationForProbe({ target: "exact", testFile: safeProbeFile });
+if (safeIsolation.mode !== "reuse") {
+  throw new Error(`explicitly safe probe must reuse prepared environment; saw ${safeIsolation.mode}`);
+}
+const resetIsolation = isolationForProbe({ target: "exact", testFile: resetProbeFile });
+if (resetIsolation.mode !== "reinstall") {
+  throw new Error(`unmarked probe must fail closed to reinstall isolation; saw ${resetIsolation.mode}`);
+}
+const mixedIsolation = isolationForProbe({
+  target: "exact-set",
+  testFilesJson: JSON.stringify([safeProbeFile, resetProbeFile]),
+});
+if (mixedIsolation.mode !== "reinstall") {
+  throw new Error("mixed exact-set must use the strongest persistent-state isolation required by any selected file");
+}
+
 for (const fragment of [
   "node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output \"$GITHUB_OUTPUT\"",
   "PROBE_START_ITERATION: ${{ matrix.start_iteration }}",
@@ -140,10 +166,14 @@ for (const fragment of [
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
   "npm run plasmon:local:status",
+  "node test/ci/plasmon-playwright-isolation.mjs",
   "npm run plasmon:local:reinstall",
   "export PLASMON_PLAYWRIGHT_ENV_READY=1",
   "for ((offset = 0; offset < repetitions; offset += 1))",
+  "[ \"$isolation_mode\" = \"reinstall\" ]",
+  "@plasmon-prepared-env-reuse",
   "PLASMON_PACKET_ITERATION=\"$iteration\"",
+  "PLASMON_PACKET_RESET_FAILED=\"$reset_failed\"",
   "kill \"$server_pid\"",
   "wait \"$server_pid\"",
 ]) {
@@ -154,11 +184,13 @@ for (const singleton of [
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
   "npm run plasmon:local:status",
-  "npm run plasmon:local:reinstall",
 ]) {
   if (occurrenceCount(packetRunner, singleton) !== 1) {
     throw new Error(`packet lifecycle must contain exactly one syntactic ${singleton} boundary`);
   }
+}
+if (occurrenceCount(packetRunner, "npm run plasmon:local:reinstall") !== 2) {
+  throw new Error("packet lifecycle must contain one initial install and one conditional repetition reset site");
 }
 const loopIndex = packetRunner.indexOf("for ((offset = 0; offset < repetitions; offset += 1))");
 for (const packetSetup of [
@@ -166,14 +198,21 @@ for (const packetSetup of [
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
   "npm run plasmon:local:status",
-  "npm run plasmon:local:reinstall",
+  "node test/ci/plasmon-playwright-isolation.mjs",
   "export PLASMON_PLAYWRIGHT_ENV_READY=1",
 ]) {
   if (packetRunner.indexOf(packetSetup) > loopIndex) {
     throw new Error(`${packetSetup} must stay outside and before the repetition loop`);
   }
 }
-forbidFragment(packetRunner.slice(loopIndex), "plasmon:local:reinstall", "per-repetition lifecycle");
+const loopSource = packetRunner.slice(loopIndex);
+for (const fragment of [
+  "if [ \"$offset\" -gt 0 ] && [ \"$isolation_mode\" = \"reinstall\" ]",
+  "npm run plasmon:local:reinstall",
+  "persistent-state reset",
+]) {
+  requireFragment(loopSource, fragment, "stateful repetition reset fallback");
+}
 
 for (const fragment of [
   "rm -rf playwright-report test-results",
@@ -184,12 +223,12 @@ for (const fragment of [
   "flake-probe-results/iteration-${iteration}",
   "flake-probe-diagnostics/iteration-${iteration}",
   "probe-output.log",
+  "PLASMON_PACKET_RESET_FAILED",
+  "PLASMON_PACKET_RESET_LOG",
+  "Persistent-state reset failed before probe iteration",
   "bash test/ci/run-plasmon-flake-probe.sh",
 ]) {
   requireFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
-}
-for (const fragment of ["PLASMON_PACKET_RESET_FAILED", "PLASMON_PACKET_RESET_LOG", "plasmon:local:reinstall"]) {
-  forbidFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
 }
 
 for (const fragment of [
@@ -206,5 +245,5 @@ forbidFragment(flakeRunner, "include_quarantined", "prepared-compatible flake ru
 forbidFragment(packetRunner, "--repeat-each", "reusable Playwright packet lifecycle");
 
 console.log(
-  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; npm install, package preparation, PocketIC startup/status, and deployment reinstall happen once per packet; repetitions reuse that ready environment while launching fresh Playwright processes; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
+  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; immutable setup is packet-scoped; explicitly marked non-mutating tests reuse the prepared deployment; unmarked or mixed targets fail closed to per-repetition reinstall isolation; exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
 );
