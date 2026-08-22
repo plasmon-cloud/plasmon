@@ -3,9 +3,17 @@ import type { FsNode, FsService } from "./contracts/index.ts";
 import { readResourcePreviewMetadata } from "./fs/resourcePreview.ts";
 import {
   canLoadImageThumbnail,
+  imageThumbnailMime,
   loadResourceThumbnail,
   type LoadedImageThumbnail,
 } from "./resource-thumbnail.ts";
+
+interface ThumbnailState {
+  fs: FsService;
+  elementRef: RefObject<HTMLElement | null>;
+  sourceKey: string;
+  url: string;
+}
 
 /**
  * Browser lifecycle adapter for bounded filesystem thumbnails. The loader owns
@@ -17,41 +25,56 @@ export function useResourceThumbnail(
   node: FsNode | null,
   elementRef: RefObject<HTMLElement | null>,
 ): string | null {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const preview = node ? readResourcePreviewMetadata(node) : null;
+  const ownImageMime = node ? imageThumbnailMime(node) : null;
+  const canLoadOwnImage = node ? canLoadImageThumbnail(node) : false;
+  const sourceKey = node
+    ? JSON.stringify([
+        node.id,
+        node.name,
+        node.size,
+        node.modifiedAt,
+        node.contentHash,
+        preview?.nodeId ?? null,
+        preview?.mime ?? null,
+        preview?.byteSize ?? null,
+        ownImageMime,
+      ])
+    : null;
+  const [thumbnail, setThumbnail] = useState<ThumbnailState | null>(null);
 
   useEffect(() => {
     let active = true;
     let observer: IntersectionObserver | null = null;
     let loaded: LoadedImageThumbnail | null = null;
-    if (!node) {
-      setThumbnailUrl(null);
+    if (!node || sourceKey === null) {
+      setThumbnail(null);
       return undefined;
     }
 
-    const hasReferencedPreview = readResourcePreviewMetadata(node) !== null;
-    const canLoadOwnImage = canLoadImageThumbnail(node);
+    const hasReferencedPreview = preview !== null;
     if (!hasReferencedPreview && !canLoadOwnImage) {
-      setThumbnailUrl(null);
+      setThumbnail(null);
       return undefined;
     }
 
     const load = () => {
       void loadResourceThumbnail(fs, node)
-        .then((thumbnail) => {
-          if (!thumbnail) {
-            if (active) setThumbnailUrl(null);
+        .then((nextThumbnail) => {
+          if (!nextThumbnail) {
+            if (active) setThumbnail(null);
             return;
           }
           if (!active) {
-            thumbnail.revoke();
+            nextThumbnail.revoke();
             return;
           }
           loaded?.revoke();
-          loaded = thumbnail;
-          setThumbnailUrl(thumbnail.url);
+          loaded = nextThumbnail;
+          setThumbnail({ fs, elementRef, sourceKey, url: nextThumbnail.url });
         })
         .catch(() => {
-          if (active) setThumbnailUrl(null);
+          if (active) setThumbnail(null);
         });
     };
 
@@ -73,17 +96,12 @@ export function useResourceThumbnail(
       observer?.disconnect();
       loaded?.revoke();
     };
-  }, [
-    fs,
-    node?.contentHash,
-    node?.id,
-    node?.metadata,
-    node?.mime,
-    node?.modifiedAt,
-    node?.name,
-    node?.size,
-    elementRef,
-  ]);
+  }, [fs, elementRef, sourceKey]);
 
-  return thumbnailUrl;
+  return thumbnail
+    && thumbnail.fs === fs
+    && thumbnail.elementRef === elementRef
+    && thumbnail.sourceKey === sourceKey
+    ? thumbnail.url
+    : null;
 }
