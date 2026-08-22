@@ -1,4 +1,6 @@
 import { appendFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const TARGETED_PACKET_SIZE = 5;
 
@@ -22,7 +24,11 @@ export function packetSizeForProbe({ iteration_count, target }) {
 export function addProbePackets(include, config) {
   const packetSize = packetSizeForProbe(config);
   let packet = 0;
-  for (let startIteration = 1; startIteration <= config.iteration_count; startIteration += packetSize) {
+  for (
+    let startIteration = 1;
+    startIteration <= config.iteration_count;
+    startIteration += packetSize
+  ) {
     packet += 1;
     const repetitions = Math.min(
       packetSize,
@@ -74,7 +80,7 @@ export function buildProbeMatrix(env = process.env) {
   return { include };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const outputIndex = process.argv.indexOf("--github-output");
   const outputPath = outputIndex === -1 ? null : process.argv[outputIndex + 1];
   const matrix = buildProbeMatrix();
