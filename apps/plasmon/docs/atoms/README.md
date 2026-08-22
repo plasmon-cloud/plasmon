@@ -1,5 +1,7 @@
 # Atom and collaboration design index
 
+<!-- plasmon-docs-review:v1 sha256=62c1cf76a66fa14f146c8cb8ba03c5eb0254ea251fc796ff9e257da41497592b base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 This directory contains the long-form design record for Plasmon's logical Atom model and the first collaborative Atom work.
 
 ## Read in this order
