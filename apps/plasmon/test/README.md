@@ -73,7 +73,7 @@ Use RTL for things such as adapter wiring, form/button/keyboard semantics, focus
 
 The repository-owned coordinator is `test/e2e/plasmon-demo-environment.ts`. It reads the manifest, resolves each inline archive to its owning workspace, runs only that workspace's production `package` command, verifies every required archive exists, then delegates lifecycle operations to the existing `neutron-provision` command.
 
-Current manifest-derived artifacts are Kernel, Plasmon, and the independently installed Review application. When the manifest changes, preparation follows it automatically.
+Current manifest-derived artifacts are Kernel and Plasmon; this submission deployment intentionally excludes Review. When the manifest changes, preparation follows it automatically.
 
 From the repository root:
 
@@ -124,7 +124,7 @@ Use real browser/Neutron automation only when the claim depends on browser or in
 
 Keep Playwright intentionally small and semantic. The packaged Plasmon specs live in the repository-wide Playwright tree at `test/e2e/` because they reuse the root Playwright configuration and canonical Neutron provisioning/runtime helpers.
 
-The Review browser proof remains responsible for the actual independently installed Review package, `/Apps/Review.neutron` visibility through real Plasmon, activation into the installed Review iframe/application, and representative real interaction. Deterministic projection uniqueness/metadata/open-dispatch semantics belong in the lower headless test instead of being broadly duplicated in Playwright.
+The Review browser proof is retained as deferred sibling-application evidence, but is not part of this submission deployment because Review is intentionally excluded. Deterministic projection uniqueness/metadata/open-dispatch semantics belong in the lower headless test instead of being broadly duplicated in Playwright.
 
 Do not add broad Desktop/FileManager/Start/Search scripts merely because Playwright can click them. Screenshot regression is outside this lane unless visual fidelity itself becomes a separately accepted contract.
 

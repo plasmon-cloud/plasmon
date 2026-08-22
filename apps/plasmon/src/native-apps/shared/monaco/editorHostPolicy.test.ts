@@ -3,6 +3,7 @@ import {
   createEditorSurfaceModelOwner,
   editorLanguageForResource,
   editorModelUri,
+  syncEditorModelLanguage,
   syncEditorModelValue,
 } from "./editorModel.ts";
 import {
@@ -45,7 +46,30 @@ describe("#200 shared Monaco editor-host policy", () => {
     expect(writes).toBe(1);
   });
 
+  test("live language synchronization changes the existing model in place", () => {
+    let language = "plaintext";
+    const model = { getLanguageId: () => language };
+    const transitions: string[] = [];
+    const setModelLanguage = (target: typeof model, next: string) => {
+      expect(target).toBe(model);
+      transitions.push(next);
+      language = next;
+    };
+
+    expect(syncEditorModelLanguage(model, "javascript", setModelLanguage)).toBe(true);
+    expect(model.getLanguageId()).toBe("javascript");
+    expect(syncEditorModelLanguage(model, "javascript", setModelLanguage)).toBe(false);
+    expect(syncEditorModelLanguage(model, "plaintext", setModelLanguage)).toBe(true);
+    expect(model.getLanguageId()).toBe("plaintext");
+    expect(transitions).toEqual(["javascript", "plaintext"]);
+  });
+
   test("language selection consumes canonical resource classification", () => {
+    expect(editorLanguageForResource("example.js")).toBe("javascript");
+    expect(editorLanguageForResource("example.js", "application/javascript")).toBe("javascript");
+    expect(editorLanguageForResource("example.js", "text/plain")).toBe("javascript");
+    expect(editorLanguageForResource("example.js", "application/octet-stream")).toBe("plaintext");
+    expect(editorLanguageForResource("notes.md", "text/plain")).toBe("plaintext");
     expect(editorLanguageForResource("notes.md", "text/markdown")).toBe("markdown");
     expect(editorLanguageForResource("plain.unknown")).toBe("plaintext");
   });

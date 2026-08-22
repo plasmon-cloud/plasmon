@@ -11,6 +11,21 @@ export function syncEditorModelValue(model: EditorValueModel, nextValue: string)
   return true;
 }
 
+export interface EditorLanguageModel {
+  getLanguageId(): string;
+}
+
+/** Change the language of one existing live editor model only when needed. */
+export function syncEditorModelLanguage<Model extends EditorLanguageModel>(
+  model: Model,
+  nextLanguage: string,
+  setModelLanguage: (model: Model, language: string) => void,
+): boolean {
+  if (model.getLanguageId() === nextLanguage) return false;
+  setModelLanguage(model, nextLanguage);
+  return true;
+}
+
 /**
  * Monaco's model registry is global to the application realm. A semantic
  * document key therefore cannot also be the ownership identity for a live
