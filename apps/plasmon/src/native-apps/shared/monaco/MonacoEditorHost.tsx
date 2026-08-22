@@ -5,7 +5,13 @@ import {
   type CSSProperties,
 } from "react";
 import { monacoActionId, type MonacoEditorCommand } from "./editorCommands.ts";
-import { createEditorSurfaceModelOwner, syncEditorModelValue, type OwnedEditorModel } from "./editorModel.ts";
+import {
+  createEditorSurfaceModelOwner,
+  syncEditorModelLanguage,
+  syncEditorModelValue,
+  type OwnedEditorModel,
+} from "./editorModel.ts";
+import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 
 export const MONACO_ENGINE_NAME = "Monaco";
@@ -51,6 +57,28 @@ type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
 type MonacoModel = import("monaco-editor").editor.ITextModel;
 type MonacoDisposable = import("monaco-editor").IDisposable;
 
+function configureSlimLanguageServices(monaco: MonacoApi): void {
+  if (!isSlimMonacoProfile) return;
+
+  const modeConfiguration = {
+    completionItems: false,
+    hovers: false,
+    documentSymbols: false,
+    definitions: false,
+    references: false,
+    documentHighlights: false,
+    rename: false,
+    diagnostics: false,
+    documentRangeFormattingEdits: false,
+    signatureHelp: false,
+    onTypeFormattingEdits: false,
+    codeActions: false,
+    inlayHints: false,
+  } as const;
+  monaco.languages.typescript.javascriptDefaults.setModeConfiguration(modeConfiguration);
+  monaco.languages.typescript.typescriptDefaults.setModeConfiguration(modeConfiguration);
+}
+
 /**
  * Shared browser-runtime adapter for Text and Markdown. The host owns only the
  * concrete Monaco editor/model lifecycle. Filesystem/document/save/close policy
@@ -75,6 +103,7 @@ export function MonacoEditorHost({
   const editorRef = useRef<MonacoEditor | null>(null);
   const modelRef = useRef<MonacoModel | null>(null);
   const monacoRef = useRef<MonacoApi | null>(null);
+  const languageRef = useRef(language);
   const applyingExternalValueRef = useRef(false);
   const onChangeRef = useRef(onChange);
   const onCursorChangeRef = useRef(onCursorChange);
@@ -83,6 +112,8 @@ export function MonacoEditorHost({
   const onCommandApiChangeRef = useRef(onCommandApiChange);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [modelLanguage, setModelLanguage] = useState<string | null>(null);
+  const [modelUri, setModelUri] = useState<string | null>(null);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCursorChangeRef.current = onCursorChange; }, [onCursorChange]);
@@ -97,6 +128,8 @@ export function MonacoEditorHost({
     const disposables: MonacoDisposable[] = [];
     setLoading(true);
     setError(null);
+    setModelLanguage(null);
+    setModelUri(null);
     onReadyChangeRef.current?.(false);
     onCommandApiChangeRef.current?.(null);
     onStateChangeRef.current?.({ phase: "loading", error: null });
@@ -106,9 +139,10 @@ export function MonacoEditorHost({
       .then((monaco) => {
         if (cancelled || !containerRef.current) return;
         monacoRef.current = monaco;
+        configureSlimLanguageServices(monaco);
         const created = createEditorSurfaceModelOwner(
           modelKey,
-          (uri) => monaco.editor.createModel(value, language, monaco.Uri.parse(uri)),
+          (uri) => monaco.editor.createModel(value, languageRef.current, monaco.Uri.parse(uri)),
         );
         const createdModel = created.model;
         createdModel.updateOptions({ tabSize: 2, insertSpaces: true, trimAutoWhitespace: false });
@@ -135,6 +169,8 @@ export function MonacoEditorHost({
         editor = createdEditor;
         editorRef.current = createdEditor;
         modelRef.current = createdModel;
+        setModelUri(created.uri);
+        setModelLanguage(createdModel.getLanguageId());
         disposables.push(
           createdEditor.onDidChangeModelContent(() => {
             if (!applyingExternalValueRef.current) onChangeRef.current(createdModel.getValue());
@@ -166,6 +202,8 @@ export function MonacoEditorHost({
         if (!cancelled) {
           const message = reason instanceof Error ? reason.message : String(reason);
           setLoading(false);
+          setModelLanguage(null);
+          setModelUri(null);
           onReadyChangeRef.current?.(false);
           onCommandApiChangeRef.current?.(null);
           onStateChangeRef.current?.({ phase: "error", error: message });
@@ -194,9 +232,16 @@ export function MonacoEditorHost({
   }, [value]);
 
   useEffect(() => {
+    languageRef.current = language;
     const monaco = monacoRef.current;
     const model = modelRef.current;
-    if (monaco && model && model.getLanguageId() !== language) monaco.editor.setModelLanguage(model, language);
+    if (!monaco || !model) return;
+    syncEditorModelLanguage(
+      model,
+      language,
+      (target, nextLanguage) => monaco.editor.setModelLanguage(target, nextLanguage),
+    );
+    setModelLanguage(model.getLanguageId());
   }, [language]);
 
   useEffect(() => {
@@ -221,6 +266,8 @@ export function MonacoEditorHost({
       data-editor-engine="monaco"
       data-editor-ready={loading || error ? "false" : "true"}
       data-editor-state={error ? "error" : loading ? "loading" : "ready"}
+      data-editor-language={modelLanguage ?? ""}
+      data-editor-model-uri={modelUri ?? ""}
     >
       <div ref={containerRef} style={styles.editor} />
       {loading && <div style={styles.overlay} role="status">Loading editor…</div>}
