@@ -141,9 +141,9 @@ for (const fragment of [
   "npm run plasmon:local:serve",
   "npm run plasmon:local:status",
   "npm run plasmon:local:reinstall",
+  "export PLASMON_PLAYWRIGHT_ENV_READY=1",
   "for ((offset = 0; offset < repetitions; offset += 1))",
   "PLASMON_PACKET_ITERATION=\"$iteration\"",
-  "PLASMON_PLAYWRIGHT_ENV_READY=1",
   "kill \"$server_pid\"",
   "wait \"$server_pid\"",
 ]) {
@@ -161,12 +161,19 @@ for (const singleton of [
   }
 }
 const loopIndex = packetRunner.indexOf("for ((offset = 0; offset < repetitions; offset += 1))");
-if (packetRunner.indexOf("npm ci") > loopIndex || packetRunner.indexOf("npm run plasmon:local:prepare") > loopIndex) {
-  throw new Error("dependency install and package preparation must stay outside the repetition loop");
+for (const packetSetup of [
+  "npm ci",
+  "npm run plasmon:local:prepare",
+  "npm run plasmon:local:serve",
+  "npm run plasmon:local:status",
+  "npm run plasmon:local:reinstall",
+  "export PLASMON_PLAYWRIGHT_ENV_READY=1",
+]) {
+  if (packetRunner.indexOf(packetSetup) > loopIndex) {
+    throw new Error(`${packetSetup} must stay outside and before the repetition loop`);
+  }
 }
-if (packetRunner.indexOf("npm run plasmon:local:reinstall") < loopIndex) {
-  throw new Error("persistent-state reinstall reset must happen inside the repetition loop");
-}
+forbidFragment(packetRunner.slice(loopIndex), "plasmon:local:reinstall", "per-repetition lifecycle");
 
 for (const fragment of [
   "rm -rf playwright-report test-results",
@@ -177,8 +184,12 @@ for (const fragment of [
   "flake-probe-results/iteration-${iteration}",
   "flake-probe-diagnostics/iteration-${iteration}",
   "probe-output.log",
+  "bash test/ci/run-plasmon-flake-probe.sh",
 ]) {
   requireFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
+}
+for (const fragment of ["PLASMON_PACKET_RESET_FAILED", "PLASMON_PACKET_RESET_LOG", "plasmon:local:reinstall"]) {
+  forbidFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
 }
 
 for (const fragment of [
@@ -195,5 +206,5 @@ forbidFragment(flakeRunner, "include_quarantined", "prepared-compatible flake ru
 forbidFragment(packetRunner, "--repeat-each", "reusable Playwright packet lifecycle");
 
 console.log(
-  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; install/package/PocketIC setup is packet-scoped; reinstall reset and fresh test execution are repetition-scoped; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
+  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; npm install, package preparation, PocketIC startup/status, and deployment reinstall happen once per packet; repetitions reuse that ready environment while launching fresh Playwright processes; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
 );
