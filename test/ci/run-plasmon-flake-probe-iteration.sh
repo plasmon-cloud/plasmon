@@ -21,12 +21,23 @@ mkdir -p "$result_dir"
 rm -rf playwright-report test-results
 : > "$output_path"
 
-set +e
-bash test/ci/run-plasmon-flake-probe.sh \
-  "$target" "$test_file" "$test_grep" "$test_files_json" \
-  2>&1 | tee "$output_path"
-status=${PIPESTATUS[0]}
-set -e
+status=0
+if [ "${PLASMON_PACKET_RESET_FAILED:-0}" = "1" ]; then
+  {
+    echo "Persistent-state reset failed before probe iteration ${iteration}."
+    if [ -n "${PLASMON_PACKET_RESET_LOG:-}" ] && [ -f "$PLASMON_PACKET_RESET_LOG" ]; then
+      cat "$PLASMON_PACKET_RESET_LOG"
+    fi
+  } | tee "$output_path"
+  status=1
+else
+  set +e
+  bash test/ci/run-plasmon-flake-probe.sh \
+    "$target" "$test_file" "$test_grep" "$test_files_json" \
+    2>&1 | tee "$output_path"
+  status=${PIPESTATUS[0]}
+  set -e
+fi
 
 if [ "$status" -eq 0 ]; then
   outcome=success
