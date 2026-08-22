@@ -93,8 +93,14 @@ async function createLegacyManagedSystemState(
     seeded.push(identity);
   }
 
+  // The released v1 reconciler wrote the seed ledger after creating the folder
+  // and its shortcuts. Ensure the fixture preserves that durable ordering even
+  // on millisecond-resolution clocks.
+  let rootBeforeLedger = await fs.stat(root.id);
+  while (Date.now() <= system.createdAt) await new Promise((resolve) => setTimeout(resolve, 1));
   await fs.setMetadata(root.id, { [START_SEEDED_IDENTITIES_KEY]: seeded.sort() });
-  return { root: await fs.stat(root.id), system, shortcuts };
+  rootBeforeLedger = await fs.stat(root.id);
+  return { root: rootBeforeLedger, system, shortcuts };
 }
 
 async function createPriorRootManagedState(
@@ -263,29 +269,37 @@ test("upgrade preserves metadata-customized canonical Settings default", async (
   }
 });
 
-test("unmarked legacy System defaults are preserved when directory ownership cannot be proven", async () => {
+test("released v1 legacy System defaults backfill provenance and migrate once", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
     const legacy = await createLegacyManagedSystemState(environment.services.fs);
-    const result = await reconcileStartMenu(environment.services.fs, formerSystemApps, []);
+    const fs = environment.services.fs;
+    const settingsId = nativeIdentity(settingsApp);
+    const explorerId = nativeIdentity(explorerApp);
+    const propertiesId = nativeIdentity(propertiesApp);
 
-    expect(result.created).toBe(0);
-    expect(result.preserved).toBe(1);
-    expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(legacy.system.id);
+    const first = await reconcileStartMenu(fs, formerSystemApps, []);
+    expect(first.created).toBe(0);
+    expect(first.preserved).toBe(1);
+    expect(await environment.node(`${START_MENU_PATH}/System`)).toBeNull();
+    expect(await environment.node(`${START_MENU_PATH}/Settings`)).toBeNull();
+    expect(await environment.node(`${START_MENU_PATH}/Properties`)).toBeNull();
 
-    const shortcuts = await allShortcuts(environment.services.fs);
-    expect(shortcuts).toHaveLength(formerSystemApps.length);
-    for (const app of formerSystemApps) {
-      const identity = nativeIdentity(app);
-      const preserved = shortcuts.filter((shortcut) => startShortcutTargetIdentity(shortcut.target) === identity);
-      expect(preserved).toHaveLength(1);
-      expect(preserved[0]?.node.id).toBe(legacy.shortcuts.get(identity)?.id);
-      expect(await environment.services.fs.pathOf(preserved[0]!.node.id)).toBe(
-        `${START_MENU_PATH}/System/${app.name}`,
-      );
-    }
-    expect(await seededIdentities(environment.services.fs)).toEqual([nativeIdentity(explorerApp)]);
+    const explorer = legacy.shortcuts.get(explorerId)!;
+    expect((await fs.stat(explorer.id)).id).toBe(explorer.id);
+    expect(await fs.pathOf(explorer.id)).toBe(`${START_MENU_PATH}/Explorer`);
+    expect(await fs.stat(legacy.shortcuts.get(settingsId)!.id).then(() => true, () => false)).toBe(false);
+    expect(await fs.stat(legacy.shortcuts.get(propertiesId)!.id).then(() => true, () => false)).toBe(false);
+    expect(await seededIdentities(fs)).toEqual([explorerId]);
+
+    const revisionAfterFirstPass = await fs.revision();
+    const second = await reconcileStartMenu(fs, formerSystemApps, []);
+    expect(second.created).toBe(0);
+    expect(second.preserved).toBe(1);
+    expect(second.skippedDeleted).toBe(0);
+    expect(await fs.revision()).toBe(revisionAfterFirstPass);
+    expect(await fs.pathOf(explorer.id)).toBe(`${START_MENU_PATH}/Explorer`);
   } finally {
     environment.dispose();
   }
@@ -359,12 +373,14 @@ test("legacy customization preserves renamed moved and deleted defaults and neve
   }
 });
 
-test("preserving an unowned legacy System folder remains idempotent", async () => {
+test("customized pre-provenance System preservation remains idempotent", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
-    await createLegacyManagedSystemState(environment.services.fs);
+    const legacy = await createLegacyManagedSystemState(environment.services.fs);
+    await environment.services.fs.setMetadata(legacy.system.id, { "user.organized": true });
     await reconcileStartMenu(environment.services.fs, formerSystemApps, []);
+    expect((await environment.node(`${START_MENU_PATH}/System`))?.id).toBe(legacy.system.id);
     const revisionAfterFirstPass = await environment.services.fs.revision();
     const pathsAfterFirstPass = await Promise.all(
       (await allShortcuts(environment.services.fs)).map((shortcut) => environment.services.fs.pathOf(shortcut.node.id)),
