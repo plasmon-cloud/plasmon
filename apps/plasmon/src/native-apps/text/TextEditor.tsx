@@ -143,7 +143,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
       ) : (
         <div style={styles.editorPane}>
           <MonacoEditorHost
-            modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}`}
+            modelKey={`text:${processId}`}
             value={snapshot.text}
             language={language}
             readOnly={readOnly}
