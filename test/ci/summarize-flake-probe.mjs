@@ -68,6 +68,16 @@ function resultIterationCount(result, path, root) {
   return Number(result.iteration_count);
 }
 
+function resultMode(result, isLegacy, path, root) {
+  if (!result.mode) return isLegacy ? "baseline" : "baseline";
+  if (!/^(?:baseline|manual|characterization)$/.test(result.mode)) {
+    throw new Error(
+      `invalid probe mode in ${relative(root, path)}: ${result.mode}`,
+    );
+  }
+  return result.mode;
+}
+
 function stripAnsi(value) {
   return value.replace(/\u001b\[[0-9;]*m/g, "");
 }
@@ -138,11 +148,18 @@ function iterationsText(iterations) {
   return [...iterations].sort((a, b) => a - b).join(", ");
 }
 
+function summaryHeading(mode) {
+  if (mode === "characterization") return "## Plasmon 50-iteration characterization probe";
+  if (mode === "manual") return "## Plasmon manual flake probe";
+  return "## Plasmon 10-iteration baseline flake probe";
+}
+
 try {
   const resultFiles = walkFiles(resultsRoot, "result.txt");
   const results = resultFiles.map((path) => ({ path, ...parseResult(path) }));
   const iterations = new Set();
   const iterationCounts = new Set();
+  const modes = new Set();
   const shas = new Set();
   const targets = new Set();
   const scopes = new Set();
@@ -156,6 +173,7 @@ try {
     const iteration = probeIteration(result, result.path, resultsRoot);
     const iterationCount = resultIterationCount(result, result.path, resultsRoot);
     const isLegacy = !result.iteration && Boolean(result.attempt);
+    const mode = resultMode(result, isLegacy, result.path, resultsRoot);
     if (!result.sha || result.sha === "unknown") {
       throw new Error(`missing exact SHA in ${relative(resultsRoot, result.path)}`);
     }
@@ -184,6 +202,7 @@ try {
       iterationCounts.add(10);
       scopes.add(result.target);
     }
+    modes.add(mode);
     iterations.add(iteration);
     shas.add(result.sha);
     targets.add(result.target);
@@ -194,7 +213,17 @@ try {
   if (iterationCounts.size !== 1) {
     throw new Error("probe result artifacts disagree on iteration_count");
   }
+  if (modes.size !== 1) {
+    throw new Error("probe result artifacts disagree on probe mode");
+  }
   const expectedCount = [...iterationCounts][0];
+  const mode = [...modes][0];
+  if (mode === "characterization" && expectedCount !== 50) {
+    throw new Error(`characterization mode requires 50 probe iterations; saw ${expectedCount}`);
+  }
+  if (mode === "baseline" && expectedCount !== 10) {
+    throw new Error(`baseline mode requires 10 probe iterations; saw ${expectedCount}`);
+  }
   if (results.length !== expectedCount || iterations.size !== expectedCount) {
     throw new Error(
       `expected ${expectedCount} unique fresh probe iteration results; saw ${results.length} files and ${iterations.size} unique probe iterations`,
@@ -260,8 +289,9 @@ try {
     ? "none"
     : failedIterations.sort((a, b) => a - b).join(", ");
 
-  console.log("## Plasmon flake probe");
+  console.log(summaryHeading(mode));
   console.log();
+  console.log(`- Probe mode: ${markdownCode(mode)}`);
   console.log(`- Exact SHA: ${markdownCode(sha)}`);
   console.log(`- Target: ${markdownCode(target)}`);
   console.log(`- Scope: ${markdownCode(scope)}`);
@@ -311,7 +341,13 @@ try {
   }
 
   if (passed === expectedCount) {
-    console.log(`**STABILITY OBSERVED: ${expectedCount}/${expectedCount} fresh probe iterations passed.**`);
+    if (expectedCount === 50) {
+      console.log(
+        "**STABILITY EVIDENCE: 50/50 fresh probe iterations passed for this exact SHA and scope. This is evidence, not proof that the target cannot flake.**",
+      );
+    } else {
+      console.log(`**STABILITY OBSERVED: ${expectedCount}/${expectedCount} fresh probe iterations passed.**`);
+    }
   } else {
     console.log(
       `**FLAKE/FAILURE OBSERVED: only ${passed}/${expectedCount} fresh probe iterations passed (${results.length}/${expectedCount} reported).**`,
