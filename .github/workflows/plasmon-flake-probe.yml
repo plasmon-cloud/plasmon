@@ -3,8 +3,8 @@ name: Plasmon Flake Probe
 on:
   # The workflow must exist for every relevant PR event because
   # "Flake probe summary" is a required check. A cheap detector preserves
-  # the old optimization by skipping the expensive matrix when none of the
-  # probe trigger paths changed.
+  # the old optimization by skipping the expensive baseline matrix when none
+  # of the probe trigger paths changed. Characterization has its own selector.
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
@@ -311,18 +311,18 @@ jobs:
       - name: Upload applicability and characterization evidence
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-applicability-${{ github.run_id }}
+          name: flake-probe-applicability-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: flake-probe-applicability
           if-no-files-found: error
           retention-days: 7
-          overwrite: true
 
   probe:
-    if: needs.applicability.outputs.applicable == 'true'
+    if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     needs: applicability
     name: Flake ${{ matrix.mode }} ${{ matrix.scope }} iteration ${{ matrix.iteration }}/${{ matrix.iteration_count }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    continue-on-error: ${{ matrix.mode == 'characterization' }}
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -396,11 +396,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}
+          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-result-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
-          overwrite: true
 
       - name: Collect failed-probe-iteration diagnostics
         if: always() && steps.probe.outcome != 'success'
@@ -421,17 +420,16 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}
+          name: flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
-          overwrite: true
 
       - name: Report observed probe failure
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
-          diagnostic_artifact="flake-probe-${PROBE_MODE:-unknown}-${PROBE_ITERATION_COUNT:-unknown}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}"
+          diagnostic_artifact="flake-probe-${PROBE_MODE:-unknown}-${PROBE_ITERATION_COUNT:-unknown}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}"
           context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
 
           {
@@ -482,16 +480,17 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
 
-      - name: Download applicability evidence
+      - name: Download applicability evidence from available run attempts
         uses: actions/download-artifact@v4
         with:
-          name: flake-probe-applicability-${{ github.run_id }}
+          pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
           path: flake-probe-applicability
+          merge-multiple: true
 
-      - name: Download primary probe iteration results
+      - name: Download primary probe iteration results across run attempts
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-*
+          pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-probe-results
 
       - name: Detect failed primary probe iterations
@@ -515,22 +514,32 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `failed=${failed}\n`);
           NODE
 
-      - name: Download failed primary probe diagnostics
+      - name: Download failed primary probe diagnostics across run attempts
         if: steps.primary_results.outputs.failed == 'true'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-*
+          pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-*-*
           path: flake-probe-diagnostics
 
       - name: Summarize exact-head baseline or manual stability
         run: |
           set -o pipefail
-          mkdir -p flake-probe-diagnostics
+          mkdir -p flake-probe-diagnostics flake-probe-summary
           node test/ci/summarize-flake-probe.mjs \
             flake-probe-results \
             flake-probe-diagnostics \
             flake-probe-applicability/changed-files.txt \
+            --json-file flake-probe-summary/summary.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload baseline/manual evidence packet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-summary-${{ needs.applicability.outputs.primary_mode }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: flake-probe-summary/summary.json
+          if-no-files-found: ignore
+          retention-days: 7
 
   characterization_summary:
     if: ${{ always() && github.event_name == 'pull_request' && needs.applicability.result == 'success' }}
@@ -549,7 +558,7 @@ jobs:
             echo "No automatic characterization was selected for this PR head."
             echo
             echo "- Selection reason: \`${CHARACTERIZATION_REASON:-unknown}\`"
-            echo "- The normal 10-iteration baseline remains a separate check in \`Flake probe summary\`."
+            echo "- The normal 10-iteration baseline remains a separate evidence packet/check in \`Flake probe summary\`."
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout exact characterization ref
@@ -559,18 +568,19 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Download characterization applicability evidence
+      - name: Download characterization applicability evidence from available run attempts
         if: needs.applicability.outputs.characterization_applicable == 'true'
         uses: actions/download-artifact@v4
         with:
-          name: flake-probe-applicability-${{ github.run_id }}
+          pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
           path: flake-probe-applicability
+          merge-multiple: true
 
-      - name: Download characterization probe iteration results
+      - name: Download characterization probe iteration results across run attempts
         if: needs.applicability.outputs.characterization_applicable == 'true'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-result-${{ github.run_id }}-*
+          pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-characterization-results
 
       - name: Detect failed characterization probe iterations
@@ -595,20 +605,30 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `failed=${failed}\n`);
           NODE
 
-      - name: Download failed characterization diagnostics
+      - name: Download failed characterization diagnostics across run attempts
         if: needs.applicability.outputs.characterization_applicable == 'true' && steps.characterization_results.outputs.failed == 'true'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-diagnostics-${{ github.run_id }}-*
+          pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-*-*
           path: flake-characterization-diagnostics
 
       - name: Summarize exact-head 50-iteration characterization evidence
         if: needs.applicability.outputs.characterization_applicable == 'true'
         run: |
           set -o pipefail
-          mkdir -p flake-characterization-diagnostics
+          mkdir -p flake-characterization-diagnostics flake-characterization-summary
           node test/ci/summarize-flake-probe.mjs \
             flake-characterization-results \
             flake-characterization-diagnostics \
             flake-probe-applicability/changed-files.txt \
+            --json-file flake-characterization-summary/summary.json \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload characterization evidence packet
+        if: always() && needs.applicability.outputs.characterization_applicable == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake-summary-characterization-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: flake-characterization-summary/summary.json
+          if-no-files-found: ignore
+          retention-days: 7
