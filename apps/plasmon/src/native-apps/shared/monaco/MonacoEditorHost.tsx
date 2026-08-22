@@ -11,6 +11,7 @@ import {
   syncEditorModelValue,
   type OwnedEditorModel,
 } from "./editorModel.ts";
+import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 
 export const MONACO_ENGINE_NAME = "Monaco";
@@ -55,6 +56,28 @@ type MonacoApi = typeof import("monaco-editor");
 type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
 type MonacoModel = import("monaco-editor").editor.ITextModel;
 type MonacoDisposable = import("monaco-editor").IDisposable;
+
+function configureSlimLanguageServices(monaco: MonacoApi): void {
+  if (!isSlimMonacoProfile) return;
+
+  const modeConfiguration = {
+    completionItems: false,
+    hovers: false,
+    documentSymbols: false,
+    definitions: false,
+    references: false,
+    documentHighlights: false,
+    rename: false,
+    diagnostics: false,
+    documentRangeFormattingEdits: false,
+    signatureHelp: false,
+    onTypeFormattingEdits: false,
+    codeActions: false,
+    inlayHints: false,
+  } as const;
+  monaco.languages.typescript.javascriptDefaults.setModeConfiguration(modeConfiguration);
+  monaco.languages.typescript.typescriptDefaults.setModeConfiguration(modeConfiguration);
+}
 
 /**
  * Shared browser-runtime adapter for Text and Markdown. The host owns only the
@@ -116,6 +139,7 @@ export function MonacoEditorHost({
       .then((monaco) => {
         if (cancelled || !containerRef.current) return;
         monacoRef.current = monaco;
+        configureSlimLanguageServices(monaco);
         const created = createEditorSurfaceModelOwner(
           modelKey,
           (uri) => monaco.editor.createModel(value, languageRef.current, monaco.Uri.parse(uri)),
