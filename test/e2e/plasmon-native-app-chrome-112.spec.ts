@@ -58,13 +58,18 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
   await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
   await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
   await fixtureNavigation;
-  await page.unroute(fixtureRoute, redirectToFirstDemo);
 
   const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-  await expect(page.locator(appSelector)).toBeVisible();
-  const app = page.frameLocator(appSelector);
+  await expect(page.locator(appSelector).first()).toBeAttached();
+  const app = page.frameLocator(appSelector).first();
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+  // first-demo is startup configuration. Keep the route active through real
+  // Plasmon readiness because Kernel app-host setup can issue more than one
+  // main-document navigation before bootstrap settles.
   await expect(taskbar).toBeVisible({ timeout: 30_000 });
+  const activeAppUrl = new URL(await app.locator("html").evaluate(() => window.location.href));
+  expect(activeAppUrl.searchParams.get("plasmon-fixture")).toBe("first-demo");
+  await page.unroute(fixtureRoute, redirectToFirstDemo);
 
   const health = installPlasmonBrowserHealth(page, {
     firstPartyOrigins: [kernelUrl],
