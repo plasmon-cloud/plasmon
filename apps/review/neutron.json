@@ -2,13 +2,13 @@
   "format": 3,
   "name": "Review",
   "id": "review",
-  "version": 100,
+  "version": 101,
   "update_source": "233tv-xiaaa-aaaay-aacta-cai",
-  "description": "Structured collaborative review workspaces with durable logical Atom history",
+  "description": "Human acceptance reviews with durable logical Atom history",
   "src": "main.mo",
   "background": {
     "path": "service.html",
-    "description": "Own Review Atom state, semantic history, and agent tools"
+    "description": "Own Review Atom state, semantic history, and review interchange"
   },
   "capabilities": {
     "background_ui_requests": {
@@ -26,7 +26,7 @@
       "title": "Review",
       "path": "index.html",
       "icon": "static/icon.svg",
-      "description": "Create, open, review, coordinate, comment, and restore Review Atoms"
+      "description": "Load acceptance checks, record human results, refresh reviewer context, and submit evidence"
     }
   ],
   "func": {}

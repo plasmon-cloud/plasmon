@@ -20,7 +20,9 @@ export async function login(page: Page): Promise<void> {
   }, runtime.developerIdentitySeed);
   await expect(page.locator('[data-tid="auth-error"]')).toHaveCount(0);
   await expect(page.locator('[data-tid="app-background-frame"][data-app-id="review"]')).toHaveCount(1);
-  await expect(page.locator('[data-tid="app-background-frame"][data-app-id="files"]')).toHaveCount(1);
+  // #395 deliberately provisions Review without Files. The core acceptance path
+  // must not become green by accidentally relying on app:files:background.
+  await expect(page.locator('[data-tid="app-background-frame"][data-app-id="files"]')).toHaveCount(0);
   await page.frameLocator('[data-tid="app-background-frame"][data-app-id="review"]').locator("body").waitFor({ state: "attached" });
 }
 
@@ -34,16 +36,6 @@ export async function openReview(page: Page): Promise<ReviewHarness> {
   await expect(frame).toBeVisible({ timeout: 1_500 });
   await expect(review.locator("#root > .review-app")).toBeVisible({ timeout: 1_500 });
   return { page, review, frame };
-}
-
-export async function approveFilesTool(page: Page, tool: "readBinary" | "writeBinary"): Promise<void> {
-  const dialog = page.locator('[data-tid="frontend-tool-dialog"]');
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("review/background");
-  await expect(dialog).toContainText("app:files:background");
-  await expect(dialog).toContainText(tool);
-  await page.locator('[data-tid="frontend-tool-approve-session"]').click();
-  await expect(dialog).toHaveCount(0);
 }
 
 function kernelUrl(): string {

@@ -1,94 +1,141 @@
 # Review
 
-`Review.neutron` is a standalone **vanilla Neutron application** for structured review work. It has no Plasmon or MTN runtime dependency.
+`Review.neutron` is a standalone vanilla-Neutron application for durable human acceptance review.
 
-One installed Review Element owns many logical Review Atoms. A Review Atom is a durable workspace with its own stable `AtomId`; it is not the physical AppScope, tile/window/process, source path, or historical revision.
+One installed Review Element owns many logical Review Atoms. A Review Atom is an independently addressable review workspace with its own stable `AtomId`; it is not the physical AppScope, tile/window/process, source path, or historical revision.
 
-## Using Review
+## Product role
 
-A Review is organized around review items. Each item keeps the primary workflow visible together:
+Review sits between an acceptance plan and engineering work:
 
-- **Desired** — how strongly the outcome needs to be true (`Must`, `High`, `Normal`, or `Later`).
-- **Effort** — the expected size of the work, from `Tiny` through `Really big`.
-- **Owner** — the person or team responsible for moving the item forward; an empty owner is explicitly unassigned.
-- **Work** — the current workflow state such as `Ready`, `In progress`, `Blocked`, `Needs retest`, or `Done`.
-- **Evidence** — the local reviewer result plus evidence/comments attached to the item.
-- **Activity / History** — the semantic actions that changed the Review, including actor/time information when available.
+1. An AI or engineer prepares a list of things humans should verify in the real Plasmon OS.
+2. The plan describes each acceptance check and, when available, the real UI workflow and expected behavior.
+3. Human reviewers perform those checks and independently record **Pass** or **Fail** plus observations/evidence.
+4. Recorded results remain durable so a reviewer can leave and resume later.
+5. Shared/provider updates never silently replace the visible Review. The human chooses **Refresh** before queued reviewer changes are pulled in.
+6. Ordinary local saves do not publish a downstream result. **Submit** marks one exact Review revision as the deliberate AI/engineering snapshot.
+7. The submitted Markdown can be copied into the downstream AI/engineering conversation, which may then propose Issues from the human evidence.
 
-Create a Review from the left workspace panel, add the first item in the main workspace, fill the structured fields, and choose **Save details**. Evidence results and evidence notes are completed actions and persist immediately after the provider accepts them.
+The AI is an author/consumer of the Review plan and results; it is not treated as the human who performed acceptance checks.
 
-### Persistence
+## First-run workflow
 
-Review has no fake app-wide Save button. The persistent background owns canonical Review data using Neutron's `persistent_browser_storage` capability.
+The guaranteed standalone workflow does not require the separate Files application:
 
-The UI reports persistence truthfully:
+```text
+AI / engineer
+    -> Markdown/TODO acceptance plan
+    -> Paste AI test plan
+    -> Review Atom
+    -> human Pass/Fail + observations
+    -> Submit current review
+    -> Copy for AI
+    -> downstream triage / Issues
+```
 
-- completed actions show **Saved** after the provider accepts them;
-- edits to Desired / Effort / Owner / Work show **Unsaved changes** until **Save details** is chosen;
-- failed actions show an explicit error and are not presented as saved;
-- pending item/evidence input and restore confirmation are kept after a failed provider action so the user can retry; success cleanup runs only after provider acceptance.
+The primary reviewer questions are deliberately narrow:
 
-Current state is normalized into Atom metadata, item records, and comment records. Every accepted semantic mutation appends one revision/event journal record. Initial creation, every twentieth revision, and restore create checkpoints used for historical reconstruction.
+- What am I supposed to test?
+- How should I test it in the real OS?
+- What should happen?
+- Did it pass?
+- If it failed, what actually happened?
+- What did other reviewers observe the last time I refreshed?
 
-### History and restore
+Legacy coordination fields remain in the stored Review model for compatibility, but `Desired`, `Effort`, `Owner`, and `Work` are not the primary reviewer interaction. Review records human observations; downstream issue tracking owns engineering prioritization and implementation work.
 
-Each accepted semantic transaction creates one logical `RevisionId`. History shows those revisions as user-readable activity rather than exposing storage encoding.
+## Import
 
-Restore is deliberately a two-step action. Restoring a prior logical revision changes the current state by creating a **new** logical revision, keeps the same `AtomId`, and preserves the existing history. If the provider rejects the restore, Review keeps the confirmation visible instead of implying the restore completed.
+**Paste AI test plan** is the primary import path. It calls the Review provider directly with bounded Markdown/TODO text and therefore works when Review is the only installed application besides the Kernel.
 
-### Sharing
+Top-level Markdown bullets or checkboxes become acceptance checks. Indented lines beneath each check are retained as test instructions / expected behavior. A top-level `#` heading becomes the Review title unless the human provides a title explicitly.
 
-Live MTN-backed sharing is **not available in the current standalone build**. Review does not display an active-looking Share action or imply that a live link exists.
+Example:
 
-Markdown/TODO import/export is portability, not collaboration:
+```markdown
+# r2 Human Acceptance
 
-- import creates a new logical Review Atom and records the source as provenance;
-- export writes a readable Markdown copy through normal Neutron Files;
-- neither operation changes Atom identity into a filesystem path or creates a live shared Review.
+- [ ] Explorer Back returns to the prior folder
+  1. Open Explorer.
+  2. Navigate into two folders.
+  3. Press Back.
+  Expected: Explorer returns to the folder you just left.
+```
 
-Live sharing remains separate work governed by #125/#127.
+Files-backed Markdown/TODO import remains available as an **optional portability path**. If Files is not installed, Review reports that Files is unavailable and directs the user to paste the plan instead; it must not expose a raw `app:files:background` endpoint failure as the core workflow.
 
-## MVP architecture
+Import remains portability rather than identity. File-backed import records source provenance; pasted text does not invent a fake source path.
 
-- Stable `ReviewItemId` records with independent per-actor evidence.
-- Typed semantic provider commands with optimistic `expectedRevision` and idempotent `commandId`.
-- Exactly one accepted semantic transaction creates one logical `RevisionId`.
-- Provider-owned current state plus append-only semantic history.
-- Whole-Atom restore preserves Atom identity and prior history.
-- Markdown/TODO portability through normal Neutron Files.
-- No Yjs/CRDT, Plasmon dependency, or MTN dependency in the base application.
+## Human reviewer behavior
 
-Ordinary small-field edits write only changed records plus revision/receipt metadata; `RevisionId` does not imply a snapshot, Git commit/tree, content-addressed object, chunk manifest, or immutable publication.
+Each item stores independent per-actor evidence. One reviewer result does not overwrite another reviewer's result.
 
-## Package shape
+- **Pass** records `review.set_result = working`.
+- **Fail** records `review.set_result = not_working` and requires an explanatory observation in the UI.
+- Result notes belong to that participant result rather than being confused with generic project-management metadata.
+- Existing comments/history remain shared context.
 
-- `src/index.tsx` — human Review tile and first-demo workflow.
-- `src/action_outcome.ts` — deterministic action outcome and retry-safe draft cleanup rules.
-- `src/presentation.ts` — deterministic user-facing vocabulary and draft/presentation helpers.
-- `src/style.scss` — light/dark Review presentation tokens and responsive desktop layout.
-- `src/service.ts` — persistent background and Review-specific agent tools.
-- `src/engine.ts` — deterministic semantic transaction engine.
-- `src/persistence.ts` — normalized IndexedDB production persistence and in-memory test port.
-- `src/markdown.ts` — bounded Markdown/TODO import/export.
-- `src/neutron_files_port.ts` — normal Neutron Files attachment boundary.
+The provider persists each accepted Pass/Fail result and observation immediately. Recorded progress survives closing and reopening Review. Text typed into an observation box but not yet recorded with Pass or Fail is only a UI draft and is not promised durable across reopening.
 
-## Verification
+## Refresh boundary
+
+`review.state` notifications do not auto-replace visible Review state. They mark that updates are waiting. The reviewer explicitly chooses **Refresh** to read the current provider state and other reviewer changes.
+
+This prepares the UI for later MTN-backed sharing without allowing a remote update to silently replace the context a human is currently reviewing.
+
+## Submit and export
+
+Submit is distinct from persistence.
+
+- Local reviewer results and observations are saved during ordinary review work.
+- **Submit current review** records the exact current logical revision as the latest deliberate submission and returns its readable Markdown snapshot.
+- **Copy for AI** uses Neutron's trusted clipboard bridge from a human click; it does not require Files and it does not imply live AI access.
+- After reopening Review, the provider-local submission marker identifies the exact submitted revision and Review can render that historical snapshot again.
+- Any later Review mutation makes the UI show that current changes are not submitted until the human chooses Submit again.
+
+A submitted snapshot contains:
+
+- Review/Atom identity and exact revision;
+- every acceptance check;
+- test instructions / expected behavior;
+- independent reviewer results;
+- failure/observation notes;
+- reviewer discussion.
+
+Saving the submitted Markdown through the separate Files app remains an optional portability action. The basic AI handoff never depends on Files.
+
+## Sharing
+
+MTN-backed live sharing is not wired in this standalone release. The application nevertheless establishes the intended shared-review interaction:
+
+- recorded local progress is durable;
+- independent participant results are part of the Atom model;
+- queued external changes require explicit Refresh;
+- downstream publication requires explicit Submit.
+
+Actual two-human MTN sharing, authoritative remote identity, rights, and revocation remain separate platform integration work.
+
+## Architecture retained from the original Review MVP
+
+- stable `ReviewItemId` records with independent per-actor evidence;
+- typed semantic provider commands with optimistic `expectedRevision` and idempotent `commandId`;
+- exactly one accepted semantic transaction creates one logical `RevisionId`;
+- provider-owned normalized current state plus append-only semantic history;
+- whole-Atom restore preserves Atom identity and prior history;
+- Markdown/TODO portability is not canonical Atom identity/state;
+- one Review Element can own many logical Review Atoms;
+- no Yjs/CRDT, Plasmon dependency, or MTN dependency in the standalone application.
+
+Submission bookkeeping is provider-local operational metadata and does not create a Review logical revision. The existing submission IndexedDB remains at its original schema/version; older records containing Files `path`/`etag` fields remain valid because those fields are optional compatibility metadata rather than a new persistent schema.
+
+## Package and verification
+
+This change is Review package version `101` (`review.v0.1.1.neutron`). Review v100 remains historical r2 package bytes; changed bytes are not republished under the old version.
+
+Run:
 
 ```sh
 npm --workspace neutron-review test
 ```
 
-The semantic suite includes the failure-path contract: rejected provider actions surface an explicit failed outcome, preserve submitted drafts, and never clear newer input accidentally.
-
-The Review CI package/browser lane additionally provisions vanilla Neutron and checks installed package bytes plus Playwright acceptance for:
-
-- first-run copy and sharing/persistence truth;
-- light/dark readability;
-- normal and narrow-window layout without horizontal overflow;
-- create/edit/evidence workflow;
-- explicit unsaved-to-saved item-detail behavior;
-- history and deliberate restore;
-- persistence across reopen;
-- Markdown export/import portability.
-
-Browser evidence is captured in the Playwright report. It intentionally does not require Plasmon or MTN.
+Semantic tests cover Atom/revision invariants, plan parsing, and submission bookkeeping. The Review CI packaged-browser lane intentionally provisions vanilla Neutron **without Files** and proves the standalone paste-plan -> review -> reopen -> Submit -> Copy workflow against the installed package bytes. Optional Files portability is a separate integration path and is not allowed to make the standalone gate green.

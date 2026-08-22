@@ -112,7 +112,9 @@ test("runtime-only process host is not a user-launchable Shell application", asy
 
     const { root } = await reconcileStartMenu(services.fs, services.nativeApps.list(), []);
     expect(await nativeShortcutForHandler(services, root.id, JS_DOS_HANDLER)).toBeNull();
-    expect(await nativeShortcutForHandler(services, root.id, "native:settings")).not.toBeNull();
+    expect(await nativeShortcutForHandler(services, root.id, "native:settings")).toBeNull();
+    expect(await nativeShortcutForHandler(services, root.id, "native:properties")).toBeNull();
+    expect(await nativeShortcutForHandler(services, root.id, "native:explorer")).not.toBeNull();
   } finally {
     services.filesystem.dispose();
   }
