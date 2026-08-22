@@ -109,7 +109,7 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     const address = explorer.getByRole("textbox", { name: "Address" });
     await address.fill("/System");
     await address.press("Enter");
-    await expect(files.getByRole("option").filter({ hasText: "FileManager.sys" })).toBeVisible({ timeout: 20_000 });
+    await expect(files.getByRole("option").filter({ hasText: "RecycleBin.sys" })).toBeVisible({ timeout: 20_000 });
     await expect(address).toHaveValue("/System");
 
     const localHidden = explorer.getByRole("checkbox", { name: "Show hidden files" });
