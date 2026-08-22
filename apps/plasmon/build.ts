@@ -22,6 +22,14 @@ const isHackathonCoreProfile = !isEditorProfile;
 const isSlimMonacoProfile = packageProfile === "slim" || packageProfile === "demo";
 const isDemoProfile = packageProfile === "demo";
 
+const [demoTextSource, demoMarkdownSource, demoSvgSource] = isDemoProfile
+  ? await Promise.all([
+    readFile(new URL("./src/demo/assets/Demo Notes.txt", import.meta.url), "utf8"),
+    readFile(new URL("./src/demo/assets/Demo Guide.md", import.meta.url), "utf8"),
+    readFile(new URL("./src/demo/assets/Demo Artwork.svg", import.meta.url), "utf8"),
+  ])
+  : [undefined, undefined, undefined];
+
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(mainOutfile, "utf8");
   const sanitized = source.replaceAll("https://react.dev/errors/", "#react-error-");
@@ -94,6 +102,9 @@ const config: BuildOptions = {
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
+    __PLASMON_DEMO_TEXT__: demoTextSource === undefined ? "undefined" : JSON.stringify(demoTextSource),
+    __PLASMON_DEMO_MARKDOWN__: demoMarkdownSource === undefined ? "undefined" : JSON.stringify(demoMarkdownSource),
+    __PLASMON_DEMO_SVG__: demoSvgSource === undefined ? "undefined" : JSON.stringify(demoSvgSource),
   },
   metafile: true,
   plugins: [
