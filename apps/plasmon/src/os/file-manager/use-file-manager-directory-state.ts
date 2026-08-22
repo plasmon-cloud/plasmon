@@ -20,6 +20,7 @@ import {
   type SelectionState,
 } from "./model.ts";
 import { fileManagerErrorMessage } from "./error-message.ts";
+import { SerializedRefreshQueue } from "./serialized-refresh-queue.ts";
 
 interface UseFileManagerDirectoryStateOptions {
   directoryId: NodeId;
@@ -37,33 +38,53 @@ export function useFileManagerDirectoryState(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const refreshGateRef = useRef(new RefreshGate());
+  const refreshQueueRef = useRef(new SerializedRefreshQueue());
+  const refreshScopeRef = useRef(0);
 
   const refresh = useCallback(async () => {
-    const generation = refreshGateRef.current.begin();
-    setLoading(true);
-    try {
-      const directory = await fs.stat(directoryId);
-      if (directory.kind !== "directory") {
-        throw new Error(`${directory.name} is not a directory`);
+    const scope = refreshScopeRef.current;
+
+    await refreshQueueRef.current.request(async () => {
+      if (scope !== refreshScopeRef.current) return;
+      const generation = refreshGateRef.current.begin();
+      setLoading(true);
+      try {
+        const directory = await fs.stat(directoryId);
+        if (directory.kind !== "directory") {
+          throw new Error(`${directory.name} is not a directory`);
+        }
+        const listed = await fs.list(directoryId, { sort });
+        if (
+          scope !== refreshScopeRef.current
+          || !refreshGateRef.current.isCurrent(generation)
+        ) return;
+        setNodes(listed);
+        setSelection((selection) =>
+          reconcileSelection(selection, new Set(listed.map((node) => node.id))),
+        );
+        setError(null);
+      } catch (cause: unknown) {
+        if (
+          scope !== refreshScopeRef.current
+          || !refreshGateRef.current.isCurrent(generation)
+        ) return;
+        setError(fileManagerErrorMessage(cause));
+      } finally {
+        if (
+          scope === refreshScopeRef.current
+          && refreshGateRef.current.isCurrent(generation)
+        ) setLoading(false);
       }
-      const listed = await fs.list(directoryId, { sort });
-      if (!refreshGateRef.current.isCurrent(generation)) return;
-      setNodes(listed);
-      setSelection((current) =>
-        reconcileSelection(current, new Set(listed.map((node) => node.id))),
-      );
-      setError(null);
-    } catch (cause: unknown) {
-      if (!refreshGateRef.current.isCurrent(generation)) return;
-      setError(fileManagerErrorMessage(cause));
-    } finally {
-      if (refreshGateRef.current.isCurrent(generation)) setLoading(false);
-    }
+    });
   }, [directoryId, fs, setSelection, sort]);
 
   useEffect(() => {
+    const scope = refreshScopeRef.current;
     void refresh();
-    return () => refreshGateRef.current.invalidate();
+    return () => {
+      if (refreshScopeRef.current === scope) refreshScopeRef.current += 1;
+      refreshGateRef.current.invalidate();
+    };
   }, [refresh]);
 
   useEffect(() => {
