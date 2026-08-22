@@ -20,7 +20,7 @@ async function pinPresentation(action: Locator): Promise<{
 
   await expect(action).toHaveAttribute("title", label);
   await expect(icon).toHaveAttribute("data-pin-state", pressed ? "pinned" : "unpinned");
-  await expect(art).toHaveAttribute("src", /\/static\/plasmon\/icons\/pin\.svg$/);
+  await expect(art).toHaveAttribute("src", "static/plasmon/icons/pin.svg");
   expect(await art.evaluate((image: HTMLImageElement) => image.naturalWidth), "packaged pin artwork loads").toBeGreaterThan(0);
 
   return {
@@ -125,7 +125,7 @@ test("#109 — packaged Start and taskbar context share the canonical pin afford
     const contextArt = contextIcon.locator("img");
     await expect(contextAction).toHaveAttribute("aria-label", "Unpin from taskbar");
     await expect(contextAction).toHaveAttribute("title", "Unpin from taskbar");
-    await expect(contextArt).toHaveAttribute("src", /\/static\/plasmon\/icons\/pin\.svg$/);
+    await expect(contextArt).toHaveAttribute("src", "static/plasmon/icons/pin.svg");
     expect(await contextArt.evaluate((image: HTMLImageElement) => image.naturalWidth), "taskbar context pin artwork loads").toBeGreaterThan(0);
     expect(await contextAction.textContent()).not.toContain("📌");
     await expect(contextIcon).toHaveAttribute("data-pin-state", "pinned");
