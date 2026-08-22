@@ -1,7 +1,10 @@
+import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
+
 export const MONACO_PROGRAM_FILES_RUNTIME_ROOT = "./System/Program Files/MonacoEditor";
 export const MONACO_BROWSER_TRANSPORT_PATH = "./runtime/monaco/worker-sources.js";
 
 export function monacoWorkerFile(label: string): string {
+  if (isSlimMonacoProfile) return "editor.worker.js";
   if (label === "json") return "json.worker.js";
   if (label === "css" || label === "scss" || label === "less") return "css.worker.js";
   if (label === "html" || label === "handlebars" || label === "razor") return "html.worker.js";
