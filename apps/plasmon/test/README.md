@@ -67,30 +67,24 @@ The preload in `setupHappyDom.ts` installs browser globals for the test process 
 
 Use RTL for things such as adapter wiring, form/button/keyboard semantics, focus state that Happy DOM models reliably, and React integration. Keep policy and cross-system state transitions in production/headless tests. Keep actual layout, iframe, worker, packaged-asset, and browser runtime claims in Playwright.
 
-## Installed demo environment
+## Deployment command families
 
-`plasmon-local.ndeploy.json` is the source of truth for the real local/CI Plasmon acceptance environment. Do not maintain a second package list in shell scripts or CI.
+The canonical deployment details live in [`../TESTING.md`](../TESTING.md); do not duplicate a hand-maintained package inventory here.
 
-The repository-owned coordinator is `test/e2e/plasmon-demo-environment.ts`. It reads the manifest, resolves each inline archive to its owning workspace, runs only that workspace's production `package` command, verifies every required archive exists, then delegates lifecycle operations to the existing `neutron-provision` command.
+The repository-owned coordinator is `../../test/e2e/plasmon-deployment-environment.ts`. It requires an explicit `local` or `demo` scope, reads that scope's manifest, resolves every declared inline archive to its owning workspace, runs each required production package command once, verifies the archives, and delegates provision lifecycle operations to the existing Neutron provisioning command.
 
-Current manifest-derived artifacts are Kernel and Plasmon; this submission deployment intentionally excludes Review. When the manifest changes, preparation follows it automatically.
-
-From the repository root:
+`plasmon-local.ndeploy.json` is the bounded local/CI acceptance manifest used by the required Plasmon packaged browser lanes. Use the `plasmon:local:*` command family for that environment:
 
 ```sh
-npm run plasmon:demo:prepare
-npm run plasmon:demo:serve
-npm run plasmon:demo:status
-npm run plasmon:demo:reinstall
+npm run plasmon:local:prepare
+npm run plasmon:local:serve
+npm run plasmon:local:status
+npm run plasmon:local:reinstall
 ```
 
-For a deterministic clean local acceptance setup, start `plasmon:demo:serve` in one terminal and run:
+`plasmon.ndeploy.json` is the fuller demo manifest. Use `plasmon:demo:*` only when that larger demo deployment is intentionally required. The two command families are not interchangeable, and neither should grow a second hard-coded artifact list in this README, shell scripts, or CI.
 
-```sh
-npm run test:e2e:plasmon:fresh
-```
-
-`test:e2e:plasmon:fresh` packages the manifest-derived artifacts, cleanly reinstalls through `neutron-provision`, then runs the packaged Plasmon browser suite. `npm run test:e2e:plasmon` reruns only the browser specs against an already matching deployment.
+For a deterministic clean packaged acceptance setup, use the current `test:e2e:plasmon:fresh` workflow described in `TESTING.md`; it prepares and provisions the bounded local manifest before the packaged browser suite. `npm run test:e2e:plasmon` reruns browser specs against an already matching installation.
 
 This preserves the acceptance boundary:
 
@@ -104,7 +98,7 @@ production package command
   -> canonical filesystem/open bridge
 ```
 
-The harness must not add a second PocketIC implementation or test-only product behavior.
+The harness must not add a second PocketIC implementation, fabricated packages, or test-only product behavior.
 
 ## Package lane
 
@@ -116,7 +110,7 @@ npm --workspace neutron-plasmon run test:package
 
 when generated build/package output is part of the acceptance claim. Build-output presence is not installed-runtime proof.
 
-Native-app package structural coverage is enforced during the real esbuild pipeline through `src/native-apps/packaging.ts`. Runtime-only hosts such as js-dos remain under their dedicated runtime package/asset assertions.
+Native-app package structural coverage is enforced during the real esbuild pipeline through `src/native-apps/packaging.ts`. Optional js-dos and EmulatorJS source/runtime tests remain separate evidence; current shipped package profiles omit those runtime payloads and handlers, so their retained direct-runtime coverage must not be reported as shipped-package acceptance.
 
 ## Browser / Playwright lane
 
@@ -124,7 +118,7 @@ Use real browser/Neutron automation only when the claim depends on browser or in
 
 Keep Playwright intentionally small and semantic. The packaged Plasmon specs live in the repository-wide Playwright tree at `test/e2e/` because they reuse the root Playwright configuration and canonical Neutron provisioning/runtime helpers.
 
-The Review browser proof is retained as deferred sibling-application evidence, but is not part of this submission deployment because Review is intentionally excluded. Deterministic projection uniqueness/metadata/open-dispatch semantics belong in the lower headless test instead of being broadly duplicated in Playwright.
+The Review browser proof is the representative independently-installed sibling-application boundary. Whether Review is present in a particular acceptance deployment comes from that deployment's current manifest and `TESTING.md`, not from a duplicated package list here. Deterministic projection uniqueness/metadata/open-dispatch semantics belong in the lower headless test instead of being broadly duplicated in Playwright.
 
 Do not add broad Desktop/FileManager/Start/Search scripts merely because Playwright can click them. Screenshot regression is outside this lane unless visual fidelity itself becomes a separately accepted contract.
 
@@ -144,18 +138,16 @@ real packaged Plasmon
   -> preserve the resident background origin, NodeId, and written bytes
 ```
 
-Browser restart must not be simulated by creating a fresh ephemeral automation profile. Likewise, `plasmon:demo:reinstall` is an environment/provisioning reset, not a browser restart; the persistence test establishes any fresh installed baseline before the browser lifecycle begins and does not reinstall between browser launches.
+Browser restart must not be simulated by creating a fresh ephemeral automation profile. A provisioning reinstall such as `plasmon:local:reinstall` or `plasmon:demo:reinstall` is an environment reset, not a browser restart; the persistence test establishes the required installed baseline before the browser lifecycle begins and does not reinstall between browser launches.
 
 The automated repository lane uses Chromium. Firefox/LibreWolf manual persistence evidence must record whether the tested browser profile retains website data between sessions; a browser configuration that does not retain that data is a different lifecycle condition and must not be silently classified as ordinary supported restart behavior.
 
-If this browser gate exposes a production persistence defect, preserve the browser evidence and route the smallest canonical product Issue to the owning lane. Do not repair filesystem or Neutron product behavior inside the Testing Lead branch.
+If this browser gate exposes a production persistence defect, preserve the browser evidence and route the smallest canonical product Issue to the owning lane. Do not repair filesystem or Neutron product behavior inside a testing-only branch.
 
 ## CI and handoff
 
 `Plasmon Fast CI` executes the same fast command used locally. Agents without Bun must push their branch, use that workflow as the feedback loop, and report the exact result.
 
-`Plasmon Packaged Browser CI` consumes the same manifest-driven preparation/provision path used locally. It is a separate acceptance lane; a green fast suite does not supersede a failure in package/install/browser acceptance.
-
-`Plasmon Browser Persistence CI` owns the #186 retained-profile browser-process restart guard. It packages and provisions through the same demo environment but keeps that installation live while the persistence spec closes and relaunches Chromium.
+`Plasmon Packaged Browser CI`, `Plasmon Packaged Smoke CI`, and `Plasmon Browser Persistence CI` consume the manifest-driven bounded `plasmon:local:*` preparation/provision path. They are separate acceptance lanes; a green fast suite does not supersede a failure in package/install/browser acceptance.
 
 Escaped repeatable failures should gain the lowest-level reliable automated coverage possible.
