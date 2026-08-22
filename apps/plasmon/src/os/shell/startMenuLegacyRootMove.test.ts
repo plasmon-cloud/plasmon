@@ -85,6 +85,28 @@ async function createLegacySystemState(
   return { root: await fs.stat(root.id), system, shortcuts };
 }
 
+async function createFlatRootManagedState(
+  fs: ReturnType<typeof createHeadlessPlasmonEnvironment>["services"]["fs"],
+): Promise<{ root: FsNode; shortcuts: Map<string, FsNode> }> {
+  const { root } = await reconcileStartMenu(fs, [], []);
+  const shortcuts = new Map<string, FsNode>();
+  const seeded: string[] = [];
+
+  for (const app of formerSystemApps) {
+    const target: StartShortcutTarget = { kind: "native", handlerId: app.handlerId };
+    const identity = startShortcutTargetIdentity(target);
+    const shortcut = await fs.createFile(root.id, app.name, {
+      kind: "shortcut",
+      metadata: legacyShortcutMetadata(target),
+    });
+    shortcuts.set(identity, shortcut);
+    seeded.push(identity);
+  }
+
+  await fs.setMetadata(root.id, { [START_SEEDED_IDENTITIES_KEY]: seeded.sort() });
+  return { root: await fs.stat(root.id), shortcuts };
+}
+
 test("same-name Settings and Properties moved from legacy System to Start root are preserved", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
@@ -123,6 +145,48 @@ test("same-name Settings and Properties moved from legacy System to Start root a
     expect((await fs.stat(properties.id)).id).toBe(properties.id);
     expect(await fs.pathOf(settings.id)).toBe(`${START_MENU_PATH}/Settings`);
     expect(await fs.pathOf(properties.id)).toBe(`${START_MENU_PATH}/Properties`);
+  } finally {
+    environment.dispose();
+  }
+});
+
+test("unrelated user System folder does not suppress exact flat-root managed retirement", async () => {
+  const environment = createHeadlessPlasmonEnvironment();
+  try {
+    await environment.ready;
+    const fs = environment.services.fs;
+    const prior = await createFlatRootManagedState(fs);
+    const settingsId = nativeIdentity(formerSystemApps[0]!);
+    const explorerId = nativeIdentity(formerSystemApps[1]!);
+    const propertiesId = nativeIdentity(formerSystemApps[2]!);
+    const settings = prior.shortcuts.get(settingsId)!;
+    const explorer = prior.shortcuts.get(explorerId)!;
+    const properties = prior.shortcuts.get(propertiesId)!;
+
+    const userSystem = await fs.mkdir(prior.root.id, "System");
+    const keep = await fs.createFile(userSystem.id, "Keep me.txt", { mime: "text/plain" });
+
+    const first = await reconcileStartMenu(fs, formerSystemApps, []);
+    expect(first.created).toBe(0);
+    expect(first.preserved).toBe(1);
+    expect(first.skippedDeleted).toBe(0);
+    expect(await fs.stat(settings.id).then(() => true, () => false)).toBe(false);
+    expect(await fs.stat(properties.id).then(() => true, () => false)).toBe(false);
+    expect((await fs.stat(explorer.id)).id).toBe(explorer.id);
+    expect(await fs.pathOf(explorer.id)).toBe(`${START_MENU_PATH}/Explorer`);
+    expect((await fs.stat(userSystem.id)).id).toBe(userSystem.id);
+    expect((await fs.stat(keep.id)).id).toBe(keep.id);
+    expect(await fs.pathOf(keep.id)).toBe(`${START_MENU_PATH}/System/Keep me.txt`);
+    expect(await seededIdentities(fs)).toEqual([explorerId]);
+
+    const revisionAfterFirstPass = await fs.revision();
+    const second = await reconcileStartMenu(fs, formerSystemApps, []);
+    expect(second.created).toBe(0);
+    expect(second.preserved).toBe(1);
+    expect(second.skippedDeleted).toBe(0);
+    expect(await fs.revision()).toBe(revisionAfterFirstPass);
+    expect((await fs.stat(userSystem.id)).id).toBe(userSystem.id);
+    expect((await fs.stat(keep.id)).id).toBe(keep.id);
   } finally {
     environment.dispose();
   }
