@@ -269,6 +269,17 @@ function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
   return app.runtimeOnly === true || RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId);
 }
 
+function findRetainedFormerSystemFolder(
+  rootChildren: readonly FsNode[],
+  managedFolderIds: ReadonlyMap<string, string>,
+): FsNode | null {
+  const registeredSystemId = managedFolderIds.get("System");
+  return rootChildren.find((node) =>
+    node.kind === "directory" &&
+    (node.name === "System" || (registeredSystemId !== undefined && node.id === registeredSystemId)),
+  ) ?? null;
+}
+
 /**
  * Some native applications cease to be managed Start defaults either because
  * they became runtime-only hosts or because the default Start inventory changed.
@@ -278,6 +289,14 @@ function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
  * moved, deleted, content-bearing, metadata-customized, or user-created entries
  * are intentionally preserved because their managed ownership is not provable
  * from the durable reconciliation state.
+ *
+ * The v1 seed ledger does not record shortcut NodeIds or prior parent folders.
+ * Therefore, while a former managed `System` folder remains in Start, an exact
+ * Settings/Properties shortcut at the root is ambiguous: it may be the untouched
+ * flat-layout default, or the same stable NodeId a user moved out of that legacy
+ * folder. Fail closed in that state. Management is still retired by consuming the
+ * ledger identity, but the root node itself is preserved and cannot be claimed on
+ * a later pass.
  *
  * Once an identity is retired from the managed inventory, consume its old ledger
  * entry. The inventory filter already prevents recreation, while dropping stale
@@ -289,8 +308,10 @@ async function retireManagedNativeSeeds(
   root: FsNode,
   nativeApps: readonly NativeAppDefinition[],
   seeded: Set<string>,
+  managedFolderIds: ReadonlyMap<string, string>,
 ): Promise<boolean> {
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const retainedFormerSystemFolder = findRetainedFormerSystemFolder(rootChildren, managedFolderIds);
   let changedManifest = false;
 
   for (const app of nativeApps) {
@@ -307,7 +328,13 @@ async function retireManagedNativeSeeds(
     if (parent) {
       const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
       const candidate = children.find((node) => node.name === spec.name);
-      if (candidate && isExactManagedSeed(candidate, spec)) await fs.remove(candidate.id);
+      const ambiguousFormerSystemRootMove =
+        spec.folder === null &&
+        RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId) &&
+        retainedFormerSystemFolder !== null;
+      if (!ambiguousFormerSystemRootMove && candidate && isExactManagedSeed(candidate, spec)) {
+        await fs.remove(candidate.id);
+      }
     }
 
     seeded.delete(spec.identity);
@@ -339,7 +366,7 @@ export async function reconcileStartMenu(
   const seeded = stringList(root.metadata[START_SEEDED_IDENTITIES_KEY]);
   const managedFolderIds = stringMap(root.metadata[START_MANAGED_FOLDER_IDS_KEY]);
   await migrateProvablyManagedRetiredSystemFolder(fs, root, nativeApps, seeded, managedFolderIds);
-  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded);
+  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded, managedFolderIds);
   const existing = await scanStartTree(fs, root);
   let created = 0;
   let preserved = 0;
