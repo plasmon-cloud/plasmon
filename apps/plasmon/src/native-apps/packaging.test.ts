@@ -83,6 +83,19 @@ test("package guard rejects a stylesheet without Monaco engine CSS", () => {
   expect(() => assertMatureNativeAppBundle(broken)).toThrow("Monaco editor CSS");
 });
 
+test("package guard accepts the slim Monaco worker profile", () => {
+  const slim = goodMetafile();
+  for (const worker of ["json", "css", "html", "ts"]) {
+    delete slim.outputs[`dist/web/System/Program Files/MonacoEditor/${worker}.worker.js`];
+  }
+  expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).not.toThrow();
+
+  delete slim.outputs["dist/web/System/Program Files/MonacoEditor/editor.worker.js"];
+  expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).toThrow(
+    "/dist/web/System/Program Files/MonacoEditor/editor.worker.js",
+  );
+});
+
 test("#89 package guard requires canonical Monaco Program Files worker outputs", () => {
   const broken = goodMetafile();
   delete broken.outputs["dist/web/System/Program Files/MonacoEditor/ts.worker.js"];
