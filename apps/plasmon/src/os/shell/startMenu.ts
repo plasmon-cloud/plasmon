@@ -269,15 +269,48 @@ function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
   return app.runtimeOnly === true || RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId);
 }
 
-function findRetainedFormerSystemFolder(
+/**
+ * The v1 shortcut ledger cannot prove the parent history of an exact root seed.
+ * A provenance-recorded former `System` folder therefore always makes a root
+ * Settings/Properties candidate ambiguous while that exact folder still exists.
+ *
+ * For pre-provenance directories, the name `System` alone is not enough to block
+ * retirement: that could be an unrelated user-created folder. Treat it only as
+ * move ambiguity when it still contains at least one untouched ledger-backed
+ * former-System seed whose identity is absent from the Start root. This footprint
+ * is not directory-ownership proof and never authorizes moving or deleting the
+ * folder; it is only evidence that deleting another exact root seed could destroy
+ * a user move from the historical layout.
+ */
+async function hasFormerSystemRootMoveAmbiguity(
+  fs: FsService,
   rootChildren: readonly FsNode[],
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
   managedFolderIds: ReadonlyMap<string, string>,
-): FsNode | null {
+): Promise<boolean> {
   const registeredSystemId = managedFolderIds.get("System");
-  return rootChildren.find((node) =>
-    node.kind === "directory" &&
-    (node.name === "System" || (registeredSystemId !== undefined && node.id === registeredSystemId)),
-  ) ?? null;
+  if (registeredSystemId !== undefined) {
+    const registered = rootChildren.find((node) => node.kind === "directory" && node.id === registeredSystemId);
+    if (registered) return true;
+  }
+
+  const unprovenSystem = rootChildren.find((node) => node.kind === "directory" && node.name === "System");
+  if (!unprovenSystem) return false;
+
+  const systemChildren = await fs.list(unprovenSystem.id, { includeHidden: true, sort: "name" });
+  const specs = nativeApps
+    .filter((app) => app.runtimeOnly !== true && FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
+    .map(nativeSeedSpec);
+
+  return specs.some((spec) => {
+    if (!seeded.has(spec.identity)) return false;
+    if (!systemChildren.some((node) => isExactManagedSeed(node, spec))) return false;
+    return !rootChildren.some((node) => {
+      const shortcut = parseStartShortcut(node);
+      return shortcut !== null && startShortcutTargetIdentity(shortcut.target) === spec.identity;
+    });
+  });
 }
 
 /**
@@ -291,12 +324,13 @@ function findRetainedFormerSystemFolder(
  * from the durable reconciliation state.
  *
  * The v1 seed ledger does not record shortcut NodeIds or prior parent folders.
- * Therefore, while a former managed `System` folder remains in Start, an exact
- * Settings/Properties shortcut at the root is ambiguous: it may be the untouched
- * flat-layout default, or the same stable NodeId a user moved out of that legacy
- * folder. Fail closed in that state. Management is still retired by consuming the
- * ledger identity, but the root node itself is preserved and cannot be claimed on
- * a later pass.
+ * Therefore, when the durable folder ledger or a surviving legacy-seed footprint
+ * makes the historical `System` layout plausible, an exact Settings/Properties
+ * shortcut at the root is ambiguous: it may be the untouched flat-layout default,
+ * or the same stable NodeId a user moved out of that legacy folder. Fail closed in
+ * that state. An unrelated user-created `System` directory does not create this
+ * ambiguity by name alone. Management is still retired by consuming the ledger
+ * identity, so a preserved user shortcut cannot be claimed on a later pass.
  *
  * Once an identity is retired from the managed inventory, consume its old ledger
  * entry. The inventory filter already prevents recreation, while dropping stale
@@ -311,7 +345,13 @@ async function retireManagedNativeSeeds(
   managedFolderIds: ReadonlyMap<string, string>,
 ): Promise<boolean> {
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
-  const retainedFormerSystemFolder = findRetainedFormerSystemFolder(rootChildren, managedFolderIds);
+  const formerSystemRootMoveAmbiguity = await hasFormerSystemRootMoveAmbiguity(
+    fs,
+    rootChildren,
+    nativeApps,
+    seeded,
+    managedFolderIds,
+  );
   let changedManifest = false;
 
   for (const app of nativeApps) {
@@ -331,7 +371,7 @@ async function retireManagedNativeSeeds(
       const ambiguousFormerSystemRootMove =
         spec.folder === null &&
         RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId) &&
-        retainedFormerSystemFolder !== null;
+        formerSystemRootMoveAmbiguity;
       if (!ambiguousFormerSystemRootMove && candidate && isExactManagedSeed(candidate, spec)) {
         await fs.remove(candidate.id);
       }
