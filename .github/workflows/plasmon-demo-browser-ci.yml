@@ -33,6 +33,7 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
+            npm --workspace neutron-design-system run build
             npm run test:plasmon:deployment-commands
             npm run plasmon:demo:prepare
 
