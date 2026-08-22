@@ -156,11 +156,30 @@ function cleanTitle(value) {
     .trim();
 }
 
+function canonicalGroupedBunFile(file) {
+  if (file.startsWith("apps/plasmon/")) return file;
+  if (file.startsWith("test/") || file.startsWith("src/")) {
+    return `apps/plasmon/${file}`;
+  }
+  return file;
+}
+
 function extractFailures(output) {
   const found = [];
   let currentFile = null;
   for (const rawLine of output.split(/\r?\n/)) {
     const line = stripAnsi(rawLine).trimEnd();
+    const groupedFileHeader = line.match(
+      /^\s*::group::((?:apps\/plasmon\/|test\/|src\/)[^\s:]+\.(?:test|spec)\.[A-Za-z0-9]+):\s*$/,
+    );
+    if (groupedFileHeader) {
+      currentFile = canonicalGroupedBunFile(groupedFileHeader[1]);
+      continue;
+    }
+    if (/^\s*::endgroup::\s*$/.test(line)) {
+      currentFile = null;
+      continue;
+    }
     const fileHeader = line.match(
       /^\s*((?:apps\/plasmon\/|test\/)[^\s:]+\.(?:test|spec)\.[A-Za-z0-9]+):\s*$/,
     );
