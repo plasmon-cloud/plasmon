@@ -1,0 +1,25 @@
+.plasmon-desktop > .fm-root--desktop > .fm-entries {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+}
+
+/*
+ * Desktop icon coordinates are relative to the entries plane. Transient
+ * FileManager chrome must overlay that plane instead of changing its origin.
+ */
+.plasmon-desktop > .fm-root--desktop > .fm-error-banner {
+  position: absolute;
+  z-index: 2200;
+  top: 14px;
+  right: 14px;
+  left: 14px;
+}
+
+.plasmon-desktop > .fm-root--desktop > .fm-operation-status {
+  position: absolute;
+  z-index: 2100;
+  right: 14px;
+  bottom: 14px;
+  margin: 0;
+}
