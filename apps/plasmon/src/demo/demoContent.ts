@@ -9,33 +9,29 @@ export const DEMO_TEXT_PATH = "/Documents/Demo Notes.txt";
 export const DEMO_MARKDOWN_PATH = "/Documents/Demo Guide.md";
 export const DEMO_IMAGE_PATH = "/Pictures/Demo Artwork.svg";
 
-const DEMO_TEXT = `Plasmon Demo Notes
+export interface DemoAssetContent {
+  text: string;
+  markdown: string;
+  svg: string;
+}
 
-This document is authored for the Plasmon demo environment.
-Use FileManager, Search, Desktop, and Text Editor to discover and open it through normal filesystem associations.
-`;
-
-const DEMO_MARKDOWN = `# Plasmon Demo
-
-This redistribution-safe Markdown demo document is authored in the Plasmon repository.
-
-- Open it from Desktop, FileManager, or Search.
-- Edit it with the native Markdown application.
-- Demo content is selected by the plasmon:demo deployment, not browser URL state.
-`;
-
-const DEMO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Plasmon demo artwork">
-  <rect width="960" height="540" fill="#121722"/>
-  <circle cx="480" cy="270" r="150" fill="#73d6ff" opacity="0.22"/>
-  <circle cx="480" cy="270" r="88" fill="#8af0c8" opacity="0.72"/>
-  <path d="M188 336 C332 126 628 126 772 336" fill="none" stroke="#f0d27a" stroke-width="18" stroke-linecap="round"/>
-  <text x="480" y="458" text-anchor="middle" font-family="system-ui, sans-serif" font-size="42" font-weight="700" fill="#f5f7fb">Plasmon Demo</text>
-</svg>`;
+function packagedDemoContent(): DemoAssetContent {
+  // @ts-expect-error Build-time esbuild define; unbundled tests supply explicit asset content.
+  const text: string | undefined = typeof __PLASMON_DEMO_TEXT__ === "undefined" ? undefined : __PLASMON_DEMO_TEXT__;
+  // @ts-expect-error Build-time esbuild define; unbundled tests supply explicit asset content.
+  const markdown: string | undefined = typeof __PLASMON_DEMO_MARKDOWN__ === "undefined" ? undefined : __PLASMON_DEMO_MARKDOWN__;
+  // @ts-expect-error Build-time esbuild define; unbundled tests supply explicit asset content.
+  const svg: string | undefined = typeof __PLASMON_DEMO_SVG__ === "undefined" ? undefined : __PLASMON_DEMO_SVG__;
+  if (text === undefined || markdown === undefined || svg === undefined) {
+    throw new Error("Demo content is available only in the packaged plasmon:demo profile");
+  }
+  return { text, markdown, svg };
+}
 
 const encode = (value: string): Uint8Array => new TextEncoder().encode(value);
 
 /** Demo-deployment content expressed only through production filesystem seeds. */
-export function createDemoSeeds(): readonly FilesystemSeedSpec[] {
+export function createDemoSeeds(content: DemoAssetContent = packagedDemoContent()): readonly FilesystemSeedSpec[] {
   return [
     {
       key: "demo.documents-directory.v1",
@@ -58,7 +54,7 @@ export function createDemoSeeds(): readonly FilesystemSeedSpec[] {
       name: "Demo Notes.txt",
       kind: "file",
       mime: "text/plain",
-      bytes: encode(DEMO_TEXT),
+      bytes: encode(content.text),
     },
     {
       key: "demo.guide.v1",
@@ -67,7 +63,7 @@ export function createDemoSeeds(): readonly FilesystemSeedSpec[] {
       name: "Demo Guide.md",
       kind: "file",
       mime: "text/markdown",
-      bytes: encode(DEMO_MARKDOWN),
+      bytes: encode(content.markdown),
     },
     {
       key: "demo.artwork.v1",
@@ -76,7 +72,7 @@ export function createDemoSeeds(): readonly FilesystemSeedSpec[] {
       name: "Demo Artwork.svg",
       kind: "file",
       mime: "image/svg+xml",
-      bytes: encode(DEMO_SVG),
+      bytes: encode(content.svg),
     },
   ];
 }
