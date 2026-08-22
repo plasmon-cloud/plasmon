@@ -8,7 +8,7 @@ For an ancestry-only PR targeting a protected branch, run the required workflow 
 
 ## Playwright retry semantics
 
-CI may retain Playwright retries for traces, diagnostics, and classification, but a retry must never convert a failed test attempt into a green release gate. The shared root Playwright configuration must fail on flaky tests in CI: first-attempt pass is green, fail-then-pass is red, and exhausted retries are red.
+CI may retain Playwright retries for traces, diagnostics, and classification, but a test retry must never convert an initial failed test execution into a green release gate. The shared root Playwright configuration must fail on flaky tests in CI: pass without a test retry is green, fail-then-pass is red, and exhausted retries are red.
 
 `test/ci/verify-playwright-gate.mjs` exercises those three exit-code cases through the shared configuration without launching a browser. Keep that contract proof in the Packaged Smoke path when changing shared Playwright gate semantics. Merge enforcement of packaged browser status contexts is a separate GitHub ruleset responsibility tracked by #227.
 
@@ -60,10 +60,19 @@ For post-merge r2 validation, a Plasmon-relevant push to `release/0.1.0-r2` must
 
 The workflow is path-triggered only when Plasmon tests or their test infrastructure change: ordinary Plasmon test files, root Playwright specs, the test harness, package/toolchain configuration, or the workflow itself. Unrelated PRs do not create a skipped flake-probe check. A suspected flake caused only by production changes can be opted in by adding the `ci:flake-probe` label; `.github/workflows/plasmon-flake-probe-label.yml` dispatches an exact-head probe for that label without broadening the automatic path-triggered workflow.
 
-Automatic test-change probes run the combined `all` target: ten independent attempts, each on a fresh hosted runner and fresh package/PocketIC environment. The target runs the Plasmon fast Bun/RTL suite and the automatically discovered Specialist browser inventory. Browser execution remains serialized with `--workers=1`, and Playwright retries remain disabled with `--retries=0` so every observed failure remains evidence. Manual dispatch additionally provides bounded named targets for known flaky boundaries such as right snap, left snap, Monaco, EmulatorJS, or window lifetime.
+Automatic test-change probes run the combined `all` target: ten independent **probe iterations**, each on a fresh hosted runner and fresh package/PocketIC environment. The target runs the Plasmon fast Bun/RTL suite and the automatically discovered Specialist browser inventory. Browser execution remains serialized with `--workers=1`, and Playwright test retries remain disabled with `--retries=0` so every observed failure remains evidence. Manual dispatch additionally provides bounded named targets for known flaky boundaries such as right snap, left snap, Monaco, EmulatorJS, or window lifetime.
+
+Flake Probe terminology is intentionally distinct from GitHub Actions and test-runner terminology:
+
+- **workflow run** / `run_number` — one GitHub Actions workflow run;
+- **workflow run attempt** / `run_attempt` — a GitHub Actions rerun of that workflow run;
+- **probe iteration** — one of the ten fresh Flake Probe executions;
+- **test retry** — a retry performed by the test runner when enabled.
+
+New Flake Probe result files emit `iteration=<n>` plus explicit `run_number` and `run_attempt` metadata, and iteration artifacts use `flake-probe-iteration-*` names. `test/ci/summarize-flake-probe.mjs` remains backward compatible with historical result files by accepting the old `attempt=<n>` field as a legacy alias while always reporting that execution as a probe iteration. This compatibility is read-only: new workflow output must not emit the legacy field.
 
 New `test/e2e/plasmon-*.spec.*` files default to the Specialist inventory. Existing Smoke, Persistence, and explicitly quarantined ownership remains declared in `test/ci/plasmon-test-inventory.mjs`; the inventory verifier fails if a browser spec is otherwise unclassified. This prevents a new test from silently escaping the probe.
 
 A `10/10` probe means stability was observed for that exact head; it is not mathematical proof that a test can never flake. A result below `10/10` is positive evidence of an intermittent, deterministic, or infrastructure failure and must be classified by the CI owner. Product agents should change product code only when exact evidence establishes product ownership.
 
-`test/ci/verify-flake-probe.mjs` protects the path trigger, exact-head checkout, ten-fresh-run matrix, retry-zero/worker-one execution, automatic Specialist discovery, real package/provision path, and aggregate summary contract.
+`test/ci/verify-flake-probe.mjs` protects the path trigger, exact-head checkout, ten-fresh-probe-iteration matrix, retry-zero/worker-one execution, automatic Specialist discovery, real package/provision path, rerun-safe iteration artifacts, backward-compatible result parsing, and aggregate summary contract.

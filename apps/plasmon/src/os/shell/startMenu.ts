@@ -17,9 +17,14 @@ export const START_MENU_NAME = "Start Menu";
 export const START_SHORTCUT_METADATA_KEY = "plasmon.shortcut";
 export const START_SEEDED_IDENTITIES_KEY = "plasmon.shell.start.seeded.v1";
 
-const RETIRED_SYSTEM_NATIVE_HANDLERS = new Set<HandlerId>([
+const FORMER_SYSTEM_NATIVE_HANDLERS = new Set<HandlerId>([
   "native:settings",
   "native:explorer",
+  "native:properties",
+]);
+
+const RETIRED_DEFAULT_START_NATIVE_HANDLERS = new Set<HandlerId>([
+  "native:settings",
   "native:properties",
 ]);
 
@@ -66,7 +71,7 @@ function stringList(value: JsonValue | undefined): Set<string> {
 }
 
 function seedFolderForNative(app: NativeAppDefinition): "Accessories" | null {
-  return RETIRED_SYSTEM_NATIVE_HANDLERS.has(app.handlerId) ? null : "Accessories";
+  return FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId) ? null : "Accessories";
 }
 
 function safeEntryName(name: string): string {
@@ -153,7 +158,7 @@ function nativeSeedSpec(app: NativeAppDefinition): SeedSpec {
 
 function desiredSeeds(nativeApps: readonly NativeAppDefinition[], elements: readonly ExternalElement[]): SeedSpec[] {
   const native = nativeApps
-    .filter((app) => app.runtimeOnly !== true)
+    .filter((app) => app.runtimeOnly !== true && !RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId))
     .map(nativeSeedSpec);
   const neutron = elements.map<SeedSpec>((element) => {
     const target: StartShortcutTarget = { kind: "element", elementId: element.id };
@@ -175,40 +180,56 @@ function isExactManagedSeed(node: FsNode, spec: SeedSpec): boolean {
   return !!shortcut && startShortcutTargetIdentity(shortcut.target) === spec.identity;
 }
 
+function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
+  return app.runtimeOnly === true || RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId);
+}
+
 /**
- * Runtime hosts used to be seeded because Start projected every Process
- * definition. Retire only an exact old managed default: the durable seed ledger
- * must prove that identity was seeded, and the shortcut must still have its
- * canonical direct folder/name plus untouched shortcut-only metadata/content.
- * Renamed, moved, deleted, content-bearing, metadata-customized, or user-created
- * entries are intentionally preserved because their managed ownership is not
- * provable from the durable reconciliation state.
+ * Some native applications cease to be managed Start defaults either because
+ * they became runtime-only hosts or because the default Start inventory changed.
+ * Retire only an exact old managed default: the durable seed ledger must prove
+ * that identity was seeded, and the shortcut must still have its canonical
+ * direct folder/name plus untouched shortcut-only metadata/content. Renamed,
+ * moved, deleted, content-bearing, metadata-customized, or user-created entries
+ * are intentionally preserved because their managed ownership is not provable
+ * from the durable reconciliation state.
+ *
+ * Once an identity is retired from the managed inventory, consume its old ledger
+ * entry. The inventory filter already prevents recreation, while dropping stale
+ * target-only provenance prevents a future user-created exact equivalent from
+ * being falsely claimed as the old managed node.
  */
-async function retireManagedRuntimeOnlySeeds(
+async function retireManagedNativeSeeds(
   fs: FsService,
   root: FsNode,
   nativeApps: readonly NativeAppDefinition[],
-  seeded: ReadonlySet<string>,
-): Promise<void> {
+  seeded: Set<string>,
+): Promise<boolean> {
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  let changedManifest = false;
 
   for (const app of nativeApps) {
-    if (app.runtimeOnly !== true) continue;
+    if (!shouldRetireManagedNativeSeed(app)) continue;
     const spec = nativeSeedSpec(app);
     if (!seeded.has(spec.identity)) continue;
 
-    let parent = root;
+    let parent: FsNode | null = root;
     if (spec.folder !== null) {
       const folder = rootChildren.find((node) => node.name === spec.folder);
-      if (!folder || folder.kind !== "directory") continue;
-      parent = folder;
+      parent = folder?.kind === "directory" ? folder : null;
     }
 
-    const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
-    const candidate = children.find((node) => node.name === spec.name);
-    if (!candidate || !isExactManagedSeed(candidate, spec)) continue;
-    await fs.remove(candidate.id);
+    if (parent) {
+      const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
+      const candidate = children.find((node) => node.name === spec.name);
+      if (candidate && isExactManagedSeed(candidate, spec)) await fs.remove(candidate.id);
+    }
+
+    seeded.delete(spec.identity);
+    changedManifest = true;
   }
+
+  return changedManifest;
 }
 
 /**
@@ -216,10 +237,11 @@ async function retireManagedRuntimeOnlySeeds(
  * shortcuts anywhere under Start Menu are preserved, including user renames and
  * moves. Once an identity has been seeded, its later absence is treated as an
  * intentional deletion and is not recreated. Newly discovered identities are
- * seeded exactly once. Exact previously-managed defaults that are now classified
- * runtime-only are retired without weakening those user-customization semantics.
- * Ambiguous same-name category resources block only the seeds that require that
- * category; they are never mutated or treated as managed merely by name.
+ * seeded exactly once. Exact previously-managed native defaults that are no
+ * longer in the managed inventory are retired without weakening those
+ * user-customization semantics. Ambiguous same-name category resources block
+ * only the seeds that require that category; they are never mutated or treated
+ * as managed merely by name.
  */
 export async function reconcileStartMenu(
   fs: FsService,
@@ -231,12 +253,11 @@ export async function reconcileStartMenu(
   // The v1 seed ledger records shortcut identities, not the NodeId of the old
   // `System` directory. Shape alone cannot prove directory ownership, so legacy
   // folders are scanned in place and never moved/deleted by reconciliation.
-  await retireManagedRuntimeOnlySeeds(fs, root, nativeApps, seeded);
+  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded);
   const existing = await scanStartTree(fs, root);
   let created = 0;
   let preserved = 0;
   let skippedDeleted = 0;
-  let changedManifest = false;
   const folders = new Map<string, FsNode | null>();
 
   for (const spec of desiredSeeds(nativeApps, elements)) {
