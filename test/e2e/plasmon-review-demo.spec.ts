@@ -75,7 +75,7 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
 
 test(
   "#118 groups canonical Explorer processes and focuses individual members",
-  { tag: ["@r2-quarantine", "@issue-303"] },
+  { tag: ["@issue-303"] },
   async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
