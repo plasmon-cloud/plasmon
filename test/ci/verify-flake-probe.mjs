@@ -334,10 +334,61 @@ function verifyLegacyResultCompatibility() {
   }
 }
 
+function verifyPriorIterationResultCompatibility() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-prior-iteration-summary-"));
+  try {
+    const resultsRoot = join(fixtureRoot, "results");
+    const diagnosticsRoot = join(fixtureRoot, "diagnostics");
+    const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    mkdirSync(resultsRoot, { recursive: true });
+    mkdirSync(diagnosticsRoot, { recursive: true });
+    writeFileSync(changedFilesPath, "");
+    for (let iteration = 1; iteration <= 10; iteration += 1) {
+      const directory = join(resultsRoot, `iteration-${iteration}`);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(
+        join(directory, "result.txt"),
+        [
+          "run_id=prior-iteration-run-id",
+          "run_number=291",
+          "run_attempt=2",
+          `iteration=${iteration}`,
+          "outcome=success",
+          "sha=prior-iteration-sha",
+          "target=all",
+          "",
+        ].join("\n"),
+      );
+    }
+    const summaryRun = spawnSync(
+      process.execPath,
+      [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    if (summaryRun.status !== 0) {
+      throw new Error(`prior iteration result fixture must remain readable: ${summaryRun.stderr}\n${summaryRun.stdout}`);
+    }
+    for (const fragment of [
+      "Workflow `run_number`: `291`",
+      "Workflow `run_attempt`: `2`",
+      "Target: `all`",
+      "Scope: `all`",
+      "Configured probe iterations: 10",
+      "Fresh probe iterations reported: 10/10",
+      "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
+    ]) {
+      requireFragment(summaryRun.stdout, fragment, "prior iteration result compatibility fixture");
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 runSummaryFixture(10);
 runSummaryFixture(50);
 verifyLegacyResultCompatibility();
+verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 iteration count, explicit named/exact scope, exact-head checkout, retry-zero, worker-one, fresh local fixture, run metadata, scope-bearing artifacts/results, automatic 10-iteration default, exact quarantined-test reachability, and legacy ten-iteration summary compatibility contracts verified",
+  "Flake-probe configurable 10/50 iteration count, explicit named/exact scope, exact-head checkout, retry-zero, worker-one, fresh local fixture, run metadata, scope-bearing artifacts/results, automatic 10-iteration default, exact quarantined-test reachability, and historical ten-iteration summary compatibility contracts verified",
 );
