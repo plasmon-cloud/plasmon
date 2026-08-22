@@ -64,18 +64,12 @@ for (const fragment of [
   "- exact",
   "test_file:",
   "test_grep:",
-  "group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}",
   "cancel-in-progress: true",
   "name: Determine flake probe applicability and configuration",
   "git diff --name-only \"$BASE_SHA\" \"$HEAD_SHA\"",
-  "apps/plasmon/src/*.test.*",
-  "apps/plasmon/src/*.spec.*",
-  "apps/plasmon/test/*",
   "test/e2e/*",
   "test/ci/*",
   "playwright.config.ts",
-  ".github/workflows/plasmon-flake-probe.yml",
-  "primary_mode: ${{ steps.configure.outputs.primary_mode }}",
   "characterization_applicable: ${{ steps.characterize.outputs.applicable }}",
   "characterization_files_json: ${{ steps.characterize.outputs.files_json }}",
   "probe_matrix: ${{ steps.matrix.outputs.matrix }}",
@@ -83,39 +77,24 @@ for (const fragment of [
   "iteration_count=10",
   "target=all",
   "10|50",
-  "target=exact requires test/e2e/**/*.spec.* or *.test.*",
   "name: Select automatic 50-iteration characterization scope",
   "node test/ci/select-plasmon-flake-characterization.mjs",
-  "--github-output \"$GITHUB_OUTPUT\"",
-  "--json-file flake-probe-applicability/characterization.json",
   "name: Build shared probe matrix",
   "mode: 'characterization'",
   "automatic_characterization: true",
   "if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'",
   "continue-on-error: ${{ matrix.mode == 'characterization' }}",
-  "matrix: ${{ fromJSON(needs.applicability.outputs.probe_matrix) }}",
   "max-parallel: 10",
   "PROBE_MODE: ${{ matrix.mode }}",
   "PROBE_TEST_FILES_JSON: ${{ matrix.automatic_characterization && needs.applicability.outputs.characterization_files_json || '[]' }}",
   "ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}",
-  "bash test/ci/run-plasmon-flake-probe.sh \"$PROBE_TARGET\" \"$PROBE_TEST_FILE\" \"$PROBE_TEST_GREP\" \"$PROBE_TEST_FILES_JSON\"",
   "run_number=${{ github.run_number }}",
   "run_attempt=${{ github.run_attempt }}",
-  "mode=${PROBE_MODE:-unknown}",
   "iteration=${{ matrix.iteration }}",
-  "iteration_count=${PROBE_ITERATION_COUNT:-unknown}",
-  "test_files_json=${PROBE_TEST_FILES_JSON:-[]}",
-  "flake-probe-applicability-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
-  "iteration-result-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}",
-  "iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}",
-  "pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*",
-  "iteration-result-${{ github.run_id }}-attempt-*-*",
   "name: Flake probe summary",
   "name: Flake characterization summary",
   "--json-file flake-probe-summary/summary.json",
   "--json-file flake-characterization-summary/summary.json",
-  "name: flake-summary-${{ needs.applicability.outputs.primary_mode }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
-  "name: flake-summary-characterization-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
 ]) {
   requireFragment(workflow, fragment, "flake-probe workflow");
 }
@@ -124,7 +103,6 @@ for (const fragment of [
   "    paths:",
   "matrix.attempt",
   "--repeat-each",
-  "--pass-with-no-tests",
   "paths-ignore",
   "pull_request_target",
   "overwrite: true",
@@ -134,8 +112,6 @@ for (const fragment of [
 
 for (const fragment of [
   "name: Plasmon Flake Probe Label Trigger",
-  "types: [labeled]",
-  "actions: write",
   "ci:flake-probe",
   "createWorkflowDispatch",
   "workflow_id: 'plasmon-flake-probe.yml'",
@@ -151,6 +127,7 @@ for (const fragment of [
   "npm run plasmon:local:reinstall",
   "--workers=1",
   "--retries=0",
+  "--grep-invert @r2-quarantine",
   "npm run test:e2e:plasmon:specialist -- --retries=0",
   "exact)",
   "exact-set)",
@@ -169,7 +146,6 @@ for (const fragment of [
   "plasmon:demo:serve",
   "plasmon:demo:status",
   "plasmon:demo:reinstall",
-  "--grep-invert @r2-quarantine",
   "--repeat-each",
 ]) {
   forbidFragment(executableRunner, fragment, "targeted flake-probe runner");
@@ -192,18 +168,26 @@ for (const fragment of [
 
 for (const fragment of [
   "repositoryPathReferences",
-  "supportPathNeedsFallback",
-  "Filename prefixes are not an ownership proof",
   "dependsOn",
-  "sharedFallbackInputs",
-  "lane === \"specialist\"",
+  "unresolvedSharedInputs",
+  "isQuarantinedAcceptance",
+  "excluded_quarantined_tests",
+  "unresolved_inputs",
   "target: \"exact-set\"",
   "iteration_count: 50",
   "files_json",
-  "shared-support-fallback",
+  "no-deterministic-playwright-target",
+  "only-quarantined-playwright-changes",
   "no-relevant-playwright-change",
 ]) {
   requireFragment(selector, fragment, "automatic characterization selector");
+}
+for (const fragment of [
+  "shared-support-fallback",
+  "specialist-fallback",
+  "lane === \"specialist\"",
+]) {
+  forbidFragment(selector, fragment, "automatic characterization selector");
 }
 
 for (const fragment of [
@@ -255,9 +239,12 @@ for (const fragment of [
   "10-iteration baseline",
   "50-iteration characterization",
   "opened`, `reopened`, and `synchronize`",
-  "Shared-support fallback",
+  "Quarantine is absolute",
+  "exact changed files",
+  "does not broaden",
   "Flake characterization summary",
   "not proof that the target cannot flake",
+  "#448",
 ]) {
   requireFragment(probeDoc, fragment, "flake-probe characterization documentation");
 }
@@ -273,62 +260,83 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
+function assertNoQuarantinedFiles(selection, label) {
+  for (const file of selection.files) {
+    if (readFileSync(file, "utf8").includes("@r2-quarantine")) {
+      throw new Error(`${label} selected quarantined acceptance: ${file}`);
+    }
+  }
+}
+
 async function verifyCharacterizationSelection() {
-  const quarantined = await selectCharacterization({
-    changedFiles: ["test/e2e/plasmon-golden-path-left-snap.spec.ts"],
-  });
-  if (!quarantined.applicable || quarantined.target !== "exact-set") {
-    throw new Error("changed quarantined Playwright spec must select exact-set characterization");
+  const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
+  const second = "test/e2e/plasmon-neutron-icon.spec.ts";
+
+  const oneChanged = await selectCharacterization({ changedFiles: [first] });
+  if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
+    throw new Error("changed Playwright spec must select exact-set characterization");
   }
-  if (!quarantined.files.includes("test/e2e/plasmon-golden-path-left-snap.spec.ts")) {
-    throw new Error("changed quarantined Playwright spec was silently excluded from characterization");
+  if (oneChanged.files.length !== 1 || oneChanged.files[0] !== first) {
+    throw new Error("single changed Playwright spec must remain a one-file characterization target");
   }
-  if (quarantined.fallback_inputs.length !== 0) {
-    throw new Error("ordinary changed Playwright spec must not force Specialist fallback");
+  assertNoQuarantinedFiles(oneChanged, "single changed spec");
+
+  const twoChanged = await selectCharacterization({ changedFiles: [second, first] });
+  if (!twoChanged.applicable || twoChanged.files.length !== 2) {
+    throw new Error("two changed Playwright specs must select exactly those two files");
+  }
+  if (!twoChanged.files.includes(first) || !twoChanged.files.includes(second)) {
+    throw new Error("multiple changed Playwright specs lost an exact changed-file target");
+  }
+  assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
+
+  const quarantinedPath = "test/e2e/plasmon-golden-path-left-snap.spec.ts";
+  const quarantined = await selectCharacterization({ changedFiles: [quarantinedPath] });
+  if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
+    throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
+  }
+  if (!quarantined.excluded_quarantined_tests.includes(quarantinedPath)) {
+    throw new Error("quarantined changed acceptance must be reported as explicitly excluded");
   }
 
   const helper = await selectCharacterization({
     changedFiles: ["test/e2e/plasmon-browser-health.ts"],
   });
   if (!helper.applicable || helper.files.length === 0) {
-    throw new Error("modified Plasmon Playwright helper must select an impacted set or fallback");
+    throw new Error("modified helper with deterministic Plasmon consumers must select impacted tests");
   }
+  assertNoQuarantinedFiles(helper, "helper impact");
 
-  const stringPathFixture = await selectCharacterization({
+  const unresolvedFixture = await selectCharacterization({
     changedFiles: ["test/e2e/permission-dialog.fixture.tsx"],
   });
-  if (!stringPathFixture.applicable || stringPathFixture.reason !== "shared-support-fallback") {
-    throw new Error("unresolved arbitrary E2E fixture must fail closed to Specialist fallback");
+  if (unresolvedFixture.applicable || unresolvedFixture.reason !== "no-deterministic-playwright-target") {
+    throw new Error("unresolved support must not broaden characterization to Specialist inventory");
   }
-  if (!stringPathFixture.fallback_inputs.includes("test/e2e/permission-dialog.fixture.tsx")) {
-    throw new Error("permission-dialog fixture regression must be recorded as the fallback input");
+  if (!unresolvedFixture.unresolved_inputs.includes("test/e2e/permission-dialog.fixture.tsx")) {
+    throw new Error("unresolved fixture must remain visible in selector diagnostics");
   }
 
-  const fallback = await selectCharacterization({
-    changedFiles: ["playwright.config.ts"],
-  });
-  if (!fallback.applicable || fallback.reason !== "shared-support-fallback") {
-    throw new Error("shared Playwright configuration must select documented Specialist fallback");
-  }
-  if (!fallback.files.includes("test/e2e/plasmon-golden-path-left-snap.spec.ts")) {
-    throw new Error("Specialist fallback must include current Specialist files directly");
+  const configOnly = await selectCharacterization({ changedFiles: ["playwright.config.ts"] });
+  if (configOnly.applicable || configOnly.reason !== "no-deterministic-playwright-target") {
+    throw new Error("shared Playwright configuration must not create a 50x whole-Specialist probe");
   }
 
   const combined = await selectCharacterization({
-    changedFiles: [
-      "playwright.config.ts",
-      "test/e2e/plasmon-golden-path-left-snap.spec.ts",
-    ],
+    changedFiles: ["playwright.config.ts", first],
   });
-  if (!combined.files.includes("test/e2e/plasmon-golden-path-left-snap.spec.ts")) {
-    throw new Error("fallback must union a directly changed quarantined Playwright spec");
+  if (!combined.applicable || combined.files.length !== 1 || combined.files[0] !== first) {
+    throw new Error("uncertain support plus a changed spec must characterize only the exact changed spec");
+  }
+  if (!combined.unresolved_inputs.includes("playwright.config.ts")) {
+    throw new Error("combined selection must retain unresolved support as diagnostics without broadening");
   }
 
   const unrelated = await selectCharacterization({
     changedFiles: ["test/e2e/contacts-wallet.spec.ts"],
   });
   if (unrelated.applicable) {
-    throw new Error("explicitly non-Plasmon Playwright ownership must not receive direct Plasmon characterization");
+    throw new Error("explicitly non-Plasmon Playwright ownership must not receive Plasmon characterization");
   }
 
   const bunOnly = await selectCharacterization({
@@ -367,14 +375,7 @@ function writeResult(root, iteration, count, fields = {}) {
 function runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath) {
   return spawnSync(
     process.execPath,
-    [
-      summarizerPath,
-      resultsRoot,
-      diagnosticsRoot,
-      changedFilesPath,
-      "--json-file",
-      jsonFilePath,
-    ],
+    [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath, "--json-file", jsonFilePath],
     { cwd: process.cwd(), env: { ...process.env, GITHUB_EVENT_NAME: "pull_request" }, encoding: "utf8" },
   );
 }
@@ -414,11 +415,7 @@ function runSummaryFixture(count) {
           "Fresh probe iterations reported: 10/10",
           "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
         ];
-    for (const fragment of [
-      "Workflow `run_number`: `317`",
-      "Workflow `run_attempt`: `2`",
-      ...expected,
-    ]) {
+    for (const fragment of ["Workflow `run_number`: `317`", "Workflow `run_attempt`: `2`", ...expected]) {
       requireFragment(summaryRun.stdout, fragment, `${count}-iteration summary fixture`);
     }
     const json = JSON.parse(readFileSync(jsonFilePath, "utf8"));
@@ -449,15 +446,11 @@ function verifyPartialRerunReconciliation() {
         outcome: iteration === 3 ? "failure" : "success",
       });
     }
-    writeResult(resultsRoot, 3, 10, {
-      runAttempt: 2,
-      outcome: "success",
-      slot: "rerun",
-    });
+    writeResult(resultsRoot, 3, 10, { runAttempt: 2, outcome: "success", slot: "rerun" });
 
     const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
     if (summaryRun.status !== 0) {
-      throw new Error(`partial rerun fixture must reconcile to the newest per-iteration evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
+      throw new Error(`partial rerun fixture must reconcile newest evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
     }
     for (const fragment of [
       "Workflow `run_attempt` provenance:",
@@ -476,7 +469,7 @@ function verifyPartialRerunReconciliation() {
     }
     const iteration3 = packet.iteration_results.find((entry) => entry.iteration === 3);
     if (iteration3?.run_attempt !== 2 || iteration3?.outcome !== "success") {
-      throw new Error("partial rerun packet must select the newest result for rerun iteration 3");
+      throw new Error("partial rerun packet must select newest result for iteration 3");
     }
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -495,18 +488,15 @@ function verifyLegacyResultCompatibility() {
     for (let legacySlot = 1; legacySlot <= 10; legacySlot += 1) {
       const directory = join(resultsRoot, `attempt-${legacySlot}`);
       mkdirSync(directory, { recursive: true });
-      writeFileSync(
-        join(directory, "result.txt"),
-        [
-          "run_id=legacy-run-id",
-          "run_attempt=1",
-          `attempt=${legacySlot}`,
-          "outcome=success",
-          "sha=legacy-sha",
-          "target=specialist",
-          "",
-        ].join("\n"),
-      );
+      writeFileSync(join(directory, "result.txt"), [
+        "run_id=legacy-run-id",
+        "run_attempt=1",
+        `attempt=${legacySlot}`,
+        "outcome=success",
+        "sha=legacy-sha",
+        "target=specialist",
+        "",
+      ].join("\n"));
     }
     const summaryRun = spawnSync(
       process.execPath,
@@ -544,19 +534,16 @@ function verifyPriorIterationResultCompatibility() {
     for (let iteration = 1; iteration <= 10; iteration += 1) {
       const directory = join(resultsRoot, `iteration-${iteration}`);
       mkdirSync(directory, { recursive: true });
-      writeFileSync(
-        join(directory, "result.txt"),
-        [
-          "run_id=prior-iteration-run-id",
-          "run_number=291",
-          "run_attempt=2",
-          `iteration=${iteration}`,
-          "outcome=success",
-          "sha=prior-iteration-sha",
-          "target=all",
-          "",
-        ].join("\n"),
-      );
+      writeFileSync(join(directory, "result.txt"), [
+        "run_id=prior-iteration-run-id",
+        "run_number=291",
+        "run_attempt=2",
+        `iteration=${iteration}`,
+        "outcome=success",
+        "sha=prior-iteration-sha",
+        "target=all",
+        "",
+      ].join("\n"));
     }
     const summaryRun = spawnSync(
       process.execPath,
@@ -590,5 +577,5 @@ verifyLegacyResultCompatibility();
 verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, automatic exact-head changed-Playwright characterization, import/string-path helper impact, arbitrary unresolved helper fail-closed fallback, quarantined changed-test inclusion, unrelated-owner exclusion, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, quarantine exclusion, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );
