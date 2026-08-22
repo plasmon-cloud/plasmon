@@ -10,6 +10,7 @@ import type {
   Revision,
   WriteOptions,
 } from "../contracts/index.ts";
+import { classifyResource } from "../fs/index.ts";
 import { createDocument, importFileIntoFs, type ImportFileSource } from "./create-import.ts";
 import { finishEntryDragGesture } from "./drag.ts";
 import { emptySelection, selectNode } from "./model.ts";
@@ -140,22 +141,32 @@ function source(name: string, type: string, data: Uint8Array): ImportFileSource 
   };
 }
 
-test("New Text Document creates a normal .txt file with text/plain MIME", async () => {
+test("New Text Document keeps text/plain filename-derived for later extension rename", async () => {
   const fs = new RecordingFs();
   const created = await createDocument(fs, "dir", "text");
   expect(created.name).toBe("New Text Document.txt");
   expect(created.kind).toBe("file");
-  expect(created.mime).toBe("text/plain");
-  expect(fs.creates).toEqual([{ parentId: "dir", name: "New Text Document.txt", options: { mime: "text/plain" } }]);
+  expect(created.mime).toBeUndefined();
+  expect(classifyResource(created).type).toMatchObject({
+    mime: "text/plain",
+    language: "plaintext",
+    source: "filename",
+  });
+  expect(fs.creates).toEqual([{ parentId: "dir", name: "New Text Document.txt" }]);
 });
 
-test("New Markdown Document creates a normal .md file with text/markdown MIME", async () => {
+test("New Markdown Document keeps text/markdown filename-derived for later extension rename", async () => {
   const fs = new RecordingFs();
   const created = await createDocument(fs, "dir", "markdown");
   expect(created.name).toBe("New Markdown Document.md");
   expect(created.kind).toBe("file");
-  expect(created.mime).toBe("text/markdown");
-  expect(fs.creates[0]?.options?.mime).toBe("text/markdown");
+  expect(created.mime).toBeUndefined();
+  expect(classifyResource(created).type).toMatchObject({
+    mime: "text/markdown",
+    language: "markdown",
+    source: "filename",
+  });
+  expect(fs.creates[0]?.options).toBeUndefined();
 });
 
 test("import preserves filename/MIME and writes the selected bytes", async () => {

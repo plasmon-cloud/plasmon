@@ -24,10 +24,7 @@ function presentMove(operation: FileOperationSnapshot): FileOperationPresentatio
   }
 
   if (operation.status === "completed") {
-    return {
-      running: false,
-      message: `Moved ${itemCount(operation.succeededItems, "item")}.`,
-    };
+    return { running: false, message: null };
   }
 
   if (operation.status === "failed") {
