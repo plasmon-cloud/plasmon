@@ -16,6 +16,7 @@ export const START_MENU_PATH = "/System/Start Menu";
 export const START_MENU_NAME = "Start Menu";
 export const START_SHORTCUT_METADATA_KEY = "plasmon.shortcut";
 export const START_SEEDED_IDENTITIES_KEY = "plasmon.shell.start.seeded.v1";
+export const START_MANAGED_FOLDER_IDS_KEY = "plasmon.shell.start.managed-folders.v1";
 
 const FORMER_SYSTEM_NATIVE_HANDLERS = new Set<HandlerId>([
   "native:settings",
@@ -70,6 +71,28 @@ function stringList(value: JsonValue | undefined): Set<string> {
   return new Set(value.filter((item): item is string => typeof item === "string" && item.length > 0));
 }
 
+function stringMap(value: JsonValue | undefined): Map<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return new Map();
+  return new Map(
+    Object.entries(value).filter((entry): entry is [string, string] =>
+      typeof entry[1] === "string" && entry[1].length > 0,
+    ),
+  );
+}
+
+function managedFolderIdsValue(folderIds: ReadonlyMap<string, string>): JsonValue | null {
+  const entries = [...folderIds.entries()].sort(([left], [right]) => left.localeCompare(right));
+  return entries.length === 0 ? null : Object.fromEntries(entries);
+}
+
+async function persistManagedFolderIds(
+  fs: FsService,
+  rootId: string,
+  folderIds: ReadonlyMap<string, string>,
+): Promise<void> {
+  await fs.setMetadata(rootId, { [START_MANAGED_FOLDER_IDS_KEY]: managedFolderIdsValue(folderIds) });
+}
+
 function seedFolderForNative(app: NativeAppDefinition): "Accessories" | null {
   return FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId) ? null : "Accessories";
 }
@@ -95,15 +118,32 @@ async function ensureStartRoot(fs: FsService): Promise<FsNode> {
 
 /**
  * Resolve a canonical managed Start category without claiming ownership of an
- * ambiguous same-name resource. A non-directory collision is preserved and
- * represented as a blocked placement for this reconciliation pass; callers may
- * continue reconciling independent categories without mutating or relabeling it.
+ * ambiguous same-name resource. When Shell creates a category, its stable NodeId
+ * is recorded on the Start root. Existing same-name directories are never
+ * adopted, so copying/replacing a directory cannot transfer managed ownership.
+ * A non-directory collision is preserved and represented as a blocked placement
+ * for this reconciliation pass; callers may continue reconciling independent
+ * categories without mutating or relabeling it.
  */
-async function resolveChildDirectory(fs: FsService, parent: FsNode, name: string): Promise<FsNode | null> {
+async function resolveChildDirectory(
+  fs: FsService,
+  parent: FsNode,
+  name: string,
+  managedFolderIds: Map<string, string>,
+): Promise<FsNode | null> {
   const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
   const existing = children.find((node) => node.name === name);
   if (existing) return existing.kind === "directory" ? existing : null;
-  return fs.mkdir(parent.id, name);
+
+  const created = await fs.mkdir(parent.id, name);
+  managedFolderIds.set(name, created.id);
+  try {
+    await persistManagedFolderIds(fs, parent.id, managedFolderIds);
+  } catch (error) {
+    managedFolderIds.delete(name);
+    throw error;
+  }
+  return created;
 }
 
 async function uniqueChildName(fs: FsService, parentId: string, preferred: string): Promise<string> {
@@ -180,8 +220,145 @@ function isExactManagedSeed(node: FsNode, spec: SeedSpec): boolean {
   return !!shortcut && startShortcutTargetIdentity(shortcut.target) === spec.identity;
 }
 
+function formerSystemSpecs(nativeApps: readonly NativeAppDefinition[]): SeedSpec[] {
+  return nativeApps
+    .filter((app) => app.runtimeOnly !== true && FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
+    .map(nativeSeedSpec);
+}
+
+/**
+ * Backfill folder provenance for the exact released v1 Start state. The old
+ * ledger did not store the directory NodeId, but it was written only after Shell
+ * created the managed System directory and its three canonical shortcuts.
+ *
+ * This is deliberately stricter than shape matching: all three v1 identities
+ * must still be managed, the direct System directory and children must be exact
+ * and metadata-clean, the directory must predate the ledger write represented by
+ * the Start root modification time, and every shortcut must have been created in
+ * that directory before that write and never modified afterward. A replacement
+ * directory or moved shortcut created after the ledger write therefore fails
+ * closed. The timestamps are supporting lifecycle evidence only in combination
+ * with the durable v1 ledger and exact canonical state; they never authorize
+ * adoption of a merely same-name or same-shape folder by themselves.
+ */
+async function backfillReleasedManagedSystemFolderProvenance(
+  fs: FsService,
+  root: FsNode,
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+  managedFolderIds: Map<string, string>,
+): Promise<void> {
+  if (managedFolderIds.has("System")) return;
+  const specs = formerSystemSpecs(nativeApps);
+  if (specs.length !== FORMER_SYSTEM_NATIVE_HANDLERS.size) return;
+  if (specs.some((spec) => !seeded.has(spec.identity))) return;
+
+  const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const system = rootChildren.find((node) => node.kind === "directory" && node.name === "System");
+  if (!system || Object.keys(system.metadata).length !== 0) return;
+  if (!(system.createdAt < root.modifiedAt)) return;
+  if (specs.some((spec) => rootChildren.some((node) => node.id !== system.id && node.name === spec.name))) return;
+
+  const systemChildren = await fs.list(system.id, { includeHidden: true, sort: "name" });
+  if (systemChildren.length !== specs.length) return;
+  for (const spec of specs) {
+    const candidate = systemChildren.find((node) => node.name === spec.name);
+    if (!candidate || !isExactManagedSeed(candidate, spec)) return;
+    if (candidate.createdAt < system.createdAt || candidate.createdAt > root.modifiedAt) return;
+    if (candidate.modifiedAt !== candidate.createdAt) return;
+  }
+
+  managedFolderIds.set("System", system.id);
+  await persistManagedFolderIds(fs, root.id, managedFolderIds);
+}
+
+/**
+ * Retire the former managed Start `System` category only when the durable
+ * Start-root provenance map names that exact stable directory NodeId and its
+ * contents are still the untouched canonical defaults. Current Shell-created
+ * folders have direct NodeId provenance; released v1 folders may receive that
+ * provenance only through the narrow lifecycle-backed backfill above.
+ */
+async function migrateProvablyManagedRetiredSystemFolder(
+  fs: FsService,
+  root: FsNode,
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+  managedFolderIds: Map<string, string>,
+): Promise<void> {
+  const registeredSystemId = managedFolderIds.get("System");
+  if (!registeredSystemId) return;
+
+  const specs = formerSystemSpecs(nativeApps);
+  if (specs.length !== FORMER_SYSTEM_NATIVE_HANDLERS.size) return;
+
+  const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const system = rootChildren.find((node) => node.id === registeredSystemId);
+  if (!system || system.kind !== "directory" || system.name !== "System") return;
+  if (Object.keys(system.metadata).length !== 0) return;
+  if (specs.some((spec) => !seeded.has(spec.identity))) return;
+  if (specs.some((spec) => rootChildren.some((node) => node.id !== system.id && node.name === spec.name))) return;
+
+  const systemChildren = await fs.list(system.id, { includeHidden: true, sort: "name" });
+  if (systemChildren.length !== specs.length) return;
+
+  const candidates: FsNode[] = [];
+  for (const spec of specs) {
+    const candidate = systemChildren.find((node) => node.name === spec.name);
+    if (!candidate || !isExactManagedSeed(candidate, spec)) return;
+    candidates.push(candidate);
+  }
+
+  for (const candidate of candidates) await fs.move(candidate.id, root.id);
+  await fs.remove(system.id);
+  managedFolderIds.delete("System");
+  await persistManagedFolderIds(fs, root.id, managedFolderIds);
+}
+
 function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
   return app.runtimeOnly === true || RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId);
+}
+
+/**
+ * The v1 shortcut ledger cannot prove the parent history of an exact root seed.
+ * A provenance-recorded former `System` folder therefore always makes a root
+ * Settings/Properties candidate ambiguous while that exact folder still exists.
+ *
+ * For pre-provenance directories, the name `System` alone is not enough to block
+ * retirement: that could be an unrelated user-created folder. Treat it only as
+ * move ambiguity when it still contains at least one untouched ledger-backed
+ * former-System seed whose identity is absent from the Start root. This footprint
+ * is not directory-ownership proof and never authorizes moving or deleting the
+ * folder; it is only evidence that deleting another exact root seed could destroy
+ * a user move from the historical layout.
+ */
+async function hasFormerSystemRootMoveAmbiguity(
+  fs: FsService,
+  rootChildren: readonly FsNode[],
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+  managedFolderIds: ReadonlyMap<string, string>,
+): Promise<boolean> {
+  const registeredSystemId = managedFolderIds.get("System");
+  if (registeredSystemId !== undefined) {
+    const registered = rootChildren.find((node) => node.kind === "directory" && node.id === registeredSystemId);
+    if (registered) return true;
+  }
+
+  const unprovenSystem = rootChildren.find((node) => node.kind === "directory" && node.name === "System");
+  if (!unprovenSystem) return false;
+
+  const systemChildren = await fs.list(unprovenSystem.id, { includeHidden: true, sort: "name" });
+  const specs = formerSystemSpecs(nativeApps);
+
+  return specs.some((spec) => {
+    if (!seeded.has(spec.identity)) return false;
+    if (!systemChildren.some((node) => isExactManagedSeed(node, spec))) return false;
+    return !rootChildren.some((node) => {
+      const shortcut = parseStartShortcut(node);
+      return shortcut !== null && startShortcutTargetIdentity(shortcut.target) === spec.identity;
+    });
+  });
 }
 
 /**
@@ -194,6 +371,15 @@ function shouldRetireManagedNativeSeed(app: NativeAppDefinition): boolean {
  * are intentionally preserved because their managed ownership is not provable
  * from the durable reconciliation state.
  *
+ * The v1 seed ledger does not record shortcut NodeIds or prior parent folders.
+ * Therefore, when the durable folder ledger or a surviving legacy-seed footprint
+ * makes the historical `System` layout plausible, an exact Settings/Properties
+ * shortcut at the root is ambiguous: it may be the untouched flat-layout default,
+ * or the same stable NodeId a user moved out of that legacy folder. Fail closed in
+ * that state. An unrelated user-created `System` directory does not create this
+ * ambiguity by name alone. Management is still retired by consuming the ledger
+ * identity, so a preserved user shortcut cannot be claimed on a later pass.
+ *
  * Once an identity is retired from the managed inventory, consume its old ledger
  * entry. The inventory filter already prevents recreation, while dropping stale
  * target-only provenance prevents a future user-created exact equivalent from
@@ -204,8 +390,16 @@ async function retireManagedNativeSeeds(
   root: FsNode,
   nativeApps: readonly NativeAppDefinition[],
   seeded: Set<string>,
+  managedFolderIds: ReadonlyMap<string, string>,
 ): Promise<boolean> {
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const formerSystemRootMoveAmbiguity = await hasFormerSystemRootMoveAmbiguity(
+    fs,
+    rootChildren,
+    nativeApps,
+    seeded,
+    managedFolderIds,
+  );
   let changedManifest = false;
 
   for (const app of nativeApps) {
@@ -222,7 +416,13 @@ async function retireManagedNativeSeeds(
     if (parent) {
       const children = await fs.list(parent.id, { includeHidden: true, sort: "name" });
       const candidate = children.find((node) => node.name === spec.name);
-      if (candidate && isExactManagedSeed(candidate, spec)) await fs.remove(candidate.id);
+      const ambiguousFormerSystemRootMove =
+        spec.folder === null &&
+        RETIRED_DEFAULT_START_NATIVE_HANDLERS.has(app.handlerId) &&
+        formerSystemRootMoveAmbiguity;
+      if (!ambiguousFormerSystemRootMove && candidate && isExactManagedSeed(candidate, spec)) {
+        await fs.remove(candidate.id);
+      }
     }
 
     seeded.delete(spec.identity);
@@ -239,21 +439,24 @@ async function retireManagedNativeSeeds(
  * intentional deletion and is not recreated. Newly discovered identities are
  * seeded exactly once. Exact previously-managed native defaults that are no
  * longer in the managed inventory are retired without weakening those
- * user-customization semantics. Ambiguous same-name category resources block
- * only the seeds that require that category; they are never mutated or treated
- * as managed merely by name.
+ * user-customization semantics. Managed category ownership is recorded by stable
+ * NodeId when Shell creates a category. Released v1 legacy `System` provenance is
+ * backfilled only for the exact untouched lifecycle that could have been created
+ * by the historical reconciler; later replacement/move/customization states fail
+ * closed. A proven retired `System` folder then migrates once and is removed.
  */
 export async function reconcileStartMenu(
   fs: FsService,
   nativeApps: readonly NativeAppDefinition[],
   elements: readonly ExternalElement[],
 ): Promise<StartSeedResult> {
-  const root = await ensureStartRoot(fs);
+  let root = await ensureStartRoot(fs);
   const seeded = stringList(root.metadata[START_SEEDED_IDENTITIES_KEY]);
-  // The v1 seed ledger records shortcut identities, not the NodeId of the old
-  // `System` directory. Shape alone cannot prove directory ownership, so legacy
-  // folders are scanned in place and never moved/deleted by reconciliation.
-  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded);
+  const managedFolderIds = stringMap(root.metadata[START_MANAGED_FOLDER_IDS_KEY]);
+  await backfillReleasedManagedSystemFolderProvenance(fs, root, nativeApps, seeded, managedFolderIds);
+  root = await fs.stat(root.id);
+  await migrateProvablyManagedRetiredSystemFolder(fs, root, nativeApps, seeded, managedFolderIds);
+  let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded, managedFolderIds);
   const existing = await scanStartTree(fs, root);
   let created = 0;
   let preserved = 0;
@@ -280,7 +483,7 @@ export async function reconcileStartMenu(
       if (folders.has(spec.folder)) {
         resolved = folders.get(spec.folder) ?? null;
       } else {
-        resolved = await resolveChildDirectory(fs, root, spec.folder);
+        resolved = await resolveChildDirectory(fs, root, spec.folder, managedFolderIds);
         folders.set(spec.folder, resolved);
       }
       if (!resolved) continue;

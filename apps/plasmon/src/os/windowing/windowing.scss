@@ -5,6 +5,9 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  // Browser focus may scroll an overflow:hidden container programmatically,
+  // offsetting manager-owned window geometry from the visible workspace.
+  overflow: clip;
   isolation: isolate;
 }
 

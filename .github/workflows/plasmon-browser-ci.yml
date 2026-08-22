@@ -69,3 +69,12 @@ jobs:
             npm run plasmon:local:reinstall
             npm run test:e2e:plasmon:specialist
           '
+
+      - name: Upload Specialist Playwright report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-specialist-report-${{ github.run_attempt }}
+          path: playwright-report/
+          if-no-files-found: error
+          retention-days: 14
