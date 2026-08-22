@@ -27,9 +27,49 @@ Use the nearest meaningful documentation boundary rather than adding documentati
 - A nested `AGENTS.md` adds narrower rules; otherwise a directory inherits the nearest ancestor `AGENTS.md`.
 - Canonical documents under this directory hold cross-subsystem architecture, accepted terminology, deeper rationale, compatibility constraints, and durable research that is too large or cross-cutting for a scoped README/AGENTS file.
 
-Concrete bugs, temporary migrations, current ownership, one-off acceptance fixes, and implementation sequencing belong in GitHub Issues and tests rather than README/AGENTS files.
+The machine-readable boundary inventory is [`documentation-boundaries.json`](documentation-boundaries.json). It is the single source for which Plasmon directories are documentation boundaries, whether they require local README/AGENTS files or inherit AGENTS ownership, and which roots require direct-child classification. Do not duplicate that inventory in prose or external project context.
 
-The current directory-boundary inventory is repository-owned. Do not maintain a second authoritative boundary list in external project context. Follow the current tree and nearest scoped documentation; repository validation for explicit boundary inventory is tracked separately.
+<!-- plasmon-documentation-boundaries:start -->
+<!-- Generated from documentation-boundaries.json by documentation-boundaries.mjs. Do not edit this table by hand. -->
+| Boundary | Kind | README | AGENTS |
+| --- | --- | --- | --- |
+| `apps/plasmon` | application-root | local | local |
+| `apps/plasmon/backend` | backend | local | local |
+| `apps/plasmon/docs` | documentation-index | local | inherited from `apps/plasmon/AGENTS.md` |
+| `apps/plasmon/docs/atoms` | documentation-index | local | inherited from `apps/plasmon/AGENTS.md` |
+| `apps/plasmon/src` | source-root | local | local |
+| `apps/plasmon/src/demo` | demo-fixtures | local | inherited from `apps/plasmon/src/AGENTS.md` |
+| `apps/plasmon/src/games` | subsystem | local | local |
+| `apps/plasmon/src/native-apps` | native-app-root | local | local |
+| `apps/plasmon/src/native-apps/browser` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/emulatorjs` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/explorer` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/jsdos` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/markdown` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/photos` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/properties` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/recycle-bin` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/settings` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/shared/monaco` | browser-adapter | local | local |
+| `apps/plasmon/src/native-apps/text` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/video` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/os` | os-root | local | local |
+| `apps/plasmon/src/os/associations` | os-subsystem | local | local |
+| `apps/plasmon/src/os/contracts` | os-subsystem | local | local |
+| `apps/plasmon/src/os/desktop` | os-subsystem | local | local |
+| `apps/plasmon/src/os/file-manager` | os-subsystem | local | local |
+| `apps/plasmon/src/os/fs` | os-subsystem | local | local |
+| `apps/plasmon/src/os/integration` | os-subsystem | local | local |
+| `apps/plasmon/src/os/neutron` | os-subsystem | local | local |
+| `apps/plasmon/src/os/process` | os-subsystem | local | local |
+| `apps/plasmon/src/os/sharing` | os-subsystem | local | inherited from `apps/plasmon/src/os/AGENTS.md` |
+| `apps/plasmon/src/os/shell` | os-subsystem | local | local |
+| `apps/plasmon/src/os/visual` | os-subsystem | local | local |
+| `apps/plasmon/src/os/windowing` | os-subsystem | local | local |
+| `apps/plasmon/test` | testing | local | local |
+<!-- plasmon-documentation-boundaries:end -->
+
+Concrete bugs, temporary migrations, current ownership, one-off acceptance fixes, and implementation sequencing belong in GitHub Issues and tests rather than README/AGENTS files.
 
 ## Terminology
 

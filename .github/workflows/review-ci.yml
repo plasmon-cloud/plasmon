@@ -57,21 +57,9 @@ jobs:
         run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-kernel run package'
       - name: Build design system
         run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-design-system run build'
-      - name: Package Files for local acceptance
-        run: |
-          nix develop --command bash -lc '
-            set -euxo pipefail
-            cd apps/vfs
-            npm run validate
-            npm run build
-            npm run typecheck:clean
-            npm run mopack
-            npm run schema
-            bun ../../packages/neutron-scripts/src/pack.ts
-          '
       - name: Package Review
         run: nix develop --command bash -lc 'set -euxo pipefail; npm --workspace neutron-review run package'
-      - name: Start and provision vanilla Neutron
+      - name: Start and provision vanilla Neutron without Files
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -86,7 +74,7 @@ jobs:
           '
       - name: Attest installed Review package bytes
         run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npm --workspace neutron-review run attest:installed'
-      - name: Exercise packaged Review in vanilla Neutron
+      - name: Exercise standalone packaged Review in vanilla Neutron
         run: nix develop --command bash -lc 'set -euxo pipefail; NEUTRON_NDEPLOY_CONFIG="$PWD/review-local.ndeploy.json" npx playwright test -c apps/review/playwright.config.ts'
       - name: Upload Review browser evidence
         if: always()

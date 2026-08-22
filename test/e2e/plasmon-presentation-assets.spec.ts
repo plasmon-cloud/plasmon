@@ -5,14 +5,14 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
-const NATIVE_IDENTITY_ASSETS = [
+const START_NATIVE_IDENTITY_ASSETS = [
   "text.svg",
   "markdown.svg",
   "photos.svg",
   "video.svg",
   "browser.svg",
-  "settings.svg",
 ] as const;
+const NATIVE_IDENTITY_ASSETS = [...START_NATIVE_IDENTITY_ASSETS, "settings.svg"] as const;
 
 function pathname(value: string): string {
   return new URL(value).pathname;
@@ -63,12 +63,12 @@ test("#190/#96 installed assets and #171 bounded Element icon probing use canoni
   }
 
   // #96: exercise the canonical filesystem-backed Start projection rather than
-  // inventing a presentation-only app catalog. Settings is a direct Start root
-  // entry; first-party apps are ordinary Accessories seeds.
+  // inventing a presentation-only app catalog. #428 intentionally removes the
+  // managed Settings Start shortcut, so Start proves the remaining first-party
+  // application identities while native Search proves Settings below.
   await plasmon.getByRole("button", { name: "Start" }).click();
   const start = plasmon.getByRole("region", { name: "Start menu" });
   await expect(start).toBeVisible();
-  await expect(start.getByRole("button", { name: /Settings/u }).first()).toBeVisible();
   await start.getByRole("button", { name: /Accessories/u }).first().click();
 
   for (const name of ["Text Editor", "Markdown", "Photos", "Video Player", "Browser"] as const) {
@@ -76,14 +76,28 @@ test("#190/#96 installed assets and #171 bounded Element icon probing use canoni
   }
 
   await expect.poll(
-    () => NATIVE_IDENTITY_ASSETS.filter((name) => iconResponses.get(`${ICON_PREFIX}${name}`) === 200).length,
-    { timeout: 15_000, message: "all six canonical native identity assets should load from the installed package" },
-  ).toBe(NATIVE_IDENTITY_ASSETS.length);
+    () => START_NATIVE_IDENTITY_ASSETS.filter((name) => iconResponses.get(`${ICON_PREFIX}${name}`) === 200).length,
+    { timeout: 15_000, message: "all Start-projected native identity assets should load from the installed package" },
+  ).toBe(START_NATIVE_IDENTITY_ASSETS.length);
+
+  // Settings remains a canonical native application even though it is no longer
+  // a managed Start default. Search is an existing canonical metadata consumer,
+  // so use it to prove the packaged Settings identity without recreating a Start
+  // shortcut solely for presentation coverage.
+  await plasmon.getByRole("button", { name: "Search", exact: true }).click();
+  const search = plasmon.getByRole("region", { name: "Search" });
+  await expect(search).toBeVisible();
+  await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Settings");
+  await expect(search.locator("[data-search-result]").filter({ hasText: "Settings" }).first()).toBeVisible({ timeout: 15_000 });
+  await expect.poll(
+    () => iconResponses.get(`${ICON_PREFIX}settings.svg`),
+    { timeout: 15_000, message: "Settings canonical identity asset should load through native Search" },
+  ).toBe(200);
 
   requested = [...new Set(iconRequests)];
   for (const name of NATIVE_IDENTITY_ASSETS) {
     const path = `${ICON_PREFIX}${name}`;
-    expect(requested, `${path} should be requested by canonical Start presentation`).toContain(path);
+    expect(requested, `${path} should be requested by canonical Shell presentation`).toContain(path);
     expect(iconResponses.get(path), `${path} should stay offline/package-local and load successfully`).toBe(200);
   }
 });
