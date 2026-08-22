@@ -11,7 +11,6 @@ import { dirname, extname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   classifyPlasmonTest,
-  discoverPlasmonTests,
   repoRoot as defaultRepoRoot,
 } from "./plasmon-test-inventory.mjs";
 
@@ -44,7 +43,10 @@ const importExtensionCandidates = [
   "/index.mjs",
 ];
 
-export const sharedFallbackInputs = Object.freeze([
+// These inputs can affect Playwright execution, but they do not identify an
+// acceptance target on their own. Automatic characterization must never turn
+// uncertainty here into a 50x whole-Specialist run.
+export const unresolvedSharedInputs = Object.freeze([
   "playwright.config.ts",
   ".github/workflows/plasmon-flake-probe.yml",
   ".github/workflows/plasmon-browser-ci.yml",
@@ -54,10 +56,6 @@ export const sharedFallbackInputs = Object.freeze([
   "test/ci/run-plasmon-specialist.mjs",
   "test/ci/plasmon-test-inventory.mjs",
   "test/ci/select-plasmon-flake-characterization.mjs",
-]);
-
-const deletedSharedHelperFallbacks = new Set([
-  "test/e2e/local-playwright-identity.ts",
 ]);
 
 function slash(path) {
@@ -113,10 +111,6 @@ function resolveRelativeImport(importer, specifier, root) {
 }
 
 function repositoryPathReferences(source, sourcePaths) {
-  // Some browser fixtures are intentionally handed to bundlers/runners by a
-  // repository-root string path rather than a JS import. Treat an exact source
-  // path literal as a dependency edge so those helpers still get the narrowest
-  // resolvable characterization scope.
   return sourcePaths.filter((candidate) => source.includes(candidate));
 }
 
@@ -178,27 +172,20 @@ function isRelevantPlaywrightTest(path, graph, sources, playwrightMemo) {
   if (!playwrightTestPattern.test(path)) return false;
   const classification = classifyPlasmonTest(path);
   if (classification?.layer === "non-plasmon-browser") return false;
-
-  // Repository inventory classifies Playwright *.spec.* files. A future
-  // Playwright *.test.* file is also eligible, but only when its import graph
-  // actually reaches @playwright/test so Bun-only tests under test/e2e are not
-  // accidentally handed to the Playwright runner.
   if (playwrightSpecPattern.test(path)) return true;
   return usesPlaywright(path, graph, sources, playwrightMemo);
 }
 
-function supportPathNeedsFallback(path, root, impactedCount) {
+function isQuarantinedAcceptance(path, sources) {
+  return (sources.get(path) ?? "").includes("@r2-quarantine");
+}
+
+function unresolvedSupportInput(path, root, impactedCount) {
   if (impactedCount > 0) return false;
-  const absolute = resolve(root, path);
   if (!path.startsWith("test/e2e/") || playwrightTestPattern.test(path) || !isSourcePath(path)) {
     return false;
   }
-  // Any changed E2E source helper/fixture whose Plasmon consumers cannot be
-  // resolved must fail closed. Filename prefixes are not an ownership proof:
-  // helpers such as permission-dialog.fixture.tsx can be reached through
-  // runner/bundler path strings instead of static imports.
-  if (existsSync(absolute)) return true;
-  return deletedSharedHelperFallbacks.has(path);
+  return existsSync(resolve(root, path));
 }
 
 function selectionHash(files) {
@@ -224,36 +211,45 @@ export async function selectCharacterization({
   const directChangedTests = normalizedChanged.filter(
     (path) => relevantSet.has(path) && existsSync(resolve(root, path)),
   );
+  const excludedQuarantinedTests = new Set(
+    directChangedTests.filter((path) => isQuarantinedAcceptance(path, sources)),
+  );
 
   const impactedTests = new Set();
-  const unresolvedSupport = [];
+  const unresolvedInputs = new Set(
+    normalizedChanged.filter((path) => unresolvedSharedInputs.includes(path)),
+  );
+
   for (const path of normalizedChanged) {
     if (!path.startsWith("test/e2e/") || playwrightTestPattern.test(path) || !isSourcePath(path)) {
       continue;
     }
     const impacted = relevantTests.filter((test) => dependsOn(test, path, graph));
-    impacted.forEach((test) => impactedTests.add(test));
-    if (supportPathNeedsFallback(path, root, impacted.length)) unresolvedSupport.push(path);
-  }
-
-  const fallbackInputs = [
-    ...normalizedChanged.filter((path) => sharedFallbackInputs.includes(path)),
-    ...unresolvedSupport,
-  ].filter((value, index, values) => values.indexOf(value) === index).sort();
-
-  const exactTargets = new Set([...directChangedTests, ...impactedTests]);
-  if (fallbackInputs.length > 0) {
-    const inventory = await discoverPlasmonTests(root);
-    for (const test of inventory) {
-      if (test.layer === "browser" && test.lane === "specialist") exactTargets.add(test.path);
+    for (const test of impacted) {
+      if (isQuarantinedAcceptance(test, sources)) excludedQuarantinedTests.add(test);
+      else impactedTests.add(test);
     }
+    if (unresolvedSupportInput(path, root, impacted.length)) unresolvedInputs.add(path);
   }
+
+  const exactTargets = new Set(
+    directChangedTests.filter((path) => !excludedQuarantinedTests.has(path)),
+  );
+  for (const test of impactedTests) exactTargets.add(test);
 
   const files = [...exactTargets].sort();
+  const unresolved = [...unresolvedInputs].sort();
+  const excluded = [...excludedQuarantinedTests].sort();
+
   if (files.length === 0) {
+    const reason = excluded.length > 0 && unresolved.length === 0
+      ? "only-quarantined-playwright-changes"
+      : unresolved.length > 0
+        ? "no-deterministic-playwright-target"
+        : "no-relevant-playwright-change";
     return {
       applicable: false,
-      reason: "no-relevant-playwright-change",
+      reason,
       target: "exact-set",
       iteration_count: 50,
       files: [],
@@ -262,21 +258,19 @@ export async function selectCharacterization({
       scope_key: "not-applicable",
       direct_changed_tests: directChangedTests,
       impacted_tests: [...impactedTests].sort(),
-      fallback_inputs: fallbackInputs,
+      excluded_quarantined_tests: excluded,
+      unresolved_inputs: unresolved,
     };
   }
 
-  const fallback = fallbackInputs.length > 0;
-  const reason = fallback
-    ? "shared-support-fallback"
-    : directChangedTests.length > 0 && impactedTests.size > 0
-      ? "changed-tests-and-impacted-support"
-      : directChangedTests.length > 0
-        ? "changed-playwright-tests"
-        : "impacted-playwright-support";
+  const reason = directChangedTests.some((path) => exactTargets.has(path)) && impactedTests.size > 0
+    ? "changed-tests-and-impacted-support"
+    : directChangedTests.some((path) => exactTargets.has(path))
+      ? "changed-playwright-tests"
+      : "impacted-playwright-support";
   const digest = selectionHash(files);
-  const scope = `characterization:${fallback ? "specialist-fallback" : "targeted"}:${files.length}-files:${digest}`;
-  const scopeKey = `char-${fallback ? "fallback" : "targeted"}-${files.length}-${digest}`;
+  const scope = `characterization:targeted:${files.length}-files:${digest}`;
+  const scopeKey = `char-targeted-${files.length}-${digest}`;
 
   return {
     applicable: true,
@@ -289,7 +283,8 @@ export async function selectCharacterization({
     scope_key: scopeKey,
     direct_changed_tests: directChangedTests,
     impacted_tests: [...impactedTests].sort(),
-    fallback_inputs: fallbackInputs,
+    excluded_quarantined_tests: excluded,
+    unresolved_inputs: unresolved,
   };
 }
 
@@ -300,41 +295,39 @@ function optionValue(args, name) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const changedFilesPath = args[0];
-  if (!changedFilesPath || changedFilesPath.startsWith("--")) {
-    console.error(
-      "usage: node test/ci/select-plasmon-flake-characterization.mjs <changed-files> [--github-output <path>] [--json-file <path>]",
-    );
-    process.exit(2);
+  const changedFilesPath = args.find((arg) => !arg.startsWith("--")) ?? null;
+  const githubOutputPath = optionValue(args, "--github-output");
+  const jsonFilePath = optionValue(args, "--json-file");
+  if (!changedFilesPath) {
+    throw new Error("Usage: select-plasmon-flake-characterization.mjs <changed-files.txt> [--github-output <path>] [--json-file <path>]");
   }
 
   const changedFiles = existsSync(changedFilesPath)
     ? readFileSync(changedFilesPath, "utf8").split(/\r?\n/).filter(Boolean)
     : [];
   const selection = await selectCharacterization({ changedFiles });
-  const json = JSON.stringify(selection);
-  console.log(json);
-
-  const outputPath = optionValue(args, "--github-output");
-  if (outputPath) {
-    const fields = {
-      applicable: String(selection.applicable),
-      reason: selection.reason,
-      target: selection.target,
-      iteration_count: String(selection.iteration_count),
-      files_json: selection.files_json,
-      scope: selection.scope,
-      scope_key: selection.scope_key,
-    };
-    appendFileSync(
-      outputPath,
-      Object.entries(fields).map(([key, value]) => `${key}=${value}\n`).join(""),
-    );
+  const json = `${JSON.stringify(selection)}\n`;
+  process.stdout.write(json);
+  if (jsonFilePath) writeFileSync(jsonFilePath, json);
+  if (githubOutputPath) {
+    for (const key of [
+      "applicable",
+      "reason",
+      "target",
+      "iteration_count",
+      "files_json",
+      "scope",
+      "scope_key",
+    ]) {
+      appendFileSync(githubOutputPath, `${key}=${selection[key]}\n`);
+    }
   }
-
-  const jsonPath = optionValue(args, "--json-file");
-  if (jsonPath) writeFileSync(jsonPath, `${JSON.stringify(selection, null, 2)}\n`);
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
-if (invokedPath === fileURLToPath(import.meta.url)) await main();
+if (invokedPath === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
