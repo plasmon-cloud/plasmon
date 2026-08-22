@@ -19,6 +19,15 @@ import {
   type SelectionState,
 } from "./model.ts";
 import { directoryDropCandidateId } from "./drop-target.ts";
+import {
+  dispatchIncomingDropPlacement,
+  FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT,
+  incomingDropPlacementIntent,
+  type DropPlacementSourceRect,
+  type IncomingDropPlacementCommit,
+  type IncomingDropPlacementIntent,
+  type IncomingDropPlacementRequest,
+} from "./drop-placement.ts";
 import { finishEntryDragGesture } from "./drag.ts";
 import {
   dragOperationFeedback,
@@ -52,6 +61,7 @@ interface UseFileManagerPointerAdapterOptions {
     delta: { dx: number; dy: number },
     bounds: { width: number; height: number },
   ) => void | Promise<void>;
+  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
 }
 
 interface EntryDragState {
@@ -76,6 +86,7 @@ interface DragPendingVisual {
 interface DragDropCandidate {
   id: NodeId;
   element: HTMLElement;
+  kind: "entry" | "surface";
 }
 
 interface ActiveDropTarget {
@@ -140,6 +151,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     setError,
     closeContextMenu,
     onDesktopReposition,
+    onIncomingDropPlacement,
   } = options;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -300,6 +312,24 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     return nodes.filter((node) => ids.has(node.id));
   };
 
+  const sourcePlacementRects = (active: EntryDragState): DropPlacementSourceRect[] => {
+    const result: DropPlacementSourceRect[] = [];
+    for (const id of active.ids) {
+      const rect = id === active.sourceId
+        ? active.sourceRect
+        : entriesRef.current.get(id)?.getBoundingClientRect();
+      if (!rect) continue;
+      result.push({
+        id,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+    return result;
+  };
+
   const dragCandidateAtPoint = (
     active: EntryDragState,
     clientX: number,
@@ -327,7 +357,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         ], active.ids);
         // A visible resource entry blocks its containing directory surface. A
         // normal file therefore means "no target" instead of "drop in folder".
-        return candidateId ? { id: candidateId, element: entry } : null;
+        return candidateId ? { id: candidateId, element: entry, kind: "entry" } : null;
       }
 
       const surface = element.closest<HTMLElement>("[data-fm-directory-id]");
@@ -338,7 +368,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
       const candidateId = directoryDropCandidateId([
         { kind: "surface", directoryId },
       ], active.ids);
-      if (candidateId) return { id: candidateId, element: surface };
+      if (candidateId) return { id: candidateId, element: surface, kind: "surface" };
     }
     return null;
   };
@@ -361,7 +391,11 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
 
   const resolveDropCandidate = (active: EntryDragState, candidate: DragDropCandidate | null) => {
     const previous = dropCandidateRef.current;
-    if (previous?.id === candidate?.id && previous?.element === candidate?.element) return;
+    if (
+      previous?.id === candidate?.id
+      && previous?.element === candidate?.element
+      && previous?.kind === candidate?.kind
+    ) return;
     dropCandidateRef.current = candidate;
     const generation = ++dropTargetGenerationRef.current;
     setActiveDropTarget(null);
@@ -374,10 +408,32 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         || dragRef.current !== active
         || dropCandidateRef.current?.id !== candidate.id
         || dropCandidateRef.current.element !== candidate.element
+        || dropCandidateRef.current.kind !== candidate.kind
       ) return;
       if (target) setActiveDropTarget({ node: target, element: candidate.element });
       applyDragVisual();
     });
+  };
+
+  const handoffIncomingPlacement = (
+    active: EntryDragState,
+    candidate: DragDropCandidate | null,
+    dx: number,
+    dy: number,
+  ): IncomingDropPlacementCommit | null => {
+    if (!candidate || candidate.kind !== "surface") return null;
+    const sources = sourcePlacementRects(active);
+    if (sources.length !== active.ids.length) return null;
+    const targetRect = candidate.element.getBoundingClientRect();
+    return dispatchIncomingDropPlacement(
+      candidate.element,
+      incomingDropPlacementIntent(sources, { dx, dy }, {
+        left: targetRect.left,
+        top: targetRect.top,
+        width: targetRect.width,
+        height: targetRect.height,
+      }),
+    );
   };
 
   const cancelActiveEntryDrag = (): boolean => {
@@ -403,6 +459,20 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !onIncomingDropPlacement) return undefined;
+    const handleIncomingPlacement = (event: Event) => {
+      const custom = event as CustomEvent<IncomingDropPlacementRequest>;
+      const request = custom.detail;
+      if (!request?.intent) return;
+      request.commit = () => Promise.resolve(onIncomingDropPlacement(request.intent));
+      event.preventDefault();
+    };
+    root.addEventListener(FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT, handleIncomingPlacement);
+    return () => root.removeEventListener(FILE_MANAGER_INCOMING_DROP_PLACEMENT_EVENT, handleIncomingPlacement);
+  }, [onIncomingDropPlacement]);
 
   useEffect(() => () => {
     dropTargetGenerationRef.current += 1;
@@ -485,6 +555,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element
       ? resolved.node
       : await resolveCanonicalDropTarget(active, candidate);
+    const placementCommit = target?.kind === "directory" && candidate?.id === target.id
+      ? handoffIncomingPlacement(active, candidate, dx, dy)
+      : null;
 
     resetDragFrame();
     clearDropTarget();
@@ -502,8 +575,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const source = sourceNodesFor(active);
     try {
       if (target?.kind === "directory") {
-        removeDragPreview();
+        if (!placementCommit) removeDragPreview();
         if (!operationState.begin("move", source.length)) {
+          removeDragPreview();
           setError("Another file operation is already running");
           return;
         }
@@ -514,9 +588,30 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
             onItemFailure: (_index, node, cause) => operationState.failItem(node.name, errorMessage(cause)),
           });
           operationState.complete();
-          setError(null);
-          await refresh();
+
+          let completionError: string | null = null;
+          if (placementCommit) {
+            try {
+              await placementCommit();
+            } catch (cause: unknown) {
+              completionError = `Move completed, but drop placement could not be saved: ${errorMessage(cause)}`;
+            }
+          }
+          try {
+            await refresh();
+          } catch (refreshCause: unknown) {
+            const refreshMessage = `refresh failed: ${errorMessage(refreshCause)}`;
+            completionError = completionError
+              ? `${completionError} (${refreshMessage})`
+              : refreshMessage;
+          }
+          setError(completionError);
+          if (placementCommit) {
+            await nextAnimationFrame();
+            removeDragPreview();
+          }
         } catch (cause: unknown) {
+          removeDragPreview();
           const message = errorMessage(cause);
           if (operationState.isRunning()) {
             if (operationState.snapshot().failedItems > 0) operationState.complete();

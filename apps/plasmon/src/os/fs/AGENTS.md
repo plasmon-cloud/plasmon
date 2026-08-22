@@ -11,7 +11,7 @@
 - Atomic commit semantics and monotonic revision behavior.
 - Versionable, idempotent bootstrap/reconciliation that preserves user-owned state.
 - Centralized resource classification/protection; generic consumers must not bypass it through private storage access.
-- Classification precedence is explicit persisted resource/MIME metadata, then canonical filename-derived inference, then safe unknown fallback. Filename inference must never replace stronger explicit MIME metadata.
+- Classification precedence is stronger explicit persisted resource/MIME metadata, then canonical filename-derived inference, then safe unknown fallback. Filename inference must never replace stronger explicit MIME metadata; any MIME treated as generic/non-authoritative must be defined centrally by `resourcePolicy.ts`, not by a consumer.
 - Derived classification is not resource identity: rename preserves `NodeId` and may change derived type only when stronger metadata is absent.
 - `AssociationRegistry`/`OpenService` retain handler and default-open authority. Visual and application consumers may map canonical classification to local behavior but must not create another global MIME/type authority.
 - Shared resource opening/shortcut resolution rather than per-surface dispatch tables.
