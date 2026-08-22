@@ -3,7 +3,7 @@ name: Plasmon Flake Probe
 on:
   # The workflow must exist for every relevant PR event because
   # "Flake probe summary" is a required check. A cheap detector preserves
-  # the old optimization by skipping the expensive ten-attempt matrix when
+  # the old optimization by skipping the expensive ten-iteration matrix when
   # none of the probe trigger paths changed.
   pull_request:
     types: [opened, synchronize, reopened]
@@ -100,8 +100,6 @@ jobs:
       - name: Upload applicability evidence
         uses: actions/upload-artifact@v4
         with:
-          # Stable for this workflow run so a summary re-run can consume the
-          # original detector output when the successful detector is not rerun.
           name: flake-probe-applicability-${{ github.run_id }}
           path: flake-probe-applicability/changed-files.txt
           if-no-files-found: error
@@ -111,18 +109,16 @@ jobs:
   probe:
     if: needs.applicability.outputs.applicable == 'true'
     needs: applicability
-    name: Flake probe ${{ matrix.attempt }}/10
+    name: Flake probe iteration ${{ matrix.iteration }}/10
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 10
       matrix:
-        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        iteration: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     env:
-      # Automatic test-change probes cover both the fast and packaged browser
-      # boundaries. Manual dispatch remains available for a single boundary.
       PROBE_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'all' }}
 
     steps:
@@ -136,8 +132,9 @@ jobs:
         run: |
           set -euxo pipefail
           echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "attempt=${{ matrix.attempt }}/10"
+          echo "iteration=${{ matrix.iteration }}/10"
           echo "run_id=${{ github.run_id }}"
+          echo "run_number=${{ github.run_number }}"
           echo "run_attempt=${{ github.run_attempt }}"
           echo "target=$PROBE_TARGET"
           git rev-parse HEAD
@@ -147,7 +144,7 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run fresh Plasmon probe
+      - name: Run fresh Plasmon probe iteration
         id: probe
         run: |
           set -o pipefail
@@ -156,33 +153,32 @@ jobs:
             bash test/ci/run-plasmon-flake-probe.sh "$PROBE_TARGET"
           ' 2>&1 | tee flake-probe-output.log
 
-      - name: Record attempt result
+      - name: Record probe iteration result
         if: always()
         run: |
           set -u
           mkdir -p flake-probe-result
           {
             echo "run_id=${{ github.run_id }}"
+            echo "run_number=${{ github.run_number }}"
             echo "run_attempt=${{ github.run_attempt }}"
-            echo "attempt=${{ matrix.attempt }}"
+            echo "iteration=${{ matrix.iteration }}"
             echo "outcome=${{ steps.probe.outcome }}"
             echo "sha=${PROBE_SHA:-unknown}"
             echo "target=${PROBE_TARGET:-unknown}"
           } > flake-probe-result/result.txt
 
-      - name: Upload attempt result
+      - name: Upload probe iteration result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # One logical artifact per matrix slot. Re-running a failed slot
-          # replaces only that slot while the other nine remain available.
-          name: flake-probe-result-${{ github.run_id }}-${{ matrix.attempt }}
+          name: flake-probe-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}
           path: flake-probe-result/result.txt
           if-no-files-found: error
           retention-days: 7
           overwrite: true
 
-      - name: Collect failed-attempt diagnostics
+      - name: Collect failed-probe-iteration diagnostics
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
@@ -197,11 +193,11 @@ jobs:
             cp -R test-results flake-probe-diagnostics/test-results
           fi
 
-      - name: Upload failed-attempt diagnostics
+      - name: Upload failed-probe-iteration diagnostics
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}
+          name: flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}
           path: flake-probe-diagnostics
           if-no-files-found: ignore
           retention-days: 7
@@ -211,19 +207,21 @@ jobs:
         if: always() && steps.probe.outcome != 'success'
         run: |
           set -u
-          diagnostic_artifact="flake-probe-diagnostics-${{ github.run_id }}-${{ matrix.attempt }}"
+          diagnostic_artifact="flake-probe-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}"
           context_file="$(find test-results -name error-context.md -type f -print -quit 2>/dev/null || true)"
 
           {
-            echo "## Plasmon flake probe attempt failure"
+            echo "## Plasmon flake probe iteration failure"
             echo
-            echo "- Attempt: ${{ matrix.attempt }}/10"
+            echo "- Probe iteration: ${{ matrix.iteration }}/10"
+            echo "- Workflow run_number: ${{ github.run_number }}"
+            echo "- Workflow run_attempt: ${{ github.run_attempt }}"
             echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
             echo "- Target: \`${PROBE_TARGET:-unknown}\`"
             echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
             echo
-            echo "The failing command is the \`Run fresh Plasmon probe\` step above; expand it for the original stdout/stderr."
+            echo "The failing command is the \`Run fresh Plasmon probe iteration\` step above; expand it for the original stdout/stderr."
             echo
             if [ -n "$context_file" ]; then
               echo "### First Playwright error context"
@@ -237,8 +235,6 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   summary:
-    # Job-level skipping is intentional: GitHub creates the required check and
-    # accepts a skipped conclusion, unlike a workflow suppressed by paths.
     if: ${{ always() && (needs.applicability.result != 'success' || needs.applicability.outputs.applicable == 'true') }}
     name: Flake probe summary
     needs: [applicability, probe]
@@ -266,17 +262,17 @@ jobs:
           name: flake-probe-applicability-${{ github.run_id }}
           path: flake-probe-applicability
 
-      - name: Download attempt results
+      - name: Download probe iteration results
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-result-${{ github.run_id }}-*
+          pattern: flake-probe-iteration-result-${{ github.run_id }}-*
           path: flake-probe-results
 
-      - name: Download failed-attempt diagnostics
+      - name: Download failed-probe-iteration diagnostics
         if: needs.probe.result != 'success'
         uses: actions/download-artifact@v4
         with:
-          pattern: flake-probe-diagnostics-${{ github.run_id }}-*
+          pattern: flake-probe-iteration-diagnostics-${{ github.run_id }}-*
           path: flake-probe-diagnostics
 
       - name: Summarize exact-head stability
