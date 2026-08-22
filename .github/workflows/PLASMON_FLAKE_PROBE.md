@@ -75,11 +75,33 @@ GitHub workflow dispatch requires a branch or tag as its transport ref. The labe
 
 While the label remains present, every later `synchronize` event requests another fresh 50-iteration probe for the new exact head. Removing the label prevents future synchronize-triggered labeled probes but does not cancel a run already dispatched. Removing and re-adding the label can request another fresh probe on the same SHA.
 
-## Setup lifecycle and follow-up optimization
+## Prepared Playwright packet lifecycle
 
-#409 intentionally keeps the current per-iteration package/provision lifecycle so the targeting correction does not expand into a broader harness refactor.
+#448 moves expensive repeated-test infrastructure out of the individual targeted Playwright repetition. A targeted 50-iteration probe is scheduled as **10 prepared packets of 5 repetitions**. The normal 10-iteration broad baseline remains ten independent one-execution jobs, and broad `all`/`specialist` 50-run diagnostics also remain unbundled because silently serializing those larger test boundaries would change their latency and execution characteristics.
 
-The desired general direction is to package/provision/start expensive integration infrastructure once per repeated-test packet where safe, then repeat isolated Playwright executions against that prepared environment with an explicit cheap reset boundary for persistent state. That cross-cutting Playwright/integration-harness improvement is tracked in **#448**.
+Each prepared packet uses the repository-owned `test/e2e/run-plasmon-playwright-packet.sh` lifecycle:
+
+```text
+packet setup, once
+  npm ci
+  -> plasmon:local:prepare
+  -> plasmon:local:serve
+  -> PocketIC readiness + plasmon:local:status
+
+for each repetition
+  plasmon:local:reinstall
+  -> fresh Playwright process with workers=1, retries=0
+  -> exact per-iteration result + diagnostics
+
+packet teardown, once
+  stop/wait for the packet PocketIC process
+```
+
+`plasmon:local:reinstall` is the explicit persistent-state reset boundary between repetitions. Browser/test isolation remains fresh because each repetition launches a new Playwright process rather than using `--repeat-each` inside one browser worker. The packet runner exports `PLASMON_PLAYWRIGHT_ENV_READY=1` only for its child execution; direct standalone uses of `test/ci/run-plasmon-flake-probe.sh` retain the older fully fresh setup path.
+
+This changes setup cost, not evidence identity. Five repetitions in one prepared packet still produce five independent `iteration=<n>` result records and separate failure directories. A failed packet continues through its remaining repetitions so the aggregate summary can report the complete observed iteration set. GitHub rerunning that failed packet produces a newer `run_attempt` for all five slots; the summarizer keeps the newest result per iteration and retains superseded same-SHA evidence as provenance.
+
+The packet lifecycle is a general Plasmon Playwright/integration harness rather than a #409-only shortcut. Other repeated installed-browser checks may reuse it when the same explicit reset boundary is truthful. It must not be used when a test requires a newly created PocketIC process or newly packaged archive for every observation.
 
 ## Identity, artifacts, reruns, and summaries
 
