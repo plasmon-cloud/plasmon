@@ -43,6 +43,7 @@ jobs:
         run: |
           set -euxo pipefail
           node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
           node test/ci/verify-flake-summary-human.mjs
 
       - name: Set up Bun
