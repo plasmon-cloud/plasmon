@@ -12,7 +12,6 @@
     "schema": "bun ../../packages/neutron-scripts/src/method_schema.ts",
     "validate": "bun ../../packages/neutron-scripts/src/validate.ts",
     "package": "npm run validate && npm run build && npm run mopack && npm run schema && bun ../../packages/neutron-scripts/src/pack.ts",
-    "package:demo": "PLASMON_PACKAGE_PROFILE=demo npm run package",
     "watch": "bun monacoWorkerTransport.ts generate && bun build.ts watch",
     "test": "npm run test:fast",
     "test:fast": "npm run test:fast:model && npm run test:ui",

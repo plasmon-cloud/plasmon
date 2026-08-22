@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   manifestForPlasmonDeployment,
-  packageScriptForDeployment,
+  packageProfileForDeployment,
   PLASMON_DEMO_MANIFEST,
   PLASMON_LOCAL_MANIFEST,
   PLASMON_WORKSPACE,
@@ -40,12 +40,13 @@ describe("Plasmon deployment command semantics", () => {
     expect(manifestForPlasmonDeployment("demo")).toBe(PLASMON_DEMO_MANIFEST);
   });
 
-  test("demo preparation selects the demo Plasmon package profile only", async () => {
+  test("demo preparation reuses the normal Plasmon package command with the existing demo profile", async () => {
     const plasmonPackageJson = JSON.parse(await readFile(resolve(repoRoot, "apps/plasmon/package.json"), "utf8")) as { scripts: Record<string, string> };
-    expect(plasmonPackageJson.scripts["package:demo"]).toBe("PLASMON_PACKAGE_PROFILE=demo npm run package");
-    expect(packageScriptForDeployment(PLASMON_DEMO_MANIFEST, PLASMON_WORKSPACE)).toBe("package:demo");
-    expect(packageScriptForDeployment(PLASMON_LOCAL_MANIFEST, PLASMON_WORKSPACE)).toBe("package");
-    expect(packageScriptForDeployment(PLASMON_DEMO_MANIFEST, "neutron-kernel")).toBe("package");
+    expect(plasmonPackageJson.scripts.package).toContain("npm run build");
+    expect(plasmonPackageJson.scripts["package:demo"]).toBeUndefined();
+    expect(packageProfileForDeployment(PLASMON_DEMO_MANIFEST, PLASMON_WORKSPACE)).toBe("demo");
+    expect(packageProfileForDeployment(PLASMON_LOCAL_MANIFEST, PLASMON_WORKSPACE)).toBeUndefined();
+    expect(packageProfileForDeployment(PLASMON_DEMO_MANIFEST, "neutron-kernel")).toBeUndefined();
   });
 
   test("demo preparation resolves every artifact declared by plasmon.ndeploy.json", async () => {

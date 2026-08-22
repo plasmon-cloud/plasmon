@@ -46,10 +46,10 @@ export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): str
   }
 }
 
-export function packageScriptForDeployment(manifestPath: string, workspace: string): string {
+export function packageProfileForDeployment(manifestPath: string, workspace: string): string | undefined {
   return manifestPath === PLASMON_DEMO_MANIFEST && workspace === PLASMON_WORKSPACE
-    ? "package:demo"
-    : "package";
+    ? "demo"
+    : undefined;
 }
 
 function repositoryRoot(): string {
@@ -101,9 +101,8 @@ export async function resolveDeploymentArtifacts(
     if (!workspace) {
       throw new Error(`Deployment artifact workspace has no package name: ${archivePath}`);
     }
-    const script = packageScriptForDeployment(manifestPath, workspace);
-    if (!packageJson.scripts?.[script]) {
-      throw new Error(`Deployment artifact workspace has no ${script} command: ${workspace}`);
+    if (!packageJson.scripts?.package) {
+      throw new Error(`Deployment artifact workspace has no production package command: ${workspace}`);
     }
     artifacts.push({
       archivePath,
@@ -119,12 +118,23 @@ export function workspacesToPackage(artifacts: readonly DeploymentArtifact[]): s
   return [...new Set(artifacts.map((artifact) => artifact.workspace))];
 }
 
-async function runCommand(command: string[], cwd: string): Promise<void> {
+function packageEnvironmentForDeployment(manifestPath: string, workspace: string): NodeJS.ProcessEnv | undefined {
+  if (workspace !== PLASMON_WORKSPACE) return undefined;
+
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.PLASMON_PACKAGE_PROFILE;
+  const profile = packageProfileForDeployment(manifestPath, workspace);
+  if (profile) env.PLASMON_PACKAGE_PROFILE = profile;
+  return env;
+}
+
+async function runCommand(command: string[], cwd: string, env?: NodeJS.ProcessEnv): Promise<void> {
   const child = Bun.spawn(command, {
     cwd,
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
+    ...(env ? { env } : {}),
   });
   const exitCode = await child.exited;
   if (exitCode !== 0) {
@@ -155,7 +165,11 @@ export async function prepareDeploymentEnvironment(
   if (!manifestPath) throw new Error("Deployment manifest must be selected explicitly");
   const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
   for (const workspace of workspacesToPackage(artifacts)) {
-    await runCommand(["npm", "--workspace", workspace, "run", packageScriptForDeployment(manifestPath, workspace)], repoRoot);
+    await runCommand(
+      ["npm", "--workspace", workspace, "run", "package"],
+      repoRoot,
+      packageEnvironmentForDeployment(manifestPath, workspace),
+    );
   }
   await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   return artifacts;
