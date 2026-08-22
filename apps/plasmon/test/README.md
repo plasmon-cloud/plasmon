@@ -1,6 +1,6 @@
 # Plasmon test lanes
 
-<!-- plasmon-docs-review:v1 sha256=51174cd12c312591e465e357373d07938d3e9f72fdf0afb1f07bc3103436a220 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+<!-- plasmon-docs-review:v1 sha256=9ca0a007bd2d170028b42d2c907f99e56fea7a97239eeeee6573d87f96cf9cbc base=0c96705a95fa0b512e872ab94f2f42697945737a -->
 
 The canonical testing protocol is [`../TESTING.md`](../TESTING.md). This directory contains Plasmon-level contract, integration, React-adapter, packaging, and regression tests that span multiple source subsystems. Focused implementation tests should normally remain colocated with the production code they exercise.
 
