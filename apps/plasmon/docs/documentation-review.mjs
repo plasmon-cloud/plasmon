@@ -196,7 +196,7 @@ export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = d
   return review;
 }
 
-function printStatus(status) {
+export function printStatus(status) {
   const stale = status.filter((entry) => entry.stale);
   if (stale.length === 0) {
     console.log(`Documentation review fingerprints current: ${status.length} boundaries.`);
