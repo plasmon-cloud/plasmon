@@ -101,12 +101,16 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     await activateSearchResult(plasmon, "Files", "Files");
     const explorer = plasmon.locator(".explorer-app").last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
+    const files = explorer.getByRole("listbox", { name: "Files" });
+    // Explorer paints its shell before resolveInitialLocation installs the
+    // navigation model. The Files listbox appears only after that authority is
+    // ready, so submitting the address before this point can be silently ignored.
+    await expect(files).toBeVisible({ timeout: 20_000 });
     const address = explorer.getByRole("textbox", { name: "Address" });
     await address.fill("/System");
     await address.press("Enter");
-    await expect(address).toHaveValue("/System");
-    const files = explorer.getByRole("listbox", { name: "Files" });
     await expect(files.getByRole("option").filter({ hasText: "FileManager.sys" })).toBeVisible({ timeout: 20_000 });
+    await expect(address).toHaveValue("/System");
 
     const localHidden = explorer.getByRole("checkbox", { name: "Show hidden files" });
     await expect(localHidden).toBeEnabled();
