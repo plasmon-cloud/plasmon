@@ -3,6 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
+// CI proof only: this comment-only test modification intentionally exercises #409 automatic characterization.
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
 const REVIEW_APP_ID = "review";
