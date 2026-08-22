@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  DEPLOYMENT_BUILD_PREREQUISITES,
   manifestForPlasmonDeployment,
   packageProfileForDeployment,
   PLASMON_DEMO_MANIFEST,
@@ -52,6 +53,15 @@ describe("Plasmon deployment command semantics", () => {
     expect(manifestForPlasmonDeployment("demo")).toBe(PLASMON_DEMO_MANIFEST);
     expect(PLASMON_LOCAL_MANIFEST).toBe("plasmon-local.ndeploy.json");
     expect(PLASMON_DEMO_MANIFEST).toBe("plasmon.ndeploy.json");
+  });
+
+  test("clean-checkout preparation materializes generated shared UI exports first", async () => {
+    expect([...DEPLOYMENT_BUILD_PREREQUISITES]).toEqual(["neutron-design-system"]);
+    const designSystemPackageJson = JSON.parse(
+      await readFile(resolve(repoRoot, "packages/neutron-design-system/package.json"), "utf8"),
+    ) as { exports: Record<string, { import?: string }>; scripts: Record<string, string> };
+    expect(designSystemPackageJson.exports["."]?.import).toBe("./dist/classes.js");
+    expect(designSystemPackageJson.scripts.build).toBeTruthy();
   });
 
   test("demo preparation reuses the normal Plasmon package command with the existing demo profile", async () => {
