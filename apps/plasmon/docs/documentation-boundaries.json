@@ -20,13 +20,17 @@
       "path": "apps/plasmon",
       "kind": "application-root",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/backend",
       "kind": "backend",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/docs",
@@ -50,19 +54,34 @@
       "path": "apps/plasmon/src",
       "kind": "source-root",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
+    },
+    {
+      "path": "apps/plasmon/src/demo",
+      "kind": "demo-fixtures",
+      "readme": "local",
+      "agents": {
+        "mode": "inherited",
+        "from": "apps/plasmon/src/AGENTS.md"
+      }
     },
     {
       "path": "apps/plasmon/src/games",
       "kind": "subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/native-apps",
       "kind": "native-app-root",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/native-apps/browser",
@@ -146,6 +165,14 @@
       }
     },
     {
+      "path": "apps/plasmon/src/native-apps/shared/monaco",
+      "kind": "browser-adapter",
+      "readme": "local",
+      "agents": {
+        "mode": "local"
+      }
+    },
+    {
       "path": "apps/plasmon/src/native-apps/text",
       "kind": "native-app",
       "readme": "local",
@@ -167,55 +194,73 @@
       "path": "apps/plasmon/src/os",
       "kind": "os-root",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/associations",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/contracts",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/desktop",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/file-manager",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/fs",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/integration",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/neutron",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/process",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/sharing",
@@ -230,25 +275,33 @@
       "path": "apps/plasmon/src/os/shell",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/visual",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/src/os/windowing",
       "kind": "os-subsystem",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     },
     {
       "path": "apps/plasmon/test",
       "kind": "testing",
       "readme": "local",
-      "agents": { "mode": "local" }
+      "agents": {
+        "mode": "local"
+      }
     }
   ]
 }
