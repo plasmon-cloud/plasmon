@@ -261,6 +261,8 @@ function selectLatestIterationResults(candidates) {
   };
 }
 
+// run_attempt provenance is retained per selected probe iteration so a partial
+// workflow rerun can combine fresh slots without destroying same-SHA history.
 function attemptProvenance(results) {
   const byAttempt = new Map();
   for (const result of results) {
