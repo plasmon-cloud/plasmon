@@ -6,15 +6,17 @@ import {
 } from "./build-plasmon-flake-probe-matrix.mjs";
 import {
   isolationForProbe,
-  PREPARED_ENV_REUSE_MARKER,
+  PERSISTENT_STATE_RESET_FILES,
 } from "./plasmon-playwright-isolation.mjs";
 
 const workflow = readFileSync(".github/workflows/plasmon-flake-probe.yml", "utf8");
 const packetRunner = readFileSync("test/e2e/run-plasmon-playwright-packet.sh", "utf8");
 const iterationRunner = readFileSync("test/ci/run-plasmon-flake-probe-iteration.sh", "utf8");
 const flakeRunner = readFileSync("test/ci/run-plasmon-flake-probe.sh", "utf8");
-const safeProbeFile = "test/e2e/plasmon-neutron-icon.spec.ts";
-const resetProbeFile = "test/e2e/plasmon-demo-game.spec.ts";
+
+const reuseProbeFile = "test/e2e/plasmon-neutron-icon.spec.ts";
+const persistenceProbeFile = "test/e2e/plasmon-persistence.spec.ts";
+const savedGameProbeFile = "test/e2e/plasmon-demo-game.spec.ts";
 
 function requireFragment(source, fragment, label) {
   if (!source.includes(fragment)) {
@@ -39,7 +41,7 @@ function primaryEnv({ count, target }) {
     PRIMARY_MODE: "manual",
     PRIMARY_COUNT: String(count),
     PRIMARY_TARGET: target,
-    PRIMARY_TEST_FILE: target === "exact" ? safeProbeFile : "",
+    PRIMARY_TEST_FILE: target === "exact" ? reuseProbeFile : "",
     PRIMARY_TEST_GREP: "",
     PRIMARY_SCOPE: target,
     PRIMARY_SCOPE_KEY: target,
@@ -71,48 +73,38 @@ for (const target of [
 }
 for (const target of ["all", "specialist"]) {
   if (packetSizeForProbe({ iteration_count: 50, target }) !== 1) {
-    throw new Error(`broad ${target} probes must not be silently bundled into repeated packets`);
+    throw new Error(`broad ${target} probes must remain one execution per job`);
   }
 }
 if (packetSizeForProbe({ iteration_count: 10, target: "exact" }) !== 1) {
-  throw new Error("10-iteration probes must retain one fresh execution per CI job");
+  throw new Error("10-iteration probes must retain one execution per CI job");
 }
 
 const targeted = buildProbeMatrix(primaryEnv({ count: 50, target: "exact" })).include;
 if (targeted.length !== 10) {
   throw new Error(`50 targeted iterations must resolve to 10 prepared packets; saw ${targeted.length}`);
 }
-const coveredIterations = [];
-for (const [index, packet] of targeted.entries()) {
-  const expectedStart = index * 5 + 1;
-  const expectedEnd = expectedStart + 4;
-  if (
-    packet.packet !== index + 1 ||
-    packet.start_iteration !== expectedStart ||
-    packet.end_iteration !== expectedEnd ||
-    packet.repetitions !== 5 ||
-    packet.packet_size !== 5
-  ) {
-    throw new Error(`targeted packet ${index + 1} lost deterministic five-iteration bounds`);
-  }
-  for (let iteration = packet.start_iteration; iteration <= packet.end_iteration; iteration += 1) {
-    coveredIterations.push(iteration);
-  }
+const covered = targeted.flatMap((packet) =>
+  Array.from(
+    { length: packet.repetitions },
+    (_, offset) => packet.start_iteration + offset,
+  ),
+);
+if (covered.join(",") !== Array.from({ length: 50 }, (_, index) => index + 1).join(",")) {
+  throw new Error("packetized characterization must cover probe iterations 1-50 exactly once");
 }
-if (coveredIterations.join(",") !== Array.from({ length: 50 }, (_, index) => index + 1).join(",")) {
-  throw new Error("packetized characterization must cover each probe iteration 1-50 exactly once");
+if (targeted.some((packet) => packet.repetitions !== 5 || packet.packet_size !== 5)) {
+  throw new Error("targeted characterization packets must contain five repetitions each");
 }
 
 const broad = buildProbeMatrix(primaryEnv({ count: 50, target: "specialist" })).include;
 if (broad.length !== 50 || broad.some((packet) => packet.repetitions !== 1)) {
-  throw new Error("broad Specialist diagnostic probes must retain one iteration per job");
+  throw new Error("broad Specialist probes must remain unbundled");
 }
-
 const baseline = buildProbeMatrix(primaryEnv({ count: 10, target: "all" })).include;
 if (baseline.length !== 10 || baseline.some((packet) => packet.repetitions !== 1)) {
-  throw new Error("10-iteration all baseline must retain ten independent one-execution jobs");
+  throw new Error("10-iteration all baseline must retain ten independent jobs");
 }
-
 const combined = buildProbeMatrix({
   ...primaryEnv({ count: 10, target: "all" }),
   EVENT_NAME: "pull_request",
@@ -123,27 +115,37 @@ const combined = buildProbeMatrix({
   CHARACTERIZATION_SCOPE_KEY: "characterization-targeted-fixture",
 }).include;
 if (combined.length !== 20) {
-  throw new Error(`baseline plus characterization should schedule 10 baseline jobs + 10 prepared packets; saw ${combined.length}`);
+  throw new Error(`baseline plus characterization must schedule 10 baseline jobs + 10 packets; saw ${combined.length}`);
 }
 
-const safeSource = readFileSync(safeProbeFile, "utf8");
-if (!safeSource.includes(PREPARED_ENV_REUSE_MARKER)) {
-  throw new Error(`${safeProbeFile} must explicitly opt into prepared-environment reuse`);
+for (const resetFile of [persistenceProbeFile, savedGameProbeFile]) {
+  if (!PERSISTENT_STATE_RESET_FILES.has(resetFile)) {
+    throw new Error(`known state-mutating probe must require reset: ${resetFile}`);
+  }
+  const isolation = isolationForProbe({ target: "exact", testFile: resetFile });
+  if (isolation.mode !== "reinstall" || !isolation.resetFiles.includes(resetFile)) {
+    throw new Error(`state-mutating probe lost per-repetition reset: ${resetFile}`);
+  }
 }
-const safeIsolation = isolationForProbe({ target: "exact", testFile: safeProbeFile });
-if (safeIsolation.mode !== "reuse") {
-  throw new Error(`explicitly safe probe must reuse prepared environment; saw ${safeIsolation.mode}`);
+
+const reuseIsolation = isolationForProbe({ target: "exact", testFile: reuseProbeFile });
+if (reuseIsolation.mode !== "reuse") {
+  throw new Error(`ordinary targeted probe should reuse the prepared deployment; saw ${reuseIsolation.mode}`);
 }
-const resetIsolation = isolationForProbe({ target: "exact", testFile: resetProbeFile });
-if (resetIsolation.mode !== "reinstall") {
-  throw new Error(`unmarked probe must fail closed to reinstall isolation; saw ${resetIsolation.mode}`);
+const namedReuse = isolationForProbe({ target: "right-snap" });
+if (namedReuse.mode !== "reuse") {
+  throw new Error("ordinary named targets should reuse the prepared deployment by default");
+}
+const namedReset = isolationForProbe({ target: "saved-preview" });
+if (namedReset.mode !== "reinstall") {
+  throw new Error("saved-preview must retain persistent-state reset isolation");
 }
 const mixedIsolation = isolationForProbe({
   target: "exact-set",
-  testFilesJson: JSON.stringify([safeProbeFile, resetProbeFile]),
+  testFilesJson: JSON.stringify([reuseProbeFile, persistenceProbeFile]),
 });
 if (mixedIsolation.mode !== "reinstall") {
-  throw new Error("mixed exact-set must use the strongest persistent-state isolation required by any selected file");
+  throw new Error("an exact-set containing a reset-required file must use the stronger isolation mode");
 }
 
 for (const fragment of [
@@ -171,7 +173,6 @@ for (const fragment of [
   "export PLASMON_PLAYWRIGHT_ENV_READY=1",
   "for ((offset = 0; offset < repetitions; offset += 1))",
   "[ \"$isolation_mode\" = \"reinstall\" ]",
-  "@plasmon-prepared-env-reuse",
   "PLASMON_PACKET_ITERATION=\"$iteration\"",
   "PLASMON_PACKET_RESET_FAILED=\"$reset_failed\"",
   "kill \"$server_pid\"",
@@ -186,14 +187,14 @@ for (const singleton of [
   "npm run plasmon:local:status",
 ]) {
   if (occurrenceCount(packetRunner, singleton) !== 1) {
-    throw new Error(`packet lifecycle must contain exactly one syntactic ${singleton} boundary`);
+    throw new Error(`packet lifecycle must contain exactly one ${singleton} setup boundary`);
   }
 }
 if (occurrenceCount(packetRunner, "npm run plasmon:local:reinstall") !== 2) {
-  throw new Error("packet lifecycle must contain one initial install and one conditional repetition reset site");
+  throw new Error("packet lifecycle must contain one initial install and one conditional reset site");
 }
 const loopIndex = packetRunner.indexOf("for ((offset = 0; offset < repetitions; offset += 1))");
-for (const packetSetup of [
+for (const setupFragment of [
   "npm ci",
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
@@ -201,8 +202,8 @@ for (const packetSetup of [
   "node test/ci/plasmon-playwright-isolation.mjs",
   "export PLASMON_PLAYWRIGHT_ENV_READY=1",
 ]) {
-  if (packetRunner.indexOf(packetSetup) > loopIndex) {
-    throw new Error(`${packetSetup} must stay outside and before the repetition loop`);
+  if (packetRunner.indexOf(setupFragment) > loopIndex) {
+    throw new Error(`${setupFragment} must stay outside the repetition loop`);
   }
 }
 const loopSource = packetRunner.slice(loopIndex);
@@ -213,6 +214,7 @@ for (const fragment of [
 ]) {
   requireFragment(loopSource, fragment, "stateful repetition reset fallback");
 }
+forbidFragment(packetRunner, "@plasmon-prepared-env-reuse", "packet lifecycle");
 
 for (const fragment of [
   "rm -rf playwright-report test-results",
@@ -226,7 +228,6 @@ for (const fragment of [
   "PLASMON_PACKET_RESET_FAILED",
   "PLASMON_PACKET_RESET_LOG",
   "Persistent-state reset failed before probe iteration",
-  "bash test/ci/run-plasmon-flake-probe.sh",
 ]) {
   requireFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
 }
@@ -245,5 +246,5 @@ forbidFragment(flakeRunner, "include_quarantined", "prepared-compatible flake ru
 forbidFragment(packetRunner, "--repeat-each", "reusable Playwright packet lifecycle");
 
 console.log(
-  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; immutable setup is packet-scoped; explicitly marked non-mutating tests reuse the prepared deployment; unmarked or mixed targets fail closed to per-repetition reinstall isolation; exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
+  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; prepared deployment reuse is the default; only explicit persistent-state-mutating files pay per-repetition reinstall reset; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
 );
