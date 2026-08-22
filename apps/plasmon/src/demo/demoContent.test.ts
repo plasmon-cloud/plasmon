@@ -54,17 +54,17 @@ test("ordinary production composition remains free of demo resources", async () 
 });
 
 test("demo seeds use real repository text, Markdown, and SVG assets byte-for-byte", () => {
-  expect(DEMO_ASSETS.markdown).toStartWith("# Plasmon Demo Guide\n");
+  expect(DEMO_ASSETS.markdown.startsWith("# Plasmon Demo Guide\n")).toBe(true);
   expect(DEMO_ASSETS.markdown).toContain("- [ ] Open this file from its Desktop shortcut.");
   expect(DEMO_ASSETS.markdown).toContain("| Resource | Location | Opens with |");
   expect(DEMO_ASSETS.markdown).toContain("```ts");
 
-  expect(DEMO_ASSETS.svg).toStartWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg ");
+  expect(DEMO_ASSETS.svg.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg ")).toBe(true);
   expect(DEMO_ASSETS.svg).toContain("xmlns=\"http://www.w3.org/2000/svg\"");
   expect(DEMO_ASSETS.svg).toContain("<title id=\"title\">Plasmon Demo Artwork</title>");
   expect(DEMO_ASSETS.svg).toContain("<defs>");
   expect(DEMO_ASSETS.svg).toContain("<linearGradient id=\"background\"");
-  expect(DEMO_ASSETS.svg.trimEnd()).toEndWith("</svg>");
+  expect(DEMO_ASSETS.svg.trimEnd().endsWith("</svg>")).toBe(true);
 
   const seeds = createDemoSeeds(DEMO_ASSETS);
   expect(seeds).toHaveLength(5);
