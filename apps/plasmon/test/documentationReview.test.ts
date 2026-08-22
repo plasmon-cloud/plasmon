@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadDocumentationBoundaryRegistry } from "../docs/documentation-boundaries.mjs";
 import {
   computeOwnedFingerprint,
   documentationReviewStatus,
@@ -11,6 +13,9 @@ import {
   reviewDocumentationBoundary,
   upsertReviewMarker,
 } from "../docs/documentation-review.mjs";
+
+const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(appRoot, "../..");
 
 function git(root: string, args: string[]) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -140,5 +145,20 @@ test("equivalent working trees produce the same fingerprint", () => {
   } finally {
     rmSync(left, { recursive: true, force: true });
     rmSync(right, { recursive: true, force: true });
+  }
+});
+
+test("current repository review fingerprints are computable", () => {
+  const registry = loadDocumentationBoundaryRegistry(repoRoot);
+  const status = documentationReviewStatus(registry, repoRoot);
+  expect(status).toHaveLength(registry.boundaries.length);
+  expect(status.every((entry) => /^[0-9a-f]{64}$/.test(entry.digest))).toBe(true);
+
+  if (status.some((entry) => entry.marker === null)) {
+    console.log(
+      `DOCUMENTATION_REVIEW_BASELINES=${JSON.stringify(
+        status.map((entry) => ({ boundary: entry.boundary, digest: entry.digest })),
+      )}`,
+    );
   }
 });
