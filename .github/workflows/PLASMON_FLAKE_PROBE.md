@@ -87,21 +87,24 @@ packet setup, once
   -> plasmon:local:prepare
   -> plasmon:local:serve
   -> PocketIC readiness + plasmon:local:status
+  -> plasmon:local:reinstall
+  -> mark the Playwright environment ready
 
 for each repetition
-  plasmon:local:reinstall
-  -> fresh Playwright process with workers=1, retries=0
+  fresh Playwright process with workers=1, retries=0
   -> exact per-iteration result + diagnostics
 
 packet teardown, once
   stop/wait for the packet PocketIC process
 ```
 
-`plasmon:local:reinstall` is the explicit persistent-state reset boundary between repetitions. Browser/test isolation remains fresh because each repetition launches a new Playwright process rather than using `--repeat-each` inside one browser worker. The packet runner exports `PLASMON_PLAYWRIGHT_ENV_READY=1` only for its child execution; direct standalone uses of `test/ci/run-plasmon-flake-probe.sh` retain the older fully fresh setup path.
+The package archives and installed bounded local deployment do not change between repetitions, so a packet does not reinstall them again. The packet runner exports `PLASMON_PLAYWRIGHT_ENV_READY=1` after setup; nested `test/ci/run-plasmon-flake-probe.sh` calls see that the environment is already ready and skip duplicate dependency install, package preparation, PocketIC startup/status, and deployment reinstall. Direct standalone uses of the Flake runner retain the older fully fresh setup path.
+
+Browser/test isolation remains fresh because every repetition launches a new Playwright process rather than using `--repeat-each` inside one browser worker. A test that intentionally mutates persistent canister or installed filesystem state must own an explicit cleanup or namespacing boundary; the shared packet harness must not reinstall unchanged Kernel/Plasmon/Review packages merely as a generic per-test reset.
 
 This changes setup cost, not evidence identity. Five repetitions in one prepared packet still produce five independent `iteration=<n>` result records and separate failure directories. A failed packet continues through its remaining repetitions so the aggregate summary can report the complete observed iteration set. GitHub rerunning that failed packet produces a newer `run_attempt` for all five slots; the summarizer keeps the newest result per iteration and retains superseded same-SHA evidence as provenance.
 
-The packet lifecycle is a general Plasmon Playwright/integration harness rather than a #409-only shortcut. Other repeated installed-browser checks may reuse it when the same explicit reset boundary is truthful. It must not be used when a test requires a newly created PocketIC process or newly packaged archive for every observation.
+The packet lifecycle is a general Plasmon Playwright/integration harness rather than a #409-only shortcut. Other repeated installed-browser checks may reuse it when sharing one prepared deployment is truthful. It must not be used when a test genuinely requires a newly created PocketIC process or newly packaged/installed archive for every observation.
 
 ## Identity, artifacts, reruns, and summaries
 
