@@ -290,7 +290,7 @@ async function verifyCharacterizationSelection() {
   }
   assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
 
-  const quarantinedPath = "test/e2e/plasmon-golden-path-left-snap.spec.ts";
+  const quarantinedPath = "test/e2e/plasmon-drag-preview-66.spec.ts";
   const quarantined = await selectCharacterization({ changedFiles: [quarantinedPath] });
   if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
     throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
@@ -314,7 +314,7 @@ async function verifyCharacterizationSelection() {
     throw new Error("unresolved support must not broaden characterization to Specialist inventory");
   }
   if (!unresolvedFixture.unresolved_inputs.includes("test/e2e/permission-dialog.fixture.tsx")) {
-    throw new Error("unresolved fixture must remain visible in selector diagnostics");
+    throw new Error("unresolved fixture must remain visible in selector diagnostics without broadening");
   }
 
   const configOnly = await selectCharacterization({ changedFiles: ["playwright.config.ts"] });
