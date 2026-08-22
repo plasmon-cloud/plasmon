@@ -40,7 +40,7 @@ The target is an internal `exact-set`: every selected file is passed directly to
 
 Some shared inputs can affect Playwright without identifying a safe acceptance target, including `playwright.config.ts`, the browser workflow/runner files, and a helper/fixture with no deterministically resolved Plasmon consumer.
 
-The selector records these as `unresolved_inputs`. It does not invent a whole-Specialist 50-iteration target. If an exact changed spec is present alongside an unresolved support input, the exact changed spec is still characterized and the unresolved input remains visible in the applicability artifact.
+The selector records these as `unresolved_inputs`. Uncertainty **does not broaden** characterization: it does not invent a whole-Specialist 50-iteration target. If an exact changed spec is present alongside an unresolved support input, the exact changed spec is still characterized and the unresolved input remains visible in the applicability artifact.
 
 ## Quarantine is absolute
 
