@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
-
-export const PREPARED_ENV_REUSE_MARKER = "@plasmon-prepared-env-reuse";
+export const PERSISTENT_STATE_RESET_FILES = new Set([
+  "test/e2e/plasmon-persistence.spec.ts",
+  "test/e2e/plasmon-demo-game.spec.ts",
+]);
 
 const namedTargetFiles = new Map([
   ["right-snap", ["test/e2e/plasmon-golden-path-right-snap.spec.ts"]],
@@ -27,28 +28,16 @@ export function filesForProbe({ target, testFile = "", testFilesJson = "[]" }) {
 
 export function isolationForProbe(options) {
   const files = filesForProbe(options);
-  if (files.length === 0) {
-    return {
-      mode: "reinstall",
-      reason: "no-explicit-safe-file-set",
-      files,
-      unmarkedFiles: files,
-    };
-  }
-
-  const unmarkedFiles = files.filter((file) => {
-    const source = readFileSync(file, "utf8");
-    return !source.includes(PREPARED_ENV_REUSE_MARKER);
-  });
+  const resetFiles = files.filter((file) => PERSISTENT_STATE_RESET_FILES.has(file));
 
   return {
-    mode: unmarkedFiles.length === 0 ? "reuse" : "reinstall",
+    mode: resetFiles.length > 0 ? "reinstall" : "reuse",
     reason:
-      unmarkedFiles.length === 0
-        ? "all-selected-files-declare-prepared-environment-reuse"
-        : "selected-file-requires-persistent-state-reset",
+      resetFiles.length > 0
+        ? "selected-file-requires-persistent-state-reset"
+        : "selected-files-reuse-prepared-environment",
     files,
-    unmarkedFiles,
+    resetFiles,
   };
 }
 
