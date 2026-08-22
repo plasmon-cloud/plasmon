@@ -91,7 +91,8 @@ for (const fragment of [
   "name: Build shared probe matrix",
   "mode: 'characterization'",
   "automatic_characterization: true",
-  "if: needs.applicability.outputs.applicable == 'true'",
+  "if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'",
+  "continue-on-error: ${{ matrix.mode == 'characterization' }}",
   "matrix: ${{ fromJSON(needs.applicability.outputs.probe_matrix) }}",
   "max-parallel: 10",
   "PROBE_MODE: ${{ matrix.mode }}",
@@ -104,30 +105,29 @@ for (const fragment of [
   "iteration=${{ matrix.iteration }}",
   "iteration_count=${PROBE_ITERATION_COUNT:-unknown}",
   "test_files_json=${PROBE_TEST_FILES_JSON:-[]}",
-  "flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-result-${{ github.run_id }}-${{ matrix.iteration }}",
-  "flake-probe-${{ matrix.mode }}-${{ matrix.iteration_count }}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-${{ matrix.iteration }}",
-  "Probe mode: \\`${PROBE_MODE:-unknown}\\`",
-  "Probe iteration: ${{ matrix.iteration }}/${PROBE_ITERATION_COUNT:-unknown}",
-  "Workflow run_number: ${{ github.run_number }}",
-  "Workflow run_attempt: ${{ github.run_attempt }}",
+  "flake-probe-applicability-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
+  "iteration-result-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}",
+  "iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-${{ matrix.iteration }}",
+  "pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*",
+  "iteration-result-${{ github.run_id }}-attempt-*-*",
   "name: Flake probe summary",
-  "pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-*",
   "name: Flake characterization summary",
-  "pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-result-${{ github.run_id }}-*",
-  "node test/ci/summarize-flake-probe.mjs",
+  "--json-file flake-probe-summary/summary.json",
+  "--json-file flake-characterization-summary/summary.json",
+  "name: flake-summary-${{ needs.applicability.outputs.primary_mode }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
+  "name: flake-summary-characterization-${{ github.run_id }}-attempt-${{ github.run_attempt }}",
 ]) {
   requireFragment(workflow, fragment, "flake-probe workflow");
 }
 
 for (const fragment of [
   "    paths:",
-  "continue-on-error: true",
   "matrix.attempt",
   "--repeat-each",
   "--pass-with-no-tests",
   "paths-ignore",
   "pull_request_target",
-  "ci:flake-probe",
+  "overwrite: true",
 ]) {
   forbidFragment(workflow, fragment, "flake-probe workflow");
 }
@@ -139,8 +139,6 @@ for (const fragment of [
   "ci:flake-probe",
   "createWorkflowDispatch",
   "workflow_id: 'plasmon-flake-probe.yml'",
-  "ref: headSha",
-  "target: 'all'",
 ]) {
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
@@ -193,15 +191,11 @@ for (const fragment of [
 }
 
 for (const fragment of [
-  "playwrightTestPattern",
-  "@playwright/test",
-  "classifyPlasmonTest",
-  "non-plasmon-browser",
+  "repositoryPathReferences",
+  "supportPathNeedsFallback",
+  "Filename prefixes are not an ownership proof",
   "dependsOn",
   "sharedFallbackInputs",
-  "playwright.config.ts",
-  ".github/workflows/plasmon-flake-probe.yml",
-  "run-plasmon-flake-probe.sh",
   "lane === \"specialist\"",
   "target: \"exact-set\"",
   "iteration_count: 50",
@@ -219,14 +213,14 @@ for (const fragment of [
   "resultIterationCount",
   "resultMode",
   "baseline|manual|characterization",
-  "iteration_count",
-  "run_number",
-  "run_attempt",
-  "Probe mode:",
-  "Configured probe iterations:",
-  "Fresh probe iterations reported",
-  "Failed probe iterations",
-  "Legacy result files parsed",
+  "selectLatestIterationResults",
+  "run_attempt provenance",
+  "Superseded same-run attempt results retained",
+  "plasmon-flake-summary-v1",
+  "evidence_packets",
+  "iteration_results",
+  "superseded_results",
+  "run_attempts",
   "Plasmon 10-iteration baseline flake probe",
   "Plasmon 50-iteration characterization probe",
   "STABILITY EVIDENCE: 50/50",
@@ -261,10 +255,7 @@ for (const fragment of [
   "10-iteration baseline",
   "50-iteration characterization",
   "opened`, `reopened`, and `synchronize`",
-  "static relative-import",
   "Shared-support fallback",
-  "complete current Specialist file inventory",
-  "unioned into the fallback set",
   "Flake characterization summary",
   "not proof that the target cannot flake",
 ]) {
@@ -303,6 +294,16 @@ async function verifyCharacterizationSelection() {
     throw new Error("modified Plasmon Playwright helper must select an impacted set or fallback");
   }
 
+  const stringPathFixture = await selectCharacterization({
+    changedFiles: ["test/e2e/permission-dialog.fixture.tsx"],
+  });
+  if (!stringPathFixture.applicable || stringPathFixture.reason !== "shared-support-fallback") {
+    throw new Error("unresolved arbitrary E2E fixture must fail closed to Specialist fallback");
+  }
+  if (!stringPathFixture.fallback_inputs.includes("test/e2e/permission-dialog.fixture.tsx")) {
+    throw new Error("permission-dialog fixture regression must be recorded as the fallback input");
+  }
+
   const fallback = await selectCharacterization({
     changedFiles: ["playwright.config.ts"],
   });
@@ -327,7 +328,7 @@ async function verifyCharacterizationSelection() {
     changedFiles: ["test/e2e/contacts-wallet.spec.ts"],
   });
   if (unrelated.applicable) {
-    throw new Error("explicitly non-Plasmon Playwright ownership must not receive Plasmon characterization");
+    throw new Error("explicitly non-Plasmon Playwright ownership must not receive direct Plasmon characterization");
   }
 
   const bunOnly = await selectCharacterization({
@@ -339,19 +340,20 @@ async function verifyCharacterizationSelection() {
 }
 
 function writeResult(root, iteration, count, fields = {}) {
-  const directory = join(root, `iteration-${iteration}`);
+  const runAttempt = fields.runAttempt ?? 2;
+  const directory = join(root, `attempt-${runAttempt}-iteration-${iteration}-${fields.slot ?? "primary"}`);
   mkdirSync(directory, { recursive: true });
   writeFileSync(
     join(directory, "result.txt"),
     [
       "run_id=fixture-run-id",
-      "run_number=317",
-      "run_attempt=2",
+      `run_number=${fields.runNumber ?? 317}`,
+      `run_attempt=${runAttempt}`,
       `mode=${fields.mode ?? (count === 50 ? "characterization" : "baseline")}`,
       `iteration=${iteration}`,
       `iteration_count=${count}`,
       `outcome=${fields.outcome ?? "success"}`,
-      "sha=fixture-sha",
+      `sha=${fields.sha ?? "fixture-sha"}`,
       `target=${fields.target ?? (count === 50 ? "exact-set" : "all")}`,
       `scope=${fields.scope ?? (count === 50 ? "characterization:targeted:1-files:fixture" : "all")}`,
       "test_file=",
@@ -362,23 +364,35 @@ function writeResult(root, iteration, count, fields = {}) {
   );
 }
 
+function runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath) {
+  return spawnSync(
+    process.execPath,
+    [
+      summarizerPath,
+      resultsRoot,
+      diagnosticsRoot,
+      changedFilesPath,
+      "--json-file",
+      jsonFilePath,
+    ],
+    { cwd: process.cwd(), env: { ...process.env, GITHUB_EVENT_NAME: "pull_request" }, encoding: "utf8" },
+  );
+}
+
 function runSummaryFixture(count) {
   const fixtureRoot = mkdtempSync(join(tmpdir(), `plasmon-flake-${count}-summary-`));
   try {
     const resultsRoot = join(fixtureRoot, "results");
     const diagnosticsRoot = join(fixtureRoot, "diagnostics");
     const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    const jsonFilePath = join(fixtureRoot, "summary.json");
     mkdirSync(resultsRoot, { recursive: true });
     mkdirSync(diagnosticsRoot, { recursive: true });
     writeFileSync(changedFilesPath, "test/e2e/changed.spec.ts\n");
     for (let iteration = 1; iteration <= count; iteration += 1) {
       writeResult(resultsRoot, iteration, count);
     }
-    const summaryRun = spawnSync(
-      process.execPath,
-      [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath],
-      { cwd: process.cwd(), env: { ...process.env, GITHUB_EVENT_NAME: "pull_request" }, encoding: "utf8" },
-    );
+    const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
     if (summaryRun.status !== 0) {
       throw new Error(`${count}-iteration summary fixture failed: ${summaryRun.stderr}\n${summaryRun.stdout}`);
     }
@@ -406,6 +420,63 @@ function runSummaryFixture(count) {
       ...expected,
     ]) {
       requireFragment(summaryRun.stdout, fragment, `${count}-iteration summary fixture`);
+    }
+    const json = JSON.parse(readFileSync(jsonFilePath, "utf8"));
+    if (json.schema !== "plasmon-flake-summary-v1" || json.evidence_packets?.length !== 1) {
+      throw new Error("machine-readable flake summary must expose one independently classified packet");
+    }
+    if (json.evidence_packets[0].iteration_count !== count) {
+      throw new Error("machine-readable evidence packet lost configured iteration count");
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+function verifyPartialRerunReconciliation() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-partial-rerun-"));
+  try {
+    const resultsRoot = join(fixtureRoot, "results");
+    const diagnosticsRoot = join(fixtureRoot, "diagnostics");
+    const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    const jsonFilePath = join(fixtureRoot, "summary.json");
+    mkdirSync(resultsRoot, { recursive: true });
+    mkdirSync(diagnosticsRoot, { recursive: true });
+    writeFileSync(changedFilesPath, "test/e2e/changed.spec.ts\n");
+    for (let iteration = 1; iteration <= 10; iteration += 1) {
+      writeResult(resultsRoot, iteration, 10, {
+        runAttempt: 1,
+        outcome: iteration === 3 ? "failure" : "success",
+      });
+    }
+    writeResult(resultsRoot, 3, 10, {
+      runAttempt: 2,
+      outcome: "success",
+      slot: "rerun",
+    });
+
+    const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
+    if (summaryRun.status !== 0) {
+      throw new Error(`partial rerun fixture must reconcile to the newest per-iteration evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
+    }
+    for (const fragment of [
+      "Workflow `run_attempt` provenance:",
+      "`1`: probe iteration(s) 1, 2, 4, 5, 6, 7, 8, 9, 10",
+      "`2`: probe iteration(s) 3",
+      "Superseded same-run attempt results retained: 1",
+      "Superseded same-SHA failures retained as provenance: 1",
+      "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
+    ]) {
+      requireFragment(summaryRun.stdout, fragment, "partial rerun summary fixture");
+    }
+    const json = JSON.parse(readFileSync(jsonFilePath, "utf8"));
+    const packet = json.evidence_packets[0];
+    if (packet.run_attempts.length !== 2 || packet.superseded_results.length !== 1) {
+      throw new Error("partial rerun packet must retain mixed-attempt provenance and superseded evidence");
+    }
+    const iteration3 = packet.iteration_results.find((entry) => entry.iteration === 3);
+    if (iteration3?.run_attempt !== 2 || iteration3?.outcome !== "success") {
+      throw new Error("partial rerun packet must select the newest result for rerun iteration 3");
     }
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
@@ -461,11 +532,63 @@ function verifyLegacyResultCompatibility() {
   }
 }
 
+function verifyPriorIterationResultCompatibility() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-prior-iteration-summary-"));
+  try {
+    const resultsRoot = join(fixtureRoot, "results");
+    const diagnosticsRoot = join(fixtureRoot, "diagnostics");
+    const changedFilesPath = join(fixtureRoot, "changed-files.txt");
+    mkdirSync(resultsRoot, { recursive: true });
+    mkdirSync(diagnosticsRoot, { recursive: true });
+    writeFileSync(changedFilesPath, "");
+    for (let iteration = 1; iteration <= 10; iteration += 1) {
+      const directory = join(resultsRoot, `iteration-${iteration}`);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(
+        join(directory, "result.txt"),
+        [
+          "run_id=prior-iteration-run-id",
+          "run_number=291",
+          "run_attempt=2",
+          `iteration=${iteration}`,
+          "outcome=success",
+          "sha=prior-iteration-sha",
+          "target=all",
+          "",
+        ].join("\n"),
+      );
+    }
+    const summaryRun = spawnSync(
+      process.execPath,
+      [summarizerPath, resultsRoot, diagnosticsRoot, changedFilesPath],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    if (summaryRun.status !== 0) {
+      throw new Error(`prior iteration result fixture must remain readable: ${summaryRun.stderr}\n${summaryRun.stdout}`);
+    }
+    for (const fragment of [
+      "Workflow `run_number`: `291`",
+      "Workflow `run_attempt`: `2`",
+      "Target: `all`",
+      "Scope: `all`",
+      "Configured probe iterations: 10",
+      "Fresh probe iterations reported: 10/10",
+      "STABILITY OBSERVED: 10/10 fresh probe iterations passed.",
+    ]) {
+      requireFragment(summaryRun.stdout, fragment, "prior iteration result compatibility fixture");
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 await verifyCharacterizationSelection();
 runSummaryFixture(10);
 runSummaryFixture(50);
+verifyPartialRerunReconciliation();
 verifyLegacyResultCompatibility();
+verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, automatic exact-head changed-Playwright characterization, import-resolved helper impact, documented Specialist fallback, quarantined changed-test inclusion, unrelated-owner exclusion, shared matrix execution, retry-zero, worker-one, fresh local fixture, distinct baseline/characterization summaries, run metadata, and legacy ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, automatic exact-head changed-Playwright characterization, import/string-path helper impact, arbitrary unresolved helper fail-closed fallback, quarantined changed-test inclusion, unrelated-owner exclusion, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );
