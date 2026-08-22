@@ -102,16 +102,17 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     const explorer = plasmon.locator(".explorer-app").last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
     const files = explorer.getByRole("listbox", { name: "Files" });
-    // Explorer paints its shell before resolveInitialLocation installs the
-    // navigation model. The Files listbox appears only after that authority is
-    // ready, so submitting the address before this point can be silently ignored.
     await expect(files).toBeVisible({ timeout: 20_000 });
     const address = explorer.getByRole("textbox", { name: "Address" });
-    const breadcrumb = explorer.getByRole("navigation", { name: "Location breadcrumb" });
-    await address.fill("/System");
-    await address.press("Enter");
-    await expect(breadcrumb.getByRole("button", { name: "System", exact: true })).toBeVisible({ timeout: 20_000 });
-    await expect(address).toHaveValue("/System");
+    await expect(address).toHaveValue("/");
+
+    // Use the same production folder-activation adapter as the packaged #108
+    // navigation regression instead of racing controlled address-form state.
+    const systemEntry = files.locator("[data-fm-node-id]", { hasText: "System" }).first();
+    await expect(systemEntry).toBeVisible({ timeout: 20_000 });
+    await systemEntry.dblclick();
+    await expect(address).toHaveValue("/System", { timeout: 20_000 });
+    await expect(files.getByRole("option").filter({ hasText: "FileManager.sys" })).toBeVisible({ timeout: 20_000 });
 
     const localHidden = explorer.getByRole("checkbox", { name: "Show hidden files" });
     await expect(localHidden).toBeEnabled();
