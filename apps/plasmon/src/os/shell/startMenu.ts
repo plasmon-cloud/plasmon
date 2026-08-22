@@ -220,12 +220,64 @@ function isExactManagedSeed(node: FsNode, spec: SeedSpec): boolean {
   return !!shortcut && startShortcutTargetIdentity(shortcut.target) === spec.identity;
 }
 
+function formerSystemSpecs(nativeApps: readonly NativeAppDefinition[]): SeedSpec[] {
+  return nativeApps
+    .filter((app) => app.runtimeOnly !== true && FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
+    .map(nativeSeedSpec);
+}
+
+/**
+ * Backfill folder provenance for the exact released v1 Start state. The old
+ * ledger did not store the directory NodeId, but it was written only after Shell
+ * created the managed System directory and its three canonical shortcuts.
+ *
+ * This is deliberately stricter than shape matching: all three v1 identities
+ * must still be managed, the direct System directory and children must be exact
+ * and metadata-clean, the directory must predate the ledger write represented by
+ * the Start root modification time, and every shortcut must have been created in
+ * that directory before that write and never modified afterward. A replacement
+ * directory or moved shortcut created after the ledger write therefore fails
+ * closed. The timestamps are supporting lifecycle evidence only in combination
+ * with the durable v1 ledger and exact canonical state; they never authorize
+ * adoption of a merely same-name or same-shape folder by themselves.
+ */
+async function backfillReleasedManagedSystemFolderProvenance(
+  fs: FsService,
+  root: FsNode,
+  nativeApps: readonly NativeAppDefinition[],
+  seeded: ReadonlySet<string>,
+  managedFolderIds: Map<string, string>,
+): Promise<void> {
+  if (managedFolderIds.has("System")) return;
+  const specs = formerSystemSpecs(nativeApps);
+  if (specs.length !== FORMER_SYSTEM_NATIVE_HANDLERS.size) return;
+  if (specs.some((spec) => !seeded.has(spec.identity))) return;
+
+  const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
+  const system = rootChildren.find((node) => node.kind === "directory" && node.name === "System");
+  if (!system || Object.keys(system.metadata).length !== 0) return;
+  if (!(system.createdAt < root.modifiedAt)) return;
+  if (specs.some((spec) => rootChildren.some((node) => node.id !== system.id && node.name === spec.name))) return;
+
+  const systemChildren = await fs.list(system.id, { includeHidden: true, sort: "name" });
+  if (systemChildren.length !== specs.length) return;
+  for (const spec of specs) {
+    const candidate = systemChildren.find((node) => node.name === spec.name);
+    if (!candidate || !isExactManagedSeed(candidate, spec)) return;
+    if (candidate.createdAt < system.createdAt || candidate.createdAt > root.modifiedAt) return;
+    if (candidate.modifiedAt !== candidate.createdAt) return;
+  }
+
+  managedFolderIds.set("System", system.id);
+  await persistManagedFolderIds(fs, root.id, managedFolderIds);
+}
+
 /**
  * Retire the former managed Start `System` category only when the durable
  * Start-root provenance map names that exact stable directory NodeId and its
- * contents are still the untouched canonical defaults. The v1 seed ledger,
- * folder name, shortcut shape, and timestamps are not directory ownership
- * evidence. Pre-provenance and otherwise ambiguous folders fail closed.
+ * contents are still the untouched canonical defaults. Current Shell-created
+ * folders have direct NodeId provenance; released v1 folders may receive that
+ * provenance only through the narrow lifecycle-backed backfill above.
  */
 async function migrateProvablyManagedRetiredSystemFolder(
   fs: FsService,
@@ -237,9 +289,7 @@ async function migrateProvablyManagedRetiredSystemFolder(
   const registeredSystemId = managedFolderIds.get("System");
   if (!registeredSystemId) return;
 
-  const specs = nativeApps
-    .filter((app) => app.runtimeOnly !== true && FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
-    .map(nativeSeedSpec);
+  const specs = formerSystemSpecs(nativeApps);
   if (specs.length !== FORMER_SYSTEM_NATIVE_HANDLERS.size) return;
 
   const rootChildren = await fs.list(root.id, { includeHidden: true, sort: "name" });
@@ -299,9 +349,7 @@ async function hasFormerSystemRootMoveAmbiguity(
   if (!unprovenSystem) return false;
 
   const systemChildren = await fs.list(unprovenSystem.id, { includeHidden: true, sort: "name" });
-  const specs = nativeApps
-    .filter((app) => app.runtimeOnly !== true && FORMER_SYSTEM_NATIVE_HANDLERS.has(app.handlerId))
-    .map(nativeSeedSpec);
+  const specs = formerSystemSpecs(nativeApps);
 
   return specs.some((spec) => {
     if (!seeded.has(spec.identity)) return false;
@@ -392,19 +440,21 @@ async function retireManagedNativeSeeds(
  * seeded exactly once. Exact previously-managed native defaults that are no
  * longer in the managed inventory are retired without weakening those
  * user-customization semantics. Managed category ownership is recorded by stable
- * NodeId when Shell creates a category. The retired `System` folder migrates only
- * when that exact directory NodeId is already present in durable provenance and
- * the legacy contents remain exact. Historical pre-provenance folders cannot be
- * adopted from name, shape, shortcut identity, or timestamps and remain in place.
+ * NodeId when Shell creates a category. Released v1 legacy `System` provenance is
+ * backfilled only for the exact untouched lifecycle that could have been created
+ * by the historical reconciler; later replacement/move/customization states fail
+ * closed. A proven retired `System` folder then migrates once and is removed.
  */
 export async function reconcileStartMenu(
   fs: FsService,
   nativeApps: readonly NativeAppDefinition[],
   elements: readonly ExternalElement[],
 ): Promise<StartSeedResult> {
-  const root = await ensureStartRoot(fs);
+  let root = await ensureStartRoot(fs);
   const seeded = stringList(root.metadata[START_SEEDED_IDENTITIES_KEY]);
   const managedFolderIds = stringMap(root.metadata[START_MANAGED_FOLDER_IDS_KEY]);
+  await backfillReleasedManagedSystemFolderProvenance(fs, root, nativeApps, seeded, managedFolderIds);
+  root = await fs.stat(root.id);
   await migrateProvablyManagedRetiredSystemFolder(fs, root, nativeApps, seeded, managedFolderIds);
   let changedManifest = await retireManagedNativeSeeds(fs, root, nativeApps, seeded, managedFolderIds);
   const existing = await scanStartTree(fs, root);
