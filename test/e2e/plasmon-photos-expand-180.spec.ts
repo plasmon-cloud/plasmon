@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -14,6 +14,30 @@ function geometryMatches(
     && Math.abs(actual.y - expected.y) <= GEOMETRY_TOLERANCE_PX
     && Math.abs(actual.width - expected.width) <= GEOMETRY_TOLERANCE_PX
     && Math.abs(actual.height - expected.height) <= GEOMETRY_TOLERANCE_PX;
+}
+
+async function hasMaximizedManagerGeometry(window: Locator): Promise<boolean> {
+  return window.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) return false;
+    const layer = element.parentElement;
+    if (!(layer instanceof HTMLElement)) return false;
+
+    const parsePixels = (value: string): number => Number.parseFloat(value || "NaN");
+    const left = parsePixels(element.style.left);
+    const top = parsePixels(element.style.top);
+    const width = parsePixels(element.style.width);
+    const height = parsePixels(element.style.height);
+    const tolerance = 1;
+
+    return Number.isFinite(left)
+      && Number.isFinite(top)
+      && Number.isFinite(width)
+      && Number.isFinite(height)
+      && Math.abs(left) <= tolerance
+      && Math.abs(top) <= tolerance
+      && Math.abs(width - layer.clientWidth) <= tolerance
+      && Math.abs(height - layer.clientHeight) <= tolerance;
+  });
 }
 
 test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", async ({ page }) => {
@@ -98,9 +122,8 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     expect(await photos.evaluate(() => document.fullscreenElement)).toBeNull();
     await expect(photosWindow).not.toHaveClass(/plasmon-window--maximized/);
 
-    const workspaceBefore = await windowLayer.boundingBox();
     const floatingBefore = await photosWindow.boundingBox();
-    if (!workspaceBefore || !floatingBefore) throw new Error("Photos has no packaged workspace geometry");
+    if (!floatingBefore) throw new Error("Photos has no packaged window geometry");
 
     await photosWindow.getByRole("button", { name: "Expand" }).click();
     await expect(photos).toHaveAttribute("data-photos-display-mode", "expanded");
@@ -110,18 +133,11 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     );
     expect(await photos.evaluate(() => document.fullscreenElement)).toBeNull();
 
-    // NativeWindow intentionally animates geometry. Wait on the actual geometry
-    // contract instead of sampling a frame in the middle of the CSS transition.
-    await expect.poll(async () => {
-      const workspace = await windowLayer.boundingBox();
-      const expanded = await photosWindow.boundingBox();
-      return !!workspace && !!expanded && geometryMatches(expanded, workspace);
-    }).toBe(true);
-
-    const workspaceExpanded = await windowLayer.boundingBox();
-    const expanded = await photosWindow.boundingBox();
-    if (!workspaceExpanded || !expanded) throw new Error("Expanded Photos has no packaged workspace geometry");
-    expect(geometryMatches(expanded, workspaceExpanded)).toBe(true);
+    // WindowManager defines maximized geometry from WindowLayer client bounds.
+    // Assert that production state directly instead of comparing Playwright outer
+    // border boxes, which include window chrome and are not the manager contract.
+    await expect.poll(() => hasMaximizedManagerGeometry(photosWindow)).toBe(true);
+    expect(await hasMaximizedManagerGeometry(photosWindow)).toBe(true);
 
     await photosWindow.getByRole("button", { name: "Exit expanded" }).click();
     await expect(photos).toHaveAttribute("data-photos-display-mode", "normal");
