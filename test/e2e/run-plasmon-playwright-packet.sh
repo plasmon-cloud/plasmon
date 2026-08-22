@@ -83,9 +83,8 @@ for ((offset = 0; offset < repetitions; offset += 1)); do
   reset_failed="$initial_reset_failed"
   reset_log="$initial_reset_log"
 
-  # Files explicitly marked @plasmon-prepared-env-reuse are responsible for
-  # not mutating persistent canister/filesystem state. Everything else fails
-  # closed to a reinstall reset between observations.
+  # Prepared deployment reuse is the default. Only explicitly registered tests
+  # that mutate durable PocketIC/canister/filesystem state pay this reset cost.
   if [ "$offset" -gt 0 ] && [ "$isolation_mode" = "reinstall" ]; then
     reset_log="/tmp/plasmon-packet-reset-${iteration}.log"
     : > "$reset_log"
