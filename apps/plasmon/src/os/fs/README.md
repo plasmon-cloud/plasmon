@@ -31,9 +31,11 @@ Hosted Plasmon keeps durable browser filesystem ownership behind the application
 
 ## Resource classification
 
-`resourcePolicy.ts` is the canonical derived-classification seam. Persisted `FsNode` resource and MIME metadata is authoritative. When it is absent, the classifier may derive MIME, content family, and language hints from the current filename; otherwise it falls back safely to unknown.
+`resourcePolicy.ts` is the canonical derived-classification seam. Stronger persisted `FsNode` resource and MIME metadata is authoritative. When stronger metadata is absent, the classifier may derive MIME, content family, and language hints from the current filename; otherwise it falls back safely to unknown.
 
-The precedence is: **explicit resource/MIME metadata > filename-derived inference > unknown fallback**. An explicit MIME value is never replaced by a filename guess, even when the explicit value is generic. Rename preserves `NodeId`; a derived classification may change with the filename when no stronger metadata pins it.
+The normal precedence is: **stronger explicit resource/MIME metadata > filename-derived inference > unknown fallback**. Specific explicit MIME is never replaced by a filename guess. Rename preserves `NodeId`; a derived classification may change with the filename when no stronger metadata pins it.
+
+One enduring compatibility rule keeps generic `text/plain` from becoming false source-language authority: when the current filename is a source extension recognized by the canonical table, `text/plain` may be refined to that filename-derived source MIME/language. This covers both generic text transport metadata and older Plasmon-authored resources that persisted `text/plain` before a later rename. The rule is intentionally narrow: Markdown/plain precedence is unchanged, media is not inferred through a conflicting explicit MIME, and specific values such as `application/octet-stream` or an explicit source MIME remain authoritative. Consumers must use this centralized result rather than adding their own exception.
 
 System and installed-application identity remains metadata-backed. A `.sys` or `.neutron` suffix by itself does not create application authority.
 
