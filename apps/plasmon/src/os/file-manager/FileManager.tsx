@@ -25,6 +25,7 @@ import {
 } from "./model.ts";
 import type { FileManagerOpenAuthority } from "./activation.ts";
 import type { FileManagerTrashAuthority } from "./delete.ts";
+import type { IncomingDropPlacementIntent } from "./drop-placement.ts";
 import { ErrorBanner } from "./ErrorBanner.tsx";
 import { FileManagerCommandBar } from "./FileManagerCommandBar.tsx";
 import {
@@ -77,6 +78,7 @@ export interface FileManagerProps {
     delta: { dx: number; dy: number },
     bounds: { width: number; height: number },
   ) => void | Promise<void>;
+  onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
   onSnapshot?: (snapshot: FileManagerSnapshot) => void;
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
@@ -99,6 +101,7 @@ export function FileManager({
   filterQuery = "",
   positions,
   onDesktopReposition,
+  onIncomingDropPlacement,
   onOpenDirectory,
   onSnapshot,
   confirmDelete,
@@ -183,6 +186,7 @@ export function FileManager({
     setError: directory.setError,
     closeContextMenu,
     ...(onDesktopReposition ? { onDesktopReposition } : {}),
+    ...(onIncomingDropPlacement ? { onIncomingDropPlacement } : {}),
   });
 
   const closeOverlays = () => {
@@ -385,7 +389,9 @@ export function FileManager({
           {operationPresentation.message}
         </p>
       ) : null}
-      {directory.loading && directory.nodes.length === 0 ? (
+      {presentation !== "desktop"
+        && directory.loading
+        && directory.nodes.length === 0 ? (
         <p className="fm-empty">Loading…</p>
       ) : null}
 
