@@ -1,0 +1,84 @@
+import { appendFileSync } from "node:fs";
+
+export const TARGETED_PACKET_SIZE = 5;
+
+const targetedPlaywrightTargets = new Set([
+  "exact",
+  "exact-set",
+  "right-snap",
+  "left-snap",
+  "window-lifetime",
+  "monaco",
+  "emulatorjs",
+  "saved-preview",
+]);
+
+export function packetSizeForProbe({ iteration_count, target }) {
+  return iteration_count === 50 && targetedPlaywrightTargets.has(target)
+    ? TARGETED_PACKET_SIZE
+    : 1;
+}
+
+export function addProbePackets(include, config) {
+  const packetSize = packetSizeForProbe(config);
+  let packet = 0;
+  for (let startIteration = 1; startIteration <= config.iteration_count; startIteration += packetSize) {
+    packet += 1;
+    const repetitions = Math.min(
+      packetSize,
+      config.iteration_count - startIteration + 1,
+    );
+    include.push({
+      ...config,
+      packet,
+      start_iteration: startIteration,
+      end_iteration: startIteration + repetitions - 1,
+      repetitions,
+      packet_size: packetSize,
+    });
+  }
+}
+
+export function buildProbeMatrix(env = process.env) {
+  const include = [];
+
+  if (env.PRIMARY_APPLICABLE === "true") {
+    addProbePackets(include, {
+      mode: env.PRIMARY_MODE,
+      automatic_characterization: false,
+      iteration_count: Number(env.PRIMARY_COUNT),
+      target: env.PRIMARY_TARGET,
+      test_file: env.PRIMARY_TEST_FILE ?? "",
+      test_grep: env.PRIMARY_TEST_GREP ?? "",
+      scope: env.PRIMARY_SCOPE,
+      scope_key: env.PRIMARY_SCOPE_KEY,
+    });
+  }
+
+  if (
+    env.EVENT_NAME === "pull_request" &&
+    env.CHARACTERIZATION_APPLICABLE === "true"
+  ) {
+    addProbePackets(include, {
+      mode: "characterization",
+      automatic_characterization: true,
+      iteration_count: Number(env.CHARACTERIZATION_COUNT),
+      target: env.CHARACTERIZATION_TARGET,
+      test_file: "",
+      test_grep: "",
+      scope: env.CHARACTERIZATION_SCOPE,
+      scope_key: env.CHARACTERIZATION_SCOPE_KEY,
+    });
+  }
+
+  return { include };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const outputIndex = process.argv.indexOf("--github-output");
+  const outputPath = outputIndex === -1 ? null : process.argv[outputIndex + 1];
+  const matrix = buildProbeMatrix();
+  const line = `matrix=${JSON.stringify(matrix)}\n`;
+  if (outputPath) appendFileSync(outputPath, line);
+  else process.stdout.write(line);
+}
