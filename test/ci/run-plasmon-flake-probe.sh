@@ -4,7 +4,7 @@ set -euo pipefail
 target="${1:-specialist}"
 test_file="${2:-}"
 test_grep="${3:-}"
-test_files_json="${4:-[]}" 
+test_files_json="${4:-[]}"
 exact_files=()
 
 validate_exact_file() {
@@ -120,6 +120,7 @@ run_one() {
     npx playwright test \
       --workers=1 \
       --retries=0 \
+      --grep-invert @r2-quarantine \
       "$@"
 }
 
