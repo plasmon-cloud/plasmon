@@ -54,25 +54,27 @@ For post-merge r2 validation, a Plasmon-relevant push to `release/0.1.0-r2` must
 
 `test/ci/verify-required-browser-gates.mjs` protects the PR-always-run contract, stable context names, real gate commands, direct-push coverage, and #226 fail-on-flaky proof. It also verifies that all five required workflow definitions retain `release/0.1.0-r2` push coverage. Do not mask failures with `continue-on-error` and do not add a ruleset bypass as a substitute for a passing real gate.
 
-## Automatic r2 flake probing
+## Automatic and labeled r2 flake probing
 
-`Plasmon Flake Probe` is a diagnostic workflow for stress-testing test boundaries. It is **not** one of the five required r2 release gates and must not replace, cheap-green, bypass, or weaken those gates.
+`Plasmon Flake Probe` is diagnostic CI for stress-testing test boundaries. It is **not** one of the five required r2 release gates and must not replace, cheap-green, bypass, or weaken those gates.
 
-The workflow is path-triggered only when Plasmon tests or their test infrastructure change: ordinary Plasmon test files, root Playwright specs, the test harness, package/toolchain configuration, or the workflow itself. Unrelated PRs do not create a skipped flake-probe check. A suspected flake caused only by production changes can be opted in by adding the `ci:flake-probe` label; `.github/workflows/plasmon-flake-probe-label.yml` dispatches an exact-head probe for that label without broadening the automatic path-triggered workflow.
+Qualifying pull-request heads retain the ten-iteration `all` baseline. When a PR changes a relevant non-quarantined Playwright acceptance, #409 also selects a separate 50-iteration exact-file or exact-set characterization. Multiple directly changed Playwright specs remain one narrow exact set; uncertain helper/configuration changes do not expand into fifty runs of the whole Specialist inventory.
 
-Automatic test-change probes run the combined `all` target: ten independent **probe iterations**, each on a fresh hosted runner and fresh package/PocketIC environment. The target runs the Plasmon fast Bun/RTL suite and the automatically discovered Specialist browser inventory. Browser execution remains serialized with `--workers=1`, and Playwright test retries remain disabled with `--retries=0` so every observed failure remains evidence. Manual dispatch additionally provides bounded named targets for known flaky boundaries such as right snap, left snap, Monaco, EmulatorJS, or window lifetime.
+The `ci:flake-probe` label is a separate explicit request for a fresh targeted 50-iteration probe. The label workflow dispatches through the same-repository PR head branch while independently pinning the immutable head SHA in the probe workflow input. While the label remains present, later `synchronize` events request a fresh probe for each new exact head. Removing the label prevents future synchronize-triggered requests and does not cancel already-dispatched evidence.
+
+A labeled probe may use `Flake-Probe-Target: test/e2e/<file>.spec.ts` with optional `Flake-Probe-Grep: <title-or-tag>`, or a documented bounded named target. Without a directive, the label selector may reuse #409 only when exactly one Playwright file is resolved. Ambiguous or unresolved selection fails closed instead of launching a broad `all` or `specialist` 50-run sweep.
+
+Quarantine is absolute across automatic, manual/direct, and labeled probes. Every direct Playwright invocation uses `--grep-invert @r2-quarantine`; a label never turns quarantine into an opt-in execution lane.
 
 Flake Probe terminology is intentionally distinct from GitHub Actions and test-runner terminology:
 
 - **workflow run** / `run_number` — one GitHub Actions workflow run;
 - **workflow run attempt** / `run_attempt` — a GitHub Actions rerun of that workflow run;
-- **probe iteration** — one of the ten fresh Flake Probe executions;
+- **probe iteration** — one fresh Flake Probe execution inside a configured 10- or 50-iteration packet;
 - **test retry** — a retry performed by the test runner when enabled.
 
-New Flake Probe result files emit `iteration=<n>` plus explicit `run_number` and `run_attempt` metadata, and iteration artifacts use `flake-probe-iteration-*` names. `test/ci/summarize-flake-probe.mjs` remains backward compatible with historical result files by accepting the old `attempt=<n>` field as a legacy alias while always reporting that execution as a probe iteration. This compatibility is read-only: new workflow output must not emit the legacy field.
+New Flake Probe result files emit explicit `iteration`, `iteration_count`, `run_number`, `run_attempt`, target/scope, and mode metadata. `test/ci/summarize-flake-probe.mjs` remains read-compatible with historical ten-iteration result shapes, including the old `attempt=<n>` alias, but new output must use the unambiguous fields.
 
-New `test/e2e/plasmon-*.spec.*` files default to the Specialist inventory. Existing Smoke, Persistence, and explicitly quarantined ownership remains declared in `test/ci/plasmon-test-inventory.mjs`; the inventory verifier fails if a browser spec is otherwise unclassified. This prevents a new test from silently escaping the probe.
+A clean `10/10` or `50/50` probe is stability evidence for that exact SHA and scope, not mathematical proof that a test cannot flake. Baseline and characterization packets remain independent and are never flattened into one sample count. Any observed failure remains diagnostic evidence and must be classified rather than hidden with retries, sleeps, timeout inflation, broad skips, or weaker assertions.
 
-A `10/10` probe means stability was observed for that exact head; it is not mathematical proof that a test can never flake. A result below `10/10` is positive evidence of an intermittent, deterministic, or infrastructure failure and must be classified by the CI owner. Product agents should change product code only when exact evidence establishes product ownership.
-
-`test/ci/verify-flake-probe.mjs` protects the path trigger, exact-head checkout, ten-fresh-probe-iteration matrix, retry-zero/worker-one execution, automatic Specialist discovery, real package/provision path, rerun-safe iteration artifacts, backward-compatible result parsing, and aggregate summary contract.
+`test/ci/verify-flake-probe.mjs` protects the baseline/automatic characterization contract. `test/ci/verify-labeled-flake-probe.mjs` separately protects label-trigger targeting, synchronize/removal behavior, exact-SHA dispatch transport, retry-zero/worker-one execution, and the absolute quarantine exclusion.
