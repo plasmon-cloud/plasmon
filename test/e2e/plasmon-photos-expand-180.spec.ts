@@ -134,10 +134,21 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     expect(await photos.evaluate(() => document.fullscreenElement)).toBeNull();
 
     // WindowManager defines maximized geometry from WindowLayer client bounds.
-    // Assert that production state directly instead of comparing Playwright outer
-    // border boxes, which include window chrome and are not the manager contract.
+    // First prove canonical state reached that contract, then prove the browser
+    // renders that state over the same visible workspace rather than scrolling
+    // the WindowLayer away from its manager-owned coordinate origin.
     await expect.poll(() => hasMaximizedManagerGeometry(photosWindow)).toBe(true);
     expect(await hasMaximizedManagerGeometry(photosWindow)).toBe(true);
+    await expect.poll(async () => {
+      const workspace = await windowLayer.boundingBox();
+      const expanded = await photosWindow.boundingBox();
+      return !!workspace && !!expanded && geometryMatches(expanded, workspace);
+    }).toBe(true);
+
+    const workspaceExpanded = await windowLayer.boundingBox();
+    const expanded = await photosWindow.boundingBox();
+    if (!workspaceExpanded || !expanded) throw new Error("Expanded Photos has no packaged workspace geometry");
+    expect(geometryMatches(expanded, workspaceExpanded)).toBe(true);
 
     await photosWindow.getByRole("button", { name: "Exit expanded" }).click();
     await expect(photos).toHaveAttribute("data-photos-display-mode", "normal");
