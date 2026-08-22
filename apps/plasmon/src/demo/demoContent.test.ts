@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { MemoryFsRepository, readSharedShortcut } from "../os/fs/index.ts";
 import { createPlasmonServices } from "../os/integration/services.ts";
 import { MockNeutronBridge } from "../os/neutron/index.ts";
@@ -10,7 +11,14 @@ import {
   DEMO_TEXT_PATH,
   createDemoSeeds,
   reconcileDemoDesktopShortcuts,
+  type DemoAssetContent,
 } from "./demoContent.ts";
+
+const DEMO_ASSETS: DemoAssetContent = {
+  text: readFileSync(new URL("./assets/Demo Notes.txt", import.meta.url), "utf8"),
+  markdown: readFileSync(new URL("./assets/Demo Guide.md", import.meta.url), "utf8"),
+  svg: readFileSync(new URL("./assets/Demo Artwork.svg", import.meta.url), "utf8"),
+};
 
 function deterministicWindows(): NativeWindowManager {
   let nextWindowId = 0;
@@ -45,8 +53,20 @@ test("ordinary production composition remains free of demo resources", async () 
   }
 });
 
-test("demo profile seeds authored redistribution-safe document and image resources", () => {
-  const seeds = createDemoSeeds();
+test("demo seeds use real repository text, Markdown, and SVG assets byte-for-byte", () => {
+  expect(DEMO_ASSETS.markdown).toStartWith("# Plasmon Demo Guide\n");
+  expect(DEMO_ASSETS.markdown).toContain("- [ ] Open this file from its Desktop shortcut.");
+  expect(DEMO_ASSETS.markdown).toContain("| Resource | Location | Opens with |");
+  expect(DEMO_ASSETS.markdown).toContain("```ts");
+
+  expect(DEMO_ASSETS.svg).toStartWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg ");
+  expect(DEMO_ASSETS.svg).toContain("xmlns=\"http://www.w3.org/2000/svg\"");
+  expect(DEMO_ASSETS.svg).toContain("<title id=\"title\">Plasmon Demo Artwork</title>");
+  expect(DEMO_ASSETS.svg).toContain("<defs>");
+  expect(DEMO_ASSETS.svg).toContain("<linearGradient id=\"background\"");
+  expect(DEMO_ASSETS.svg.trimEnd()).toEndWith("</svg>");
+
+  const seeds = createDemoSeeds(DEMO_ASSETS);
   expect(seeds).toHaveLength(5);
   expect(seeds.map(({ key }) => key)).toEqual([
     "demo.documents-directory.v1",
@@ -63,9 +83,9 @@ test("demo profile seeds authored redistribution-safe document and image resourc
   expect(byName.get("Demo Artwork.svg")).toMatchObject({ seedClass: "demo-temporary", parentPath: "/Pictures", kind: "file", mime: "image/svg+xml" });
 
   const decoder = new TextDecoder();
-  expect(decoder.decode(byName.get("Demo Notes.txt")?.bytes)).toContain("authored for the Plasmon demo environment");
-  expect(decoder.decode(byName.get("Demo Guide.md")?.bytes)).toContain("redistribution-safe Markdown demo document");
-  expect(decoder.decode(byName.get("Demo Artwork.svg")?.bytes)).toContain("Plasmon Demo");
+  expect(decoder.decode(byName.get("Demo Notes.txt")?.bytes)).toBe(DEMO_ASSETS.text);
+  expect(decoder.decode(byName.get("Demo Guide.md")?.bytes)).toBe(DEMO_ASSETS.markdown);
+  expect(decoder.decode(byName.get("Demo Artwork.svg")?.bytes)).toBe(DEMO_ASSETS.svg);
 });
 
 test("demo resources and Desktop shortcuts traverse production bootstrap and opening", async () => {
@@ -74,7 +94,7 @@ test("demo resources and Desktop shortcuts traverse production bootstrap and ope
     filesystemRepository: new MemoryFsRepository(),
     neutron: new MockNeutronBridge({ elements: [] }),
     windows,
-    demoSeeds: createDemoSeeds(),
+    demoSeeds: createDemoSeeds(DEMO_ASSETS),
   });
 
   try {
