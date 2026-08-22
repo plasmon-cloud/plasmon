@@ -51,13 +51,13 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
   await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
   await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
   await fixtureNavigation;
-  await page.unroute(fixtureRoute, redirectToFirstDemo);
 
   const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(appSelector)).toBeVisible();
   const app = page.frameLocator(appSelector);
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await expect(taskbar).toBeVisible({ timeout: 30_000 });
+  await page.unroute(fixtureRoute, redirectToFirstDemo);
 
   // Reach Text through the real filesystem and association path used by the
   // existing packaged Monaco acceptance; this test owns parity presentation,
