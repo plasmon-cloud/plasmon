@@ -104,3 +104,39 @@ test("Start filters hidden shortcut targets without deleting shortcut authority 
     env.dispose();
   }
 });
+
+test("global hidden visibility does not expose shortcuts whose NodeId target was deleted", async () => {
+  const env = createHeadlessPlasmonEnvironment();
+  await env.ready;
+  try {
+    const root = await env.node("/");
+    const start = await env.node("/System/Start Menu");
+    if (!root || !start) throw new Error("Shortcut fixture roots are unavailable");
+
+    const target = await env.services.fs.createFile(root.id, ".orphan-target.txt", { mime: "text/plain" });
+    const searchShortcut = await createShortcut(
+      env.services.fs,
+      root.id,
+      { kind: "node", nodeId: target.id },
+      { name: "Orphan Search target" },
+    );
+    const startShortcut = await createShortcut(
+      env.services.fs,
+      start.id,
+      { kind: "node", nodeId: target.id },
+      { name: "Orphan Start target" },
+    );
+
+    await env.services.fs.remove(target.id);
+    await env.services.hiddenVisibility.setAlwaysShowHiddenFiles(true);
+
+    const search = await searchShell(env.services.fs, env.services.nativeApps.list(), [], "Orphan Search target");
+    expect(search.results.some((result) => result.kind === "start-shortcut" && result.node.id === searchShortcut.id)).toBe(false);
+
+    const visibleStart = await listVisibleStartMenuFolder(env.services.fs, start.id);
+    expect(visibleStart.some((node) => node.id === startShortcut.id)).toBe(false);
+    expect((await env.services.fs.stat(startShortcut.id)).id).toBe(startShortcut.id);
+  } finally {
+    env.dispose();
+  }
+});
