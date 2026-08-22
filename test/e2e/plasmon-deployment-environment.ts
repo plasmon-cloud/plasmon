@@ -4,6 +4,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 export const PLASMON_LOCAL_MANIFEST = "plasmon-local.ndeploy.json";
 export const PLASMON_DEMO_MANIFEST = "plasmon.ndeploy.json";
 export const PLASMON_WORKSPACE = "neutron-plasmon";
+export const DEPLOYMENT_BUILD_PREREQUISITES = ["neutron-design-system"] as const;
 
 export type PlasmonDeploymentScope = "local" | "demo";
 
@@ -164,6 +165,15 @@ export async function prepareDeploymentEnvironment(
   const manifestPath = options.manifestPath;
   if (!manifestPath) throw new Error("Deployment manifest must be selected explicitly");
   const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
+
+  // npm workspaces link shared source packages after `npm ci`, but packages such
+  // as neutron-design-system export generated `dist/*` files. A clean checkout
+  // therefore must materialize those shared build products before any declared
+  // application package command tries to bundle them.
+  for (const workspace of DEPLOYMENT_BUILD_PREREQUISITES) {
+    await runCommand(["npm", "--workspace", workspace, "run", "build"], repoRoot);
+  }
+
   for (const workspace of workspacesToPackage(artifacts)) {
     await runCommand(
       ["npm", "--workspace", workspace, "run", "package"],
