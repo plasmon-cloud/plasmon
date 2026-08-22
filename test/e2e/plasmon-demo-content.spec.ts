@@ -37,6 +37,17 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   await expect(textWindow).toBeVisible({ timeout: 20_000 });
   await expect(textWindow.getByLabel("Text editor")).toBeVisible();
 
+  await desktopGuide.dblclick();
+  const markdownWindow = app.getByRole("dialog", { name: "Demo Guide.md - Monaco Editor" }).last();
+  await expect(markdownWindow).toBeVisible({ timeout: 20_000 });
+  await expect(markdownWindow.getByLabel("Markdown editor", { exact: true })).toBeVisible();
+  const markdownSurface = markdownWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
+  await expect(markdownSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+  await markdownWindow.getByRole("button", { name: "Preview", exact: true }).click();
+  const markdownPreview = markdownWindow.getByRole("article", { name: "Markdown preview" });
+  await expect(markdownPreview.getByRole("heading", { name: "Plasmon Demo Guide", level: 1, exact: true })).toBeVisible();
+  await expect(markdownPreview.getByText("Try these workflows", { exact: true })).toBeVisible();
+
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await rootShortcut.dblclick();
   const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
