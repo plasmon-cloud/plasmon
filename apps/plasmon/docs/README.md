@@ -27,9 +27,9 @@ Use the nearest meaningful documentation boundary rather than adding documentati
 - A nested `AGENTS.md` adds narrower rules; otherwise a directory inherits the nearest ancestor `AGENTS.md`.
 - Canonical documents under this directory hold cross-subsystem architecture, accepted terminology, deeper rationale, compatibility constraints, and durable research that is too large or cross-cutting for a scoped README/AGENTS file.
 
-Concrete bugs, temporary migrations, current ownership, one-off acceptance fixes, and implementation sequencing belong in GitHub Issues and tests rather than README/AGENTS files.
+The machine-readable boundary inventory is [`documentation-boundaries.json`](documentation-boundaries.json). It is the single source for which Plasmon directories are documentation boundaries, whether they require local README/AGENTS files or inherit AGENTS ownership, and which roots require direct-child classification. Do not duplicate that inventory in prose or external project context.
 
-The current directory-boundary inventory is repository-owned. Do not maintain a second authoritative boundary list in external project context. Follow the current tree and nearest scoped documentation; repository validation for explicit boundary inventory is tracked separately.
+Concrete bugs, temporary migrations, current ownership, one-off acceptance fixes, and implementation sequencing belong in GitHub Issues and tests rather than README/AGENTS files.
 
 ## Terminology
 
