@@ -73,7 +73,7 @@ Flake Probe terminology is intentionally distinct from GitHub Actions and test-r
 - **probe iteration** — one fresh Flake Probe execution inside a configured 10- or 50-iteration packet;
 - **test retry** — a retry performed by the test runner when enabled.
 
-New Flake Probe result files emit explicit `iteration`, `iteration_count`, `run_number`, `run_attempt`, target/scope, and mode metadata. `test/ci/summarize-flake-probe.mjs` remains read-compatible with historical ten-iteration result shapes, including the old `attempt=<n>` alias, but new output must use the unambiguous fields.
+New Flake Probe result files emit `iteration=<n>` plus explicit `iteration_count`, `run_number`, `run_attempt`, target/scope, and mode metadata. `iteration` identifies the probe slot; `run_attempt` identifies a GitHub workflow rerun. `test/ci/summarize-flake-probe.mjs` remains read-compatible with historical ten-iteration result shapes, including the old `attempt=<n>` alias, but new output must use the unambiguous fields.
 
 A clean `10/10` or `50/50` probe is stability evidence for that exact SHA and scope, not mathematical proof that a test cannot flake. Baseline and characterization packets remain independent and are never flattened into one sample count. Any observed failure remains diagnostic evidence and must be classified rather than hidden with retries, sleeps, timeout inflation, broad skips, or weaker assertions.
 
