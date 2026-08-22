@@ -102,12 +102,21 @@ test("fingerprints are deterministic and documentation markers do not recurse", 
   }
 });
 
-test("status stales only the nearest boundary and review refreshes its marker", () => {
+test("status stales only the nearest boundary and review previews before refreshing its marker", () => {
   const registry = fixtureRegistry();
   const root = createFixture();
   try {
     const parentReview = reviewDocumentationBoundary("apps/plasmon/src/os", registry, root);
-    const childReview = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    const childReadmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
+    let previewed = false;
+    const childReview = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root, {
+      beforeWrite(review) {
+        previewed = true;
+        expect(parseReviewMarker(readFileSync(childReadmePath, "utf8"))).toBeNull();
+        expect(review.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
+      },
+    });
+    expect(previewed).toBe(true);
     expect(parentReview.changedFiles).toContain("apps/plasmon/src/os/service.ts");
     expect(childReview.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
     expect(documentationReviewStatus(registry, root).filter((entry) => entry.stale)).toEqual([]);
@@ -126,7 +135,7 @@ test("status stales only the nearest boundary and review refreshes its marker", 
     expect(refreshed.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
     expect(documentationReviewStatus(registry, root).filter((entry) => entry.stale)).toEqual([]);
 
-    const marker = parseReviewMarker(readFileSync(resolve(root, "apps/plasmon/src/os/windowing/README.md"), "utf8"));
+    const marker = parseReviewMarker(readFileSync(childReadmePath, "utf8"));
     expect(marker?.digest).toBe(refreshed.digest);
     expect(marker?.base).toBe(git(root, ["rev-parse", "HEAD"]));
   } finally {
