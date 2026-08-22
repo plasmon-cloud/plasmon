@@ -119,7 +119,7 @@ Historical refactor test packets or old staging procedures are provenance, not c
 - [`DAEDALOS_PARITY_LEDGER.md`](DAEDALOS_PARITY_LEDGER.md) — evidence ledger for daedalOS feature-completeness reference behavior and Plasmon implementation, headless, packaged/browser, and human/manual acceptance state.
 - [`ACCEPTANCE_2026-08-11_BASELINE_GATE.md`](ACCEPTANCE_2026-08-11_BASELINE_GATE.md) — dated integrated disposition of the 2026-08-11 packaged/manual review findings.
 
-The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human/manual acceptance state are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
+The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human review are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
 
 ## Neutron / Kernel boundary
 
