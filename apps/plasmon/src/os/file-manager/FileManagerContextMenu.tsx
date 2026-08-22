@@ -1,5 +1,10 @@
-import type { MouseEvent as ReactMouseEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import type { FsNode, NodeId } from "../contracts/index.ts";
+import { fitContextMenuPosition } from "./context-menu-position.ts";
 
 export type FileManagerContextMenuAction =
   | "open"
@@ -35,8 +40,32 @@ interface FileManagerContextMenuProps {
 }
 
 export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    const boundary = menu?.parentElement;
+    if (!menu || !boundary) return;
+
+    const menuRect = menu.getBoundingClientRect();
+    const boundaryRect = boundary.getBoundingClientRect();
+    const position = fitContextMenuPosition(
+      { x: props.state.x, y: props.state.y },
+      { width: menuRect.width, height: menuRect.height },
+      {
+        left: boundaryRect.left,
+        top: boundaryRect.top,
+        right: boundaryRect.right,
+        bottom: boundaryRect.bottom,
+      },
+    );
+    menu.style.left = `${position.x}px`;
+    menu.style.top = `${position.y}px`;
+  });
+
   return (
     <div
+      ref={menuRef}
       className="fm-context-menu"
       role="menu"
       style={{ left: props.state.x, top: props.state.y }}
