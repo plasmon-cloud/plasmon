@@ -1,5 +1,7 @@
 # Plasmon Shell
 
+<!-- plasmon-docs-review:v1 sha256=3a72dea608dbe738efaef63ac10e5da4bada24412024216135918e21d1dbc698 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 `shell/**` owns shell-level presentation and orchestration around the central Desktop/native-window workspace: Start, Search, taskbar/tray, calendar, flyouts/context menus, pinning, and shell preferences.
 
 Shell derives state from public authorities. Native task state comes from `ProcessController`/`WindowManager`; external application state comes from `NeutronBridge`; filesystem/search/start content comes from filesystem/shared resource services. Shell must not become a second install database, process store, filesystem, or generic resource-opening authority.

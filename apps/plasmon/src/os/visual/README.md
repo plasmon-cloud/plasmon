@@ -1,5 +1,7 @@
 # Plasmon shared visual foundation
 
+<!-- plasmon-docs-review:v1 sha256=477296a546f15777ce820792eb90fa33efc2686513d8e3eab3508d1ffe9b8973 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+
 `visual/**` is the shared presentation-only foundation for Plasmon OS surfaces. It provides semantic sizing, reusable icon/media/resource presentation, application-owned content-chrome presentation, overlays, artwork/fallback composition, and wallpaper primitives.
 
 It does not decide filesystem protection, hidden state, application/runtime identity, association matching, shortcut execution, Neutron ownership, application behavior, or native-window lifecycle/geometry. Callers resolve semantics first and pass presentation information into this layer.

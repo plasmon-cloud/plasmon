@@ -1,5 +1,7 @@
 # Games
 
+<!-- plasmon-docs-review:v1 sha256=b76b3e858f2bd4484e4e47480e5a662f42d7d7812fe29eb609a04dc9065a5729 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+
 `src/games/` contains Plasmon-owned game content and bootstrap glue. It is not a parallel launcher, emulator shell, or resource-dispatch architecture.
 
 ## Architecture

@@ -1,8 +1,19 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
-import type { ExternalElement, FsNode, FsService } from "../contracts/index.ts";
+import type { ExternalElement, FsNode, FsService, NativeAppDefinition } from "../contracts/index.ts";
 import { NEUTRON_APP_MIME, neutronAppMetadata } from "../fs/index.ts";
-import { categorizeFsNode, searchApplicationIcon, searchShell } from "./search.ts";
+import {
+  SYSTEM_APP_METADATA_KEY,
+  SYSTEM_APP_MIME,
+  classifyResource,
+} from "../fs/resourcePolicy.ts";
+import { activateSearchFilesystemResult } from "./activation.ts";
+import {
+  categorizeFsNode,
+  searchApplicationIcon,
+  searchFilesystem,
+  searchShell,
+} from "./search.ts";
 
 function rootNode(): FsNode {
   return {
@@ -45,14 +56,42 @@ function projectionNode(
   };
 }
 
+function systemNode(
+  id = "system:browser",
+  name = "Browser.sys",
+  modifiedAt = 2,
+): FsNode {
+  return {
+    id,
+    parentId: "root",
+    name,
+    kind: "file",
+    mime: SYSTEM_APP_MIME,
+    size: 0,
+    createdAt: 2,
+    modifiedAt,
+    metadata: {
+      [SYSTEM_APP_METADATA_KEY]: {
+        format: "plasmon.system-app",
+        version: 1,
+        systemId: "browser",
+        handlerId: "native:browser",
+      },
+    },
+  };
+}
+
 function staticSearchFs(children: readonly FsNode[]): FsService {
   const root = rootNode();
   return {
     async resolvePath(path: string) {
       return path === "/" ? structuredClone(root) : null;
     },
-    async list(parentId: string) {
-      return parentId === root.id ? children.map((node) => structuredClone(node)) : [];
+    async list(parentId: string, options?: { includeHidden?: boolean }) {
+      if (parentId !== root.id) return [];
+      return children
+        .filter((node) => options?.includeHidden !== false || !node.name.startsWith("."))
+        .map((node) => structuredClone(node));
     },
   } as FsService;
 }
@@ -71,6 +110,15 @@ function element(
     running,
   };
 }
+
+const browserApp: NativeAppDefinition = {
+  id: "native:browser",
+  handlerId: "native:browser",
+  name: "Browser",
+  icon: "browser",
+  defaultWindow: { width: 800, height: 500 },
+  associations: [],
+};
 
 test("canonical Neutron projection metadata classifies as Apps without trusting the .neutron suffix", () => {
   const projection = projectionNode("projection-mail", {
@@ -210,4 +258,62 @@ test("Search de-duplicates a projection against direct Element discovery while r
   );
   expect(calendar?.kind).toBe("element");
   expect(calendar?.subtitle).toBe("Canonical Neutron Calendar");
+});
+
+test("#366 canonical .sys Search emits one friendly native-app result without a raw duplicate", async () => {
+  const node = systemNode();
+  const before = structuredClone(node);
+
+  const batch = await searchShell(staticSearchFs([node]), [browserApp], [], "browser");
+  const browserResults = batch.results.filter((result) => result.title.toLocaleLowerCase().includes("browser"));
+
+  expect(browserResults).toHaveLength(1);
+  expect(browserResults[0]?.kind).toBe("native-app");
+  expect(browserResults[0]?.category).toBe("apps");
+  expect(browserResults[0]?.title).toBe("Browser");
+  expect(browserResults[0]?.subtitle).toBe("Plasmon application");
+  expect(browserResults[0]?.subtitle).not.toMatch(/running|stopped|runtime status/iu);
+  expect(browserResults.some((result) => result.kind === "file")).toBe(false);
+  expect(browserResults.some((result) => result.title.endsWith(".sys"))).toBe(false);
+  expect(node).toEqual(before);
+});
+
+test("#366 hidden native resources stay hidden and system classification is stable across fixture state", async () => {
+  const hidden = systemNode("system:properties", ".Properties.sys");
+  const stopped = systemNode("system:stopped", "Browser.sys", 2);
+  const running = systemNode("system:running", "Browser.sys", 3);
+
+  for (const node of [stopped, running]) {
+    expect(classifyResource(node).kind).toBe("system-app");
+    expect(categorizeFsNode(node)).toBe("apps");
+  }
+
+  const hiddenSearch = await searchFilesystem(staticSearchFs([hidden]), "Properties");
+  expect(hiddenSearch.results).toHaveLength(0);
+});
+
+test("#366 native Search presentation preserves NodeId and filesystem activation opens the canonical node", async () => {
+  const node = systemNode();
+  const before = structuredClone(node);
+
+  const batch = await searchShell(staticSearchFs([node]), [browserApp], [], "browser");
+  const app = batch.results.find((result) => result.kind === "native-app");
+  expect(app?.title).toBe("Browser");
+  expect(node).toEqual(before);
+
+  const raw = (await searchFilesystem(staticSearchFs([node]), "Browser")).results.find(
+    (result) => result.kind === "file",
+  );
+  if (!raw || raw.kind !== "file") throw new Error("canonical filesystem result unavailable");
+  expect(raw.node.id).toBe(node.id);
+  expect(raw.node.name).toBe("Browser.sys");
+
+  let opened: string | null = null;
+  await activateSearchFilesystemResult({
+    openNode: async (id) => {
+      opened = id;
+    },
+  }, raw);
+  expect(opened).toBe(node.id);
+  expect(node).toEqual(before);
 });
