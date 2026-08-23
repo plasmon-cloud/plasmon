@@ -94,7 +94,7 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(settings).toBeVisible({ timeout: 20_000 });
     const settingsSurface = settings.locator(".plasmon-native-app-surface");
     await expect(settingsSurface).toBeVisible();
-    await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(4);
+    await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(5);
     const sharedPalette = await surfacePalette(settingsSurface);
     await testInfo.attach("112-settings-current-theme.png", { body: await settings.screenshot(), contentType: "image/png" });
 
