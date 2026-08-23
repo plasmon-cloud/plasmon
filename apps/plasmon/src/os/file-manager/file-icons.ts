@@ -95,12 +95,12 @@ function nativeShortcutPresentation(
   return nativeHandlerResourcePresentation(handlerId, associations?.getHandler(handlerId)?.icon);
 }
 
-async function shortcutTargetPresentation(
+async function tryShortcutTargetPresentation(
   fs: FsService,
   node: FsNode,
   associations: AssociationRegistry | undefined,
   visited: ReadonlySet<string>,
-): Promise<ResourceIconPresentation> {
+): Promise<ResourceIconPresentation | null> {
   const shortcut = readSharedShortcut(node);
   if (!shortcut) return resourceIconPresentationForFile(node);
 
@@ -115,22 +115,52 @@ async function shortcutTargetPresentation(
         const target = await fs.stat(shortcut.target.nodeId);
         const nextVisited = new Set(visited);
         nextVisited.add(node.id);
-        const resolved = await resolveFileResourcePresentation(fs, target, associations, nextVisited);
-        return resolved.presentation;
+        const resolved = await tryResolveFileResourcePresentation(fs, target, associations, nextVisited);
+        return resolved?.presentation ?? null;
       }
       case "url":
         return { kind: "file-type", icon: "file" };
     }
   } catch {
-    if (shortcut.target.kind === "native") return nativeShortcutPresentation(shortcut.target.handlerId, associations);
+    // Preserve the canonical resolver's existing target-specific fallbacks for
+    // native/Element shortcuts. Only a node-target lookup failure means richer
+    // asynchronous artwork is temporarily unavailable to a mounted FileEntry.
+    if (shortcut.target.kind === "native") {
+      return nativeShortcutPresentation(shortcut.target.handlerId, associations);
+    }
     if (shortcut.target.kind === "element") return applicationResourcePresentation();
-    return { kind: "file-type", icon: "file" };
+    return null;
   }
+}
+
+/**
+ * Resolve presentation only when asynchronous node-target shortcut enrichment
+ * is currently available. A null result is not a generic-file presentation:
+ * callers that already have a last-known presentation may keep it without
+ * causing packaged image source churn. Genuinely new entries still initialize
+ * from the safe synchronous fallback.
+ */
+export async function tryResolveFileResourcePresentation(
+  fs: FsService,
+  node: FsNode,
+  associations?: AssociationRegistry,
+  visited: ReadonlySet<string> = new Set(),
+): Promise<FileResourcePresentation | null> {
+  if (classifyResource(node).kind !== "shortcut") {
+    return { presentation: directFileResourcePresentation(node, associations), shortcut: false };
+  }
+
+  if (visited.has(node.id)) return fallbackFileResourcePresentation(node, associations);
+  const target = await tryShortcutTargetPresentation(fs, node, associations, visited);
+  if (!target) return null;
+  const composed = composeShortcutPresentation(target);
+  return { presentation: composed.target, shortcut: composed.shortcut };
 }
 
 /**
  * FileManager production seam from resource semantics to the shared Visual presentation vocabulary.
  * Shortcut targets are inspected only for presentation metadata; this never dispatches or executes them.
+ * Direct callers retain deterministic fallback semantics when node-target enrichment is unavailable.
  */
 export async function resolveFileResourcePresentation(
   fs: FsService,
@@ -138,12 +168,6 @@ export async function resolveFileResourcePresentation(
   associations?: AssociationRegistry,
   visited: ReadonlySet<string> = new Set(),
 ): Promise<FileResourcePresentation> {
-  if (classifyResource(node).kind !== "shortcut") {
-    return { presentation: directFileResourcePresentation(node, associations), shortcut: false };
-  }
-
-  if (visited.has(node.id)) return fallbackFileResourcePresentation(node, associations);
-  const target = await shortcutTargetPresentation(fs, node, associations, visited);
-  const composed = composeShortcutPresentation(target);
-  return { presentation: composed.target, shortcut: composed.shortcut };
+  return await tryResolveFileResourcePresentation(fs, node, associations, visited)
+    ?? fallbackFileResourcePresentation(node, associations);
 }
