@@ -33,7 +33,7 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   await expect(desktopArtwork).toBeVisible();
 
   await desktopNotes.dblclick();
-  const textWindow = app.getByRole("dialog", { name: "Demo Notes.txt" }).last();
+  const textWindow = app.getByRole("dialog", { name: "Demo Notes.txt - Monaco Editor" }).last();
   await expect(textWindow).toBeVisible({ timeout: 20_000 });
   await expect(textWindow.getByLabel("Text editor")).toBeVisible();
 
