@@ -12,7 +12,9 @@
   }
 
   .plasmon-shell__search-panel > .plasmon-shell__results {
+    align-content: start;
     flex: 1 1 auto;
+    grid-auto-rows: max-content;
     min-height: 0;
     max-height: none;
     overflow: auto;
