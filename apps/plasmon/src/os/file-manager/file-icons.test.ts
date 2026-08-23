@@ -179,6 +179,19 @@ test("missing shortcut targets and missing app icons fail to deterministic share
     presentation: { kind: "application", src: null },
     shortcut: true,
   });
+
+  const failingElementFs = {
+    ...presentationFs([]),
+    resolvePath: async () => { throw new Error("transient Apps lookup failure"); },
+  } as unknown as FsService;
+  expect(await tryResolveFileResourcePresentation(failingElementFs, missingElement)).toEqual({
+    presentation: { kind: "application", src: null },
+    shortcut: true,
+  });
+  expect(await resolveFileResourcePresentation(failingElementFs, missingElement)).toEqual({
+    presentation: { kind: "application", src: null },
+    shortcut: true,
+  });
 });
 
 test("shortcut classification remains upstream of shared visual composition", () => {
