@@ -48,6 +48,11 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   await expect(markdownPreview.getByRole("heading", { name: "Plasmon Demo Guide", level: 1, exact: true })).toBeVisible();
   await expect(markdownPreview.getByText("Try these workflows", { exact: true })).toBeVisible();
 
+  await textWindow.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(textWindow).not.toBeVisible();
+  await markdownWindow.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(markdownWindow).not.toBeVisible();
+
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await rootShortcut.dblclick();
   const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
