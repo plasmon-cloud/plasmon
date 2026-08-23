@@ -13,6 +13,7 @@ import {
   fileVisualKind,
   resolveFileResourcePresentation,
   resourceIconPresentationForFile,
+  tryResolveFileResourcePresentation,
 } from "./file-icons.ts";
 
 function node(
@@ -161,7 +162,9 @@ test("missing shortcut targets and missing app icons fail to deterministic share
     undefined,
     shortcutMetadata({ kind: "node", nodeId: "node:gone" }),
   );
-  expect(await resolveFileResourcePresentation(presentationFs([]), missingNode)).toEqual({
+  const missingNodeFs = presentationFs([]);
+  expect(await tryResolveFileResourcePresentation(missingNodeFs, missingNode)).toBeNull();
+  expect(await resolveFileResourcePresentation(missingNodeFs, missingNode)).toEqual({
     presentation: { kind: "file-type", icon: "file" },
     shortcut: true,
   });
