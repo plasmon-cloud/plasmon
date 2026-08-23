@@ -1,4 +1,5 @@
 import type { NeutronBridge } from "../contracts/neutron.ts";
+import { admittedVanillaNeutronApi } from "./frontend-call-admission.ts";
 import { MockNeutronBridge, type MockNeutronBridgeOptions } from "./mock.ts";
 import { VanillaNeutronBridge, type VanillaNeutronBridgeOptions } from "./vanilla.ts";
 import type { NeutronBridgeMode } from "./types.ts";
@@ -19,7 +20,11 @@ function detectedMode(): NeutronBridgeMode {
  */
 export function createNeutronBridge(options: CreateNeutronBridgeOptions = {}): NeutronBridge {
   const mode = options.mode ?? detectedMode();
-  return mode === "preview"
-    ? new MockNeutronBridge(options.preview)
-    : new VanillaNeutronBridge(options.vanilla);
+  if (mode === "preview") return new MockNeutronBridge(options.preview);
+
+  const vanilla = options.vanilla ?? {};
+  return new VanillaNeutronBridge({
+    ...vanilla,
+    api: vanilla.api ?? admittedVanillaNeutronApi,
+  });
 }
