@@ -60,7 +60,8 @@ async function activateTaskbarWindow(plasmon: FrameLocator, label: string): Prom
   const taskbar = plasmon.getByRole("navigation", { name: "Taskbar" });
   const task = taskbar.getByRole("button", { name: new RegExp(`^${label};`) }).first();
   await expect(task).toBeVisible({ timeout: 20_000 });
-  await task.click();
+  if (await task.getAttribute("aria-pressed") !== "true") await task.click();
+  await expect(task).toHaveAttribute("aria-pressed", "true");
 }
 
 test("#429 — packaged hidden visibility composes global Settings with Explorer-local state", async ({ page }) => {
