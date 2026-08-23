@@ -46,13 +46,13 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #112 shared native-app chrome",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #112 shared native-app chrome",
       },
     ],

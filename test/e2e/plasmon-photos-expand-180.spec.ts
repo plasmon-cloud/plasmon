@@ -47,19 +47,19 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
       {
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
-        urlPathPrefix: "/chunks/",
+        urlPathPrefix: "/app/plasmon/chunks/",
         reason: "Kernel-owned installed-app iframe warning is outside #180; this gate exercises the real packaged Photos sandbox",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
-        urlPathPrefix: "/static/plasmon/icons/",
+        urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
       },
     ],
