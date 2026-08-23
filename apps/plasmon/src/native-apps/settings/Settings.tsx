@@ -98,12 +98,15 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                   checked={alwaysShowHiddenFiles}
                   disabled={!hiddenVisibilityReady}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    const store = dependencies.hiddenVisibility;
                     const next = event.currentTarget.checked;
+                    setAlwaysShowHiddenFiles(next);
                     setHiddenVisibilityError(null);
-                    void dependencies.hiddenVisibility?.setAlwaysShowHiddenFiles(next)
-                      .catch((cause: unknown) => setHiddenVisibilityError(
-                        cause instanceof Error ? cause.message : String(cause),
-                      ));
+                    void store?.setAlwaysShowHiddenFiles(next)
+                      .catch((cause: unknown) => {
+                        setAlwaysShowHiddenFiles(store.getSnapshot().alwaysShowHiddenFiles);
+                        setHiddenVisibilityError(cause instanceof Error ? cause.message : String(cause));
+                      });
                   }}
                 />
                 Always show hidden files
