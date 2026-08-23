@@ -122,19 +122,23 @@ async function tryShortcutTargetPresentation(
         return { kind: "file-type", icon: "file" };
     }
   } catch {
-    // The canonical public resolver below still supplies its deterministic
-    // fallback. Returning null here lets a mounted FileEntry distinguish
-    // unavailable asynchronous enrichment from authoritative generic artwork.
+    // Preserve the canonical resolver's existing target-specific fallbacks for
+    // native/Element shortcuts. Only a node-target lookup failure means richer
+    // asynchronous artwork is temporarily unavailable to a mounted FileEntry.
+    if (shortcut.target.kind === "native") {
+      return nativeShortcutPresentation(shortcut.target.handlerId, associations);
+    }
+    if (shortcut.target.kind === "element") return applicationResourcePresentation();
     return null;
   }
 }
 
 /**
- * Resolve presentation only when asynchronous shortcut enrichment is currently
- * available. A null result is not a generic-file presentation: callers that
- * already have a last-known presentation may keep it without causing packaged
- * image source churn. Genuinely new entries still initialize from the safe
- * synchronous fallback.
+ * Resolve presentation only when asynchronous node-target shortcut enrichment
+ * is currently available. A null result is not a generic-file presentation:
+ * callers that already have a last-known presentation may keep it without
+ * causing packaged image source churn. Genuinely new entries still initialize
+ * from the safe synchronous fallback.
  */
 export async function tryResolveFileResourcePresentation(
   fs: FsService,
@@ -156,7 +160,7 @@ export async function tryResolveFileResourcePresentation(
 /**
  * FileManager production seam from resource semantics to the shared Visual presentation vocabulary.
  * Shortcut targets are inspected only for presentation metadata; this never dispatches or executes them.
- * Direct callers retain deterministic fallback semantics when target enrichment is unavailable.
+ * Direct callers retain deterministic fallback semantics when node-target enrichment is unavailable.
  */
 export async function resolveFileResourcePresentation(
   fs: FsService,
