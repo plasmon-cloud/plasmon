@@ -1,4 +1,10 @@
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
+import {
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
+import type { FsService } from "../contracts/index.ts";
+import { useResourceThumbnail } from "../use-resource-thumbnail.ts";
 import { ShellIcon } from "./icon.tsx";
 import {
   searchApplicationIcon,
@@ -34,6 +40,47 @@ function focusRelative(event: ReactKeyboardEvent<HTMLElement>): void {
   items[next]?.focus();
 }
 
+function SearchResultRow({
+  fs,
+  result,
+  activationBusyId,
+  resolveShortcutPresentation,
+  onActivate,
+}: Pick<SearchSurfaceProps, "activationBusyId" | "resolveShortcutPresentation" | "onActivate"> & {
+  fs: FsService;
+  result: ShellSearchResult;
+}) {
+  const rowRef = useRef<HTMLButtonElement | null>(null);
+  const resourceNode = result.kind === "file" || result.kind === "directory"
+    ? result.node
+    : null;
+  const thumbnailUrl = useResourceThumbnail(fs, resourceNode, rowRef);
+  const shortcutPresentation = result.kind === "start-shortcut"
+    ? resolveShortcutPresentation(result.target)
+    : null;
+  const fallbackIcon = searchApplicationIcon(result) ?? shortcutPresentation?.icon;
+  const icon = thumbnailUrl
+    ? { kind: "thumbnail" as const, src: thumbnailUrl, mediaKind: "image" as const }
+    : fallbackIcon;
+
+  return <button
+    ref={rowRef}
+    type="button"
+    data-search-result
+    onClick={() => void onActivate(result)}
+    disabled={activationBusyId === result.id}
+  >
+    <ShellIcon
+      icon={icon}
+      label={result.title}
+      shortcut={shortcutPresentation !== null}
+      context="search"
+    />
+    <span><strong>{result.title}</strong><small>{result.subtitle}</small></span>
+    <em>{result.category}</em>
+  </button>;
+}
+
 export function SearchSurface({
   controller,
   searchMark,
@@ -41,7 +88,7 @@ export function SearchSurface({
   resolveShortcutPresentation,
   onActivate,
 }: SearchSurfaceProps) {
-  const { query, setQuery, tab, setTab, view } = controller;
+  const { fs, query, setQuery, tab, setTab, view } = controller;
 
   return <section
     className="plasmon-shell__panel plasmon-shell__search-panel"
@@ -75,23 +122,14 @@ export function SearchSurface({
       {view.error ? <p role="alert">{view.error}</p> : null}
       {view.warnings.map((warning) => <p key={warning}>{warning}</p>)}
       {view.truncated ? <p>Search reached its local safety/result limit; refine the query for more matches.</p> : null}
-      {view.results.map((result) => {
-        const presentation = result.kind === "start-shortcut"
-          ? resolveShortcutPresentation(result.target)
-          : null;
-        const icon = searchApplicationIcon(result) ?? presentation?.icon;
-        return <button
-          key={result.id}
-          type="button"
-          data-search-result
-          onClick={() => void onActivate(result)}
-          disabled={activationBusyId === result.id}
-        >
-          <ShellIcon icon={icon} label={result.title} shortcut={presentation !== null} context="search" />
-          <span><strong>{result.title}</strong><small>{result.subtitle}</small></span>
-          <em>{result.category}</em>
-        </button>;
-      })}
+      {view.results.map((result) => <SearchResultRow
+        key={result.id}
+        fs={fs}
+        result={result}
+        activationBusyId={activationBusyId}
+        resolveShortcutPresentation={resolveShortcutPresentation}
+        onActivate={onActivate}
+      />)}
       {view.empty ? <p>No results in this category.</p> : null}
     </div>
   </section>;
