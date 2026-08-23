@@ -7,6 +7,12 @@ const PLASMON_TILE_ID = "main";
 const WIDE_PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAECAIAAAA8r+mnAAAAEklEQVR4nGP8z4AdMOEQJ0MCAGSRAQfIidsoAAAAAElFTkSuQmCC", "base64");
 const TALL_PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAQAAAAICAIAAABRUclSAAAAFElEQVR4nGNkYPjPAANMDEiAuhwAaEMBD80tnoAAAAAASUVORK5CYII=", "base64");
 
+type BrowserFixture = {
+  name: string;
+  mimeType: string;
+  buffer: Buffer;
+};
+
 function installStrictBrowserHealth(page: Page): () => void {
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
@@ -24,6 +30,17 @@ async function finishElementAnimations(locator: Locator): Promise<void> {
 
 async function expectDesktopFixture(plasmon: ReturnType<Page["frameLocator"]>, name: string): Promise<void> {
   await expect(plasmon.getByRole("option").filter({ hasText: name })).toBeVisible();
+}
+
+async function importDesktopFixture(
+  plasmon: ReturnType<Page["frameLocator"]>,
+  importer: Locator,
+  fixture: BrowserFixture,
+): Promise<void> {
+  await importer.setInputFiles(fixture);
+  await expectDesktopFixture(plasmon, fixture.name);
+  await expect(plasmon.locator(".fm-operation-status")).toHaveCount(0);
+  await expectDesktopFixture(plasmon, fixture.name);
 }
 
 function expectNear(actual: number, expected: number, label: string): void {
@@ -51,14 +68,13 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   await expect(plasmon.getByRole("button", { name: "Search" })).toBeVisible({ timeout: 30_000 });
 
   const importer = plasmon.locator('input[type="file"][multiple]').first();
-  await importer.setInputFiles([
+  for (const fixture of [
     { name: "issue426-wide.png", mimeType: "image/png", buffer: WIDE_PNG },
     { name: "issue426-tall.png", mimeType: "image/png", buffer: TALL_PNG },
     { name: "issue426-note.txt", mimeType: "text/plain", buffer: Buffer.from("issue 426 document") },
-  ]);
-  await expectDesktopFixture(plasmon, "issue426-wide.png");
-  await expectDesktopFixture(plasmon, "issue426-tall.png");
-  await expectDesktopFixture(plasmon, "issue426-note.txt");
+  ] satisfies BrowserFixture[]) {
+    await importDesktopFixture(plasmon, importer, fixture);
+  }
 
   await plasmon.getByRole("button", { name: "Search" }).click();
   const panel = plasmon.getByRole("region", { name: "Search" });
@@ -100,12 +116,11 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
     }))).toEqual({ objectFit: "contain", naturalWidth, naturalHeight });
   }
 
-  await importer.setInputFiles({
+  await importDesktopFixture(plasmon, importer, {
     name: "issue426-unavailable.png",
     mimeType: "image/png",
     buffer: Buffer.alloc(0),
   });
-  await expectDesktopFixture(plasmon, "issue426-unavailable.png");
   await expect(mediaRows).toHaveCount(3);
   const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
   await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
