@@ -447,6 +447,7 @@ function verifyPartialRerunReconciliation() {
       });
     }
     writeResult(resultsRoot, 3, 10, { runAttempt: 2, outcome: "success", slot: "rerun" });
+
     const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
     if (summaryRun.status !== 0) {
       throw new Error(`partial rerun fixture must reconcile newest evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
