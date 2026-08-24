@@ -290,7 +290,7 @@ async function verifyCharacterizationSelection() {
   }
   assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
 
-  const quarantinedPath = "test/e2e/plasmon-golden-path-left-snap.spec.ts";
+  const quarantinedPath = "test/e2e/plasmon-drag-placement-371.spec.ts";
   const quarantined = await selectCharacterization({ changedFiles: [quarantinedPath] });
   if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
     throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
@@ -447,7 +447,6 @@ function verifyPartialRerunReconciliation() {
       });
     }
     writeResult(resultsRoot, 3, 10, { runAttempt: 2, outcome: "success", slot: "rerun" });
-
     const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
     if (summaryRun.status !== 0) {
       throw new Error(`partial rerun fixture must reconcile newest evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
