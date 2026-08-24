@@ -4,6 +4,12 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const DEMO_MANIFEST = "plasmon.ndeploy.json";
+
+test.skip(
+  process.env.NEUTRON_NDEPLOY_CONFIG !== DEMO_MANIFEST,
+  "#181 demo content acceptance requires the plasmon:demo deployment",
+);
 
 test("plasmon:demo exposes demo files and Desktop shortcuts through installed Plasmon", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
