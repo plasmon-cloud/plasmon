@@ -7,6 +7,7 @@ import {
   type LocalEnvironment,
 } from "./local_environment.ts";
 import { resolvePocketIcBinary } from "./pocketic_binary.ts";
+import { diagnosticPocketIcProcessHost } from "./pocketic_process_diagnostics.ts";
 import {
   readLivePocketIcSupervisorOwner,
   servePocketIc,
@@ -103,6 +104,7 @@ export async function startLocalServer(
     runtimeDirectory: paths.runtimeDirectory,
     stateDirectory: path.resolve(options.stateDirectory),
     binary,
+    processHost: diagnosticPocketIcProcessHost,
     ...(previous === undefined ? {} : { previousDescriptor: previous }),
     publishDescriptor: async (descriptor) => {
       await withSessionLock(options.sessionPath, async () => {
@@ -394,7 +396,7 @@ async function recordLocalFixtureId(
   canisterId: string,
 ): Promise<void> {
   await withSessionLock(sessionPath, async () => {
-    const journal = await readSession(sessionPath);
+    const journal = await readSession(options.sessionPath);
     if (journal === null) {
       throw new Error("PocketIC started without publishing its provision session");
     }
@@ -414,6 +416,6 @@ async function recordLocalFixtureId(
     ) {
       journal.configSha256 = configSha256;
     }
-    await writeSession(sessionPath, journal);
+    await writeSession(options.sessionPath, journal);
   });
 }
