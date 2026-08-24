@@ -14,7 +14,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 
 | Required-CI quarantine | Exact spec/test | Known signature | Repair / restoration Issue |
 | --- | --- | --- | --- |
-| Shared left-snap preview acceptance | `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap @issue-277` — tags `@r2-quarantine @issue-277` | shared #43 left-preview assertion failed first attempt and passed retry | #279 |
 | Explorer sibling lifetime | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — tags `@r2-quarantine @issue-251` | second Explorer creation stays at native-window count 1 instead of 2 | #251 |
 | Alt-Tab multi-instance setup | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — tags `@r2-quarantine @issue-63 @issue-308` | second-Explorer creation failure occurs before Alt-Tab semantics are reached | #308 |
 | Grouped Explorer chooser-title readiness | `test/e2e/plasmon-review-demo.spec.ts` — `#118 groups canonical Explorer processes and focuses individual members` — tags `@r2-quarantine @issue-303` | chooser opens after both Explorers exist, but `This Plasmon; Minimized` is not visible on first attempt; retry passes | #303 |
@@ -24,6 +23,14 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | #86 diagnostic-selection / New Folder rename readiness | `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — `#86 diagnostic text selects without stealing FileEntry drag` — tags `@r2-quarantine @issue-86 @issue-330` | unrelated PR #328 flake probe `31976275024`, attempt 1/10: after `New Folder`, expected rename textbox never appears within 20s; Specialist result 1 failed / 8 passed | #330 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-text-language-transition.spec.ts` — `#415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
+
+## #279 left-snap / snap-preview restoration proof
+
+Issue #279 restores `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap` — to required serialized Specialist execution. This is the restoration owner for the quarantine created under #277. The test retains `@issue-277` history and adds `@issue-279`; it no longer carries `@r2-quarantine` on the restoration head.
+
+The restored acceptance uses the shared real-titlebar pointer helper: Playwright first establishes titlebar actionability, the helper then derives a currently hit-testable non-control point, raw mouse input establishes the production `data-interacting="drag"` lifecycle, and release waits for that lifecycle to clear. Visible left preview, preview geometry, usable-workspace containment, and committed `data-window-snap="left"` remain required.
+
+Quarantine removal is provisional until #279's exact-head proof completes. The restoration head must remain retries=0 and pass the requested fresh 10+50 flake-probe evidence plus the Issue-required clean first-attempt Specialist evidence. Any owned red resets the restoration claim; no sleep, timeout inflation, retry-as-fix, Product hook, or geometry weakening is allowed.
 
 The #251 and #308 tests currently exhibit the same second-Explorer setup signature, but workflow v4.0 tracks their quarantine removal independently because each confirmed flaky test has its own dedicated repair Issue.
 
@@ -85,7 +92,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 `npm run test:e2e:plasmon:specialist` keeps every Specialist spec present and excludes only the explicitly tagged tests above:
 
 - `test/e2e/plasmon-golden-path.spec.ts` — required; #268 is not broad-skipped.
-- `test/e2e/plasmon-golden-path-left-snap.spec.ts` — retained; exact #277 test quarantined pending #279 restoration proof.
+- `test/e2e/plasmon-golden-path-left-snap.spec.ts` — required on #279's restoration head; exact left preview/snap geometry remains fail-closed.
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
 - `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; only the sibling-lifetime acceptance under #251 and the #63 Alt-Tab acceptance under #308 are quarantined.
 - `test/e2e/plasmon-monaco-packaged.spec.ts` — required.
@@ -107,6 +114,8 @@ Package/security validation, worker/asset validation, persistence, and fail-on-u
 ## Removal contract
 
 A quarantined acceptance returns to required CI through its linked repair/restoration Issue after deterministic root-cause repair, retries=0 validation, and that Issue's required clean first-attempt evidence. Removing one quarantine must not remove or weaken unrelated required coverage.
+
+For #279 specifically, the exact left-snap acceptance must remain unquarantined with retries=0 and complete the requested fresh 10+50 probe plus the Issue-required clean first-attempt Specialist proof while retaining the real titlebar pointer path, visible preview, preview geometry, workspace containment, and final left-snap state. Any owned red restores the hold.
 
 For #304 specifically, the dedicated saved-preview acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the required `blob:` preview contract before this quarantine is removed. Static artwork remains a failure for that acceptance.
 
