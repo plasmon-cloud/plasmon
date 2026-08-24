@@ -3,6 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
+// Disposable #180 current-r2 characterization marker; no test behavior changes.
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
