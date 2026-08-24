@@ -36,7 +36,7 @@ export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-monaco-workers-89.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',
   'test/e2e/plasmon-demo-game.spec.ts',
-  'test/e2e/plasmon-demo-content.spec.ts',
+  'test/e2e/plasmon-first-demo.spec.ts',
   'test/e2e/plasmon-markdown-commands-114.spec.ts',
 ]);
 
