@@ -3,7 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
-test("#66 active multi-selection drag preview is above windows and transparent to hit testing", async ({ page }) => {
+test("#66 active multi-selection drag preview is above windows and transparent to hit testing", { tag: ["@issue-66", "@issue-320"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
