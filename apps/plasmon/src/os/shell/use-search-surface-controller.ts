@@ -31,6 +31,7 @@ export interface SearchSurfaceControllerOptions {
 }
 
 export interface SearchSurfaceController {
+  fs: FsService;
   query: string;
   setQuery(value: string): void;
   tab: SearchTab;
@@ -114,5 +115,5 @@ export function useSearchSurfaceController(
     [batch, error, searching, tab],
   );
 
-  return { query, setQuery, tab, setTab, view };
+  return { fs: options.fs, query, setQuery, tab, setTab, view };
 }
