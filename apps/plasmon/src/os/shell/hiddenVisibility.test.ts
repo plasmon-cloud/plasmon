@@ -54,6 +54,26 @@ test("Search excludes hidden files, directories, and Properties projection by de
   }
 });
 
+test("Search does not descend into hidden directories until global visibility is enabled", async () => {
+  const env = createHeadlessPlasmonEnvironment();
+  await env.ready;
+  try {
+    const root = await env.node("/");
+    if (!root) throw new Error("Filesystem root is unavailable");
+    const hiddenDirectory = await env.services.fs.mkdir(root.id, ".Issue429Folder");
+    const nestedFixture = await env.services.fs.createFile(hiddenDirectory.id, "HiddenFixture.url", { mime: "text/plain" });
+
+    const hidden = await searchShell(env.services.fs, env.services.nativeApps.list(), [], "HiddenFixture");
+    expect(hidden.results.some((result) => "node" in result && result.node.id === nestedFixture.id)).toBe(false);
+
+    await env.services.hiddenVisibility.setAlwaysShowHiddenFiles(true);
+    const visible = await searchShell(env.services.fs, env.services.nativeApps.list(), [], "HiddenFixture");
+    expect(visible.results.some((result) => "node" in result && result.node.id === nestedFixture.id)).toBe(true);
+  } finally {
+    env.dispose();
+  }
+});
+
 test("Start filters hidden shortcut targets without deleting shortcut authority and restores them when global visibility is on", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
