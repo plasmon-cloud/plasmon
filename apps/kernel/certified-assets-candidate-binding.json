@@ -503,7 +503,7 @@
   },
   "runner": {
     "fingerprint_schema": "neutron.kernel.certified-assets-qualification-runner.v2",
-    "source_set_sha256": "7dc345637bd03bca4d8f1ed5c73e95845e8bae2db48f9d2b5f25903a4dc92648",
+    "source_set_sha256": "7d4368bd5e99503ddf075e947b1b6a47bc71d94e79299097d046afb9aacba3a1",
     "sources": [
       {
         "bytes": 19806,
@@ -746,9 +746,9 @@
         "sha256": "3396b43274ea52d75c70c9388976a1c038c369c8b98d4d15bccd56d1abe37dfe"
       },
       {
-        "bytes": 14336,
+        "bytes": 14467,
         "path": "packages/neutron-provision/src/local_server.ts",
-        "sha256": "066a71482e8dbe7b2826a03f82eb7369724053ed8ce86970cf479bab5f343b86"
+        "sha256": "d332831a21030299802446cefe17a8803d5caac7e479e9f2ad33e88f2a1e1daa"
       },
       {
         "bytes": 7824,
@@ -769,6 +769,11 @@
         "bytes": 11138,
         "path": "packages/neutron-provision/src/pocketic_binary.ts",
         "sha256": "0999f0e5e9ee9fc1c86507d946627ff48f19509765411a482b5a7bf6c0ee6ce0"
+      },
+      {
+        "bytes": 1773,
+        "path": "packages/neutron-provision/src/pocketic_process_diagnostics.ts",
+        "sha256": "582fa946734bd94809cfcb1d26f2c74ab23cdcdcc367947ad2b0c0b7f05f710a"
       },
       {
         "bytes": 36457,
