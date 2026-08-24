@@ -171,7 +171,7 @@ function usesPlaywright(path, graph, sources, memo = new Map(), visiting = new S
 function isRelevantPlaywrightTest(path, graph, sources, playwrightMemo) {
   if (!playwrightTestPattern.test(path)) return false;
   const classification = classifyPlasmonTest(path);
-  if (classification?.layer === "non-plasmon-browser") return false;
+  if (classification?.layer === "non-plasmon-browser" || classification?.layer === "browser-optional") return false;
   if (playwrightSpecPattern.test(path)) return true;
   return usesPlaywright(path, graph, sources, playwrightMemo);
 }
