@@ -124,6 +124,43 @@ async function runCommand(command: string[], cwd: string): Promise<void> {
   }
 }
 
+async function printLinuxRuntimeDiagnostics(reason: string): Promise<void> {
+  if (process.platform !== "linux") return;
+  console.error(`[plasmon-runtime-diagnostics] ${reason}`);
+
+  for (const filename of [
+    "/sys/fs/cgroup/memory.events",
+    "/sys/fs/cgroup/memory.current",
+    "/sys/fs/cgroup/memory.max",
+    "/proc/meminfo",
+  ]) {
+    try {
+      const value = await readFile(filename, "utf8");
+      console.error(`[plasmon-runtime-diagnostics] ${filename}\n${value.trim()}`);
+    } catch (error) {
+      console.error(`[plasmon-runtime-diagnostics] unable to read ${filename}: ${String(error)}`);
+    }
+  }
+
+  try {
+    const child = Bun.spawn(
+      ["ps", "-eo", "pid,ppid,pgid,sid,stat,lstart,cmd"],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    console.error(`[plasmon-runtime-diagnostics] process table (exit ${exitCode})\n${stdout.trim()}`);
+    if (stderr.trim()) {
+      console.error(`[plasmon-runtime-diagnostics] ps stderr\n${stderr.trim()}`);
+    }
+  } catch (error) {
+    console.error(`[plasmon-runtime-diagnostics] unable to capture process table: ${String(error)}`);
+  }
+}
+
 export async function verifyDeploymentArchives(
   artifacts: readonly DeploymentArtifact[],
   options: DeploymentEnvironmentOptions = {},
@@ -167,7 +204,15 @@ export async function provisionDeploymentEnvironment(
     await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   }
 
-  await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
+  try {
+    await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
+  } catch (error) {
+    await printLinuxRuntimeDiagnostics(`provision ${action} failed`);
+    throw error;
+  }
+  if (action === "status") {
+    await printLinuxRuntimeDiagnostics("post-suite provision status");
+  }
 }
 
 async function main(): Promise<void> {
