@@ -290,13 +290,31 @@ async function verifyCharacterizationSelection() {
   }
   assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
 
-  const quarantinedPath = "test/e2e/plasmon-drag-placement-371.spec.ts";
-  const quarantined = await selectCharacterization({ changedFiles: [quarantinedPath] });
-  if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
-    throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
-  }
-  if (!quarantined.excluded_quarantined_tests.includes(quarantinedPath)) {
-    throw new Error("quarantined changed acceptance must be reported as explicitly excluded");
+  const quarantineFixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-quarantine-selection-"));
+  const quarantinedPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";
+  try {
+    mkdirSync(join(quarantineFixtureRoot, "test/e2e"), { recursive: true });
+    writeFileSync(
+      join(quarantineFixtureRoot, quarantinedPath),
+      [
+        'import { test } from "@playwright/test";',
+        "",
+        'test("synthetic quarantine fixture", { tag: ["@r2-quarantine"] }, async () => {});',
+        "",
+      ].join("\n"),
+    );
+    const quarantined = await selectCharacterization({
+      changedFiles: [quarantinedPath],
+      root: quarantineFixtureRoot,
+    });
+    if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
+      throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
+    }
+    if (!quarantined.excluded_quarantined_tests.includes(quarantinedPath)) {
+      throw new Error("quarantined changed acceptance must be reported as explicitly excluded");
+    }
+  } finally {
+    rmSync(quarantineFixtureRoot, { recursive: true, force: true });
   }
 
   const helper = await selectCharacterization({
@@ -314,7 +332,7 @@ async function verifyCharacterizationSelection() {
     throw new Error("unresolved support must not broaden characterization to Specialist inventory");
   }
   if (!unresolvedFixture.unresolved_inputs.includes("test/e2e/permission-dialog.fixture.tsx")) {
-    throw new Error("unresolved fixture must remain visible in selector diagnostics");
+    throw new Error("unresolved fixture must remain visible in selector diagnostics without broadening");
   }
 
   const configOnly = await selectCharacterization({ changedFiles: ["playwright.config.ts"] });
@@ -447,7 +465,6 @@ function verifyPartialRerunReconciliation() {
       });
     }
     writeResult(resultsRoot, 3, 10, { runAttempt: 2, outcome: "success", slot: "rerun" });
-
     const summaryRun = runSummary(resultsRoot, diagnosticsRoot, changedFilesPath, jsonFilePath);
     if (summaryRun.status !== 0) {
       throw new Error(`partial rerun fixture must reconcile newest evidence: ${summaryRun.stderr}\n${summaryRun.stdout}`);
