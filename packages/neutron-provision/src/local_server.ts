@@ -396,7 +396,7 @@ async function recordLocalFixtureId(
   canisterId: string,
 ): Promise<void> {
   await withSessionLock(sessionPath, async () => {
-    const journal = await readSession(options.sessionPath);
+    const journal = await readSession(sessionPath);
     if (journal === null) {
       throw new Error("PocketIC started without publishing its provision session");
     }
@@ -416,6 +416,6 @@ async function recordLocalFixtureId(
     ) {
       journal.configSha256 = configSha256;
     }
-    await writeSession(options.sessionPath, journal);
+    await writeSession(sessionPath, journal);
   });
 }
