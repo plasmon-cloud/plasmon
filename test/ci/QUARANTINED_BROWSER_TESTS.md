@@ -17,7 +17,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | Explorer sibling lifetime | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — tags `@r2-quarantine @issue-251` | second Explorer creation stays at native-window count 1 instead of 2 | #251 |
 | Alt-Tab multi-instance setup | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — tags `@r2-quarantine @issue-63 @issue-308` | second-Explorer creation failure occurs before Alt-Tab semantics are reached | #308 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
-| #66 drag-preview / directory-drop completion | `test/e2e/plasmon-drag-preview-66.spec.ts` — `#66 active multi-selection drag preview is above windows and transparent to hit testing` — tags `@r2-quarantine @issue-66 @issue-320` | independent retry-free probes `31926388328` attempt 9/10 and `31950894639` attempt 8/10: final Explorer directory-drop source expected count 0, received 1 | #320 |
 | #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
 | #86 diagnostic-selection / New Folder rename readiness | `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — `#86 diagnostic text selects without stealing FileEntry drag` — tags `@r2-quarantine @issue-86 @issue-330` | unrelated PR #328 flake probe `31976275024`, attempt 1/10: after `New Folder`, expected rename textbox never appears within 20s; Specialist result 1 failed / 8 passed | #330 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
@@ -35,7 +34,13 @@ The #251 and #308 tests currently exhibit the same second-Explorer setup signatu
 
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
-The #320 quarantine is limited to the single #66 acceptance. The spec stays in Specialist inventory; only the tagged test is filtered. The two observed failures occur after the preview stacking/hit-testing checks, at the final canonical Explorer directory-drop completion assertion. Product Issue #66 remains the canonical behavior owner while #320 owns CI stability and restoration.
+## #320 directory-drop completion restoration
+
+Issue #320 restores the exact `test/e2e/plasmon-drag-preview-66.spec.ts` acceptance to required Specialist execution with its real pointer path, preview stacking/hit-testing checks, and final canonical Explorer source-removal assertion unchanged.
+
+The preserved retry-free failures reached the directory-drop operation/refresh pipeline and then surfaced `Too many concurrent frontend tool calls`. The shared #317 repair is now integrated on `release/0.1.0-r2` via PR #458 and bounds Plasmon foreground frontend-call admission at Kernel's per-caller concurrency cap, so excess move/refresh work queues rather than allowing a ninth frontend call to be rejected. #320 carries no duplicate transport fix and changes only restoration bookkeeping.
+
+#320 remains the restoration owner until its exact unquarantined retries=0 proof completes. Any recurrence must be traced as a new event-timeline failure rather than hidden with waits or retries.
 
 ## #303 grouped Explorer chooser-title restoration
 
@@ -83,7 +88,7 @@ Issue #305 owns one shared Chromium diagnostic observed after the #66 product in
 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
 ```
 
-`test/e2e/plasmon-browser-health.ts` classifies **only that full `console.warn` message** as an r2 known diagnostic. It does not use a substring match and does not allow other console warnings/errors, page errors, first-party request failures, or HTTP failures. The #305 diagnostic rule is separate from the #320 test-level quarantine.
+`test/e2e/plasmon-browser-health.ts` classifies **only that full `console.warn` message** as an r2 known diagnostic. It does not use a substring match and does not allow other console warnings/errors, page errors, first-party request failures, or HTTP failures. The #305 diagnostic rule is separate from the #320 restoration test.
 
 ## Known #295 signatures deliberately not silenced by test skip
 
@@ -105,7 +110,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-review-demo.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required; #245 restores the production readiness/canvas/core-start proof while retaining loader/local-asset/network-safety coverage. The PR #417 one-off fixture-selection observation is not quarantined without independent recurrence.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
-- `test/e2e/plasmon-drag-preview-66.spec.ts` — retained; its single #66/#320 acceptance is quarantined pending restoration proof.
+- `test/e2e/plasmon-drag-preview-66.spec.ts` — required; #320 restores the exact #66 acceptance with its canonical final directory-drop assertion unchanged.
 - `test/e2e/plasmon-drag-feedback-360.spec.ts` — required; #420 restores the open-folder move, target-transition/invalid/cancel/unmount, and grouped multi-selection acceptances while the Desktop ghost/release-continuity acceptance remains continuously required.
 - `test/e2e/plasmon-drag-placement-371.spec.ts` — retained; its single #371/#406 placement acceptance is quarantined pending deterministic repair and restoration proof.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — retained; its single #86/#330 acceptance is quarantined pending restoration proof.
