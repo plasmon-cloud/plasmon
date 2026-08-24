@@ -1,0 +1,5 @@
+Disposable CI transport only.
+
+Base release SHA: 545f66121420d4b147d71a8b063ca17516b27785
+Target acceptance: test/e2e/plasmon-photos-expand-180.spec.ts
+Do not merge.
