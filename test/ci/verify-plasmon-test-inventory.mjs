@@ -13,7 +13,6 @@ import {
 
 const args = new Set(process.argv.slice(2));
 const activeQuarantines = Object.freeze({
-  'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 1, issues: ['@issue-308'] },
   'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
   'test/e2e/plasmon-drag-placement-371.spec.ts': { count: 1, issues: ['@issue-371', '@issue-406'] },
   'test/e2e/plasmon-monaco-workers-89.spec.ts': { count: 1, issues: ['@issue-89', '@issue-391'] },
