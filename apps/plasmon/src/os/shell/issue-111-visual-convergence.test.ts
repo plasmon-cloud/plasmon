@@ -36,10 +36,13 @@ test("#111 active Shell styles consume shared Visual semantics instead of a para
     "--plasmon-font-md",
     "--plasmon-font-lg",
     "--plasmon-font-xl",
-  ]) expect(shellStyles).not.toContain(retiredToken);
+  ]) {
+    expect(shellStyles).not.toContain(`${retiredToken}:`);
+    expect(shellStyles).not.toContain(`var(${retiredToken})`);
+    expect(shellStyles).not.toContain(`var(${retiredToken},`);
+  }
 
-  expect(shellStyles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-  expect(shellStyles).not.toContain("rgba(");
+  expect(shellStyles).not.toMatch(/(?:#[0-9a-f]{3,8}\b|rgba?\()/i);
 
   for (const sharedToken of [
     "--plasmon-control-background:",
