@@ -20,6 +20,24 @@ function geometryMatches(
     && Math.abs(actual.height - expected.height) <= GEOMETRY_TOLERANCE_PX;
 }
 
+async function waitForWindowMotionToSettle(window: Locator): Promise<void> {
+  await window.evaluate(async (element) => {
+    if (!(element instanceof HTMLElement)) throw new Error("Native window element is unavailable");
+
+    const activeAnimations = element.getAnimations().filter(
+      (animation) => animation.playState === "pending" || animation.playState === "running",
+    );
+    await Promise.all(activeAnimations.map(async (animation) => {
+      try {
+        await animation.finished;
+      } catch {
+        // A superseded animation is not a readiness failure; the next geometry
+        // read forces layout from the element's current canonical state.
+      }
+    }));
+  });
+}
+
 async function hasMaximizedManagerGeometry(window: Locator): Promise<boolean> {
   return window.evaluate((element) => {
     if (!(element instanceof HTMLElement)) return false;
@@ -158,6 +176,11 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     expect(await photos.evaluate(() => document.fullscreenElement)).toBeNull();
     await expect(photosWindow).not.toHaveClass(/plasmon-window--maximized/);
 
+    // Visibility can become true while the native window's opening transform
+    // animation is still running. Capture the restore baseline only after that
+    // real browser animation lifecycle settles, rather than snapshotting a
+    // transient transformed box.
+    await waitForWindowMotionToSettle(photosWindow);
     const floatingBefore = await photosWindow.boundingBox();
     if (!floatingBefore) throw new Error("Photos has no packaged window geometry");
 
