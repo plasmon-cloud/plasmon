@@ -153,6 +153,11 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
     await expect(propertiesResults).toHaveCount(1, { timeout: 20_000 });
     await globalSearch.input.press("Escape");
 
+    await plasmon.getByRole("button", { name: "Start", exact: true }).click();
+    await expect(start).toBeVisible();
+    await expect(start.getByText("Properties", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
+
     // Turning the global policy back off hides Search/Start immediately while
     // restoring Explorer's pre-existing local ON state as editable.
     await activateTaskbarWindow(plasmon, "Settings");
