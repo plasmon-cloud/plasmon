@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { tmpdir } from "node:os";
 import {
   defaultRepoRoot,
   docsMapRelativePath,
+  generatedBoundaryBlock,
   loadDocumentationBoundaryRegistry,
   validateDocumentationBoundaries,
   validateDocumentationMap,
@@ -31,7 +33,7 @@ test("documentation contract failures include the structural repair command", ()
   expect(`${structural}\n  inspect: ${STRUCTURE_COMMAND}`).toContain(STRUCTURE_COMMAND);
 });
 
-test("documentation automation does not require whole-tree review fingerprints", () => {
+test("implementation changes do not require documentation acknowledgement metadata", () => {
   const packageJson = JSON.parse(readFileSync(resolve(defaultRepoRoot, "apps/plasmon/package.json"), "utf8"));
   const docsMap = readFileSync(resolve(defaultRepoRoot, docsMapRelativePath), "utf8");
 
@@ -40,4 +42,38 @@ test("documentation automation does not require whole-tree review fingerprints",
   expect(existsSync(resolve(defaultRepoRoot, "apps/plasmon/docs/documentation-review.mjs"))).toBe(false);
   expect(docsMap).not.toContain("DOCUMENTATION_REVIEW.md");
   expect(docsMap).not.toContain("docs:review");
+
+  const root = mkdtempSync(resolve(tmpdir(), "plasmon-doc-contract-"));
+  const appRoot = resolve(root, "apps/plasmon");
+  const implementationPath = resolve(appRoot, "src/implementation.ts");
+  const registry = {
+    schema: "plasmon-documentation-boundaries-v1",
+    root: "apps/plasmon",
+    discoveryRoots: [],
+    boundaries: [{
+      path: "apps/plasmon",
+      kind: "application-root",
+      readme: "local",
+      agents: { mode: "local" },
+    }],
+  };
+
+  try {
+    mkdirSync(resolve(appRoot, "docs"), { recursive: true });
+    mkdirSync(resolve(appRoot, "src"), { recursive: true });
+    writeFileSync(resolve(appRoot, "README.md"), "# Fixture application\n");
+    writeFileSync(resolve(appRoot, "AGENTS.md"), "# Fixture rules\n");
+    writeFileSync(implementationPath, "export const implementation = 1;\n");
+    writeFileSync(
+      resolve(appRoot, "docs/documentation-boundaries.json"),
+      `${JSON.stringify(registry, null, 2)}\n`,
+    );
+    writeFileSync(resolve(appRoot, "docs/README.md"), `# Fixture map\n\n${generatedBoundaryBlock(registry)}\n`);
+
+    expect(documentationContractErrors(root)).toEqual([]);
+    writeFileSync(implementationPath, "export const implementation = 2;\n");
+    expect(documentationContractErrors(root)).toEqual([]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
