@@ -39,7 +39,7 @@ test("compact top-level headings are normalized only for parser input", () => {
   const prepared = prepareMarkdownSourceForParsing(source);
 
   expect(source.startsWith("#hello")).toBe(true);
-  expect(prepared).toStartWith("# hello");
+  expect(prepared.startsWith("# hello")).toBe(true);
   expect(prepared).toContain("Paragraph with inline #tag.");
   expect(prepared).toContain("    #indented");
   expect(prepared).toContain("```md\n#fenced\n```");
