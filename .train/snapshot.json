@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T04:17:45.262272Z",
+  "captured_at": "2026-08-25T15:16:34.790665Z",
   "counts": {
-    "issues": 139,
+    "issues": 133,
     "open_ci_prs": 3,
-    "open_issues": 39,
-    "open_product_prs": 6
+    "open_issues": 33,
+    "open_product_prs": 5
   },
-  "generation": "d76380da4a856518786b74dff25d6d83ef3c729f",
+  "generation": "1077f627f0cff294bdddb8d40cd33031d0b54838",
   "issues": [
     {
       "area": "Repo",
@@ -248,27 +248,6 @@
       "unlocks": 1,
       "updated_at": "2026-08-17T23:29:46Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/64"
-    },
-    {
-      "area": "File Manager",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "Medium",
-      "effort": "Medium",
-      "labels": [],
-      "number": 65,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": true,
-      "title": "Add visible progress state for long-running FileManager import and paste operations",
-      "type": "Feature",
-      "unlocks": 1,
-      "updated_at": "2026-08-25T02:50:58Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/65"
     },
     {
       "area": "Desktop",
@@ -641,27 +620,6 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/93"
     },
     {
-      "area": "Visual",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "Medium",
-      "effort": "Medium",
-      "labels": [],
-      "number": 94,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": true,
-      "title": "Generate bounded FileManager thumbnails for supported video resources",
-      "type": "Feature",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T02:50:58Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/94"
-    },
-    {
       "area": "File Manager",
       "assignees": [
         "3E4B54"
@@ -799,27 +757,6 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/110"
     },
     {
-      "area": "Visual",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "High",
-      "effort": "Medium",
-      "labels": [],
-      "number": 111,
-      "open": true,
-      "open_pr": 483,
-      "priority": null,
-      "product": true,
-      "title": "Converge Shell surfaces on the shared Plasmon visual system",
-      "type": "Task",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T00:49:39Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/111"
-    },
-    {
       "area": "Native Apps",
       "assignees": [
         "3E4B54"
@@ -899,48 +836,6 @@
       "unlocks": 0,
       "updated_at": "2026-08-19T23:57:05Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/114"
-    },
-    {
-      "area": "Contracts",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "High",
-      "effort": "High",
-      "labels": [],
-      "number": 115,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": true,
-      "title": "Converge existing filesystem user actions on a thin shared resource-command layer",
-      "type": "Task",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T02:50:58Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/115"
-    },
-    {
-      "area": "Windowing",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "Medium",
-      "effort": "Medium",
-      "labels": [],
-      "number": 119,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": true,
-      "title": "Define native dialog and transient-window ownership semantics",
-      "type": "Task",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T00:50:11Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/119"
     },
     {
       "area": "Testing",
@@ -2229,30 +2124,6 @@
       "unlocks": 0,
       "updated_at": "2026-08-25T00:51:52Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/303"
-    },
-    {
-      "area": "Testing",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": true,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "Medium",
-      "effort": "Medium",
-      "labels": [
-        "ci:flaky",
-        "release-blocker"
-      ],
-      "number": 304,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": false,
-      "title": "[r2 CI] Quarantine saved-preview blob-readiness flake",
-      "type": "Task",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T00:52:38Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/304"
     },
     {
       "area": "Integration",
@@ -4214,216 +4085,6 @@
       "base": "release/0.1.0-r2",
       "base_valid": true,
       "blocking_review": {
-        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #483 / Issue #111\nExact head: `33a2e546e747bc88662d3f853f252f13a34d3369`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T03:40:16Z\nReview ID: `pr-483-33a2e546e747-1787629068407-b1c4eecf`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > The bundled Issue #111 body, acceptance criteria, related-issue constraints, current PR metadata/diff, prior SURFACE review, and exact-head CI evidence were inspected.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #111 has no attached screenshots or videos; its linked evidence is the packaged Playwright/CI evidence and the required bounded manual visual review, and the available packaged evidence was inspected.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > The Issue's relationships to #72, #90, #96, and #109, Shell README authority guidance, shared Visual primitives/assets, and surrounding Shell components were inspected.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The desired behavior is convergence of Shell presentation onto existing shared tokens/assets/primitives while preserving Shell interaction and semantic authorities.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The review identified the explicit no-redesign/no-authority-move boundaries, preserved Process/Windowing/Filesystem/Neutron ownership, and noted the separate manual visual acceptance requirement.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > The ten-file delta is focused on Shell styles/assets, Visual token vocabulary, presentation tests, and the two required README fingerprints; it does not redesign Shell models or lifecycle semantics.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > The PR targets release/0.1.0-r2; applicable release/reviewer and Plasmon testing guidance were consulted, and no package bytes, manifest, or persistent schema changed.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > The declared base is release/0.1.0-r2 and the exact head is 33a2e546e747bc88662d3f853f252f13a34d3369; no stacked-parent dependency is needed for this isolated visual delta.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The review counted the current PR's shared-token/style/asset changes and existing Visual/Shell authority only; related Issues were treated as constraints, not as unmerged implementation credit.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The changed styles and assembled test exercise normal Shell surfaces, Midnight theme, Start/Search opening, native Settings, tray/calendar/context-menu states, and existing focus/hover paths; no lifecycle code was changed.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > The React changes are presentational SystemIcon substitutions, and the packaged test disposes browser-health state in finally; no new async authority, timer, listener, or resource ownership is introduced.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > Fast Bun, Kernel, packaged smoke, packaged Playwright, persistence, and flake evidence are green, and the diff leaves Shell orchestration and Process/Windowing calls untouched.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > Shell continues to derive application/resource presentation through ShellIcon and shared Visual ResourceIcon primitives; Visual tokens/assets remain the shared presentation layer and Shell keeps interaction state.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > The inspected Shell README and surrounding code preserve filesystem/resource identity, Neutron-owned tray semantics, Process/Windowing task identity, and Shell-only transient coordination.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > The PR removes Shell-local token aliases and Start/Search SVG helpers rather than adding a parallel state or icon authority; TrayMark remains explicitly local because no shared tray asset exists.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [ ] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > :x: The new source audit honestly protects removal of retired declarations and SVG helpers, but the acceptance's selected/focused/framed visual behavior is not asserted as rendered behavior; the packaged test only checks computed backgrounds.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > The static ownership audit is deterministic for structural convergence and the packaged test is the appropriate layer for theme inheritance and installed assets, but those tests do not cover the missing manual visual criterion.\n- [ ] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > :x: The semantic-background helper compares an element's background to a probe using the same custom property; it does not bound geometry, focus/selection styling, icon framing, or major visual regressions, so it cannot stand in for the Issue's visual proof.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > The Issue correctly requires source/component tests plus packaged/manual review; the PR supplies both deterministic source checks and a packaged browser test, while the manual portion remains unresolved.\n- [ ] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > :x: The exact-head bundle proves packaged Playwright execution and browser persistence, but no human/manual visual review evidence is present in the Issue or PR comments despite acceptance criterion 6 explicitly requiring it.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > Exact run/job results were inspected separately from queue status; all required checks and flake summaries pass, but that execution evidence is not being treated as manual visual acceptance.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > No durable application state, filesystem schema, migration, package contract, or runtime identity changes; theme variables are presentation-only custom properties.\n- [x] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > The Shell and integration README markers are refreshed, and the existing Shell README documents shared ResourceIcon ownership and retained Process/Windowing/Filesystem/Neutron boundaries.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The PR contains only the intended ten Shell/integration/test/e2e/docs files, no dependencies or generated package artifacts, and no unrelated product cleanup.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head/base were recorded from the bundle and refreshed immediately before submission; queue still reports PR #483 COMPLETE at 33a2e546e747bc88662d3f853f252f13a34d3369.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > The reviewer only inspected code/evidence and used the review tools; it did not modify product code, merge, force-push, or alter another agent's work.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > The disposition is blocked for missing visual/selection acceptance evidence and incomplete behavioral coverage, not for a CI failure; green CI is recorded as supporting execution evidence only.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] Shell no longer maintains duplicate visual tokens/primitives where the shared Visual system already provides them.\n  > Shell-local retired palette declarations and Start/Search SVG marks were removed, while shared token and SystemIcon consumers are present and the remaining TrayMark is explicitly justified.\n    - [x] Production code represents the behavior.\n      > shell.scss, alt-tab.scss, and taskbarGroups.scss consume shared Visual variables, and ShellSurfaces/StartSurface use shared SystemIcon assets instead of local Start/Search SVG implementations.\n    - [x] An executable test covers it.\n      > The deterministic audit checks retired token declarations/fallbacks across all active Shell styles and checks Start/Search ownership; Fast Bun passed it.\n    - [x] The test observes behavior rather than source shape.\n      > Source assertions are an honest layer for the negative structural contract that duplicate declarations/helpers must not exist, though they do not prove rendered visual quality.\n\n- [ ] Start, Search, taskbar, tray, calendar/settings, and context-menu surfaces use coherent shared focus/selection/framing conventions.\n  > :x: The implementation shares focus outlines, control hover, borders, radii, and panel framing, but selected states still use generic control-hover and the available evidence does not prove coherent selection/framing across all listed surfaces.\n    - [ ] Production code represents the behavior.\n      > :x: Alt-Tab's `.is-selected` state uses `var(--plasmon-control-hover)` and no `--plasmon-selection`/`--plasmon-selection-border`, even though those shared semantic tokens exist; the Shell tab state likewise uses only an accent underline.\n    - [ ] An executable test covers it.\n      > :x: The source test checks that token names occur and the packaged test checks only surface backgrounds; neither tests selected/focused/framed states or actual visual consistency across the listed surfaces.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The new packaged assertion validates background-variable equality, not selection borders, focus rings, icon framing, layout, contrast, or visual regression, so it cannot establish this full presentation criterion.\n\n- [x] Canonical app/resource identity is preserved across Shell surfaces rather than replaced by Shell-only glyph maps.\n  > Start/Search system marks now use shared SystemIcon and task/resource entries continue through ShellIcon/ResourceIcon, preserving canonical metadata-driven presentation.\n    - [x] Production code represents the behavior.\n      > ShellIcon remains a rendering adapter over applicationResourcePresentation/ResourceIcon, while taskbar and Start pass authoritative entry/node metadata and only the generic Start/Search marks change.\n    - [x] An executable test covers it.\n      > The new audit verifies shared Start/Search assets and existing Fast Bun/packaged journeys exercise Settings search and taskbar/resource presentation.\n    - [x] The test observes behavior rather than source shape.\n      > The changed component code delegates identity-bearing icons through shared presentation adapters; the source audit specifically guards removal of duplicate Shell SVG helpers.\n\n- [x] Shell behavior/authority boundaries are unchanged by visual convergence.\n  > The PR changes CSS and two icon helper call sites without moving Shell state or semantic operations into Visual.\n    - [x] Production code represents the behavior.\n      > ShellSurfaces retains canonical callbacks and Process/Windowing/Neutron/filesystem-derived props; Visual receives only presentation inputs.\n    - [x] An executable test covers it.\n      > The packaged test opens Start/Search/Settings/tray/calendar/context menu and the green Fast/packaged suites cover existing behavior paths.\n    - [x] The test observes behavior rather than source shape.\n      > The inspected diff contains no model/controller/store/authority replacement and leaves Shell coordination and canonical task actions intact.\n\n- [x] Focused tests and the Plasmon fast suite pass.\n  > Fast Bun and all required exact-head CI gates passed, including the new deterministic and packaged checks.\n    - [x] Production code represents the behavior.\n      > The production style/component changes compile and are exercised by the passing Fast Bun and packaged lanes.\n    - [x] An executable test covers it.\n      > The exact-head Fast Bun check passed with the new issue-111 test and existing Shell test inventory.\n    - [x] The test observes behavior rather than source shape.\n      > The tests use deterministic source checks plus a real packaged browser journey; CI reports all required gates green.\n\n- [ ] A packaged/manual visual review confirms no major regression and improved consistency.\n  > :x: The required packaged/manual visual review has not been recorded, and the automated test only proves semantic background inheritance rather than no major visual regression and improved consistency.\n    - [x] Production code represents the behavior.\n      > Production styles and shared token consumers represent the intended visual convergence, including Midnight inheritance and shared framing variables.\n    - [ ] An executable test covers it.\n      > :x: The packaged Playwright test is executable evidence, but no human/manual visual review evidence is present for the explicitly manual acceptance criterion.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The automated test observes background colors and semantic DOM navigation only; it does not observe actual appearance, geometry, icon framing, focus/selection contrast, or visual regressions.\n\n- [x] Shell/Visual README/AGENTS remain accurate.\n  > The existing Shell and integration README content remains aligned with the changed ownership: shared ResourceIcon/Visual presentation and unchanged semantic authorities.\n    - [x] Production code represents the behavior.\n      > The production code follows the documented Shell boundary and the changed README fingerprints are current at the exact head.\n    - [x] An executable test covers it.\n      > The passing documentation/fingerprint checks and exact-head CI establish that the documented Shell/integration boundaries remain current.\n    - [x] The test observes behavior rather than source shape.\n      > The review inspected the README content against the changed code; the marker updates are not being treated as semantic documentation proof.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
-        "commit_id": "33a2e546e747bc88662d3f853f252f13a34d3369",
-        "id": 5014733411,
-        "state": "CHANGES_REQUESTED",
-        "user": "plasmon-code-reviewer[bot]"
-      },
-      "checks": [
-        {
-          "conclusion": "success",
-          "name": "Flake characterization summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97674881324"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97674881305"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 36-40/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846640"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846293"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 8-8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846269"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 26-30/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846243"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 41-45/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846238"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 16-20/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846231"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 1-5/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846216"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 31-35/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846214"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 46-50/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846202"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 11-15/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846168"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 21-25/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846162"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846158"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 7-7/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846156"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 3-3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846154"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 4-4/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846153"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846149"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:27f0e1a4c3f1 iterations 6-10/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846142"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846138"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846129"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 2-2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672846124"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine flake probe applicability and configuration",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812100/job/97672804832"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged Playwright specialist acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812077/job/97672783210"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged browser persistence",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812061/job/97672780346"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812065/job/97672780213"
-        },
-        {
-          "conclusion": "success",
-          "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812050/job/97672771994"
-        },
-        {
-          "conclusion": "success",
-          "name": "Fast Bun tests",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812173/job/97672739606"
-        },
-        {
-          "conclusion": "skipped",
-          "name": "Dispatch targeted 50-iteration flake probe",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812041/job/97672733371"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine Kernel CI applicability",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32804812050/job/97672732141"
-        }
-      ],
-      "ci": "green",
-      "ci_owned": false,
-      "conflict": false,
-      "draft": false,
-      "head": "33a2e546e747bc88662d3f853f252f13a34d3369",
-      "head_branch": "train/product/issue-111",
-      "issue": 111,
-      "mergeable": true,
-      "mergeable_state": "blocked",
-      "number": 483,
-      "owner": "default",
-      "product": true,
-      "review": "changes_requested",
-      "state": "open",
-      "title": "#111 Converge Shell on shared Visual tokens",
-      "updated_at": "2026-08-25T03:40:22Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/pull/483"
-    },
-    {
-      "base": "release/0.1.0-r2",
-      "base_valid": true,
-      "blocking_review": {
         "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #484 / Issue #367\nExact head: `275bd02c64fb404453e3f48fd130522d9a69277f`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T03:44:29Z\nReview ID: `pr-484-275bd02c64fb-1787629367942-3feb2228`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > The bundled Issue #367 body, acceptance checklist, related #182/#296/#169/#345 context, current PR delta, prior SURFACE review, and exact-head CI evidence were inspected.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #367 has no screenshot, video, or comparison attachments; its linked evidence is the deterministic source/test contract and CI, all of which were inspected.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > The prior #182 tests, adjacent default-seed coverage, production bootstrap/reconciliation, PersistentFsService, and MemoryFsRepository were inspected to establish existing accepted behavior.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The desired behavior is that a user-created root directory retains NodeId through rename, is removed through canonical FsService, and is not resurrected when the same repository is reloaded and bootstrapped.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The Issue's managed-default distinction, no-Downloads-migration scope, no-browser requirement, and single canonical filesystem authority were identified and preserved.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > The two-file delta adds only the requested deterministic regression and the filesystem boundary marker; no product implementation, Explorer behavior, or second authority is introduced.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > The PR targets release/0.1.0-r2; applicable release/reviewer and Plasmon fast-lane guidance were consulted, and this test/docs-only change has no package or version obligation.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > The declared base is release/0.1.0-r2 and the exact head is 275bd02c64fb404453e3f48fd130522d9a69277f; no stacked-parent dependency is required.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The review counted the new production-module regression as the PR's contribution and used existing #182 Downloads-preservation/default-seed tests only as surrounding behavior evidence.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The new test covers create, rename, stable identity, immediate removal, reload, bootstrap, and old/new path absence; production inspection confirms remove commits state and bootstrap is idempotent.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > PersistentFsService readiness and mutation serialization are awaited by the test through public async APIs; no new timers, listeners, cancellation, or resource teardown are introduced.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > Fast Bun, packaged smoke, packaged browser/persistence, and flake evidence are green, and the PR does not alter unrelated production behavior.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > The test uses the canonical PersistentFsService and bootstrapFilesystem directly over MemoryFsRepository, preserving filesystem authority rather than creating a fixture-specific persistence model.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > The test explicitly checks stable NodeId across rename and reloads the same repository; no Desktop, Shell, Process, Windowing, or Neutron authority is involved.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > The change adds no new service, repository, ledger, or reconciliation implementation; it exercises the existing canonical seams only.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > Assertions observe actual FsService paths, NodeIds, and repository-backed recomposition state rather than source strings or constants.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > A deterministic Bun test with MemoryFsRepository is the lowest honest layer for this persistence/recomposition contract, and it includes rename/removal boundary assertions.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > The test uses a real production repository/service/bootstrap sequence with no sleeps, retries, mocks of service logic, or relaxed timing bounds.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > Issue #367 explicitly requires deterministic Bun filesystem/bootstrap evidence and explicitly excludes browser/manual acceptance.\n- [x] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > No packaged/browser/manual evidence is required; the exact-head Fast and additional CI results were inspected as execution evidence.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > The bundle provides exact Fast Bun and CI run/job results, and the review treats those as execution evidence rather than as a substitute for checking the test contract.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > The test directly exercises durable repository state across PersistentFsService reconstruction; no schema, migration, or serialized contract is changed.\n- [x] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > The filesystem README remains accurate about stable NodeId, persistence, and bootstrap/reconciliation preserving user state; only its existing review marker is refreshed.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The PR is limited to one regression test and one documentation marker, with no dependencies, generated artifacts, package changes, or unrelated cleanup.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head/base were recorded from the bundle and refreshed immediately before submission; queue still reports PR #484 COMPLETE at 275bd02c64fb404453e3f48fd130522d9a69277f.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > The reviewer only inspected code/evidence and used review tools; it did not modify product code, merge, force-push, or alter another agent's work.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > The disposition is blocked for a concrete acceptance-coverage gap, not CI; green CI is recorded separately as execution evidence.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] A user-created root directory can be renamed and intentionally removed through the canonical filesystem service.\n  > The test creates a user root directory, renames it while asserting the same NodeId, removes it through PersistentFsService, and verifies both paths disappear.\n    - [x] Production code represents the behavior.\n      > PersistentFsService.rename preserves the node object identity and remove uses the canonical FsService mutation path; the test calls those production APIs directly.\n    - [x] An executable test covers it.\n      > issue-182.test.ts lines 42-58 execute mkdir, rename, stable-id, path absence, and remove assertions.\n    - [x] The test observes behavior rather than source shape.\n      > The assertions inspect returned FsNodes and resolvePath results from the real service, not implementation source shape.\n\n- [x] Recomposition/reload from the same repository does not recreate either the old or renamed path.\n  > A second PersistentFsService is constructed over the same MemoryFsRepository, bootstrapFilesystem runs again, and neither the original nor renamed path is found.\n    - [x] Production code represents the behavior.\n      > MemoryFsRepository.load returns the committed state and PersistentFsService.initialize restores it before bootstrap; no new production code is needed for this regression.\n    - [x] An executable test covers it.\n      > The test creates recomposed, calls bootstrapFilesystem, and asserts both /My Projects and /Renamed Projects are null after reload.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes committed repository-backed path resolution after a new service instance and does not rely on a prose or audit fixture.\n\n- [ ] The test distinguishes user deletion from managed default reconciliation and does not rely on Issue prose or audit fixtures.\n  > :x: The test proves arbitrary user deletion is not resurrected and that fresh /Downloads is omitted, but it does not demonstrate managed reconciliation simultaneously, so the required user-versus-managed distinction remains under-evidenced.\n    - [x] Production code represents the behavior.\n      > Production bootstrap distinguishes durable managed seeds through DEFAULT_DURABLE_SEEDS and the durable seed ledger, while the user-created directory is created without seed metadata.\n    - [ ] An executable test covers it.\n      > :x: The new test's only managed-default assertion is /Downloads == null on a fresh state; it does not assert a known managed seed such as /Games remains/reconciles while the deleted user path stays absent, and the neighboring Downloads test only proves preservation.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The test observes real production state, but its assertions cannot distinguish a user deletion from the separate fresh omission behavior; add an in-scope managed-seed assertion or explicit ledger-based proof in the same regression.\n\n- [x] The regression is executable in the ordinary Plasmon Bun lane using current production modules.\n  > The regression is a Bun test importing current production PersistentFsService, MemoryFsRepository, and bootstrapFilesystem modules.\n    - [x] Production code represents the behavior.\n      > No replacement production behavior is added; the test exercises the current service/bootstrap implementation.\n    - [x] An executable test covers it.\n      > The exact-head Fast Bun CI lane passed with this test included.\n    - [x] The test observes behavior rather than source shape.\n      > The test is an executable async service test over a deterministic repository, not a source-shape or audit-fixture assertion.\n\n- [x] `npm --workspace neutron-plasmon test` (or the dedicated Plasmon Fast CI lane when Bun is unavailable) passes.\n  > The exact-head Fast Bun check passed, with all reported flake baseline iterations and required packaged checks also green.\n    - [x] Production code represents the behavior.\n      > The production filesystem modules compile and the test runs through their public APIs.\n    - [x] An executable test covers it.\n      > Fast Bun CI passed and specifically includes apps/plasmon/src/os/fs/issue-182.test.ts.\n    - [x] The test observes behavior rather than source shape.\n      > The test uses real production composition with deterministic MemoryFsRepository and no test-only replacement of bootstrap semantics.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
         "commit_id": "275bd02c64fb404453e3f48fd130522d9a69277f",
         "id": 5014749315,
@@ -4670,5 +4331,5 @@
   "repo": "plasmon-cloud/plasmon",
   "schema": "plasmon-train-snapshot-v1",
   "target": "release/0.1.0-r2",
-  "target_sha": "71f84fd2ad9bf43a4bd37d29e2122e597925ce9d"
+  "target_sha": "9cdae92725ac2509bf8d051ca0ed70f4e881f329"
 }
