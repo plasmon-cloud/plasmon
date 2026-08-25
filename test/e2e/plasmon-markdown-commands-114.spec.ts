@@ -1,12 +1,10 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
 const BASIC_MARKDOWN_SOURCE = "# Big Heading\n\nNormal paragraph.\n\n- one\n- two";
 
 test(
@@ -25,24 +23,6 @@ test(
     );
     expect(principal).toBe(runtime.developerIdentityPrincipal);
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    const redirectInitialPlasmonDocument = async (route: Route) => {
-      const requestUrl = new URL(route.request().url());
-      const appRoot = `/app/${APP_ID}/`;
-      const isMainDocument = route.request().resourceType() === "document"
-        && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-      if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-        await route.continue();
-        return;
-      }
-      requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-      await route.fulfill({
-        status: 307,
-        headers: { location: requestUrl.href, "cache-control": "no-store" },
-      });
-    };
-    await page.route(fixtureRoute, redirectInitialPlasmonDocument);
-
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
@@ -51,8 +31,6 @@ test(
     await expect(page.locator(appFrameSelector).first()).toBeAttached();
     const app = page.frameLocator(appFrameSelector).first();
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-    await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
-
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible();
     await rootShortcut.dblclick();
@@ -63,11 +41,11 @@ test(
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-    const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Guide.md" }).first();
+    const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
     await expect(guide).toBeVisible();
     await guide.dblclick();
 
-    const editorWindow = app.getByRole("dialog", { name: "First Demo Guide.md - Monaco Editor" }).last();
+    const editorWindow = app.getByRole("dialog", { name: "Demo Guide.md - Monaco Editor" }).last();
     await expect(editorWindow).toBeVisible({ timeout: 20_000 });
     await expect(editorWindow.getByLabel("Markdown editor", { exact: true })).toBeVisible();
     const surface = editorWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');

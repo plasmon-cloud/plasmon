@@ -1,28 +1,10 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
-
-async function redirectToFirstDemo(route: Route): Promise<void> {
-  const requestUrl = new URL(route.request().url());
-  const appRoot = `/app/${APP_ID}/`;
-  const isMainDocument = route.request().resourceType() === "document"
-    && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-  if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-    await route.continue();
-    return;
-  }
-  requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-  await route.fulfill({
-    status: 307,
-    headers: { location: requestUrl.href, "cache-control": "no-store" },
-  });
-}
 
 test("#344 — packaged Text exposes accepted Monaco parity affordances", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
@@ -35,29 +17,15 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
     runtime.developerIdentitySeed,
   );
 
-  const fixtureRoute = `**/app/${APP_ID}/**`;
-  await page.route(fixtureRoute, redirectToFirstDemo);
-  const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-    try {
-      const url = new URL(candidate.url());
-      return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-        && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-    } catch {
-      return false;
-    }
-  });
-
   await page.locator('[data-tid="launcher-open"]').click();
   await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
   await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-  await fixtureNavigation;
 
   const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(appSelector)).toBeVisible();
   const app = page.frameLocator(appSelector);
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await expect(taskbar).toBeVisible({ timeout: 30_000 });
-  await page.unroute(fixtureRoute, redirectToFirstDemo);
 
   // Reach Text through the real filesystem and association path used by the
   // existing packaged Monaco acceptance; this test owns parity presentation,
@@ -71,7 +39,7 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
 
   const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
   await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-  const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
+  const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
   await expect(notes).toBeVisible();
 
   // #344 adds no scenario-specific warning/error allowance. BrowserHealth's
@@ -83,7 +51,7 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
     await notes.dblclick();
     await expect(windows).toHaveCount(beforeNotes + 1, { timeout: 20_000 });
     const notesWindow = windows.last();
-    await expect(notesWindow).toHaveAttribute("aria-label", "First Demo Notes.txt - Monaco Editor");
+    await expect(notesWindow).toHaveAttribute("aria-label", "Demo Notes.txt - Monaco Editor");
 
     const notesSurface = notesWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(notesSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });

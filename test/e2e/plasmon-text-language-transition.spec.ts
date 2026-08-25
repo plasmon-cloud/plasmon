@@ -1,28 +1,10 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
-
-async function redirectToFirstDemo(route: Route): Promise<void> {
-  const requestUrl = new URL(route.request().url());
-  const appRoot = `/app/${APP_ID}/`;
-  const isMainDocument = route.request().resourceType() === "document"
-    && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-  if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-    await route.continue();
-    return;
-  }
-  requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-  await route.fulfill({
-    status: 307,
-    headers: { location: requestUrl.href, "cache-control": "no-store" },
-  });
-}
 
 async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
   await expect.poll(
@@ -54,23 +36,9 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
       runtime.developerIdentitySeed,
     );
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    await page.route(fixtureRoute, redirectToFirstDemo);
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
     await expect(page.locator(appSelector)).toBeVisible();
@@ -130,7 +98,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await filesTask.click();
     await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
 
-    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
+    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
 
     const beforeText = await windows.count();

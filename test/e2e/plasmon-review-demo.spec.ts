@@ -54,7 +54,7 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
 
   // Search presents the Kernel-authoritative installed Review projection and
   // activates it through Plasmon's canonical filesystem/open path. Review's
-  // own first-demo workflow is accepted in the standalone Review lane.
+  // own demo workflow is accepted in the standalone Review lane.
   await plasmon.getByRole("button", { name: "Search" }).click();
   const search = plasmon.getByLabel("Search Plasmon");
   await expect(search).toBeVisible();

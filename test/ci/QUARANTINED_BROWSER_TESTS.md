@@ -118,7 +118,6 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-drag-placement-371.spec.ts` — retained; its single #371/#406 placement acceptance is quarantined pending deterministic repair and restoration proof.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
-- `test/e2e/plasmon-first-demo.spec.ts` — required.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
 

@@ -19,7 +19,6 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
     'test/e2e/plasmon-review-demo.spec.ts',
-    'test/e2e/plasmon-text-language-transition.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
@@ -36,8 +35,11 @@ export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-monaco-workers-89.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',
   'test/e2e/plasmon-demo-game.spec.ts',
-  'test/e2e/plasmon-first-demo.spec.ts',
   'test/e2e/plasmon-markdown-commands-114.spec.ts',
+  'test/e2e/plasmon-native-app-chrome-112.spec.ts',
+  'test/e2e/plasmon-photos-expand-180.spec.ts',
+  'test/e2e/plasmon-text-language-transition.spec.ts',
+  'test/e2e/plasmon-text-parity-344.spec.ts',
 ]);
 
 export const nonPlasmonBrowserSpecs = Object.freeze({

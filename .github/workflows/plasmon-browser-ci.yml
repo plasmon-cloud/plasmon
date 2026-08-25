@@ -100,6 +100,7 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
+            npm --workspace neutron-design-system run build
             npm run plasmon:demo:prepare
 
             npm run plasmon:demo:serve > /tmp/plasmon-demo-pocketic.log 2>&1 &
@@ -128,6 +129,13 @@ jobs:
             npm run plasmon:demo:status
             npm run plasmon:demo:reinstall
             npm run test:e2e:plasmon:demo
+            NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json npx --no-install playwright test --workers=1 \
+              test/e2e/plasmon-markdown-commands-114.spec.ts \
+              test/e2e/plasmon-monaco-packaged.spec.ts \
+              test/e2e/plasmon-native-app-chrome-112.spec.ts \
+              test/e2e/plasmon-photos-expand-180.spec.ts \
+              test/e2e/plasmon-text-language-transition.spec.ts \
+              test/e2e/plasmon-text-parity-344.spec.ts
           '
 
       - name: Upload Demo Playwright report
