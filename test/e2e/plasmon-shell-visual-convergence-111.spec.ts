@@ -97,7 +97,7 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
 
     const startButton = taskbar.getByRole("button", { name: "Start", exact: true });
     await startButton.click({ button: "right" });
-    const contextMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
+    const contextMenu = plasmon.getByRole("menu", { name: "Shell context menu" });
     await expect(contextMenu).toBeVisible();
     await expectSemanticBackground(contextMenu, "--plasmon-panel-elevated");
 
