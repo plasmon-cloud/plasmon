@@ -81,6 +81,14 @@ esac
 # bounded local deployment once for the packet.
 if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
   npm ci
+
+  # The all-target fast/model gate includes repository-freshness checks. Run it
+  # against the pristine checkout before local preparation generates or rewrites
+  # package artifacts; those build outputs are not Product source changes.
+  if [ "$target" = all ]; then
+    npm --workspace neutron-plasmon test
+  fi
+
   npm run plasmon:local:prepare
 
   npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
@@ -134,7 +142,6 @@ case "$target" in
   all)
     node test/ci/verify-flake-probe.mjs
     node test/ci/verify-plasmon-test-inventory.mjs
-    npm --workspace neutron-plasmon test
     npm --workspace neutron-plasmon run test:package
     npm run test:e2e:plasmon:specialist -- --retries=0
     ;;
