@@ -36,8 +36,8 @@
   }
 
   .plasmon-alt-tab__option.is-selected {
-    background: var(--plasmon-control-hover);
-    border-color: var(--plasmon-accent);
+    background: var(--plasmon-selection);
+    border-color: var(--plasmon-selection-border);
   }
 
   .plasmon-alt-tab__label {

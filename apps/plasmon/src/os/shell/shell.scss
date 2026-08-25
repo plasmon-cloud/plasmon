@@ -81,9 +81,13 @@
     min-height: 44px;
   }
   .plasmon-shell__task-button { min-width: 44px; padding: 4px; position: relative; }
-  .plasmon-shell__task-button:hover, .plasmon-shell__task-button.is-focused, .plasmon-shell__tray-button:hover, .plasmon-shell__clock-button:hover {
+  .plasmon-shell__task-button:hover, .plasmon-shell__tray-button:hover, .plasmon-shell__clock-button:hover {
     background: var(--plasmon-control-hover);
     border-color: color-mix(in srgb, var(--plasmon-border-subtle) 36%, transparent);
+  }
+  .plasmon-shell__task-button.is-focused {
+    background: var(--plasmon-selection);
+    border-color: var(--plasmon-selection-border);
   }
   .plasmon-shell__task-button.is-running::after {
     background: var(--plasmon-accent);
@@ -221,7 +225,7 @@
 
   .plasmon-shell__tabs { display: flex; gap: 4px; margin: 12px 0; overflow-x: auto; }
   .plasmon-shell__tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--plasmon-text-secondary); padding: 7px 10px; }
-  .plasmon-shell__tabs button[aria-selected="true"] { border-bottom-color: var(--plasmon-accent); color: var(--plasmon-text-primary); }
+  .plasmon-shell__tabs button[aria-selected="true"] { background: var(--plasmon-selection); border-bottom-color: var(--plasmon-selection-border); color: var(--plasmon-text-primary); }
   .plasmon-shell__results { display: grid; gap: 3px; max-height: 48vh; overflow: auto; }
   .plasmon-shell__results > button em { color: var(--plasmon-text-subtle); font-size: var(--plasmon-font-size-title); font-style: normal; margin-left: auto; text-transform: capitalize; }
 

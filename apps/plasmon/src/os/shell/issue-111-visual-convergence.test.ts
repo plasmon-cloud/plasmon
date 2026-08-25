@@ -66,6 +66,8 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
     "var(--plasmon-text-subtle)",
     "var(--plasmon-accent)",
     "var(--plasmon-accent-ink)",
+    "var(--plasmon-selection)",
+    "var(--plasmon-selection-border)",
     "var(--plasmon-focus-ring)",
     "var(--plasmon-shadow-panel)",
     "var(--plasmon-radius-control)",
@@ -74,6 +76,13 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
     "var(--plasmon-font-size-ui)",
     "var(--plasmon-taskbar-height)",
   ]) expect(shellStyles).toContain(token);
+
+  expect(shellStyles).toContain(
+    ".plasmon-alt-tab__option.is-selected {\n    background: var(--plasmon-selection);\n    border-color: var(--plasmon-selection-border);\n  }",
+  );
+  expect(shellCss).toContain(
+    ".plasmon-shell__task-button.is-focused {\n    background: var(--plasmon-selection);\n    border-color: var(--plasmon-selection-border);\n  }",
+  );
 
   for (const surface of [
     ".plasmon-shell__taskbar",

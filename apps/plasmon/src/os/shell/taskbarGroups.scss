@@ -35,10 +35,16 @@
     width: 100%;
   }
 
-  .plasmon-shell__task-group-members > button:hover:not(:disabled),
-  .plasmon-shell__task-group-members > button:focus-visible {
+  .plasmon-shell__task-group-members > button:hover:not(:disabled) {
     background: var(--plasmon-control-hover);
     border-color: var(--plasmon-border-subtle);
+  }
+
+  .plasmon-shell__task-group-members > button:focus-visible {
+    background: var(--plasmon-selection);
+    border-color: var(--plasmon-selection-border);
+    outline: 2px solid var(--plasmon-focus-ring);
+    outline-offset: 2px;
   }
 
   .plasmon-shell__task-group-members > button:disabled {
