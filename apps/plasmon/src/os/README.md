@@ -11,6 +11,7 @@
 - `associations/**` owns generic handler matching and defaults.
 - `process/**` and `windowing/**` own Plasmon-local native app lifecycle/window state.
 - `context-menu-boundary.ts` owns only the reusable browser-event ownership decision for first-party context menus. Specialized Shell/FileManager/application menus retain command authority; editable controls and explicitly foreign/iframe content remain unclaimed.
+- `resource-command.ts` owns only bounded cross-surface user-action orchestration for commands with demonstrated multiple production consumers. The initial Open command preserves stable NodeId intent and delegates classification, shortcuts, handlers, directory behavior, and opening to the existing filesystem authority.
 - `neutron/**` adapts verified Kernel behavior; it must not invent missing Kernel capabilities.
 - `integration/**` composes public implementations and should not absorb subsystem policy.
 - `sharing/**` owns explicit provider publication/storage semantics and only the authorization orchestration faithfully expressible through current contracts; MTN remains authoritative for cross-AppScope authorization and live provider calls.
