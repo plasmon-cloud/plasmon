@@ -3,6 +3,8 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const shellCss = readFileSync(new URL("./shell.scss", import.meta.url), "utf8");
+const shellSurfaces = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
+const startSurface = readFileSync(new URL("./StartSurface.tsx", import.meta.url), "utf8");
 const visualTokens = readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8");
 
 test("#111 Shell consumes shared Visual semantics instead of owning a parallel token palette", () => {
@@ -65,6 +67,17 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
     ".plasmon-shell__calendar-grid",
     ".plasmon-shell__error",
   ]) expect(shellCss).toContain(surface);
+});
+
+test("#111 Start and Search marks consume shared Visual assets instead of duplicate Shell SVGs", () => {
+  expect(shellSurfaces).toContain('SystemIcon icon="start"');
+  expect(shellSurfaces).toContain('SystemIcon icon="search"');
+  expect(startSurface).toContain('SystemIcon icon="search"');
+  expect(shellSurfaces).not.toContain("function StartMark");
+  expect(startSurface).not.toContain("function StartSearchMark");
+
+  // Tray remains a Shell-specific mark until Visual defines a shared tray asset.
+  expect(shellSurfaces).toContain("function TrayMark");
 });
 
 test("#111 Midnight overrides shared semantic tokens so descendant surfaces inherit one theme", () => {
