@@ -27,10 +27,6 @@ function workflowCommandValue(value: string): string {
     .replaceAll("\n", "%0A");
 }
 
-async function expectJavaScriptTokenization(editor: ReturnType<ReturnType<typeof test.extend>["prototype"]>): Promise<void> {
-  void editor;
-}
-
 test.afterEach(async ({ browserName }, testInfo) => {
   if (testInfo.status === testInfo.expectedStatus) return;
   if (testInfo.retry < testInfo.project.retries) return;
