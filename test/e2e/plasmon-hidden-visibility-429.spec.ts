@@ -155,7 +155,9 @@ test("#429 — packaged hidden visibility composes global Settings with Explorer
 
     await plasmon.getByRole("button", { name: "Start", exact: true }).click();
     await expect(start).toBeVisible();
-    await expect(start.getByText("Properties", { exact: true })).toBeVisible({ timeout: 20_000 });
+    // #428 retired the managed Properties Start default. Global visibility
+    // exposes existing hidden resources; it does not resurrect retired seeds.
+    await expect(start.getByText("Properties", { exact: true })).toHaveCount(0);
     await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 
     // Turning the global policy back off hides Search/Start immediately while
