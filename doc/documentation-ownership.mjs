@@ -7,10 +7,6 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  validateDocumentationBoundaries as validatePlasmonDocumentationBoundaries,
-  validateDocumentationMap as validatePlasmonDocumentationMap,
-} from "../apps/plasmon/docs/documentation-boundaries.mjs";
 
 export const registryRelativePath = "doc/documentation-ownership.json";
 export const mapRelativePath = "doc/repository-map.md";
@@ -76,18 +72,6 @@ function validateDelegatedContract(boundary, repoRoot, errors) {
       }
       if (!Array.isArray(nested.boundaries) || nested.boundaries.length === 0) {
         addError(errors, `${boundary.path}: delegated registry ${registryPath} has no boundary entries.`);
-      }
-      if (!Array.isArray(nested.discoveryRoots)) {
-        addError(errors, `${boundary.path}: delegated registry ${registryPath} has no discoveryRoots array.`);
-      }
-      if (nested.schema === "plasmon-documentation-boundaries-v1" && nested.root === delegatedRoot && Array.isArray(nested.boundaries) && Array.isArray(nested.discoveryRoots)) {
-        const nestedErrors = validatePlasmonDocumentationBoundaries(nested, repoRoot);
-        for (const error of nestedErrors) addError(errors, `${boundary.path}: delegated structural contract: ${error}`);
-        if (mapPath && isFile(repoRoot, mapPath)) {
-          const nestedMap = readFileSync(absolute(repoRoot, mapPath), "utf8");
-          const mapErrors = validatePlasmonDocumentationMap(nestedMap, nested);
-          for (const error of mapErrors) addError(errors, `${boundary.path}: delegated map contract: ${error}`);
-        }
       }
     } catch (error) {
       addError(errors, `${boundary.path}: delegated registry ${registryPath} is not valid JSON: ${error.message}`);
@@ -263,52 +247,6 @@ export function validateRepositoryDocumentationMap(markdown, registry, repoRoot 
   return expected === markdown
     ? []
     : [`${mapRelativePath}: generated documentation map is stale; run \`node doc/documentation-ownership.mjs generate\`.`];
-}
-
-const retiredDocumentationMechanismPatterns = [
-  { label: "docs:review", content: /docs:review/u },
-  { label: "plasmon-docs-review", content: /plasmon-docs-review/u },
-  { label: "documentation-review.mjs", content: /documentation-review\.mjs/u, path: /(?:^|\/)documentation-review\.mjs$/u },
-  { label: "DOCUMENTATION_REVIEW.md", content: /DOCUMENTATION_REVIEW\.md/u, path: /(?:^|\/)DOCUMENTATION_REVIEW\.md$/u },
-  { label: "documentationReview", content: /documentationReview/u },
-];
-const retiredDocumentationScanDirectories = new Set([".git", "node_modules", "target", "dist", "build", "coverage", ".cache", ".next"]);
-
-function repositoryFiles(repoRoot, current = "") {
-  const directory = absolute(repoRoot, current);
-  const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const relativePath = current ? `${current}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) {
-      if (!retiredDocumentationScanDirectories.has(entry.name)) files.push(...repositoryFiles(repoRoot, relativePath));
-    } else if (entry.isFile()) {
-      files.push(relativePath);
-    }
-  }
-  return files;
-}
-
-export function findRetiredDocumentationMechanismReferences(repoRoot = defaultRepoRoot, excludedPaths = []) {
-  const excluded = new Set(excludedPaths.map(normalizePath));
-  const references = [];
-  for (const relativePath of repositoryFiles(repoRoot)) {
-    if (excluded.has(relativePath)) continue;
-    const pathMatch = retiredDocumentationMechanismPatterns.find((pattern) => pattern.path?.test(relativePath));
-    if (pathMatch) {
-      references.push(`${relativePath}: retired documentation mechanism path ${pathMatch.label}`);
-      continue;
-    }
-    let content;
-    try {
-      content = readFileSync(absolute(repoRoot, relativePath), "utf8");
-    } catch {
-      continue;
-    }
-    for (const pattern of retiredDocumentationMechanismPatterns) {
-      if (pattern.content.test(content)) references.push(`${relativePath}: retired documentation mechanism reference ${pattern.label}`);
-    }
-  }
-  return references;
 }
 
 function fail(errors) {

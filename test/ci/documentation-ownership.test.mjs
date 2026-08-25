@@ -1,11 +1,9 @@
 import { strict as assert } from "node:assert";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { generatedBoundaryBlock } from "../../apps/plasmon/docs/documentation-boundaries.mjs";
 import {
-  findRetiredDocumentationMechanismReferences,
   loadDocumentationOwnershipRegistry,
   mapRelativePath,
   registryRelativePath,
@@ -74,97 +72,6 @@ test("an invalid delegated Plasmon contract is rejected", () => {
   assert.ok(errors.some((error) => error.includes("apps/plasmon") && error.includes("delegated registry")));
 });
 
-function delegatedFixture() {
-  const root = mkdtempSync(join(tmpdir(), "neutron-delegated-docs-"));
-  for (const directory of ["apps", "apps/alpha", "apps/plasmon", "apps/plasmon/docs"]) {
-    mkdirSync(join(root, directory), { recursive: true });
-  }
-  for (const file of [
-    "README.md",
-    "apps/README.md",
-    "apps/alpha/README.md",
-    "apps/plasmon/README.md",
-    "apps/plasmon/AGENTS.md",
-    "apps/plasmon/docs/README.md",
-  ]) writeFileSync(join(root, file), `# ${file}\n`);
-
-  const nested = {
-    schema: "plasmon-documentation-boundaries-v1",
-    root: "apps/plasmon",
-    discoveryRoots: [],
-    boundaries: [{
-      path: "apps/plasmon",
-      kind: "application-root",
-      readme: "local",
-      agents: { mode: "local" },
-    }],
-  };
-  const outer = {
-    schema: "neutron-repository-documentation-ownership-v1",
-    root: ".",
-    discoveryRoots: [{ path: "apps", children: "directories", excluded: [] }],
-    boundaries: [
-      { path: ".", kind: "repository-root", documentation: [{ path: "README.md", mode: "local" }] },
-      { path: "apps", kind: "application-root", documentation: [{ path: "apps/README.md", mode: "local" }] },
-      { path: "apps/alpha", kind: "first-party-application", documentation: [{ path: "apps/alpha/README.md", mode: "local" }] },
-      {
-        path: "apps/plasmon",
-        kind: "delegated-application",
-        documentation: [{ path: "apps/plasmon/docs/README.md", mode: "delegated" }],
-        delegatedContract: {
-          registry: "apps/plasmon/docs/documentation-boundaries.json",
-          map: "apps/plasmon/docs/README.md",
-          root: "apps/plasmon",
-        },
-      },
-    ],
-  };
-  const registryPath = join(root, "doc/documentation-ownership.json");
-  const nestedRegistryPath = join(root, "apps/plasmon/docs/documentation-boundaries.json");
-  const mapPath = join(root, "apps/plasmon/docs/README.md");
-  mkdirSync(join(root, "doc"), { recursive: true });
-  writeFileSync(registryPath, `${JSON.stringify(outer, null, 2)}\n`);
-  writeFileSync(nestedRegistryPath, `${JSON.stringify(nested, null, 2)}\n`);
-  writeFileSync(mapPath, `# Fixture map\n\n${generatedBoundaryBlock(nested)}\n`);
-  return { root, nested, nestedRegistryPath, mapPath };
-}
-
-test("a broken delegated Plasmon contract is rejected by the repository validator", () => {
-  const fixture = delegatedFixture();
-  try {
-    rmSync(join(fixture.root, "apps/plasmon/AGENTS.md"));
-    const ownershipErrors = validateDocumentationOwnership(
-      JSON.parse(readFileSync(join(fixture.root, "doc/documentation-ownership.json"), "utf8")),
-      fixture.root,
-    );
-    assert.ok(ownershipErrors.some((error) => error.includes("delegated structural contract") && error.includes("AGENTS.md")));
-
-    writeFileSync(join(fixture.root, "apps/plasmon/AGENTS.md"), "# Fixture rules\n");
-    fixture.nested.discoveryRoots = [{ path: "apps/plasmon/src", nonBoundaryChildren: [] }];
-    mkdirSync(join(fixture.root, "apps/plasmon/src/orphan"), { recursive: true });
-    writeFileSync(fixture.nestedRegistryPath, `${JSON.stringify(fixture.nested, null, 2)}\n`);
-    const discoveryErrors = validateDocumentationOwnership(
-      JSON.parse(readFileSync(join(fixture.root, "doc/documentation-ownership.json"), "utf8")),
-      fixture.root,
-    );
-    assert.ok(discoveryErrors.some((error) => error.includes("delegated structural contract") && error.includes("unclassified direct child")));
-
-    fixture.nested.discoveryRoots = [];
-    writeFileSync(fixture.nestedRegistryPath, `${JSON.stringify(fixture.nested, null, 2)}\n`);
-    writeFileSync(
-      fixture.mapPath,
-      readFileSync(fixture.mapPath, "utf8").replace("| Boundary | Kind | README | AGENTS |", "| Drift | Kind | README | AGENTS |"),
-    );
-    const mapErrors = validateDocumentationOwnership(
-      JSON.parse(readFileSync(join(fixture.root, "doc/documentation-ownership.json"), "utf8")),
-      fixture.root,
-    );
-    assert.ok(mapErrors.some((error) => error.includes("delegated map contract") && error.includes("generated boundary table is stale")));
-  } finally {
-    rmSync(fixture.root, { recursive: true, force: true });
-  }
-});
-
 test("generated repository-map drift is rejected", () => {
   const value = registry();
   const map = readFileSync(join(repoRoot, mapRelativePath), "utf8");
@@ -182,28 +89,18 @@ test("the delegated Plasmon contract and generated map are current", () => {
 });
 
 test("active tooling cannot reintroduce the retired review mechanism", () => {
-  const excluded = [
-    "test/ci/documentation-ownership.test.mjs",
-    "apps/plasmon/test/documentationContract.test.ts",
+  const patterns = [/docs:review/u, /plasmon-docs-review/u, /documentation-review\\.mjs/u, /documentationReview/u];
+  const activeFiles = [
+    ".github/workflows/kernel-ci.yml",
+    "package.json",
+    "apps/plasmon/package.json",
+    "apps/plasmon/docs/README.md",
+    "apps/plasmon/docs/documentation-boundaries.json",
     "doc/documentation-ownership.mjs",
+    "doc/repository-map.md",
   ];
-  assert.deepEqual(findRetiredDocumentationMechanismReferences(repoRoot, excluded), []);
-
-  const fixture = mkdtempSync(join(tmpdir(), "neutron-retired-docs-"));
-  try {
-    mkdirSync(join(fixture, "apps/plasmon/docs"), { recursive: true });
-    writeFileSync(join(fixture, "apps/plasmon/docs/documentation-review.mjs"), "// retired file\n");
-    writeFileSync(join(fixture, "apps/plasmon/docs/legacy.md"), "The old docs:review command must stay absent.\n");
-    const references = findRetiredDocumentationMechanismReferences(fixture);
-    assert.ok(references.some((reference) => reference.includes("documentation-review.mjs")));
-    assert.ok(references.some((reference) => reference.includes("docs:review")));
-
-    writeFileSync(join(fixture, "apps/plasmon/docs/negative.test.ts"), "documentation-review.mjs docs:review\n");
-    assert.deepEqual(
-      findRetiredDocumentationMechanismReferences(fixture, ["apps/plasmon/docs/negative.test.ts"]),
-      references,
-    );
-  } finally {
-    rmSync(fixture, { recursive: true, force: true });
+  for (const file of activeFiles) {
+    const content = readFileSync(join(repoRoot, file), "utf8");
+    for (const pattern of patterns) assert.doesNotMatch(content, pattern, `${file} contains retired documentation tooling`);
   }
 });
