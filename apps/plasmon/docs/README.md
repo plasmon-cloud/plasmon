@@ -1,6 +1,6 @@
 # Plasmon documentation map
 
-<!-- plasmon-docs-review:v1 sha256=ebb48c2880b11c6687c404ff477541f872635f0cbec7377024eb5c18251db4d2 base=1ad0837ecf9271b07f678a44534bb69439803f96 -->
+<!-- plasmon-docs-review:v1 sha256=9709e20094a868bedeb8bbebd93032168dc0ada0e6db61af36188b71e5f87790 base=ad922d8aa3de9b69d78a1837791cbb715d4f6e41 -->
 
 This directory is the durable cross-subsystem documentation home for Plasmon. The repository is authoritative for Plasmon architecture, terminology, testing rules, and implementation guidance; chat, handoffs, and external project context are coordination and bootstrap aids only.
 
