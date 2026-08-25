@@ -55,6 +55,8 @@ Prefer executable behavior over source-string assertions. If source inspection i
 
 Use `createHeadlessPlasmonEnvironment()` when a workflow spans several Plasmon authorities and does not require React behavior. Pass an existing `MemoryFsRepository` through the `repository` option when a workflow must reconstruct production composition over the same persistence boundary. If a workflow needs a new semantic operation, add it to the owning production model/controller/command rather than implementing it in this harness.
 
+`taskbarLifecycle.test.ts` is the composed taskbar lifecycle regression. It exercises canonical Shell projection/actions over the real Process and Windowing services through pinned-only, launch, active/running, minimize/refocus, close, and external-window teardown reconciliation.
+
 `reviewInstalledIntegration.test.ts` is the representative sibling-application proof: it verifies Review projection identity/uniqueness and canonical filesystem-open-to-Neutron-bridge activation without inventing a Plasmon-native Review process or window.
 
 ## Shared RTL adapter
