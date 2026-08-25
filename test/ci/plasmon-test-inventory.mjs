@@ -18,6 +18,7 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
+    'test/e2e/plasmon-monaco-workers-89.spec.ts',
     'test/e2e/plasmon-review-demo.spec.ts',
     'test/e2e/plasmon-text-language-transition.spec.ts',
   ]),
@@ -27,13 +28,12 @@ export const browserLanes = Object.freeze({
 });
 
 // The default slim package retains Monaco-backed Text and Markdown editing but
-// omits optional game/emulator payloads and language-service workers. Keep the
-// broader acceptance sources in the tree as deferred profile evidence rather
-// than placing unavailable game/full-worker paths in the required smoke lane.
+// omits optional game/emulator payloads and full language-service workers. The
+// required #391 acceptance covers the shipped editor worker; keep broader game
+// and full-profile-only sources as deferred profile evidence instead.
 export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-golden-path.spec.ts',
   'test/e2e/plasmon-monaco-packaged.spec.ts',
-  'test/e2e/plasmon-monaco-workers-89.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',
   'test/e2e/plasmon-demo-game.spec.ts',
   'test/e2e/plasmon-first-demo.spec.ts',
