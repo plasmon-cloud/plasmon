@@ -12,21 +12,6 @@
     user-select: none;
   }
 
-  .plasmon-shell[data-plasmon-theme="plasmon-midnight"] {
-    --plasmon-desktop-background: #080a13;
-    --plasmon-panel-background: rgba(17, 17, 30, 0.95);
-    --plasmon-panel-elevated: #171725;
-    --plasmon-window-background: #10101b;
-    --plasmon-window-titlebar: #171725;
-    --plasmon-taskbar-background: rgba(11, 12, 23, 0.84);
-    --plasmon-accent: #b9abff;
-    --plasmon-accent-hover: #c8beff;
-    --plasmon-accent-ink: #15102b;
-    --plasmon-selection: rgba(185, 171, 255, 0.16);
-    --plasmon-selection-border: rgba(200, 190, 255, 0.34);
-    --plasmon-focus-ring: #d6d0ff;
-  }
-
   .plasmon-shell *, .plasmon-shell *::before, .plasmon-shell *::after { box-sizing: border-box; }
   .plasmon-shell button, .plasmon-shell input { font: inherit; }
   .plasmon-shell button { color: inherit; }
