@@ -1,6 +1,6 @@
 # Plasmon Shell
 
-<!-- plasmon-docs-review:v1 sha256=7c594a9fa319faff0660a72c1c8d4003521886efb4c6ff61ec0675ab9a0dff04 base=e4a30c1d068c15989238191c71dec929b4c7a129 -->
+<!-- plasmon-docs-review:v1 sha256=40950c9cf24c6262dab2f806612762870d0d3c9940ba8c5b9ba7a4326b13a419 base=cbd2f7c1bc28b6dcc1ef950696db33c4339366ad -->
 
 `shell/**` owns shell-level presentation and orchestration around the central Desktop/native-window workspace: Start, Search, taskbar/tray, calendar, flyouts/context menus, pinning, and shell preferences.
 
