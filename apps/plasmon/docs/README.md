@@ -1,6 +1,6 @@
 # Plasmon documentation map
 
-<!-- plasmon-docs-review:v1 sha256=49b2e5c20f54152df04e19a8ec3319ecd63ab08df326a01e8ea52848d4e9e373 base=2464a778d421d64b3d6ee6f78d6dee972c15014c -->
+<!-- plasmon-docs-review:v1 sha256=22b85144e930e0ecd80e7aa9702cd0d4bb2350f14ec0298f28739fc93f4343c9 base=da0c01a908d4db39903edf17f5859a34a0554fd1 -->
 
 This directory is the durable cross-subsystem documentation home for Plasmon. The repository is authoritative for Plasmon architecture, terminology, testing rules, and implementation guidance; chat, handoffs, and external project context are coordination and bootstrap aids only.
 
@@ -50,7 +50,7 @@ Review fingerprints make implementation drift visible at those boundaries. [`DOC
 | `apps/plasmon/src/native-apps/explorer` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/jsdos` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/markdown` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
-| `apps/plasmon/src/native-apps/photos` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/photos` | native-app | inherited from `apps/plasmon/src/native-apps/AGENTS.md` | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/properties` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/recycle-bin` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/settings` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
@@ -119,7 +119,7 @@ Historical refactor test packets or old staging procedures are provenance, not c
 - [`DAEDALOS_PARITY_LEDGER.md`](DAEDALOS_PARITY_LEDGER.md) — evidence ledger for daedalOS feature-completeness reference behavior and Plasmon implementation, headless, packaged/browser, and human/manual acceptance state.
 - [`ACCEPTANCE_2026-08-11_BASELINE_GATE.md`](ACCEPTANCE_2026-08-11_BASELINE_GATE.md) — dated integrated disposition of the 2026-08-11 packaged/manual review findings.
 
-The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human review are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
+The parity ledger is an evidence index, not a second backlog. Advance an evidence column only when that exact layer is proven. Source presence, deterministic tests, packaged/browser execution, and human/manual acceptance are separate claims. Unknown evidence stays unverified rather than being inferred from another layer.
 
 ## Neutron / Kernel boundary
 
