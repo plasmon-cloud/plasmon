@@ -35,7 +35,7 @@ The current required browser surface is the inventory in `test/ci/plasmon-test-i
 | Create Shortcut discoverability, creation, collision naming, and activation (#44) | **PASS** | required Specialist browser | `plasmon-create-shortcut-44.spec.ts` exercises the real toolbar and item-context command, visible shortcut state/artwork, collision creation, and normal double-click activation in installed Explorer. |
 | Taskbar state derivation and visible wording/accessibility (#72) | **PASS** | Fast + required Specialist browser | `plasmon-taskbar-presentation-72.spec.ts` proves pinned-only/running/active state, accessible wording, native lifecycle projection, installed Element `Running`, and absence of raw yes/no/unknown runtime tokens. |
 | Taskbar cross-authority lifecycle (#81) | **PASS** | composed headless | `apps/plasmon/test/taskbarLifecycle.test.ts` proves canonical Process/Windowing/taskbar lifecycle and external Windowing teardown reconciliation. |
-| Shared Start/taskbar pin affordance (#109) | **PASS** | required Specialist browser | `plasmon-pin-affordance-109.spec.ts` proves packaged shared pin artwork loads, accessible labels/state are present, pinned/unpinned states are structurally distinct, and both Start and taskbar context consume the canonical affordance. |
+| Shared Start/taskbar pin affordance (#109) | **AUTOMATED PASS / MANUAL PENDING** | required Specialist browser + human/manual | `plasmon-pin-affordance-109.spec.ts` proves packaged shared pin artwork loads, accessible labels/state are present, pinned/unpinned states are structurally distinct, and both Start and taskbar context consume the canonical affordance. The bounded packaged/manual visual check required by #109 remains open; structural/browser evidence is not promoted to visual acceptance. |
 | Folder-drop target semantics | **PASS** | Fast/model | Canonical drop-target/move semantics pass below the browser boundary. |
 | Folder-drop installed pointer lifecycle | **NOT-YET-TESTABLE** | quarantined browser boundary | `plasmon-filemanager-directory-drop.spec.ts` is in the current quarantine inventory; the required gate does not promote it. |
 | Drag feedback/placement contracts that remain in required Specialist | **PASS** | required Specialist browser | Current required Specialist execution includes the non-quarantined drag-feedback/placement browser contracts and passed them. |
@@ -62,7 +62,8 @@ The required current-r2 package/browser lanes are green, but #107 is **not equiv
 3. browser-owned Download remains outside the required current browser inventory;
 4. quarantined directory-drop browser acceptance remains quarantined rather than promoted;
 5. full optional-profile Monaco and game/emulator workflows remain optional-profile evidence, not required slim-r2 acceptance;
-6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence.
+6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence;
+7. #109's shared Start/taskbar pin affordance still needs its bounded packaged/manual visual review despite the automated Specialist assertions passing.
 
 No new Product implementation defect was established by the required current-r2 Fast/Smoke/Specialist execution. The report therefore records the unresolved acceptance layer rather than creating duplicate Product work.
 
