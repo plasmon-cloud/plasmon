@@ -2,35 +2,44 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
+const shellStylePaths = [
+  "./shell.scss",
+  "./searchSurface.scss",
+  "./taskbarContext.scss",
+  "./taskbarGroups.scss",
+  "./alt-tab.scss",
+] as const;
+const shellStyles = shellStylePaths
+  .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+  .join("\n");
 const shellCss = readFileSync(new URL("./shell.scss", import.meta.url), "utf8");
 const shellSurfaces = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
 const startSurface = readFileSync(new URL("./StartSurface.tsx", import.meta.url), "utf8");
 const visualTokens = readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8");
 
-test("#111 Shell consumes shared Visual semantics instead of owning a parallel token palette", () => {
-  for (const retiredDeclaration of [
-    "--plasmon-bg:",
-    "--plasmon-bg-elevated:",
-    "--plasmon-bg-glass:",
-    "--plasmon-surface-hover:",
-    "--plasmon-border:",
-    "--plasmon-text-muted:",
-    "--plasmon-accent-strong:",
-    "--plasmon-focus:",
-    "--plasmon-shadow:",
-    "--plasmon-radius-sm:",
-    "--plasmon-radius-md:",
-    "--plasmon-radius-lg:",
-    "--plasmon-font:",
-    "--plasmon-font-xs:",
-    "--plasmon-font-sm:",
-    "--plasmon-font-md:",
-    "--plasmon-font-lg:",
-    "--plasmon-font-xl:",
-  ]) expect(shellCss).not.toContain(retiredDeclaration);
+test("#111 active Shell styles consume shared Visual semantics instead of a parallel token palette", () => {
+  for (const retiredToken of [
+    "--plasmon-bg",
+    "--plasmon-bg-elevated",
+    "--plasmon-bg-glass",
+    "--plasmon-surface-hover",
+    "--plasmon-border",
+    "--plasmon-text-muted",
+    "--plasmon-accent-strong",
+    "--plasmon-focus",
+    "--plasmon-shadow",
+    "--plasmon-radius-sm",
+    "--plasmon-radius-md",
+    "--plasmon-radius-lg",
+    "--plasmon-font-xs",
+    "--plasmon-font-sm",
+    "--plasmon-font-md",
+    "--plasmon-font-lg",
+    "--plasmon-font-xl",
+  ]) expect(shellStyles).not.toContain(retiredToken);
 
-  expect(shellCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-  expect(shellCss).not.toContain("rgba(");
+  expect(shellStyles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  expect(shellStyles).not.toContain("rgba(");
 
   for (const sharedToken of [
     "--plasmon-control-background:",
@@ -61,7 +70,7 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
     "var(--plasmon-font-ui)",
     "var(--plasmon-font-size-ui)",
     "var(--plasmon-taskbar-height)",
-  ]) expect(shellCss).toContain(token);
+  ]) expect(shellStyles).toContain(token);
 
   for (const surface of [
     ".plasmon-shell__taskbar",
@@ -69,7 +78,9 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
     ".plasmon-shell__search-box",
     ".plasmon-shell__calendar-grid",
     ".plasmon-shell__error",
-  ]) expect(shellCss).toContain(surface);
+    ".plasmon-shell__task-group-chooser",
+    ".plasmon-alt-tab__switcher",
+  ]) expect(shellStyles).toContain(surface);
 });
 
 test("#111 Start and Search marks consume shared Visual assets instead of duplicate Shell SVGs", () => {
