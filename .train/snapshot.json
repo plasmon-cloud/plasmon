@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T23:21:33.673213Z",
+  "captured_at": "2026-08-25T23:29:34.497683Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 5,
     "open_issues": 33,
     "open_product_prs": 7
   },
-  "generation": "bae677c5c66eeb54a082d77d12f03a138020db1c",
+  "generation": "88d540f6c5c24f4c40d5d31c9bd4708d43347f0e",
   "issues": [
     {
       "area": "Repo",
@@ -4441,7 +4441,7 @@
       "review": "pending",
       "state": "open",
       "title": "#45 Fix non-empty Empty Recycle Bin confirmation",
-      "updated_at": "2026-08-25T21:34:20Z",
+      "updated_at": "2026-08-25T23:27:42Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/477"
     },
     {
