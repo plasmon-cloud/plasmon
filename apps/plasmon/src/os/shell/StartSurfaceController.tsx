@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FsNode, FsService } from "../contracts/index.ts";
+import type { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { StartSurface, type StartItemPresentation } from "./StartSurface.tsx";
 import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
 import { projectStartSurfaceView, type StartTrailItem } from "./start-surface-state.ts";
@@ -9,6 +10,7 @@ export interface StartSurfaceControllerProps {
   active: boolean;
   fs: FsService;
   reconciliation: StartMenuReconciliationController;
+  hiddenVisibility: HiddenVisibilityPreferenceStore;
   fsRevision: number;
   busyId: string | null;
   preferencesReady: boolean;
@@ -37,6 +39,7 @@ export function StartSurfaceController({
   active,
   fs,
   reconciliation,
+  hiddenVisibility,
   fsRevision,
   busyId,
   preferencesReady,
@@ -48,6 +51,7 @@ export function StartSurfaceController({
 }: StartSurfaceControllerProps) {
   const initial = reconciliation.getSnapshot();
   const [controllerRevision, setControllerRevision] = useState(initial.revision);
+  const [hiddenVisibilityRevision, setHiddenVisibilityRevision] = useState(0);
   const [trail, setTrail] = useState<StartTrailItem[]>(() => initial.root ? rootTrail(initial.root) : []);
   const [items, setItems] = useState<FsNode[]>([]);
   const [query, setQuery] = useState("");
@@ -63,6 +67,10 @@ export function StartSurfaceController({
     () => reconciliation.getSnapshot(),
     [controllerRevision, reconciliation],
   );
+
+  useEffect(() => hiddenVisibility.subscribe(() => {
+    setHiddenVisibilityRevision((revision) => revision + 1);
+  }), [hiddenVisibility]);
 
   useEffect(() => {
     const root = reconciliationSnapshot.root;
@@ -92,7 +100,7 @@ export function StartSurfaceController({
         if (mounted) setBusy(false);
       });
     return () => { mounted = false; };
-  }, [active, currentFolder?.id, fs, fsRevision, controllerRevision]);
+  }, [active, currentFolder?.id, fs, fsRevision, controllerRevision, hiddenVisibilityRevision]);
 
   const view = useMemo(() => projectStartSurfaceView({
     trail,
