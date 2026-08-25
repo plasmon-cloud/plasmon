@@ -1,0 +1,7 @@
+schema=plasmon-luna-promotion-manifest-v1
+target=release/0.1.0-r2
+expectedTotal=128
+certificationInputRef=release/0.1.0-r2
+certificationReleaseSha=c572faebeb93d3fa71c77a244d1c7049164e10bb
+stableIdMigrations=[]
+fragments=lane-a.tsv,lane-b.tsv,lane-c.tsv,lane-d.tsv,invalid.tsv
