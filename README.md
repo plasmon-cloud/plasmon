@@ -25,9 +25,7 @@ Documentation: http://ntron.net code: devs
 ## Documentation
 
 Start with the [documentation index](doc/index.md) for the current architecture,
-core contracts, and suggested reading paths. The generated [repository documentation
-map](doc/repository-map.md) lists every maintained boundary, its owner, and any
-nested documentation contract.
+core contracts, repository map, and suggested reading paths.
 
 ### Foundations And Architecture
 

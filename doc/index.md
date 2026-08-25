@@ -135,8 +135,6 @@ compiler, shared-tools, or provisioner source change.
   repository-delivered setup data.
 - [Testing And Verification](./testing-and-verification.md) lists the release
   and security gates.
-- [Repository Documentation Map](./repository-map.md) lists maintained repository
-  boundaries, owning documentation, and delegated nested contracts.
 - [Playwright](./playwright.md) covers browser automation in local development.
 
 ## Product And UI
@@ -152,12 +150,23 @@ compiler, shared-tools, or provisioner source change.
 
 ## Repository Map
 
-The generated [repository documentation map](./repository-map.md) is the
-structural navigation source for maintained repository boundaries. It identifies
-local and canonical documentation owners and delegates `apps/plasmon/**` to its
-nested map rather than duplicating Plasmon's internal boundaries.
+```text
+apps/
+  kernel/                 trusted frontend and backend Kernel
+  */                      ordinary first-party apps
+packages/
+  neutron-tools/          protocol, app SDK, Kernel-side helpers, schemas
+  neutron-compiler/       package preparation, actor assembly, installation
+  neutron-motoko-wasm/    isolated browser/Node Motoko compiler service
+  neutron-provision/      PocketIC and IC deployment pipeline
+  neutron-motoko-capabilities/
+                          public Motoko capability leaf types
+support/
+  dispenser/              product bootstrap service
+  update-source/          package publication infrastructure
+doc/                      architecture and operational contracts
+```
 
-Generated product/build files remain outputs, not independent design
-authorities. Change the source manifest, catalog, compiler template, or service
-that owns a contract, then regenerate its actor, Candid, registry, archive, or
-evidence output.
+Generated files are outputs, not independent design authorities. Change the
+source manifest, catalog, compiler template, or service that owns a contract,
+then regenerate its actor, Candid, registry, archive, or evidence output.
