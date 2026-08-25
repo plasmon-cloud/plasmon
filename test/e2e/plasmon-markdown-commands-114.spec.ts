@@ -8,6 +8,7 @@ const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "first-demo";
 const BASIC_MARKDOWN_SOURCE = "# Big Heading\n\nNormal paragraph.\n\n- one\n- two";
+const COMPACT_HEADING_SOURCE = "#hello";
 
 test(
   "#114 packaged Markdown exposes formatter, commands, and basic rendered Preview",
@@ -152,6 +153,26 @@ test(
     await editorWindow.getByRole("button", { name: "Split", exact: true }).click();
     await expect(heading).toBeVisible();
     await expect(list).toBeVisible();
+    await expect(surface).toBeVisible();
+
+    // #416 compatibility: the installed Preview accepts a standalone compact
+    // top-level heading, while the editor/persisted source remains literal.
+    await editorWindow.getByRole("button", { name: "Edit", exact: true }).click();
+    await firstLine.click({ position: { x: 8, y: 10 } });
+    await expect(browserInput).toBeFocused();
+    await page.keyboard.press("Control+A");
+    await page.keyboard.insertText(COMPACT_HEADING_SOURCE);
+    await save.click();
+    await expect(editorWindow.getByText("Saved", { exact: true })).toBeVisible();
+
+    await previewButton.click();
+    const compactHeading = preview.getByRole("heading", { name: "hello", exact: true, level: 1 });
+    await expect(compactHeading).toBeVisible();
+    await expect(preview).not.toContainText(COMPACT_HEADING_SOURCE);
+
+    await editorWindow.getByRole("button", { name: "Split", exact: true }).click();
+    await expect(compactHeading).toBeVisible();
+    await expect(firstLine).toContainText(COMPACT_HEADING_SOURCE);
     await expect(surface).toBeVisible();
 
     await editorWindow.getByRole("button", { name: "Edit", exact: true }).click();
