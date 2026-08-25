@@ -25,6 +25,12 @@ jobs:
       - name: Verify Kernel CI skip contract
         run: node test/ci/verify-kernel-ci.mjs
 
+      - name: Test repository documentation ownership
+        run: node --test test/ci/documentation-ownership.test.mjs
+
+      - name: Verify repository documentation ownership
+        run: node doc/documentation-ownership.mjs check
+
       - name: Detect kernel-relevant changes
         id: kernel_scope
         shell: bash

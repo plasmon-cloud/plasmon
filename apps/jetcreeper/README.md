@@ -1,4 +1,4 @@
-# Jetfreeper
+# Jetcreeper
 
 Jetfreeper is a self-contained GPU autobattler for Neutron. Super Brain owns
 survival, movement planning, and auto-combat while a viewer can gently steer,
