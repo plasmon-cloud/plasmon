@@ -1,6 +1,5 @@
 # EmulatorJS runtime host
 
-<!-- plasmon-docs-review:v1 sha256=ac347964fea97faa7cc9b26c0ef82799b047b8b34bfddd14558c3a8816b9bc62 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
 
 This directory integrates EmulatorJS as an association-backed Plasmon runtime.
 Every shipped Plasmon package profile omits this optional runtime and its ROM

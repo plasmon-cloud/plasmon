@@ -1,6 +1,5 @@
 # Text / Monaco editor
 
-<!-- plasmon-docs-review:v1 sha256=978bbfbd0d366b62ae81c51cd83529ce60b277576a019b120a83676fb9834187 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 Text is the Plasmon native text/code editor built around the shared Monaco browser-runtime host and an FsService-backed document session.
 

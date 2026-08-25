@@ -1,6 +1,5 @@
 # Settings
 
-<!-- plasmon-docs-review:v1 sha256=9a77d0530e8250d2b339ad60d291692bde88870149dabca8f71909ad249fef1c base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 Settings is the Plasmon-native settings/status surface over shared OS capabilities.
 
