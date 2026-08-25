@@ -1,6 +1,6 @@
 # Plasmon documentation map
 
-<!-- plasmon-docs-review:v1 sha256=22b85144e930e0ecd80e7aa9702cd0d4bb2350f14ec0298f28739fc93f4343c9 base=da0c01a908d4db39903edf17f5859a34a0554fd1 -->
+<!-- plasmon-docs-review:v1 sha256=7d05a761726aa41da3e114f871e5ed33910cdb3063e1199f75bc1d72ba149f4e base=115867906490e0bb8bcc675fa55d0dbd5bcbcad8 -->
 
 This directory is the durable cross-subsystem documentation home for Plasmon. The repository is authoritative for Plasmon architecture, terminology, testing rules, and implementation guidance; chat, handoffs, and external project context are coordination and bootstrap aids only.
 
@@ -49,7 +49,7 @@ Review fingerprints make implementation drift visible at those boundaries. [`DOC
 | `apps/plasmon/src/native-apps/emulatorjs` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/explorer` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/jsdos` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
-| `apps/plasmon/src/native-apps/markdown` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/markdown` | native-app | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/photos` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/properties` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/recycle-bin` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
