@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,6 +42,14 @@ function gitFile(repoRoot, ref, path) {
   } catch {
     return null;
   }
+}
+
+function gitCommitExists(repoRoot, sha) {
+  return spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: repoRoot }).status === 0;
+}
+
+function gitIsAncestor(repoRoot, ancestor, descendant) {
+  return spawnSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: repoRoot }).status === 0;
 }
 
 function fileBytes(path) {
@@ -161,6 +169,46 @@ function untrackedPaths(repoRoot) {
   return gitZ(repoRoot, ["ls-files", "-z", "--others", "--exclude-standard", "--", "apps/plasmon"]);
 }
 
+function dirtyPaths(repoRoot) {
+  const paths = [
+    ...gitZ(repoRoot, ["diff", "--name-only", "-z", "--", "apps/plasmon"]),
+    ...gitZ(repoRoot, ["diff", "--cached", "--name-only", "-z", "--", "apps/plasmon"]),
+    ...untrackedPaths(repoRoot),
+  ];
+  return [...new Set(paths)];
+}
+
+function latestCommitTouching(repoRoot, base, paths) {
+  if (paths.length === 0) return null;
+  try {
+    return git(repoRoot, ["log", "-1", "--format=%H", `${base}..HEAD`, "--", ...paths]) || null;
+  } catch {
+    return null;
+  }
+}
+
+function substantiveDocumentationCommits(repoRoot, base, path) {
+  let commits;
+  try {
+    commits = git(repoRoot, ["log", "--format=%H", `${base}..HEAD`, "--", path])
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+
+  const result = [];
+  for (const commit of commits) {
+    const current = gitFile(repoRoot, commit, path);
+    const previous = gitFile(repoRoot, `${commit}^`, path);
+    if (current === null) continue;
+    if (normalizedDocumentationContent(path, current) !== normalizedDocumentationContent(path, previous ?? "")) {
+      result.push(commit);
+    }
+  }
+  return result;
+}
+
 export function representativeChangedFiles(boundaryPath, registry, repoRoot, marker, currentFiles, limit = 5) {
   const candidate = marker
     ? [...changedPathsSince(marker.base, repoRoot), ...untrackedPaths(repoRoot)]
@@ -168,38 +216,61 @@ export function representativeChangedFiles(boundaryPath, registry, repoRoot, mar
   return [...new Set(ownedImplementationFiles(boundaryPath, registry, candidate))].slice(0, limit);
 }
 
-export function documentationChangesSinceReview(boundary, marker, repoRoot = defaultRepoRoot) {
+export function documentationMaintenanceSinceReview(
+  boundary,
+  marker,
+  registry,
+  repoRoot = defaultRepoRoot,
+  currentFiles = listRepositoryFiles(repoRoot),
+) {
   const requiredFiles = requiredDocumentationFiles(boundary);
+  const ownedFiles = ownedImplementationFiles(boundary.path, registry, currentFiles);
+  const relevant = new Set([...ownedFiles, ...requiredFiles]);
+  const uncommittedFiles = dirtyPaths(repoRoot).filter((path) => relevant.has(path));
+
   if (!marker) {
     return {
       baselineAvailable: true,
       changed: true,
       changedFiles: requiredFiles.filter((path) => existsSync(resolve(repoRoot, path))),
       requiredFiles,
+      latestImplementationCommit: null,
+      latestDocumentationCommit: null,
+      uncommittedFiles,
     };
   }
 
-  let baselineAvailable = true;
-  const changedFiles = [];
+  if (!gitCommitExists(repoRoot, marker.base)) {
+    return {
+      baselineAvailable: false,
+      changed: false,
+      changedFiles: [],
+      requiredFiles,
+      latestImplementationCommit: null,
+      latestDocumentationCommit: null,
+      uncommittedFiles,
+    };
+  }
+
+  const latestImplementationCommit = latestCommitTouching(repoRoot, marker.base, ownedFiles);
+  const qualifying = [];
   for (const path of requiredFiles) {
-    const absolute = resolve(repoRoot, path);
-    if (!existsSync(absolute)) continue;
-    const previous = gitFile(repoRoot, marker.base, path);
-    if (previous === null) {
-      baselineAvailable = false;
-      continue;
-    }
-    const current = readFileSync(absolute, "utf8");
-    if (normalizedDocumentationContent(path, current) !== normalizedDocumentationContent(path, previous)) {
-      changedFiles.push(path);
+    for (const commit of substantiveDocumentationCommits(repoRoot, marker.base, path)) {
+      if (!latestImplementationCommit || gitIsAncestor(repoRoot, latestImplementationCommit, commit)) {
+        qualifying.push({ path, commit });
+        break;
+      }
     }
   }
 
   return {
-    baselineAvailable,
-    changed: baselineAvailable && changedFiles.length > 0,
-    changedFiles,
+    baselineAvailable: true,
+    changed: uncommittedFiles.length === 0 && qualifying.length > 0,
+    changedFiles: [...new Set(qualifying.map((entry) => entry.path))],
     requiredFiles,
+    latestImplementationCommit,
+    latestDocumentationCommit: qualifying[0]?.commit ?? null,
+    uncommittedFiles,
   };
 }
 
@@ -214,8 +285,16 @@ export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) 
     const state = computeOwnedFingerprint(boundary.path, registry, repoRoot, files);
     const stale = !marker || marker.digest !== state.digest;
     const documentation = stale
-      ? documentationChangesSinceReview(boundary, marker, repoRoot)
-      : { baselineAvailable: true, changed: false, changedFiles: [], requiredFiles: requiredDocumentationFiles(boundary) };
+      ? documentationMaintenanceSinceReview(boundary, marker, registry, repoRoot, files)
+      : {
+          baselineAvailable: true,
+          changed: false,
+          changedFiles: [],
+          requiredFiles: requiredDocumentationFiles(boundary),
+          latestImplementationCommit: null,
+          latestDocumentationCommit: null,
+          uncommittedFiles: [],
+        };
     status.push({
       boundary: boundary.path,
       digest: state.digest,
@@ -228,6 +307,9 @@ export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) 
       documentationChanged: documentation.changed,
       documentationChangedFiles: documentation.changedFiles,
       requiredDocumentationFiles: documentation.requiredFiles,
+      latestImplementationCommit: documentation.latestImplementationCommit,
+      latestDocumentationCommit: documentation.latestDocumentationCommit,
+      uncommittedReviewFiles: documentation.uncommittedFiles,
     });
   }
 
@@ -244,7 +326,7 @@ export function prepareDocumentationReview(boundaryPath, registry, repoRoot = de
   const previous = parseReviewMarker(readme);
   const state = computeOwnedFingerprint(boundary.path, registry, repoRoot, files);
   const changedFiles = representativeChangedFiles(boundary.path, registry, repoRoot, previous, state.files, 20);
-  const documentation = documentationChangesSinceReview(boundary, previous, repoRoot);
+  const documentation = documentationMaintenanceSinceReview(boundary, previous, registry, repoRoot, files);
   const base = headSha(repoRoot);
   return {
     boundary: boundary.path,
@@ -258,6 +340,9 @@ export function prepareDocumentationReview(boundaryPath, registry, repoRoot = de
     documentationChanged: documentation.changed,
     documentationChangedFiles: documentation.changedFiles,
     requiredDocumentationFiles: documentation.requiredFiles,
+    latestImplementationCommit: documentation.latestImplementationCommit,
+    latestDocumentationCommit: documentation.latestDocumentationCommit,
+    uncommittedReviewFiles: documentation.uncommittedFiles,
   };
 }
 
@@ -267,13 +352,19 @@ export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = d
   if (review.previous && !review.documentationBaselineAvailable) {
     throw new Error(
       `${review.boundary}: previous documentation baseline ${review.previous.base} is unavailable; refusing marker refresh. ` +
-      `Use a repository checkout containing that history and edit ${review.requiredDocumentationFiles.join(" or ")} before review.`,
+      "Use a repository checkout containing that history.",
+    );
+  }
+  if (review.previous && review.uncommittedReviewFiles.length > 0) {
+    throw new Error(
+      `${review.boundary}: commit the owned implementation/documentation change surface before refreshing the marker: ` +
+      review.uncommittedReviewFiles.join(", "),
     );
   }
   if (review.previous && !review.documentationChanged) {
     throw new Error(
-      `${review.boundary}: owning documentation content has not changed since the previous review. ` +
-      `Edit ${review.requiredDocumentationFiles.join(" or ")} before refreshing the marker.`,
+      `${review.boundary}: no committed substantive owning-documentation edit exists at or after the latest owned implementation commit. ` +
+      `Edit and commit ${review.requiredDocumentationFiles.join(" or ")} before refreshing the marker.`,
     );
   }
   writeFileSync(review.readmePath, review.updatedReadme);
@@ -293,10 +384,12 @@ export function printStatus(status) {
     for (const path of entry.changedFiles) console.error(`  - ${path}`);
     if (entry.marker && !entry.documentationBaselineAvailable) {
       console.error(`  documentation baseline unavailable: ${entry.marker.base}`);
+    } else if (entry.uncommittedReviewFiles.length > 0) {
+      console.error(`  commit before review: ${entry.uncommittedReviewFiles.join(", ")}`);
     } else if (entry.marker && entry.documentationChangedFiles.length === 0) {
-      console.error(`  required documentation edit: ${entry.requiredDocumentationFiles.join(" or ")}`);
+      console.error(`  required committed documentation edit: ${entry.requiredDocumentationFiles.join(" or ")}`);
     } else {
-      for (const path of entry.documentationChangedFiles) console.error(`  documentation edited: ${path}`);
+      for (const path of entry.documentationChangedFiles) console.error(`  documentation maintained: ${path}`);
     }
     console.error(`  run: npm --workspace neutron-plasmon run docs:review -- ${entry.boundary}`);
   }
@@ -312,12 +405,16 @@ function printReviewSurface(review) {
   console.log("Owning documentation maintenance:");
   if (!review.documentationBaselineAvailable) {
     console.log(`  baseline unavailable: ${review.previous?.base ?? "none"}`);
+  } else if (review.uncommittedReviewFiles.length > 0) {
+    console.log(`  COMMIT FIRST: ${review.uncommittedReviewFiles.join(", ")}`);
   } else if (review.documentationChangedFiles.length === 0) {
-    console.log(`  REQUIRED: edit ${review.requiredDocumentationFiles.join(" or ")}`);
+    console.log(`  REQUIRED: edit and commit ${review.requiredDocumentationFiles.join(" or ")}`);
   } else {
-    for (const path of review.documentationChangedFiles) console.log(`  edited: ${path}`);
+    for (const path of review.documentationChangedFiles) console.log(`  maintained: ${path}`);
+    if (review.latestImplementationCommit) console.log(`  implementation commit: ${review.latestImplementationCommit}`);
+    if (review.latestDocumentationCommit) console.log(`  documentation commit: ${review.latestDocumentationCommit}`);
   }
-  console.log("A marker refresh is valid only after the owning documentation content has been edited.");
+  console.log("A marker refresh is valid only after the implementation and substantive owning-documentation edit are committed.");
 }
 
 function runCli() {
@@ -343,7 +440,7 @@ function runCli() {
       console.log(`Updated ${result.boundary}/README.md`);
       console.log(`  sha256=${result.digest}`);
       console.log(`  base=${result.base}`);
-      console.log("This marker records that the owned implementation and owning documentation were reviewed together; it does not prove semantic correctness.");
+      console.log("This marker records that committed owned implementation and owning documentation were reviewed together; it does not prove semantic correctness.");
     } catch (error) {
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
