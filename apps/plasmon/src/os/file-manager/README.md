@@ -1,6 +1,5 @@
 # FileManager
 
-<!-- plasmon-docs-review:v1 sha256=20a13f84ecc39035392143fea0a57839dc64ed3248ba0fa2816398134999ef34 base=a9966f33fcd33c8f73f49668afe8c7d670f5a149 -->
 
 `file-manager/**` is the reusable filesystem presentation and interaction layer used by Desktop and Explorer-style applications. It renders authoritative `FsService` state and coordinates selection, rename, clipboard operations, drag/drop, create/import/download, context commands, Properties/Open With presentation, visibility preferences, operation status, and error reporting.
 

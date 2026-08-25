@@ -1,6 +1,5 @@
 # OS integration
 
-<!-- plasmon-docs-review:v1 sha256=4998c2176a4b9cf4ba1488cb0c118219ef3c2a00824b4f92c63e840e6173d7bf base=1b083268b6a3d930ad4ecad2d67d98c0167c0938 -->
 
 `integration/**` is the Plasmon OS composition boundary. It wires subsystem implementations together through their public contracts; it should not become a second home for subsystem policy.
 

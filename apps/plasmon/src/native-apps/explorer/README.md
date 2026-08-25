@@ -1,6 +1,5 @@
 # Explorer
 
-<!-- plasmon-docs-review:v1 sha256=bba9345d2ebaab1b98e22eca3ef1eda75977f95d8938d950a2760347c0cbf38d base=1b083268b6a3d930ad4ecad2d67d98c0167c0938 -->
 
 Explorer is the native application wrapper around the shared FileManager UI. It owns window-level filesystem navigation and view chrome while file operations and entry interaction remain in `os/file-manager/**`.
 
