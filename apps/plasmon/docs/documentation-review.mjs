@@ -225,7 +225,10 @@ export function documentationMaintenanceSinceReview(
 ) {
   const requiredFiles = requiredDocumentationFiles(boundary);
   const ownedFiles = ownedImplementationFiles(boundary.path, registry, currentFiles);
-  const relevant = new Set([...ownedFiles, ...requiredFiles]);
+  const changedOwnedFiles = marker
+    ? ownedImplementationFiles(boundary.path, registry, changedPathsSince(marker.base, repoRoot))
+    : [];
+  const relevant = new Set([...ownedFiles, ...changedOwnedFiles, ...requiredFiles]);
   const uncommittedFiles = dirtyPaths(repoRoot).filter((path) => relevant.has(path));
 
   if (!marker) {
@@ -252,7 +255,7 @@ export function documentationMaintenanceSinceReview(
     };
   }
 
-  const latestImplementationCommit = latestCommitTouching(repoRoot, marker.base, ownedFiles);
+  const latestImplementationCommit = latestCommitTouching(repoRoot, marker.base, changedOwnedFiles);
   const qualifying = [];
   for (const path of requiredFiles) {
     for (const commit of substantiveDocumentationCommits(repoRoot, marker.base, path)) {
