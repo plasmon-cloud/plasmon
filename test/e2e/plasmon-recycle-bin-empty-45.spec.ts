@@ -43,8 +43,6 @@ test("#45 — packaged non-empty Recycle Bin confirms and empties canonical Tras
 
     const source = desktop.locator("[data-fm-node-id]", { hasText: itemName }).first();
     await expect(source).toBeVisible();
-    const nodeId = await source.getAttribute("data-fm-node-id");
-    expect(nodeId).toBeTruthy();
 
     await source.click({ button: "right" });
     const deleteMenu = plasmon.getByRole("menu").last();
@@ -74,8 +72,8 @@ test("#45 — packaged non-empty Recycle Bin confirms and empties canonical Tras
     await confirmation.getByRole("button", { name: "Confirm Empty Recycle Bin" }).click();
 
     await expect(recycleBin.getByText("Recycle Bin is empty.")).toBeVisible({ timeout: 20_000 });
+    await expect(trashedEntry).toHaveCount(0);
     await expect(recycleBin.getByRole("button", { name: "Empty Recycle Bin" })).toBeDisabled();
-    await expect(recycleBin.locator(`[data-fm-node-id="${nodeId}"]`)).toHaveCount(0);
     health.assertClean();
   } finally {
     health.dispose();
