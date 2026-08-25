@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T19:27:08.816289Z",
+  "captured_at": "2026-08-25T19:34:30.563891Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 3,
     "open_issues": 33,
     "open_product_prs": 5
   },
-  "generation": "244938815a9751558347864e03315ef79baa7c6e",
+  "generation": "a80841907511daed6568d2cf4d1753939e1b0b5c",
   "issues": [
     {
       "area": "Repo",
@@ -3684,7 +3684,7 @@
       "review": "pending",
       "state": "open",
       "title": "#429 Add global hidden-resource visibility policy",
-      "updated_at": "2026-08-25T19:02:50Z",
+      "updated_at": "2026-08-25T19:28:00Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/433"
     },
     {
@@ -4440,7 +4440,7 @@
       "review": "pending",
       "state": "open",
       "title": "#45 Fix non-empty Empty Recycle Bin confirmation",
-      "updated_at": "2026-08-25T19:26:27Z",
+      "updated_at": "2026-08-25T19:28:00Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/477"
     },
     {
@@ -4584,7 +4584,7 @@
       "review": "pending",
       "state": "open",
       "title": "#367 Backfill user-root deletion persistence regression",
-      "updated_at": "2026-08-25T19:26:29Z",
+      "updated_at": "2026-08-25T19:28:00Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/484"
     },
     {
@@ -4674,7 +4674,7 @@
       "review": "pending",
       "state": "open",
       "title": "#107 Refresh integrated packaged acceptance on current r2",
-      "updated_at": "2026-08-25T19:26:30Z",
+      "updated_at": "2026-08-25T19:28:00Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/485"
     }
   ],
