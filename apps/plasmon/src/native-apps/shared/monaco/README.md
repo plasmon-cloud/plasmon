@@ -7,6 +7,10 @@ This directory is the single Monaco browser adapter consumed by the first-party 
 - `editorModel.ts` owns deterministic model ownership/URI and canonical resource-to-Monaco language policy.
 - `monacoEnvironment.ts` consumes the #89 packaged worker transport. `/System/Program Files/MonacoEditor` remains the logical worker-runtime authority; the opaque-origin transport adapter does not become a second authority.
 
+The r2 slim package intentionally ships only `editor.worker.js`. Every Monaco worker label, including TypeScript/JavaScript language-service labels, resolves to that installed Program Files editor-worker source in slim mode, while the opaque Neutron frame receives byte-identical preloaded bytes through the `blob:` compatibility transport. JavaScript language classification and syntax tokenization remain required editor behavior even though the heavyweight `ts.worker.js` language-service payload is omitted.
+
+The historical #89 requirement for dedicated full TypeScript/JavaScript language-service workers is therefore **FUTURE/SUPERSEDED for r2**. Release certification #369 must not require that omitted payload; #370 owns any later heavyweight/on-demand runtime-delivery architecture. Full-profile worker mapping remains supported as profile-specific policy and must not be restored to the slim artifact merely to satisfy the obsolete acceptance.
+
 The host does **not** own filesystem/document persistence, dirty/conflict state, Save/Save As/autosave, Process close negotiation, Text/Markdown commands, Markdown preview, or application chrome. Those remain with the document applications and their existing canonical services.
 
 Each mounted editor host owns exactly one concrete Monaco model. Two live surfaces for the same semantic resource intentionally receive different model URIs and dispose only their own model. Semantic document identity remains outside Monaco model-registry identity.
