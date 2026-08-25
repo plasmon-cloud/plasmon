@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { browserLanes, repoRoot as inventoryRepoRoot } from './plasmon-test-inventory.mjs';
+import { browserLanes, classifyPlasmonTest, repoRoot as inventoryRepoRoot } from './plasmon-test-inventory.mjs';
 
 export const MANIFEST_PATH = 'apps/plasmon/test/LUNA_PROMOTION_MANIFEST.json';
 export const CLASSIFICATIONS = Object.freeze([
@@ -23,7 +23,8 @@ export const SOURCE_KINDS = Object.freeze([
   'audit-contract',
 ]);
 export const TERMINAL = new Set(['PERMANENT', 'EQUIVALENT', 'PACKAGED']);
-export const REQUIRED_COUNTS = Object.freeze({
+export const REQUIRED_TOTAL = 128;
+const SELF_TEST_COUNTS = Object.freeze({
   PERMANENT: 22,
   EQUIVALENT: 15,
   PACKAGED: 28,
@@ -32,9 +33,9 @@ export const REQUIRED_COUNTS = Object.freeze({
   FUTURE: 7,
   SUPERSEDED: 28,
 });
-export const REQUIRED_TOTAL = 128;
 const SHA40 = /^[0-9a-f]{40}$/;
 const STABLE_ID = /^luna-(?:a|b|c|d|x)-[a-z0-9][a-z0-9-]*$/;
+const HISTORICAL_LUNA_RESTORATION_ISSUES = Object.freeze([251, 279, 303, 304, 308, 320, 330]);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -62,11 +63,15 @@ async function exists(root, path) {
 }
 
 function packagedReachability() {
-  const reachability = new Map();
-  for (const [lane, paths] of Object.entries(browserLanes)) {
-    for (const path of paths) reachability.set(path, lane);
-  }
-  return reachability;
+  return {
+    get(path) {
+      for (const [lane, paths] of Object.entries(browserLanes)) {
+        if (paths.includes(path)) return lane;
+      }
+      const classification = classifyPlasmonTest(path);
+      return classification?.layer === 'browser' ? classification.lane : undefined;
+    },
+  };
 }
 
 export function validateManifestShape(manifest) {
@@ -76,12 +81,13 @@ export function validateManifestShape(manifest) {
   assert(manifest.entries.length === REQUIRED_TOTAL, `manifest must contain exactly ${REQUIRED_TOTAL} entries`);
   assert(manifest.expectedTotal === REQUIRED_TOTAL, `expectedTotal must remain ${REQUIRED_TOTAL}`);
   assert(manifest.classificationCounts && typeof manifest.classificationCounts === 'object', 'classificationCounts must be present');
+  let declaredTotal = 0;
   for (const classification of CLASSIFICATIONS) {
-    assert(
-      manifest.classificationCounts[classification] === REQUIRED_COUNTS[classification],
-      `classificationCounts.${classification} must be ${REQUIRED_COUNTS[classification]}`,
-    );
+    const count = manifest.classificationCounts[classification];
+    assert(Number.isInteger(count) && count >= 0, `classificationCounts.${classification} must be a non-negative integer`);
+    declaredTotal += count;
   }
+  assert(declaredTotal === REQUIRED_TOTAL, `classificationCounts must sum to ${REQUIRED_TOTAL}`);
   assert(manifest.certification && typeof manifest.certification === 'object', 'certification block must be present');
   assert(SHA40.test(manifest.certification.releaseSha ?? ''), 'certification.releaseSha must be an exact 40-character SHA');
   assert(manifest.certification.inputRef === 'release/0.1.0-r2', 'certification.inputRef must be release/0.1.0-r2');
@@ -167,7 +173,7 @@ export async function verifyManifest(manifest, options = {}) {
   }
 
   for (const classification of CLASSIFICATIONS) {
-    assert(counts[classification] === REQUIRED_COUNTS[classification], `actual ${classification} count ${counts[classification]} != ${REQUIRED_COUNTS[classification]}`);
+    assert(counts[classification] === manifest.classificationCounts[classification], `actual ${classification} count ${counts[classification]} != declared ${manifest.classificationCounts[classification]}`);
   }
 
   for (const migration of manifest.stableIdMigrations) {
@@ -175,14 +181,29 @@ export async function verifyManifest(manifest, options = {}) {
     assert(seenIds.has(migration.to), `stable ID migration target ${migration.to} is missing`);
   }
 
-  const quarantineOwners = manifest.entries
-    .filter((entry) => entry.classification === 'QUARANTINED')
-    .map((entry) => entry.restorationIssue)
-    .sort((a, b) => a - b);
-  assert(
-    JSON.stringify(quarantineOwners) === JSON.stringify([251, 279, 303, 304, 308, 320, 330]),
-    `active r2 quarantine owners must be exactly #251/#279/#303/#304/#308/#320/#330; got ${quarantineOwners.join(',')}`,
-  );
+  const restorationEntries = new Map();
+  for (const entry of manifest.entries) {
+    if (!positiveIssue(entry.restorationIssue)) continue;
+    const list = restorationEntries.get(entry.restorationIssue) ?? [];
+    list.push(entry);
+    restorationEntries.set(entry.restorationIssue, list);
+  }
+  for (const issue of HISTORICAL_LUNA_RESTORATION_ISSUES) {
+    const entries = restorationEntries.get(issue) ?? [];
+    assert(entries.length === 1, `historical Luna restoration #${issue} must map to exactly one stable manifest entry`);
+    const entry = entries[0];
+    const state = await issueState(issue);
+    if (entry.classification === 'QUARANTINED') {
+      assert(state === 'open', `${entry.id}: active quarantine restoration #${issue} is not open`);
+    } else {
+      assert(TERMINAL.has(entry.classification), `${entry.id}: restored historical quarantine must be terminal or QUARANTINED`);
+      assert(state === 'closed', `${entry.id}: restored historical quarantine #${issue} is not closed`);
+      assert(entry.classification === 'PACKAGED', `${entry.id}: restored browser quarantine must become PACKAGED`);
+    }
+  }
+  for (const entry of manifest.entries.filter((candidate) => candidate.classification === 'QUARANTINED')) {
+    assert(HISTORICAL_LUNA_RESTORATION_ISSUES.includes(entry.restorationIssue), `${entry.id}: quarantine is outside the canonical Luna restoration set`);
+  }
 
   const browserHealth305 = manifest.entries.find((entry) => entry.sourceIssue === 305 && entry.healthAllowRule === true);
   assert(browserHealth305, 'manifest must retain #305 BrowserHealth policy evidence');
@@ -245,7 +266,7 @@ function validFixture() {
   const entries = [];
   let index = 0;
   for (const classification of CLASSIFICATIONS) {
-    for (let count = 0; count < REQUIRED_COUNTS[classification]; count += 1) {
+    for (let count = 0; count < SELF_TEST_COUNTS[classification]; count += 1) {
       index += 1;
       entries.push(makeEntry(index, classification));
     }
@@ -266,7 +287,7 @@ function validFixture() {
     schema: 'plasmon-luna-promotion-manifest-v1',
     target: 'release/0.1.0-r2',
     expectedTotal: REQUIRED_TOTAL,
-    classificationCounts: { ...REQUIRED_COUNTS },
+    classificationCounts: { ...SELF_TEST_COUNTS },
     certification: {
       releaseSha: '1111111111111111111111111111111111111111',
       inputRef: 'release/0.1.0-r2',
