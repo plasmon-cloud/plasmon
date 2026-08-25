@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T01:40:58.488493Z",
+  "captured_at": "2026-08-25T02:33:19.770985Z",
   "counts": {
-    "issues": 135,
+    "issues": 139,
     "open_ci_prs": 3,
-    "open_issues": 41,
-    "open_product_prs": 3
+    "open_issues": 43,
+    "open_product_prs": 4
   },
-  "generation": "e20b4166152162c2d352fdaf3a984bad3ec15722",
+  "generation": "f07716d2b9df5047918c3aa71b5c81d9dff3cd69",
   "issues": [
     {
       "area": "Repo",
@@ -129,7 +129,7 @@
       "labels": [],
       "number": 45,
       "open": true,
-      "open_pr": null,
+      "open_pr": 477,
       "priority": null,
       "product": true,
       "title": "Add a native Recycle Bin surface for restore, permanent delete, and empty",
@@ -2564,18 +2564,16 @@
       "dependency_states": {},
       "desire": "High",
       "effort": "Medium",
-      "labels": [
-        "release-blocker"
-      ],
+      "labels": [],
       "number": 368,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
       "title": "Add canonical full-Luna promotion manifest and verifier",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:52:41Z",
+      "updated_at": "2026-08-25T02:25:26Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/368"
     },
     {
@@ -2587,18 +2585,16 @@
       "dependency_states": {},
       "desire": null,
       "effort": null,
-      "labels": [
-        "release-blocker"
-      ],
+      "labels": [],
       "number": 369,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
       "title": "Perform final full-Luna r2 certification at one exact release SHA",
       "type": null,
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:53:10Z",
+      "updated_at": "2026-08-25T02:25:56Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/369"
     },
     {
@@ -3287,6 +3283,103 @@
       "unlocks": 0,
       "updated_at": "2026-08-25T00:55:40Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/471"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "ci_owned": false,
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Medium",
+      "labels": [
+        "needs-verification",
+        "release-blocker"
+      ],
+      "number": 478,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "[r2 Luna A] Audit Desktop / FileManager / Filesystem RED gates",
+      "type": "Task",
+      "unlocks": 0,
+      "updated_at": "2026-08-25T02:28:34Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/478"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "ci_owned": false,
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Medium",
+      "labels": [
+        "needs-verification",
+        "release-blocker"
+      ],
+      "number": 479,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "[r2 Luna B] Audit Shell / Windowing / Taskbar RED gates",
+      "type": "Task",
+      "unlocks": 0,
+      "updated_at": "2026-08-25T02:28:43Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/479"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "ci_owned": false,
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Medium",
+      "labels": [
+        "needs-verification",
+        "release-blocker"
+      ],
+      "number": 480,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "[r2 Luna C] Audit Native Apps / Editors / Media RED gates",
+      "type": "Task",
+      "unlocks": 0,
+      "updated_at": "2026-08-25T02:28:45Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/480"
+    },
+    {
+      "area": "Testing",
+      "assignees": [],
+      "blocked_by": [],
+      "ci_owned": false,
+      "dependencies_ready": true,
+      "dependency_states": {},
+      "desire": "High",
+      "effort": "Medium",
+      "labels": [
+        "blocked",
+        "needs-verification",
+        "release-blocker"
+      ],
+      "number": 481,
+      "open": true,
+      "open_pr": null,
+      "priority": null,
+      "product": true,
+      "title": "[r2 Luna D] Independently cross-check all remaining RED gates",
+      "type": "Task",
+      "unlocks": 0,
+      "updated_at": "2026-08-25T02:28:46Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/issues/481"
     }
   ],
   "milestone": "0.1.0-r2",
@@ -3516,7 +3609,13 @@
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #433 / Issue #429\nExact head: `75ad5cc008317c7cd6ba6937834960d7efd90cef`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T02:02:24Z\nReview ID: `pr-433-75ad5cc00831-1787623103876-e8655c7b`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > The complete #429 body and all 11 acceptance criteria were read from the review bundle; the live Issue comments were also fetched.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > The Issue body contains no screenshot, video, or comparison attachment URLs; that absence was recorded, and the packaged evidence referenced by the PR was inspected through its exact CI log.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > Related #466, #110, #189, #174, and #428 contracts/comments were inspected; #110 is merged/satisfied and #466 remains the separate r2 safe-default owner.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The observable goal is a durable global hidden-file preference that changes Search/Start eligibility while composing with Explorer's existing local preference; this was evaluated independently of the implementation.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The review identified protected-resource mutation, canonical filesystem/classification authority, local-vs-global preference ownership, and shortcut NodeId preservation as protected boundaries.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > The final changed-file set implements the requested Settings, Explorer, Search, Start, persistence, deterministic-test, and packaged-test scope without substituting a UI-only filter.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > SPECIFIC-REVIEW.md was read: the declared target is release/0.1.0-r2, Plasmon v0.1.0/version 100 is frozen, and the five required r2 gates were identified.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > PR #433 declares base release/0.1.0-r2 and the exact review bundle records head 75ad5cc008317c7cd6ba6937834960d7efd90cef; no stacked-parent dependency is assumed.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The assessment credits only the current PR head, merged #110/#189/#428 behavior, and exact-head CI; open #466 or other unmerged work is not counted.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > Hidden preference defaults, persistence, global/local combinations, hidden traversal, hidden native projection, hidden/orphan shortcuts, protection, and packaged failure/absence paths were inspected in production code and tests.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > The store serializes writes with writeChain, mounted flags unsubscribe React listeners, Search owns AbortController cancellation, and Start/Explorer async listings guard stale updates.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > The exact-head required lanes are green and the diff preserves canonical protected filesystem operations, local FileManager preference storage, and native app composition; no unrelated behavioral regression was found.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > The implementation keeps filesystem metadata as durable preference authority, #189 classifyResource as classification authority, FileManager as local preference owner, and Shell as Search/Start composition.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > NodeId targets are validated with fs.stat, native/.neutron projections are resolved from canonical filesystem paths, and Neutron/Process/Windowing responsibilities remain outside the new preference policy.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > HiddenVisibilityPreferenceStore is the single global store injected through the composition root; no localStorage/IndexedDB or surface-specific shadow store was added.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > The new deterministic tests assert persisted values, visibility results, shortcut identity, protection rejection, and all local/global combinations rather than source strings.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > Headless production composition covers deterministic policy and the Playwright test covers installed UI/browser behavior; cancellation, missing targets, hidden directories, and negative states are included.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > Fixtures use actual hidden files/directories, .Properties.sys, real shortcut NodeIds, and the installed Settings/Explorer flow; assertions are not relaxed geometry or source-shape checks.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > The Issue requires installed/browser evidence for Settings-to-Explorer/Search/Start behavior and strict BrowserHealth, so the packaged specialist lane is the correct evidence layer.\n- [ ] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > :x: The exact packaged test passed, but its global-ON section asserts only that Search reveals Properties; it never opens/observes Start while the global setting is ON, so the required packaged Start positive transition remains unverified.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > The specialist log shows 28 tests passed including the #429 file, and the bundle records green Fast Bun, persistence, smoke, Kernel, and 10/10 plus 50/50 flake evidence; this is distinguished from source correctness.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > The preference is a namespaced root metadata patch, not a schema replacement; reconstruction tests verify global and local values survive service recreation and installed reload.\n- [x] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > The PR updates the affected README documentation fingerprints and the reviewed code retains the filesystem, Shell, Explorer, and testing authority documentation.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The complete bundle's final changed-file list is bounded to #429 implementation/tests plus six documentation fingerprints and one related chrome assertion; no version bump or unrelated dependency update is required by r2 policy.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The immediate queue refresh still reports PR #433 COMPLETE at head 75ad5cc008317c7cd6ba6937834960d7efd90cef against release/0.1.0-r2.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > This session only inspected the exact PR, Issue, tests, and CI; it did not edit product code, merge, force-push, or alter another agent's work.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > CI was treated as separate gate/evidence: exact specialist logs and the bundled required-check results were inspected rather than used as a substitute for acceptance analysis.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] Durable global preference exists and defaults OFF.\n  > The root metadata store, OFF default, and reconstruction path are implemented and exercised by the focused persistence test.\n    - [x] Production code represents the behavior.\n      > HiddenVisibilityPreferenceStore validates versioned root metadata, defaults false, serializes updates, and is injected from services.ts.\n    - [x] An executable test covers it.\n      > apps/plasmon/src/os/hiddenVisibility.test.ts asserts default false, writes true, disposes, reconstructs, and reads true.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes FsService-backed values across service reconstruction, not a constant or source string.\n\n- [x] Global OFF preserves #466 Start/Search safe-default behavior.\n  > OFF is threaded into Search/Start and the tests assert hidden files, directories, Properties, and hidden-target shortcuts are absent.\n    - [x] Production code represents the behavior.\n      > searchFilesystem lists with includeHidden false and listVisibleStartMenuFolder does the same when the persisted global value is false.\n    - [x] An executable test covers it.\n      > The focused shell hiddenVisibility test asserts OFF exclusion for ordinary hidden resources, Properties projection, and a shortcut targeting a hidden file.\n    - [x] The test observes behavior rather than source shape.\n      > Those assertions inspect returned production Search/Start result nodes and IDs, including negative results, rather than source structure.\n\n- [x] Global ON makes hidden resources eligible in Start/Search through canonical classification/target resolution.\n  > ON enables hidden filesystem traversal and canonical target checks, and focused tests cover hidden files, nested hidden directories, Properties, and Start shortcuts.\n    - [x] Production code represents the behavior.\n      > ON passes includeHidden true and applies fs.stat/classified /System or /Apps resolution before allowing native, element, or node targets.\n    - [x] An executable test covers it.\n      > The shell test turns the store ON and asserts hidden files/directories/shortcut targets and exactly one Properties result, while its Start case asserts hidden targets reappear.\n    - [x] The test observes behavior rather than source shape.\n      > Assertions inspect actual SearchBatch results and Start folder nodes from the headless production service graph.\n\n- [x] Explorer local visibility alone never changes Start/Search.\n  > Explorer-local state is kept in FileManagerPreferenceStore and is not read by Search/Start; the installed test exercises local ON with global OFF.\n    - [x] Production code represents the behavior.\n      > Search/Start read only HIDDEN_VISIBILITY_PREFERENCES_KEY, while Explorer uses its separate FileManager preference plus the global OR composition.\n    - [x] An executable test covers it.\n      > The packaged journey checks local Explorer ON, then asserts Properties remains absent from both Search and Start while global remains OFF.\n    - [x] The test observes behavior rather than source shape.\n      > The browser assertions observe the real installed surfaces and the focused tests inspect separate persisted stores.\n\n- [x] Global ON forces Explorer effective visibility true and renders its local checkbox checked + disabled.\n  > Explorer computes global OR local visibility and disables its local checkbox when the global value is true; packaged evidence observes checked/disabled state.\n    - [x] Production code represents the behavior.\n      > ExplorerApp uses effectiveShowHiddenFiles = alwaysShowHiddenFiles || viewPreferences.showHiddenFiles and disabled={alwaysShowHiddenFiles}.\n    - [x] An executable test covers it.\n      > The packaged test checks the local box, enables the global box, and asserts the local control is checked and disabled.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes rendered checkbox state and the FileManager list's .Properties.sys entry, not a helper constant.\n\n- [x] Global ON -> OFF restores the prior local #110 preference and editable control.\n  > Global OFF leaves the FileManager preference untouched and re-enables the local control; both focused combination tests and packaged assertions cover this.\n    - [x] Production code represents the behavior.\n      > Explorer never writes the local preference when global mode changes; it derives effectiveShowHiddenFiles and only the local checkbox handler calls FileManagerPreferenceStore.save.\n    - [x] An executable test covers it.\n      > The focused test saves local true, toggles global on/off, and verifies local true; the packaged test repeats the rendered transition.\n    - [x] The test observes behavior rather than source shape.\n      > The evidence reads persisted local state and rendered control state after actual toggles.\n\n- [x] Hidden native `.sys` projection and shortcut-target visibility use canonical hidden state rather than UI heuristics.\n  > Native and shortcut paths resolve canonical resources and use filesystem listing/stat hiddenness; focused tests cover Properties, native shortcuts, node shortcuts, and orphan targets.\n    - [x] Production code represents the behavior.\n      > findSystemAppResource/findNeutronAppResource use classifyResource and isNodeEligibleForHiddenVisibility validates fs.stat plus canonical parent listing.\n    - [x] An executable test covers it.\n      > The shell tests assert no duplicate Properties result, native Properties shortcut filtering, hidden node-target filtering, hidden-directory traversal, and deleted-target filtering.\n    - [x] The test observes behavior rather than source shape.\n      > Tests inspect Search/Start result kinds and stable NodeIds, including the orphan shortcut regression, rather than dot-prefix heuristics.\n\n- [x] Protection semantics are unchanged.\n  > Global visibility only changes listing/presentation and the focused test confirms protected Properties rename remains rejected.\n    - [x] Production code represents the behavior.\n      > The new store does not alter ProtectedManagedFsService/resourceCapabilities; Explorer wraps only list visibility.\n    - [x] An executable test covers it.\n      > hiddenVisibility.test.ts enables the preference and expects renaming /System/.Properties.sys to reject with protected.\n    - [x] The test observes behavior rather than source shape.\n      > The test performs the real protected FsService operation and checks its error, not a source-level guard.\n\n- [x] Focused tests cover persistence and all global/local preference combinations.\n  > Focused coverage includes default/persistence, all four global/local combinations, and reconstruction.\n    - [x] Production code represents the behavior.\n      > Production code provides versioned global and existing versioned local filesystem-backed stores.\n    - [x] An executable test covers it.\n      > The focused hiddenVisibility test covers false/true global values, local false/true combinations, and reopened repository state.\n    - [x] The test observes behavior rather than source shape.\n      > Assertions observe loaded values and composeExplorerHiddenVisibility outputs derived from actual preference cases.\n\n- [ ] Packaged-browser acceptance proves Settings -> Search/Start/FileManager transitions using a known hidden resource.\n  > :x: The installed test covers Search and FileManager positive/negative transitions and Start while OFF, but omits the required installed Start assertion while global visibility is ON.\n    - [x] Production code represents the behavior.\n      > The production path is wired through Settings -> shared store -> fs events -> Search/Start/Explorer, with canonical resource projection.\n    - [ ] An executable test covers it.\n      > :x: test/e2e/plasmon-hidden-visibility-429.spec.ts exercises the installed journey but never asserts that Start renders Properties after globalHidden.check(); only Search is checked in the ON state.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The existing browser assertions are truthful for the states they cover, but they do not observe the missing global-ON Start behavior required by this criterion.\n\n- [x] BrowserHealth remains strict.\n  > The packaged test installs BrowserHealth and calls health.assertClean after the real journey.\n    - [x] Production code represents the behavior.\n      > The browser test installs strict BrowserHealth with only the narrowly bounded Kernel iframe warning allowance.\n    - [x] An executable test covers it.\n      > The exact specialist run executed the #429 Playwright test and reported it passed.\n    - [x] The test observes behavior rather than source shape.\n      > health.assertClean() is an executable runtime assertion; the allowance is exact message plus /chunks/ path and does not broadly ignore warnings.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
+        "commit_id": "75ad5cc008317c7cd6ba6937834960d7efd90cef",
+        "id": 5014297047,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "success",
@@ -3711,16 +3810,22 @@
       "number": 433,
       "owner": null,
       "product": true,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#429 Add global hidden-resource visibility policy",
-      "updated_at": "2026-08-25T01:19:36Z",
+      "updated_at": "2026-08-25T02:02:30Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/433"
     },
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #453 / Issue #251\nExact head: `342a9f1e19482f806232ce4c33c5da2a8d43600e`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T02:26:01Z\nReview ID: `pr-453-342a9f1e1948-1787624655991-b5ea0e9e`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > Read Issue #251 body and all five current comments through gh; the body contains the four acceptance criteria and the comments record the superseded 0/10 and current repair/CI context.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #251 has no screenshot, video, or attachment; its linked run/job references and textual evidence were inspected, and the exact-head CI evidence was checked separately.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > Inspected the related #308 child PR, its ancestry from #453, the existing quarantine ledger, and the FileManager/Desktop production path used by the acceptance.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The user problem is that a second reachable Explorer sibling sometimes never appears; the required observable result is repeated real activation, a second native window, Root address '/', and successful close/repeat cycles.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > Issue #251 explicitly protects the native-window count, canonical assertions, retries=0 evidence, and the rest of Specialist inventory, while prohibiting sleeps, retries, timeout inflation, weakened assertions, and Product hooks.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > The diff targets the quarantined sibling acceptance and its inventory count, adds Desktop-scoped identity selection and the production keyboard activation path, and leaves the #308 assertion quarantined.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > Read SPECIFIC-REVIEW.md: r2 targets release/0.1.0-r2, package identity/version is frozen, and the five required CI contexts are Fast Bun, Smoke, Specialist, Persistence, and kernel.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > PR #453 declares base release/0.1.0-r2 and is direct-to-r2; related PR #454 explicitly identifies itself as the child descending from this head, so the stack relationship is understood.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > Only the integrated r2 runtime prerequisite is treated as available; the open #454 child is not credited. The review evaluates #453's exact two-file delta relative to release/0.1.0-r2.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The changed spec covers initial and repeated activation, exact native-window counts, loaded Address '/', visibility, bounds containment, and close-back-to-count; the prior failure signature and boundary are also represented by the count assertion.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > The helper waits on the actual WindowManager projection and Explorer Address readiness rather than sleeping, then closes each sibling and waits for removal; no Product hook, direct Process call, retry, or timeout inflation was added.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > The existing #63 Alt-Tab assertions remain present and quarantined, while the shared activation path still checks distinct windows, MRU behavior, minimize/restore, Escape, close, and BrowserHealth for that test.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > The test presses Enter on the Desktop FileManager listbox after selecting the real FileEntry, preserving the production FileManager keyboard adapter -> commands.openNode -> canonical dispatcher path.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > Selection is restricted to the semantic Desktop region and stable data-fm-node-id identity; native window counts and Explorer address remain the Process/Windowing/FileManager observable boundaries.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > The change adds only test helpers and inventory bookkeeping; it does not add a second launcher, Process call, filesystem authority, or parallel WindowManager.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > Assertions observe rendered Desktop/FileManager state, native-window count, Explorer Address '/', visibility, geometry, and close lifecycle rather than source strings or implementation constants alone.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > This is correctly a packaged Playwright test because iframe hit testing and installed runtime readiness are material; the sequence uses Playwright's actionability and bounded expect polling with no arbitrary sleeps.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > The 60 sibling iterations, exact count transitions, address value, and one-pixel geometry tolerances are retained; the PR strengthens Root uniqueness and readiness instead of relaxing the acceptance.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > Issue #251 requires installed/browser Specialist execution with retries=0, so source/unit evidence would be insufficient and the PR uses the packaged Playwright lane.\n- [x] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > Exact-head CI reports successful Packaged Playwright specialist acceptance and ten successful Flake baseline iteration jobs, with the required Fast, Smoke, Persistence, and kernel jobs also passing.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > The test source and CI job evidence were inspected independently; the 10/10 flake result is treated as execution evidence, while green check status is recorded separately as merge-gate evidence.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > The diff changes only browser test and inventory metadata; it does not alter durable Plasmon state, schemas, migrations, serialized resources, or package runtime bytes.\n- [ ] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > :x: The required quarantine documentation is stale at test/ci/QUARANTINED_BROWSER_TESTS.md:17 and :110, still claiming #251 is active even though this head removes its tag and inventory entry; the PR does not update that ledger/documentation.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The exact diff contains only the two intended test/CI files, no generated artifacts or dependencies, and SPECIFIC-REVIEW.md explicitly waives a release version bump for ordinary r2 implementation PRs.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head 342a9f1e19482f806232ce4c33c5da2a8d43600e and base release/0.1.0-r2 were recorded, then review_queue confirmed the same head immediately before submission.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > No product files or branches were modified, no tests were run locally per reviewer operating policy, and no merge, force-push, or cross-agent worktree operation was performed.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > CI is reported as passing merge evidence, while correctness was judged from the Issue, changed spec, production FileManager path, inventory guard, quarantine ledger, and exact assertions.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] The exact `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` acceptance runs unquarantined with retries=0 and reaches the required second-Explorer window count.\n  > The exact test is unquarantined at line 70, the inventory expects one remaining quarantine at line 16, and exact-head Specialist/flake evidence reports the required window lifecycle passing.\n    - [x] Production code represents the behavior.\n      > The acceptance invokes the real Desktop FileManager selection and Enter keyboard path, whose production handler is on FileManager.tsx:327-331 and resolves the selected NodeId through canonical open commands.\n    - [x] An executable test covers it.\n      > test/e2e/plasmon-golden-path-window-lifetime.spec.ts:68-96 is the executable acceptance, and the exact-head Packaged Specialist job passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test asserts actual native-window count, Explorer Address '/', reachability bounds, visibility, and close lifecycle; it does not merely assert that a selector or tag exists.\n\n- [x] The second-Explorer input, FileManager activation, Process creation, or Windowing projection boundary is deterministically classified and repaired or routed to the correct owner, without sleeps, timeout inflation, retries, weakened window-count assertions, or Product test hooks.\n  > The repair deterministically addresses the observed Desktop/Explorer interception boundary by selecting one Desktop FileEntry before the first launch and reusing the real FileManager Enter path; the diff contains no prohibited workaround.\n    - [x] Production code represents the behavior.\n      > The production behavior is represented by the existing FileManager keyboard boundary and Desktop FileEntry identity; the PR's helper reaches that production path rather than creating test-only launch behavior.\n    - [x] An executable test covers it.\n      > The changed acceptance exercises the repaired boundary on the first launch and all 60 repeated sibling launches, with exact count and Address readiness assertions.\n    - [x] The test observes behavior rather than source shape.\n      > The test performs a real click/keyboard activation against the installed app and observes resulting WindowManager/FileManager state; it has no sleeps, retries, forced action, Product hook, or weakened count assertion.\n\n- [x] Five consecutive clean first-attempt packaged Specialist executions pass in a healthy environment with no recurrence of the second-Explorer count failure.\n  > Run 32757768636 on this exact head shows ten separate retries=0 Flake baseline iteration jobs all successful, plus successful Flake probe summary; this exceeds the five-clean requirement.\n    - [x] Production code represents the behavior.\n      > Each flake iteration runs the same production packaged Specialist acceptance, so the repaired FileManager/Desktop path\u2014not a test stub\u2014represents the exercised behavior.\n    - [x] An executable test covers it.\n      > The executable Specialist test is discovered by the inventory and executed by the flake baseline jobs; all ten exact-head iteration jobs passed.\n    - [x] The test observes behavior rather than source shape.\n      > The repeated runs evaluate native-window counts, Address '/', geometry, and close lifecycle through the browser, rather than checking source shape or a constant.\n\n- [ ] Only this exact acceptance is removed from quarantine; its canonical assertions and the rest of the Specialist inventory remain intact, and the quarantine documentation/inventory/ledger record the restoration evidence.\n  > :x: The quarantine tag and inventory entry are removed, but the required canonical ledger/documentation is not restored: test/ci/QUARANTINED_BROWSER_TESTS.md:17 still lists #251 as an active quarantine and :110 still says the sibling acceptance is quarantined. Update that document with the restoration evidence and remove the stale active-quarantine claims.\n    - [x] Production code represents the behavior.\n      > The canonical production FileManager/Desktop path remains represented by the executable acceptance; this criterion is primarily quarantine/inventory governance, not a new product implementation.\n    - [x] An executable test covers it.\n      > The PR retains the exact acceptance and changes only its tag plus inventory expectation; the inventory verifier still requires the full Specialist file and exact remaining quarantine count.\n    - [x] The test observes behavior rather than source shape.\n      > The test keeps the original native-window, Address, geometry, and close assertions, and the inventory change removes only @issue-251 while retaining the separate @issue-308 quarantine.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
+        "commit_id": "342a9f1e19482f806232ce4c33c5da2a8d43600e",
+        "id": 5014409984,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "success",
@@ -3855,16 +3960,22 @@
       "number": 453,
       "owner": null,
       "product": false,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#251 Stabilize Desktop Root activation for Explorer siblings",
-      "updated_at": "2026-08-25T01:28:03Z",
+      "updated_at": "2026-08-25T02:26:07Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/453"
     },
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #454 / Issue #308\nExact head: `a3e2686bf49626075cb302093d980c6028e32698`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T02:29:33Z\nReview ID: `pr-454-a3e2686bf496-1787624903238-99101210`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > Read Issue #308 body and all five comments through gh; the body contains the four acceptance criteria and comments record the original 0/10 failure, current stack ownership, and exact-head evidence policy.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #308 has no screenshots, videos, or attachments; its textual run/job evidence and current exact-head CI results were inspected.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > Inspected related Product contract #63, shared setup Issue #251, parent PR #453, the complete direct-r2 delta, production FileManager/Desktop code, and the quarantine ledger.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The user problem is that the second Explorer never appears, preventing Alt-Tab MRU behavior from being exercised; the desired result is two real native windows followed by the existing MRU/minimize/restore/Escape/close assertions.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > Issue #308 protects the exact #63 assertions and independent lifecycle, requires retries=0 clean evidence, and prohibits sleeps, retries, timeout inflation, weakened counts, and Product hooks.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > Relative to parent #453, commit a3e2686 changes only the #63 quarantine tag and #308 inventory entry; the shared activation repair preserves the intended production keyboard boundary.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > Read the r2 review policy: target release/0.1.0-r2, frozen Plasmon v0.1.0/package version, and required Fast, Smoke, Specialist, Persistence, and kernel contexts.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > PR #454 declares release/0.1.0-r2 and explicitly records parent #453 at 342a9f1; the direct-r2 diff and child-relative two-commit stack were both inspected.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The open parent is not treated as merged product work; only its exact tested behavior and the child commit's independent #308 restoration are evaluated, consistent with the stacked-PR rule.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The changed #63 test covers first/second window counts, distinct IDs, active state, MRU cycling, minimize/restore, Escape cancellation, close, and final active-window behavior.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > The shared helper waits for WindowManager count and real Explorer Address '/', while the #63 test preserves BrowserHealth setup/teardown in a finally block; no arbitrary sleep or retry was added.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > The Alt-Tab assertions remain unchanged, and the sibling #251 acceptance remains separately tagged @issue-251; only #308's quarantine is removed from the child commit.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > Activation uses the real Desktop FileManager listbox Enter path after selecting the production FileEntry, preserving the canonical FileManager command/open authority.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > The selector is scoped to the semantic Desktop and stable data-fm-node-id identity; native-window IDs, Windowing active classes, and Alt-Tab are observed through their existing boundaries.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > No parallel Process or WindowManager authority, direct Process call, filesystem shim, or Product hook is introduced; changes are test helpers and quarantine bookkeeping.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > The #63 test asserts rendered windows, stable IDs, active/minimized state, switcher visibility/selection, and BrowserHealth rather than source shape or tags alone.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > Installed browser execution is the honest layer for iframe focus, keyboard delivery, and native-window projection; Playwright actionability and bounded expect polling provide deterministic control without sleeps.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > The original strict MRU, count, ID, minimize/restore, Escape, close, and BrowserHealth assertions remain; the helper adds uniqueness and Address readiness rather than weakening bounds.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > Issue #308 explicitly requires packaged Specialist execution with retries=0 because the failure is at installed/browser Explorer setup before Alt-Tab semantics.\n- [x] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > Exact-head CI reports successful Packaged Specialist, Fast, Smoke, Persistence, and kernel jobs; the flake run also reports ten baseline and fifty characterization packets successful.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > The test source, individual flake job results, and required CI statuses were inspected separately; green status is treated as merge evidence, while the assertions and repeated runs provide behavior evidence.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > This stack changes only browser acceptance code and inventory metadata; no durable state, persistence schema, migration, serialized contract, or package bytes change.\n- [ ] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > :x: The required canonical quarantine documentation is stale: test/ci/QUARANTINED_BROWSER_TESTS.md:18 still lists #308 as an active @r2-quarantine and :110 still says the #63 acceptance is quarantined. The PR changes only code/inventory and does not record restoration evidence.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The direct-r2 diff contains only the intended test and inventory files, no generated artifacts or dependencies, and r2 policy expressly does not require a version bump for this change.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head a3e2686bf49626075cb302093d980c6028e32698 and base release/0.1.0-r2 were recorded; review_queue confirmed the same head immediately before submission.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > No product files, branches, or other agent worktrees were modified; no local tests were run per reviewer operating policy, and no merge or force-push was performed.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > CI is recorded as merge/infrastructure evidence only; correctness was judged from Issue #308, the exact diff, production FileManager path, Alt-Tab assertions, and quarantine documentation.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] The exact `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` acceptance runs unquarantined with retries=0 and reaches its Alt-Tab/Windowing MRU assertions.\n  > The #63 test is unquarantined at line 100, reaches both Explorer counts and all MRU assertions, and the exact-head retries=0 baseline/characterization jobs passed.\n    - [x] Production code represents the behavior.\n      > The production FileManager listbox keyboard handler at apps/plasmon/src/os/file-manager/FileManager.tsx:327-330 is exercised through the Desktop FileEntry selection and Enter activation path.\n    - [x] An executable test covers it.\n      > test/e2e/plasmon-golden-path-window-lifetime.spec.ts:98-165 is the executable #63 acceptance, and exact-head Packaged Specialist plus flake jobs passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes actual WindowManager native-window count/IDs, active classes, switcher options, minimize state, close state, and BrowserHealth, not source text.\n\n- [x] The second-Explorer input, FileManager activation, Process creation, or Windowing projection boundary is deterministically classified and repaired or routed to the correct owner, without sleeps, timeout inflation, retries, weakened window-count assertions, or Product test hooks.\n  > The shared repair deterministically handles the observed Desktop/Explorer interception by selecting one Desktop FileEntry before launch and using real FileManager Enter, without prohibited workarounds.\n    - [x] Production code represents the behavior.\n      > The repair reaches the existing production FileManager keyboard adapter and canonical open path; it does not emulate Process creation or Windowing in the test.\n    - [x] An executable test covers it.\n      > The #63 acceptance exercises the repaired boundary for both first and second Explorer creation and asserts exact counts before entering Alt-Tab behavior.\n    - [x] The test observes behavior rather than source shape.\n      > The helper uses real browser click/keyboard input and bounded readiness assertions; no sleep, retry, forced action, timeout inflation, weakened count, or Product hook appears in the diff.\n\n- [x] Five consecutive clean first-attempt packaged Specialist executions pass in a healthy environment with no recurrence of the second-Explorer setup failure.\n  > Run 32757831146 shows ten retries=0 baseline packets and fifty targeted characterization packets successful, exceeding the five-clean requirement with no second-Explorer recurrence in the reported exact-head run.\n    - [x] Production code represents the behavior.\n      > Each repeated packaged Specialist execution runs the real installed Plasmon/FileManager/Windowing path used by #63 rather than a test-only implementation.\n    - [x] An executable test covers it.\n      > The inventory discovers the test as Specialist and the flake baseline/characterization jobs execute it on the exact head; all reported packets passed.\n    - [x] The test observes behavior rather than source shape.\n      > Repeated browser executions assert real two-window setup and Alt-Tab MRU/minimize/restore/Escape/close outcomes, not a source-level proxy.\n\n- [ ] Only the exact #63 acceptance is removed from quarantine; its Alt-Tab assertions and independent restoration lifecycle remain intact, and the quarantine documentation/inventory records the proof.\n  > :x: The exact tag and inventory entry are removed and the Alt-Tab assertions remain, but the required quarantine documentation is not updated: lines 18 and 110 of test/ci/QUARANTINED_BROWSER_TESTS.md still describe #308 as active/quarantined. Add the restoration evidence and remove those stale claims.\n    - [x] Production code represents the behavior.\n      > The exact #63 production interaction remains represented by the unchanged FileManager/Windowing path and executable Alt-Tab acceptance; this criterion is primarily restoration bookkeeping.\n    - [x] An executable test covers it.\n      > The executable test retains @issue-63 and @issue-308, preserves all MRU/minimize/restore/Escape/close/BrowserHealth assertions, and the inventory removes only the #308 quarantine entry.\n    - [x] The test observes behavior rather than source shape.\n      > The assertions observe real Alt-Tab behavior and independent lifecycle state; the sole failure is the missing canonical documentation update, not test dishonesty.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
+        "commit_id": "a3e2686bf49626075cb302093d980c6028e32698",
+        "id": 5014425376,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "success",
@@ -4059,10 +4170,10 @@
       "number": 454,
       "owner": null,
       "product": false,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#308 Restore Alt-Tab acceptance on deterministic Explorer activation",
-      "updated_at": "2026-08-25T01:28:10Z",
+      "updated_at": "2026-08-25T02:29:39Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/454"
     },
     {
@@ -4266,7 +4377,7 @@
       "review": "pending",
       "state": "open",
       "title": "#470 Retain PocketIC child-exit and runner diagnostics",
-      "updated_at": "2026-08-25T01:01:56Z",
+      "updated_at": "2026-08-25T02:12:46Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/459"
     },
     {
@@ -4412,6 +4523,198 @@
       "title": "#81 Backfill composed taskbar lifecycle regression",
       "updated_at": "2026-08-25T01:38:39Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/473"
+    },
+    {
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
+      "blocking_review": null,
+      "checks": [
+        {
+          "conclusion": null,
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690425/job/97663720591"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690450/job/97663718219"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 46-50/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703272"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 41-45/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703246"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 31-35/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703245"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 36-40/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703235"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 26-30/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703226"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703216"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703184"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 8-8/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703177"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 1-5/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703175"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 21-25/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703173"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703161"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 1-1/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703157"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 11-15/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703154"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 7-7/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703152"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703138"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 6-10/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703122"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 16-20/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703119"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703117"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703089"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663703088"
+        },
+        {
+          "conclusion": null,
+          "name": "kernel",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690371/job/97663701928"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Dispatch targeted 50-iteration flake probe",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690400/job/97663697877"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged refactor smoke",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690344/job/97663683506"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690481/job/97663682211"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability and configuration",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690377/job/97663675954"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32801690371/job/97663669981"
+        }
+      ],
+      "ci": "running",
+      "ci_owned": false,
+      "conflict": false,
+      "draft": false,
+      "head": "cf80227947e24fde314a9d24f88b5a8057f820d3",
+      "head_branch": "train/product/issue-45",
+      "issue": 45,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "number": 477,
+      "owner": "default",
+      "product": true,
+      "review": "pending",
+      "state": "open",
+      "title": "#45 Fix non-empty Empty Recycle Bin confirmation",
+      "updated_at": "2026-08-25T02:31:25Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/477"
     }
   ],
   "repo": "plasmon-cloud/plasmon",
