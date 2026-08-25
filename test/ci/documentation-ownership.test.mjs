@@ -60,6 +60,17 @@ test("a missing documentation owner is reported with the boundary", () => {
   assert.ok(errors.some((error) => error.includes("owning documentation README.missing.md is missing")));
 });
 
+test("a removed declared boundary fails closed", () => {
+  const root = minimalRepository();
+  try {
+    rmSync(join(root, "apps/alpha"), { recursive: true, force: true });
+    const errors = validateDocumentationOwnership(minimalRegistry(), root);
+    assert.ok(errors.some((error) => error.includes("apps/alpha") && error.includes("declared boundary directory is missing")));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("duplicate local ownership is rejected as ambiguous", () => {
   const value = registry();
   value.boundaries[1].documentation = [{ path: "README.md", mode: "local" }];
@@ -177,8 +188,29 @@ test("the delegated Plasmon contract and generated map are current", () => {
   const map = readFileSync(join(repoRoot, mapRelativePath), "utf8");
   assert.deepEqual(validateDocumentationOwnership(value, repoRoot), []);
   assert.deepEqual(validateRepositoryDocumentationMap(map, value, repoRoot), []);
-  assert.equal(renderRepositoryDocumentationMap(value, repoRoot), renderRepositoryDocumentationMap(value, repoRoot));
   assert.ok(registryRelativePath.endsWith("documentation-ownership.json"));
+});
+
+test("equivalent working trees produce identical documentation validation", () => {
+  const value = minimalRegistry();
+  const roots = [minimalRepository(), minimalRepository()];
+  try {
+    const maps = roots.map((root) => {
+      mkdirSync(join(root, "doc"), { recursive: true });
+      const map = `# Fixture map\n\n${renderRepositoryDocumentationMap(value, root)}\n`;
+      writeFileSync(join(root, "doc/repository-map.md"), map);
+      return {
+        map,
+        ownership: validateDocumentationOwnership(value, root),
+        mapErrors: validateRepositoryDocumentationMap(map, value, root),
+      };
+    });
+    assert.deepEqual(maps[0], maps[1]);
+    assert.deepEqual(maps[0].ownership, []);
+    assert.deepEqual(maps[0].mapErrors, []);
+  } finally {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("active tooling cannot reintroduce the retired review mechanism", () => {
