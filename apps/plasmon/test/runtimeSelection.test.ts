@@ -66,7 +66,9 @@ test("#83 canonical associations select js-dos and EmulatorJS through the shared
     const unsupported = await environment.services.fs.createFile(documents.id, "Unsupported.asset", {
       mime: "application/x-plasmon-unsupported",
     });
-    expect(await environment.services.associations.resolve(unsupported)).toEqual([]);
+    expect((await environment.services.associations.resolve(unsupported)).map(({ id }) => id)).toEqual([
+      "native:text",
+    ]);
 
     const ambiguous = await environment.services.fs.createFile(documents.id, "Ambiguous.jsdos", {
       mime: EMULATORJS_NES_MIME,
@@ -74,6 +76,7 @@ test("#83 canonical associations select js-dos and EmulatorJS through the shared
     expect((await environment.services.associations.resolve(ambiguous)).map(({ id }) => id)).toEqual([
       "runtime:js-dos",
       "runtime:emulatorjs",
+      "native:text",
     ]);
   } finally {
     environment.dispose();
