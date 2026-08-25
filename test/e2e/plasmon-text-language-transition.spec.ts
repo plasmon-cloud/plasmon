@@ -41,7 +41,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
+test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@issue-415"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -54,6 +54,11 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
       runtime.developerIdentitySeed,
     );
 
+    // first-demo is startup configuration. Keep the route installed through
+    // real Plasmon bootstrap because Kernel app-host setup may navigate the
+    // installed main document more than once. Releasing the route after only
+    // the first flagged navigation can drop the fixture on a later navigation
+    // and strand this acceptance before it reaches the #415 assertions.
     const fixtureRoute = `**/app/${APP_ID}/**`;
     await page.route(fixtureRoute, redirectToFirstDemo);
     const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
@@ -70,13 +75,15 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
     await fixtureNavigation;
-    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible();
-    const app = page.frameLocator(appSelector);
+    await expect(page.locator(appSelector).first()).toBeAttached();
+    const app = page.frameLocator(appSelector).first();
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 30_000 });
+    const activeAppUrl = new URL(await app.locator("html").evaluate(() => window.location.href));
+    expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
+    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
