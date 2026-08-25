@@ -1,6 +1,6 @@
 # Plasmon frontend source
 
-<!-- plasmon-docs-review:v1 sha256=2e4f17b11937ef8522076c77057382d8d32d0e679f46348c64780d96775de893 base=2f895e1b9df52cd127020356f00989dc08c8a25e -->
+<!-- plasmon-docs-review:v1 sha256=9b1398a75c77bb5c342aa37ece1ac6cb94abb715328731db17dbd7ae78b9697c base=379c0407cb54b12ba9c2184cdc5317291f794633 -->
 
 `apps/plasmon/src/` contains the browser frontend and the active Plasmon OS implementation.
 
