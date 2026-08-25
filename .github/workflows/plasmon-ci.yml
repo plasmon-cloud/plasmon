@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 concurrency:
   group: plasmon-fast-${{ github.workflow }}-${{ github.ref }}
@@ -38,6 +39,21 @@ jobs:
           set -euxo pipefail
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
+
+      - name: Verify full Luna promotion manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          node test/ci/verify-luna-promotion-manifest.test.mjs
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            expected_release_sha="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.ref_name }}" == "release/0.1.0-r2" ]]; then
+            expected_release_sha="${{ github.sha }}"
+          else
+            expected_release_sha="$(git rev-parse origin/release/0.1.0-r2)"
+          fi
+          GITHUB_TOKEN="$GH_TOKEN" node test/ci/verify-luna-promotion-manifest.mjs --expected-release-sha "$expected_release_sha"
 
       - name: Verify flake-probe workflow contract
         run: |
