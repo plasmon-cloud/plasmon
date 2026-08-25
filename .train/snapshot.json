@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T19:20:31.512456Z",
+  "captured_at": "2026-08-25T19:27:08.816289Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 3,
     "open_issues": 33,
     "open_product_prs": 5
   },
-  "generation": "d3c5b36e25377ce11ca9eeeb4efdd6033dc1771b",
+  "generation": "244938815a9751558347864e03315ef79baa7c6e",
   "issues": [
     {
       "area": "Repo",
@@ -3264,13 +3264,7 @@
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": {
-        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #432 / Issue #181\nExact head: `4d66946a2b05e4588892356cbcf7a623e9fa4527`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-25T16:01:01Z\nReview ID: `pr-432-4d66946a2b05-1787673487029-86301288`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > The complete Issue #181 body, acceptance criteria, deployment contract, historical note, dependencies, current PR delta, comments, and CI evidence were inspected.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > No Issue attachments were present; the linked historical PR/review evidence and current packaged/demo acceptance claims were inspected.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > The prior query-gated first-demo implementation, current demo profile code, deployment helper, filesystem seed authority, and current test inventory were inspected.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The user need is a real demo deployment with representative files/shortcuts, not URL-triggered test fixtures, while local packaging stays clean.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The protected boundaries are the existing package-profile/deployment seam, canonical FsService seed/reconciliation, stable NodeId shortcuts, local non-demo behavior, and separate #121 game ownership.\n- [ ] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > :x: The PR adds the profile path but leaves the old live first-demo query seed path in apps/plasmon/src/index.tsx and firstDemoFixture.ts, contrary to Issue #181's one-demo-mode/no-query contract.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > The target is release/0.1.0-r2; release/package guidance and the Plasmon package-profile/deployment constraints were inspected.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > The declared base and exact head 4d66946a2b05e4588892356cbcf7a623e9fa4527 were verified, including the current-r2 integration history.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > Existing filesystem authority and deployment infrastructure were counted as parent behavior; the reviewed additions were limited to profile/content wiring, tests, and docs.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The production path covers demo/non-demo profile selection, seeded files, shortcut reconciliation, package archive preparation, and normal FileManager/Search/association opening.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > Demo startup awaits filesystem readiness before shortcut reconciliation; the deployment helper resets inherited profile state for Plasmon and awaits packaging/provision commands.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > Fast, packaged local specialist, persistence, smoke, Review, Kernel, and flake contexts passed; the concrete failures are acceptance-contract gaps rather than an observed unrelated regression.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > Package profile selection remains in the build/deployment boundary, filesystem seeds use existing bootstrap/reconciliation, and shortcuts use nodeShortcutSeedSpec/readSharedShortcut.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > Stable filesystem NodeIds, Desktop shortcut identity, Process/association opening, Neutron package profile, and separate game fixture ownership remain distinct.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > No new filesystem database or shortcut format is introduced; the demo content is translated into existing seed and shared-shortcut primitives.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > The model tests assert asset bytes, seed metadata, local absence, shortcut targets, Search classification, and native handlers; the browser test asserts actual installed UI behavior.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > Deterministic seed/deployment tests use MemoryFs and production composition, while packaged UI claims use Playwright; the missing demo execution owner is separately identified.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > Repository assets are concrete Markdown/SVG files and tests assert representative structure and exact UTF-8 bytes without relaxed source-shape-only claims.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > The deployment/profile and filesystem claims are tested below React, but Issue #181 explicitly requires a real packaged demo preparation and browser acceptance boundary.\n- [ ] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > :x: The current CI contexts run local Specialist, smoke, persistence, Review, and Kernel lanes; no checked-in workflow invokes plasmon:demo:prepare plus test:e2e:plasmon:demo, and the demo spec is skipped outside the demo manifest.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > Green CI was inspected as execution evidence, and its absence of the demo workflow was distinguished from the passing ordinary packaged lanes.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > The change adds no persistent schema or migration; demo seeds/shortcuts are ordinary filesystem data reconciled through existing durable seed behavior.\n- [x] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > Demo, frontend, application, and integration documentation markers were refreshed, and their descriptions match the new profile/content path.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The changed files are task-related profile/build/content/deployment/test/docs files; no generated archive or dependency update was added.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head/base were recorded from the complete bundle and refreshed immediately before submission; queue still reports PR #432 COMPLETE at 4d66946a2b05e4588892356cbcf7a623e9fa4527.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > The reviewer performed read-only research and review submission only; it did not modify product code, merge, force-push, or alter another worktree.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > All listed CI contexts and flake iterations passed, but the missing demo execution and legacy query path remain substantive acceptance blockers.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] `npm run plasmon:demo:prepare` produces a Plasmon package that seeds the three representative document/media resources on a fresh demo filesystem without URL/query rewriting.\n  > The demo deployment helper selects the demo profile internally and the build embeds asset bytes into the Plasmon package; the separate packaged execution gap is recorded under criterion 13.\n    - [x] Production code represents the behavior.\n      > packageProfileForDeployment returns demo only for the demo manifest/Plasmon workspace, build.ts embeds the three assets, and index.tsx seeds/reconciles them for isDemoProfile.\n    - [x] An executable test covers it.\n      > demoContent.test.ts and the demo Playwright spec cover seed composition and installed behavior, although the packaged spec lacks a required CI owner.\n    - [x] The test observes behavior rather than source shape.\n      > The tests inspect MemoryFs/production composition and rendered installed resources, not only source constants.\n\n- [x] `Demo Guide.md` is a real repository `.md` asset with representative Markdown structure, and the seeded bytes exactly match that file.\n  > Demo Guide.md is a repository asset with representative Markdown and demoContent tests compare its exact bytes with seed bytes.\n    - [x] Production code represents the behavior.\n      > build.ts reads Demo Guide.md from apps/plasmon/src/demo/assets and demoContent.ts receives the packaged content rather than an independent inline document.\n    - [x] An executable test covers it.\n      > demoContent.test.ts asserts headings, task list, table, code fence, and exact seeded UTF-8 equality with readFileSync content.\n    - [x] The test observes behavior rather than source shape.\n      > Assertions inspect actual asset contents and generated seed bytes.\n\n- [x] `Demo Artwork.svg` is a real standalone repository `.svg` asset, and the seeded bytes exactly match that file.\n  > Demo Artwork.svg is a standalone repository asset and its seed bytes are compared exactly.\n    - [x] Production code represents the behavior.\n      > build.ts embeds the repository SVG and demoContent.ts assigns it image/svg+xml through the production seed spec.\n    - [x] An executable test covers it.\n      > The deterministic test validates XML/SVG structure and exact seed-byte equality, and the packaged demo journey opens the artwork in Photos.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes file contents/structure and installed Photos rendering rather than only checking a filename.\n\n- [x] All three demo files have Desktop shortcuts on a fresh demo filesystem.\n  > reconcileDemoDesktopShortcuts creates three shared shortcut seed specs after filesystem readiness, and deterministic tests verify three entries.\n    - [x] Production code represents the behavior.\n      > index.tsx awaits services.filesystem.ready before calling reconcileDemoDesktopShortcuts, which creates one spec per demo resource.\n    - [x] An executable test covers it.\n      > demoContent.test.ts invokes reconciliation twice and asserts exactly three matching Desktop entries; the packaged demo test observes all three Desktop entries.\n    - [x] The test observes behavior rather than source shape.\n      > The tests inspect actual FsService Desktop listings and installed FileManager nodes.\n\n- [x] Desktop shortcuts target the real demo resources by stable NodeId through the shared shortcut model.\n  > nodeShortcutSeedSpec resolves target paths to stable NodeIds and readSharedShortcut assertions verify the canonical target metadata.\n    - [x] Production code represents the behavior.\n      > The shortcut specs use targetPath and the existing shared nodeShortcutSeedSpec, not path strings persisted as shortcut targets.\n    - [x] An executable test covers it.\n      > demoContent.test.ts compares each shortcut's readSharedShortcut result with the corresponding resource NodeId.\n    - [x] The test observes behavior rather than source shape.\n      > The assertion uses production shortcut decoding and actual resource IDs.\n\n- [x] Demo files and shortcuts are created through production filesystem/bootstrap/reconciliation seams and are idempotent.\n  > Demo files flow through createPlasmonServices/bootstrap and shortcuts through reconcileSeedManifest; calling reconciliation twice is covered.\n    - [x] Production code represents the behavior.\n      > createDemoSeeds returns ordinary FilesystemSeedSpec entries and reconcileDemoDesktopShortcuts delegates to existing filesystem seed authority.\n    - [x] An executable test covers it.\n      > The composition test runs production MemoryFs-backed services and calls reconciliation twice.\n    - [x] The test observes behavior rather than source shape.\n      > Tests observe stable counts/targets and opening outcomes rather than reproducing reconciliation policy.\n\n- [x] FileManager, Search, Desktop activation, and native associations can discover/open the resources normally.\n  > The headless composition covers FileManager-relevant resources through Search, Desktop shortcut activation, and native associations; the packaged demo journey covers installed UI discovery/opening when explicitly run.\n    - [x] Production code represents the behavior.\n      > The production seed content is ordinary filesystem data and opening remains the existing Search/association/process path.\n    - [x] An executable test covers it.\n      > demoContent.test.ts asserts Search categories, association handler IDs, and opening through shortcut IDs; the packaged spec covers Desktop, FileManager, Search, Text, Markdown, and Photos.\n    - [x] The test observes behavior rather than source shape.\n      > The tests observe production service/process records and rendered installed windows/resources.\n\n- [x] Ordinary `neutron-plasmon` packaging and the bounded `plasmon:local:*` deployment remain free of these #181 demo seeds by default.\n  > isDemoProfile gates new demo seeds, and ordinary composition tests verify the demo paths are absent without demoSeeds.\n    - [x] Production code represents the behavior.\n      > packageProfileForDeployment only sets demo for the demo manifest and packageEnvironmentForDeployment deletes an inherited profile before selecting it.\n    - [x] An executable test covers it.\n      > demoContent.test.ts verifies ordinary createPlasmonServices composition has no demo files or Desktop names.\n    - [x] The test observes behavior rather than source shape.\n      > The absence assertions inspect resolved paths and actual Desktop listings.\n\n- [x] `plasmon:demo:prepare` continues to use the existing Plasmon `package` command; no additional `package:demo` npm operation is required.\n  > prepareDeploymentEnvironment always runs the existing workspace package script and only injects the profile through its environment for the demo Plasmon workspace.\n    - [x] Production code represents the behavior.\n      > The helper invokes npm --workspace neutron-plasmon run package; no package:demo script is added.\n    - [x] An executable test covers it.\n      > The deployment test verifies the existing package command in the resolved artifact workspace and the package scripts expose the normal deployment commands.\n    - [x] The test observes behavior rather than source shape.\n      > The code/test inspect command selection semantics rather than merely asserting an archive exists.\n\n- [x] Callers do not have to provide a new environment variable to obtain demo behavior; `plasmon:demo:prepare` supplies the existing package-profile context internally.\n  > The public plasmon:demo:prepare script selects the demo manifest and the coordinator supplies PLASMON_PACKAGE_PROFILE=demo internally.\n    - [x] Production code represents the behavior.\n      > packageEnvironmentForDeployment constructs the child environment, removes any inherited profile, and sets demo only for the demo Plasmon workspace.\n    - [x] An executable test covers it.\n      > The public scope scripts and deployment tests exercise scope selection without requiring callers to set the profile variable.\n    - [x] The test observes behavior rather than source shape.\n      > The tested behavior is deployment command selection, not source-shape inspection.\n\n- [x] Demo assets have clear redistribution provenance.\n  > The repository-owned text/Markdown/SVG assets and README provenance statements provide clear redistribution provenance.\n    - [x] Production code represents the behavior.\n      > Assets are checked into apps/plasmon/src/demo/assets and build.ts reads those files directly.\n    - [x] An executable test covers it.\n      > demoContent.test.ts reads each repository asset and compares the seeded bytes exactly.\n    - [x] The test observes behavior rather than source shape.\n      > The test checks actual asset structure and exact bytes.\n\n- [x] Game fixture behavior remains composed through #121 rather than duplicated.\n  > The PR's new demo content excludes /Games and the demo README explicitly leaves game/runtime fixture ownership to Issue #121.\n    - [x] Production code represents the behavior.\n      > createDemoSeeds contains only Documents/Pictures and three files; it does not define game resources or runtime behavior.\n    - [x] An executable test covers it.\n      > demoContent.test.ts asserts no seed has parentPath /Games.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes the seed manifest content and parent paths.\n\n- [x] Deterministic tests prove demo-vs-local selection and filesystem/shortcut behavior at the lowest truthful layer.\n  > Deterministic tests cover local/demo manifest selection, package profile selection, exact asset bytes, seed/reconciliation, shortcuts, Search, and associations.\n    - [x] Production code represents the behavior.\n      > The deployment helper and demo content modules implement the required profile and filesystem behavior through existing seams.\n    - [x] An executable test covers it.\n      > demoContent.test.ts and plasmon-deployment-environment.test.ts provide executable low-layer coverage for the listed behavior.\n    - [x] The test observes behavior rather than source shape.\n      > Tests use MemoryFs/production services and actual repository files rather than duplicating filesystem policy.\n\n- [ ] Packaged/demo acceptance verifies the actual `plasmon:demo` preparation path rather than injecting browser state.\n  > :x: The packaged/demo acceptance spec exists and has an explicit npm command, but no checked-in workflow in the current head runs plasmon:demo:prepare, demo provisioning, and test:e2e:plasmon:demo; ordinary Specialist explicitly excludes the profile-specific spec.\n    - [x] Production code represents the behavior.\n      > The production deployment helper, demo package script, and demo Playwright command are present.\n    - [ ] An executable test covers it.\n      > :x: Current workflow inspection found no demo browser workflow; the required CI contexts run local Specialist/smoke/persistence paths, while the spec is skipped unless NEUTRON_NDEPLOY_CONFIG is plasmon.ndeploy.json.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The demo spec itself asserts installed behavior, but no current execution evidence proves that the actual demo preparation path ran it.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
-        "commit_id": "4d66946a2b05e4588892356cbcf7a623e9fa4527",
-        "id": 5021108949,
-        "state": "CHANGES_REQUESTED",
-        "user": "plasmon-code-reviewer[bot]"
-      },
+      "blocking_review": null,
       "checks": [
         {
           "conclusion": "success",
@@ -3483,10 +3477,10 @@
       "number": 432,
       "owner": "default",
       "product": true,
-      "review": "changes_requested",
+      "review": "pending",
       "state": "open",
       "title": "#181 Seed demo files and Desktop shortcuts in plasmon:demo",
-      "updated_at": "2026-08-25T19:14:50Z",
+      "updated_at": "2026-08-25T19:22:55Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/432"
     },
     {
@@ -3494,6 +3488,18 @@
       "base_valid": true,
       "blocking_review": null,
       "checks": [
+        {
+          "conclusion": "success",
+          "name": "Flake characterization summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97937008812"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97937008698"
+        },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 8-8/10",
@@ -3513,9 +3519,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540449"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 31-35/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540437"
         },
         {
@@ -3525,15 +3531,15 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540436"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 46-50/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540431"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 21-25/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540425"
         },
         {
@@ -3555,21 +3561,21 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540392"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 41-45/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540391"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 16-20/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540379"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:2-files:8fae4e36b639 iterations 36-40/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325785/job/97931540373"
         },
         {
@@ -3663,7 +3669,7 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887325808/job/97930724231"
         }
       ],
-      "ci": "running",
+      "ci": "unknown_red",
       "ci_owned": false,
       "conflict": false,
       "draft": false,
@@ -4239,6 +4245,18 @@
       "blocking_review": null,
       "checks": [
         {
+          "conclusion": "failure",
+          "name": "Flake characterization summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97937772588"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97937772503"
+        },
+        {
           "conclusion": "success",
           "name": "kernel",
           "status": "completed",
@@ -4257,9 +4275,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246568"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 36-40/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246547"
         },
         {
@@ -4275,9 +4293,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246535"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 46-50/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246511"
         },
         {
@@ -4323,9 +4341,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246423"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:1-files:abdcf439cbb7 iterations 41-45/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163230/job/97930246421"
         },
         {
@@ -4407,7 +4425,7 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32887163255/job/97930196637"
         }
       ],
-      "ci": "running",
+      "ci": "unknown_red",
       "ci_owned": false,
       "conflict": false,
       "draft": true,
@@ -4422,7 +4440,7 @@
       "review": "pending",
       "state": "open",
       "title": "#45 Fix non-empty Empty Recycle Bin confirmation",
-      "updated_at": "2026-08-25T19:01:11Z",
+      "updated_at": "2026-08-25T19:26:27Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/477"
     },
     {
@@ -4566,7 +4584,7 @@
       "review": "pending",
       "state": "open",
       "title": "#367 Backfill user-root deletion persistence regression",
-      "updated_at": "2026-08-25T18:59:51Z",
+      "updated_at": "2026-08-25T19:26:29Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/484"
     },
     {
@@ -4656,7 +4674,7 @@
       "review": "pending",
       "state": "open",
       "title": "#107 Refresh integrated packaged acceptance on current r2",
-      "updated_at": "2026-08-25T18:14:12Z",
+      "updated_at": "2026-08-25T19:26:30Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/485"
     }
   ],
