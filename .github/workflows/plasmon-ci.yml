@@ -47,9 +47,9 @@ jobs:
           set -euxo pipefail
           node test/ci/verify-luna-promotion-manifest.test.mjs
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            expected_release_sha="${{ github.event.pull_request.base.sha }}"
+            expected_release_sha="$(git rev-parse HEAD^1)"
           elif [[ "${{ github.ref_name }}" == "release/0.1.0-r2" ]]; then
-            expected_release_sha="${{ github.sha }}"
+            expected_release_sha="$(git rev-parse HEAD)"
           else
             expected_release_sha="$(git rev-parse origin/release/0.1.0-r2)"
           fi
