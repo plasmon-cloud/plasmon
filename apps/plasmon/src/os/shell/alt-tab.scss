@@ -8,10 +8,10 @@
 
   .plasmon-alt-tab__switcher {
     backdrop-filter: blur(28px) saturate(135%);
-    background: var(--plasmon-bg-elevated, rgba(17, 23, 33, 0.96));
-    border: 1px solid var(--plasmon-border-strong, rgba(255, 255, 255, 0.18));
-    border-radius: var(--plasmon-radius-lg, 18px);
-    box-shadow: var(--plasmon-shadow, 0 28px 90px rgba(0, 0, 0, 0.48));
+    background: var(--plasmon-panel-elevated);
+    border: 1px solid var(--plasmon-border-strong);
+    border-radius: var(--plasmon-radius-panel);
+    box-shadow: var(--plasmon-shadow-panel);
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
@@ -26,9 +26,9 @@
 
   .plasmon-alt-tab__option {
     align-items: center;
-    background: var(--plasmon-surface, rgba(255, 255, 255, 0.055));
+    background: var(--plasmon-control-background);
     border: 1px solid transparent;
-    border-radius: var(--plasmon-radius-md, 12px);
+    border-radius: var(--plasmon-radius-icon-frame);
     display: flex;
     gap: 10px;
     min-width: 0;
@@ -36,8 +36,8 @@
   }
 
   .plasmon-alt-tab__option.is-selected {
-    background: var(--plasmon-surface-hover, rgba(255, 255, 255, 0.095));
-    border-color: var(--plasmon-accent, #91edbd);
+    background: var(--plasmon-control-hover);
+    border-color: var(--plasmon-accent);
   }
 
   .plasmon-alt-tab__label {
@@ -53,6 +53,6 @@
     white-space: nowrap;
   }
 
-  .plasmon-alt-tab__label strong { font-size: var(--plasmon-font-sm, .8125rem); }
-  .plasmon-alt-tab__label small { color: var(--plasmon-text-muted, #aab5c5); font-size: var(--plasmon-font-xs, .75rem); }
+  .plasmon-alt-tab__label strong { font-size: var(--plasmon-font-size-ui); }
+  .plasmon-alt-tab__label small { color: var(--plasmon-text-secondary); font-size: var(--plasmon-font-size-title); }
 }
