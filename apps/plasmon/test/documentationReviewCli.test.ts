@@ -96,7 +96,15 @@ function runStatus(root: string) {
   );
 }
 
-test("documentation review status CLI reports stale/current output and exit status", () => {
+function runReview(root: string, boundary: string) {
+  return spawnSync(
+    process.execPath,
+    ["apps/plasmon/docs/documentation-review.mjs", "review", boundary],
+    { cwd: root, encoding: "utf8" },
+  );
+}
+
+test("documentation review CLI requires owning documentation edits before refresh", () => {
   const root = createFixture();
   try {
     writeFileSync(resolve(root, "apps/plasmon/src/os/windowing/model.ts"), "export const model = 2;\n");
@@ -109,20 +117,29 @@ test("documentation review status CLI reports stale/current output and exit stat
     expect(stale.stderr).toContain("STALE apps/plasmon/src/os/windowing: owned implementation changed");
     expect(stale.stderr).toContain("  - apps/plasmon/src/os/windowing/model.ts");
     expect(stale.stderr).toContain(
+      "  required documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
+    );
+    expect(stale.stderr).toContain(
       "  run: npm --workspace neutron-plasmon run docs:review -- apps/plasmon/src/os/windowing",
     );
     expect(stale.stderr).not.toContain("STALE apps/plasmon/src/os:");
 
-    const registry = fixtureRegistry();
-    const state = computeOwnedFingerprint("apps/plasmon/src/os/windowing", registry, root);
+    const refused = runReview(root, "apps/plasmon/src/os/windowing");
+    expect(refused.status).toBe(1);
+    expect(refused.stdout).toContain("Review surface for apps/plasmon/src/os/windowing:");
+    expect(refused.stdout).toContain("REQUIRED: edit apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md");
+    expect(refused.stderr).toContain("owning documentation content has not changed since the previous review");
+
     const readmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
     writeFileSync(
       readmePath,
-      readFileSync(readmePath, "utf8").replace(
-        /<!-- plasmon-docs-review:v1 sha256=[0-9a-f]{64} base=[0-9a-f]{40} -->/,
-        formatReviewMarker(state.digest, git(root, ["rev-parse", "HEAD"])),
-      ),
+      `${readFileSync(readmePath, "utf8").trimEnd()}\n\nDocument the changed windowing behavior.\n`,
     );
+    const accepted = runReview(root, "apps/plasmon/src/os/windowing");
+    expect(accepted.status).toBe(0);
+    expect(accepted.stdout).toContain("edited: apps/plasmon/src/os/windowing/README.md");
+    expect(accepted.stdout).toContain("Updated apps/plasmon/src/os/windowing/README.md");
+    expect(accepted.stderr).toBe("");
 
     const current = runStatus(root);
     expect(current.status).toBe(0);
