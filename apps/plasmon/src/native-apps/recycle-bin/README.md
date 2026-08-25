@@ -1,6 +1,6 @@
 # Recycle Bin
 
-<!-- plasmon-docs-review:v1 sha256=e12efd7d0cd85bf42c433012360f9e042f15b23846b284a53d9e90c08711800a base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
+<!-- plasmon-docs-review:v1 sha256=9e06e596fb5ef018368f137f7df0a3a276c31f00b48be3d3d4b1339f06233fc1 base=66141c20b4e577b9f9c4da36a41f581ff5333ebc -->
 
 `native:recycle-bin` is the first-class Plasmon surface for filesystem Trash operations.
 
