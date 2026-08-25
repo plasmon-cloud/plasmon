@@ -1,27 +1,33 @@
-import type { FsNode, NodeId } from "../contracts/index.ts";
+import type { FsNode } from "../contracts/index.ts";
 import type { OpenFilesystemNodeOptions } from "../fs/index.ts";
+import {
+  executeOpenResourceCommand,
+  openResourceCommand,
+  type ResourceOpenCommandAuthority,
+} from "../resource-command.ts";
 
 /** Public opening authority consumed by FileManager without owning resource semantics. */
-export interface FileManagerOpenAuthority {
-  openNode(nodeId: NodeId, options?: OpenFilesystemNodeOptions): Promise<void>;
-}
+export interface FileManagerOpenAuthority extends ResourceOpenCommandAuthority {}
 
 export interface FileManagerActivationOptions {
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
 }
 
 /**
- * Thin production adapter from FileManager activation to the canonical
- * filesystem open authority. React callers may supply presentation-owned
- * directory navigation, but resource-kind policy remains in the dispatcher.
+ * FileManager owns same-window directory presentation, while the shared resource
+ * command owns user-action orchestration and the filesystem dispatcher remains
+ * authoritative for resource classification, shortcuts, handlers, and opening.
  */
 export function activateFileManagerNode(
   authority: FileManagerOpenAuthority,
   node: FsNode,
   options: FileManagerActivationOptions = {},
 ): Promise<void> {
-  return authority.openNode(
-    node.id,
-    options.onOpenDirectory ? { onOpenDirectory: options.onOpenDirectory } : {},
+  const openOptions: OpenFilesystemNodeOptions | undefined = options.onOpenDirectory
+    ? { onOpenDirectory: options.onOpenDirectory }
+    : undefined;
+  return executeOpenResourceCommand(
+    authority,
+    openResourceCommand(node, openOptions),
   );
 }
