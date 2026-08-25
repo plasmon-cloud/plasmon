@@ -1,6 +1,5 @@
 # Markdown editor
 
-<!-- plasmon-docs-review:v1 sha256=8013e32b8e78baa848c3d5ca4ce99b43901762a92b10a95bec1dad378223ded7 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 Markdown is a Plasmon native document application built on the shared Monaco browser-runtime host in `../shared/monaco/`, the shared document session from `../text/`, and a sanitized rendered preview.
 

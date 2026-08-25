@@ -1,6 +1,5 @@
 # Desktop
 
-<!-- plasmon-docs-review:v1 sha256=1061aaaa80126784dd72dcffdf9270dda3ec696760698015634f904b650399ff base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 `desktop/**` is the Plasmon Desktop presentation over filesystem state. `Desktop.tsx` reuses the shared FileManager interaction surface and persists desktop-specific visual placement metadata.
 
