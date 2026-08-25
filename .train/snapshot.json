@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-25T01:25:01.318496Z",
+  "captured_at": "2026-08-25T01:40:58.488493Z",
   "counts": {
     "issues": 135,
     "open_ci_prs": 3,
     "open_issues": 41,
-    "open_product_prs": 2
+    "open_product_prs": 3
   },
-  "generation": "2e2e622bf1d8e9fd862a901a5a89bb5f2a3c3d4b",
+  "generation": "e20b4166152162c2d352fdaf3a984bad3ec15722",
   "issues": [
     {
       "area": "Repo",
@@ -408,7 +408,7 @@
       ],
       "number": 81,
       "open": true,
-      "open_pr": null,
+      "open_pr": 473,
       "priority": null,
       "product": true,
       "title": "Backfill a headless taskbar lifecycle regression across Shell, Process, and Windowing",
@@ -3718,8 +3718,8 @@
       "url": "https://github.com/plasmon-cloud/plasmon/pull/433"
     },
     {
-      "base": "ci/fix-flake-probe-quarantine-fixture",
-      "base_valid": false,
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
       "blocking_review": null,
       "checks": [
         {
@@ -3851,18 +3851,18 @@
       "head_branch": "ci/issue-251-desktop-root-activation",
       "issue": 251,
       "mergeable": true,
-      "mergeable_state": "clean",
+      "mergeable_state": "blocked",
       "number": 453,
       "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
       "title": "#251 Stabilize Desktop Root activation for Explorer siblings",
-      "updated_at": "2026-08-24T17:38:18Z",
+      "updated_at": "2026-08-25T01:28:03Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/453"
     },
     {
-      "base": "ci/issue-251-desktop-root-activation",
+      "base": "release/0.1.0-r2",
       "base_valid": true,
       "blocking_review": null,
       "checks": [
@@ -4055,14 +4055,14 @@
       "head_branch": "ci/issue-308-alt-tab-restoration",
       "issue": 308,
       "mergeable": true,
-      "mergeable_state": "clean",
+      "mergeable_state": "blocked",
       "number": 454,
       "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
       "title": "#308 Restore Alt-Tab acceptance on deterministic Explorer activation",
-      "updated_at": "2026-08-24T17:38:52Z",
+      "updated_at": "2026-08-25T01:28:10Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/454"
     },
     {
@@ -4268,6 +4268,150 @@
       "title": "#470 Retain PocketIC child-exit and runner diagnostics",
       "updated_at": "2026-08-25T01:01:56Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/459"
+    },
+    {
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
+      "blocking_review": null,
+      "checks": [
+        {
+          "conclusion": "success",
+          "name": "Flake characterization summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97653709226"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97653709190"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818489"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818476"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818457"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818455"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 1-1/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818454"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818452"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818427"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 7-7/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818419"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 8-8/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818417"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652818411"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability and configuration",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840626/job/97652769232"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840771/job/97652717993"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840633/job/97652715127"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840579/job/97652713423"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840617/job/97652697047"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Dispatch targeted 50-iteration flake probe",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840694/job/97652683852"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840587/job/97652665189"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32797840617/job/97652664894"
+        }
+      ],
+      "ci": "green",
+      "ci_owned": false,
+      "conflict": false,
+      "draft": false,
+      "head": "77df7499c7ebbdcf40296fb5222b63ebde201c9c",
+      "head_branch": "train/product/issue-81",
+      "issue": 81,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "number": 473,
+      "owner": "default",
+      "product": true,
+      "review": "pending",
+      "state": "open",
+      "title": "#81 Backfill composed taskbar lifecycle regression",
+      "updated_at": "2026-08-25T01:38:39Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/473"
     }
   ],
   "repo": "plasmon-cloud/plasmon",
