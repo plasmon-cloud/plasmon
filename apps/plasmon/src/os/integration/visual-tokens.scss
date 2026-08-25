@@ -17,6 +17,8 @@
     --plasmon-font-size-small: 11.5px;
     --plasmon-font-size-caption: 10.5px;
     --plasmon-font-size-title: 12px;
+    --plasmon-font-size-heading: 18px;
+    --plasmon-font-size-display: 24px;
     --plasmon-line-height-ui: 1.35;
 
     /* Core surfaces */
@@ -26,6 +28,8 @@
     --plasmon-window-background: #111820;
     --plasmon-window-titlebar: #18242b;
     --plasmon-taskbar-background: rgba(13, 24, 30, 0.91);
+    --plasmon-control-background: rgba(255, 255, 255, 0.055);
+    --plasmon-control-hover: rgba(255, 255, 255, 0.095);
 
     /* Borders */
     --plasmon-border-subtle: rgba(255, 255, 255, 0.11);
@@ -34,6 +38,7 @@
     /* Text */
     --plasmon-text-primary: #f5faf7;
     --plasmon-text-secondary: #a7b7b1;
+    --plasmon-text-subtle: #7f8b9c;
     --plasmon-text-disabled: #6f807a;
 
     /* State */
