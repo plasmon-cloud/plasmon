@@ -10,51 +10,61 @@ This section is the current #107 gate. The historical matrix below remains prese
 
 **Product basis before this report-only branch:** `release/0.1.0-r2` at `71f84fd2ad9bf43a4bd37d29e2122e597925ce9d`.
 
-The #107 branch intentionally starts with documentation-only gate changes. Therefore its exact-head package/browser jobs exercise product code equivalent to that r2 basis unless this report identifies a separate product defect, in which case the defect remains owned by its canonical Issue rather than being repaired here.
-
-### Current-r2 evidence already established before this gate run
-
-Current repository tests materially change several old 2026-08-12 dispositions and must be treated as current evidence at their actual layer:
-
-- **Runtime-only Start inventory: deterministic PASS.** `src/os/shell/runtimeOnlyInventory.test.ts` proves runtime-only process hosts are not user-launchable Shell applications and preserves upgrade/user-customization semantics. The old #88 FAIL is historical, not a current-r2 FAIL claim.
-- **Neutron Search presentation: deterministic PASS.** `src/os/shell/search-projection.test.ts` proves canonical Neutron projection metadata is presented as an application, de-duplicates against direct Element discovery, preserves canonical opening identity, and omits runtime-state text. The old #90 FAIL is historical at this gate basis.
-- **Taskbar cross-authority lifecycle: headless PASS.** `apps/plasmon/test/taskbarLifecycle.test.ts` is now integrated and proves canonical Process/Windowing/taskbar lifecycle plus external Windowing teardown reconciliation. This advances only the composed headless layer; visible wording/accessibility remains a separate acceptance claim.
-- **Trash lower-layer authority remains PASS.** `apps/plasmon/test/trashLifecycle.test.ts` and Recycle Bin model tests prove canonical Delete/Trash/restore/permanent-delete/empty semantics. This still does not prove the complete installed visible lifecycle.
-
-### Current-r2 packaged gap that this gate must not hide
-
-The current required packaged inventory launches and renders Recycle Bin, but on the r2 basis above it does **not** execute the complete visible `Delete -> Recycle Bin -> restore/empty` journey. That is a current #107 packaged-acceptance gap, not evidence that the underlying #45 Trash authority is broken.
-
-A separate ready Product PR may add stronger evidence for its own Issue, but unmerged branch evidence is not promoted into this current-r2 gate. This report records only evidence present on, or executed against, the gate basis.
+The #107 branch changes only this acceptance report and its documentation-review acknowledgement. Therefore the exact-head package/browser jobs below exercise Product code equivalent to that r2 basis. Product defects remain owned by their canonical Issues rather than being repaired inside this report task.
 
 ### Exact-head gate execution
 
-This report PR must record the exact-head outcomes of:
+| Gate | Run | Result | Current claim |
+| --- | --- | --- | --- |
+| Plasmon Fast CI | `32805252007` | **PRODUCT TESTS PASS / report marker stale** | 676 executable tests passed. The sole failure was this `apps/plasmon/docs` boundary's expected stale review fingerprint after editing the report; the final marker is refreshed separately from the report content. |
+| Plasmon Packaged Smoke CI | `32805252012` | **PASS** | Package/build plus the five required Smoke browser specs passed on the report head. |
+| Plasmon Packaged Browser CI | `32805251999` | **PASS** | The required Specialist browser inventory passed on the report head and uploaded its Playwright report. |
 
-- Plasmon Fast CI / deterministic inventory;
-- package/build validation;
-- installed packaged browser golden path in the supported Neutron/PocketIC environment.
+The current required browser surface is the inventory in `test/ci/plasmon-test-inventory.mjs`: five Smoke specs plus the required Specialist set. `plasmon-golden-path.spec.ts`, `plasmon-monaco-packaged.spec.ts`, the full demo-game/emulator proofs, and other profile-specific files are optional rather than required current-r2 gates. A historical or optional spec is not promoted into current acceptance merely because it remains checked in.
 
-The workflow run IDs and conclusions are filled in after those exact-head jobs execute. A green narrow golden path proves only the behaviors it actually exercises.
+### Current-r2 finding matrix
 
-### Manual-only acceptance remains manual
+| Finding | Current result | Evidence layer | Current-r2 disposition |
+| --- | --- | --- | --- |
+| Filesystem identity, collision naming, rename/move/delete semantics | **PASS** | Fast/model/service | Current filesystem and FileManager tests pass, including stable identity and persistence/recomposition contracts. |
+| Desktop rename editor geometry | **PASS** | required packaged Smoke | `plasmon-file-entry-191.spec.ts` proves the active rename editor stays inside the owning Desktop FileEntry/workspace in the installed package. This is a geometry claim, not a subjective typography/polish claim. |
+| Start/Search filesystem and native-app opening | **PASS** | Fast + required packaged Smoke | Canonical Start/Search/open-dispatch tests pass; required Smoke uses installed Search to open native Settings through the real Process/Windowing path. |
+| Runtime-only hosts excluded from normal Start inventory | **PASS** | Fast/model | `runtimeOnlyInventory.test.ts` proves runtime-only process hosts are not normal user-launchable Start applications while preserving upgrade/customization behavior. The old #88 FAIL below is historical only. |
+| Neutron Search classification/de-duplication/presentation | **PASS** | Fast + required Specialist inventory | Current Search projection tests pass, and required Specialist includes current Neutron/search presentation browser gates. The old #90 FAIL below is historical only. |
+| `.neutron` filesystem-projection activation through an installed Element | **NOT-YET-TESTABLE** | exact installed projection boundary | The current required gate does not establish that a canonical `/Apps/*.neutron` filesystem projection itself was activated end-to-end. Do not infer this from direct Search/Element presentation. |
+| Create Shortcut discoverability, creation, collision naming, and activation (#44) | **PASS** | required Specialist browser | `plasmon-create-shortcut-44.spec.ts` exercises the real toolbar and item-context command, visible shortcut state/artwork, collision creation, and normal double-click activation in installed Explorer. |
+| Taskbar state derivation and visible wording/accessibility (#72) | **PASS** | Fast + required Specialist browser | `plasmon-taskbar-presentation-72.spec.ts` proves pinned-only/running/active state, accessible wording, native lifecycle projection, installed Element `Running`, and absence of raw yes/no/unknown runtime tokens. |
+| Taskbar cross-authority lifecycle (#81) | **PASS** | composed headless | `apps/plasmon/test/taskbarLifecycle.test.ts` proves canonical Process/Windowing/taskbar lifecycle and external Windowing teardown reconciliation. |
+| Shared Start/taskbar pin affordance (#109) | **PASS** | required Specialist browser | `plasmon-pin-affordance-109.spec.ts` proves packaged shared pin artwork loads, accessible labels/state are present, pinned/unpinned states are structurally distinct, and both Start and taskbar context consume the canonical affordance. |
+| Folder-drop target semantics | **PASS** | Fast/model | Canonical drop-target/move semantics pass below the browser boundary. |
+| Folder-drop installed pointer lifecycle | **NOT-YET-TESTABLE** | quarantined browser boundary | `plasmon-filemanager-directory-drop.spec.ts` is in the current quarantine inventory; the required gate does not promote it. |
+| Drag feedback/placement contracts that remain in required Specialist | **PASS** | required Specialist browser | Current required Specialist execution includes the non-quarantined drag-feedback/placement browser contracts and passed them. |
+| Delete -> Recycle Bin -> restore / permanent delete / empty | **NOT-YET-TESTABLE** | lower-layer PASS; required packaged lifecycle absent | `trashLifecycle.test.ts` and Recycle Bin model tests pass the canonical authority semantics. The **current required Smoke/Specialist inventories contain no Recycle Bin journey**. The old optional `plasmon-golden-path.spec.ts` still launches an empty Recycle Bin, but that optional source is not current required execution and never covered the full lifecycle. |
+| FileManager Download | **NOT-YET-TESTABLE** | deterministic helper PASS; browser boundary absent | Current lower-layer byte/name/MIME/object-URL behavior is covered, but the required installed browser inventory does not establish the browser-owned download result. |
+| Selected filename/inline rename browser geometry | **PASS** | required Smoke/Specialist browser | Required current browser coverage includes tile-bounded rename geometry and non-quarantined inline-rename presentation contracts. This does not manufacture a separate human aesthetic judgment. |
+| Start surface current packaged contracts | **PASS** | required Specialist browser | The required Specialist inventory includes the current Start-surface browser gate and passed it. Broad subjective visual review is still distinct from those assertions. |
+| Start/Search click-away as a broad manual interaction claim | **NOT-YET-TESTABLE** | manual/interaction | No broader human interaction claim is inferred beyond the exact required browser assertions. |
+| Text/Markdown deterministic editor behavior | **PASS** | Fast + required Specialist slices | Current deterministic document/editor tests pass, and required Specialist includes non-optional Text/Markdown browser slices such as language/parity/command contracts. |
+| Full optional-profile Text/Markdown Monaco open/edit/save/reopen | **NOT-YET-TESTABLE** | optional profile-specific browser gate | `plasmon-monaco-packaged.spec.ts` remains optional/profile-specific. Required Smoke proves the installed native Settings/Monaco-ready boundary, not the complete optional-profile editor workflow. |
+| Photos fullscreen fallback and Video unsupported-codec presentation | **NOT-YET-TESTABLE** | deterministic PASS; required browser boundary absent | Focused models pass, but the optional/profile-specific browser sources are not promoted into this required current-r2 gate. |
+| `/System/Program Files` structural/package boundary | **PASS** | Fast + package/build | Current filesystem/package guards pass and required Smoke successfully packages/boots the supported current profile. |
+| Program Files subjective visible presentation | **NOT-YET-TESTABLE** | human/manual | Structural package evidence does not prove subjective Explorer/runtime presentation quality. |
+| Old boot-time Doom seed expectation | **SUPERSEDED** | accepted product contract | #29 intentionally retired unconditional demo-game boot seeding; restoring it would regress the accepted architecture. |
+| Explicit installed `.jsdos` / EmulatorJS full-profile acceptance | **NOT-YET-TESTABLE** | optional profile-specific browser gates | Demo-game/EmulatorJS proofs are optional current inventory and are not promoted into the required slim r2 gate. |
+| Active-OS visual/layout smoke after launcher-era CSS removal (#28) | **NOT-YET-TESTABLE** | human/manual | Current #28 authority still requires the bounded visual verification; this report does not manufacture it from unrelated browser assertions. |
 
-This implementation agent does not manufacture human visual evidence. The following still require bounded packaged/manual review unless current canonical Issue evidence has explicitly replaced that requirement:
+### Current blockers retained by the gate
 
-- #28 active-OS visual/layout smoke after launcher-era CSS removal;
-- #44 shortcut discoverability;
-- #72 taskbar visible wording/accessibility;
-- #109 shared pin-control visual acceptance;
-- Download browser behavior;
-- folder-drop visible feedback;
-- selected filename/rename presentation;
-- Start/Search click-away and visible Start inventory/layout;
-- Text/Markdown Monaco user-visible edit/save/reopen behavior where not already proven by a current packaged gate;
-- Photos fallback and Video unsupported-codec presentation;
-- Program Files visible presentation;
-- explicit installed js-dos fixture/game acceptance.
+The required current-r2 package/browser lanes are green, but #107 is **not equivalent to “every historical acceptance row is closed.”** The remaining evidence gaps are explicit:
 
-Any row not exercised at its required layer remains unaccepted with its current blocker stated; lower-layer tests are not promoted.
+1. the complete visible Trash lifecycle is absent from required current packaged coverage;
+2. direct installed activation of a canonical `/Apps/*.neutron` filesystem projection is not established here;
+3. browser-owned Download remains outside the required current browser inventory;
+4. quarantined directory-drop browser acceptance remains quarantined rather than promoted;
+5. full optional-profile Monaco and game/emulator workflows remain optional-profile evidence, not required slim-r2 acceptance;
+6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence.
+
+No new Product implementation defect was established by the required current-r2 Fast/Smoke/Specialist execution. The report therefore records the unresolved acceptance layer rather than creating duplicate Product work.
 
 ---
 
