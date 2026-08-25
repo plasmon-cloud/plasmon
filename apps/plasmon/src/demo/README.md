@@ -1,6 +1,5 @@
 # Plasmon demo deployment content
 
-<!-- plasmon-docs-review:v1 sha256=d3d7cb9fde0b09144dfad972d722c13c3d3b0944c48866ecb877b6951c6223ad base=379c0407cb54b12ba9c2184cdc5317291f794633 -->
 
 This directory owns non-game content enabled by the Plasmon `demo` package profile.
 
