@@ -83,9 +83,12 @@ test("#466 hidden Properties stays out of Search and Start while contextual Prop
     await expect(itemMenu.getByRole("menuitem", { name: "Properties", exact: true })).toBeVisible();
     await itemMenu.getByRole("menuitem", { name: "Properties", exact: true }).click();
 
-    const properties = plasmon.getByRole("dialog", { name: "Visibility 466.txt Properties" }).last();
+    const properties = plasmon.locator(
+      '.fm-properties[aria-label="Properties for Visibility 466.txt"]',
+    );
     await expect(properties).toBeVisible({ timeout: 20_000 });
-    await expect(properties.locator(".native-properties-app")).toBeVisible();
+    await expect(properties).toContainText("Visibility 466.txt");
+    await expect(properties).toContainText("text/plain");
 
     health.assertClean();
   } finally {
