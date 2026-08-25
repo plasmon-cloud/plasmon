@@ -43,5 +43,5 @@ test("#115 Open command reports canonical authority failure without replacing it
   expect(result.ok).toBe(false);
   if (!result.ok) expect(result.error).toBe(failure);
 
-  expect(executeOpenResourceCommand(authority, command)).rejects.toBe(failure);
+  await expect(executeOpenResourceCommand(authority, command)).rejects.toBe(failure);
 });
