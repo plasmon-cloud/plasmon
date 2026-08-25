@@ -25,7 +25,7 @@ npm --workspace neutron-plasmon test
 
 This is the required pre-handoff Plasmon fast suite. It is package-independent and intentionally avoids Kernel/Motoko/package/browser work. It includes both deterministic production-composition tests and the bounded RTL adapter tests.
 
-The fast lane also enforces the repository-owned documentation contract. Structural documentation boundaries, the generated boundary map, and review fingerprints must remain current. When owned implementation changes, the owning boundary README or local AGENTS content must be edited before `docs:review` can refresh that boundary's fingerprint; a marker-only acknowledgement is rejected.
+The fast lane also enforces the repository-owned documentation contract. Structural documentation boundaries, the generated boundary map, and review fingerprints must remain current. When owned implementation changes, both that implementation change and a substantive owning README/local-AGENTS maintenance edit must be committed, with the documentation commit at or after the latest owned implementation commit, before `docs:review` can refresh the boundary fingerprint. Uncommitted edits and marker-only commits are rejected.
 
 Do not use repository-root `npm test` as the ordinary Plasmon edit/test loop; it exercises unrelated Neutron workspaces.
 
