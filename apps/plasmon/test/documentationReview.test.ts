@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { loadDocumentationBoundaryRegistry } from "../docs/documentation-boundaries.mjs";
 import {
   computeOwnedFingerprint,
-  documentationChangesSinceReview,
+  documentationMaintenanceSinceReview,
   documentationReviewStatus,
   nearestBoundaryForPath,
   parseReviewMarker,
@@ -104,7 +104,7 @@ test("fingerprints are deterministic and documentation markers do not recurse", 
   }
 });
 
-test("status stales only the nearest boundary and review requires owning documentation maintenance", () => {
+test("status stales only the nearest boundary and review requires committed owning documentation maintenance", () => {
   const registry = fixtureRegistry();
   const root = createFixture();
   try {
@@ -128,38 +128,50 @@ test("status stales only the nearest boundary and review requires owning documen
     writeFileSync(resolve(root, "apps/plasmon/src/os/windowing/model.ts"), "export const model = 2;\n");
     git(root, ["add", "apps/plasmon/src/os/windowing/model.ts"]);
     git(root, ["commit", "-m", "change child"]);
+    const implementationCommit = git(root, ["rev-parse", "HEAD"]);
 
     const stale = documentationReviewStatus(registry, root).filter((entry) => entry.stale);
     expect(stale.map((entry) => entry.boundary)).toEqual(["apps/plasmon/src/os/windowing"]);
     expect(stale[0]?.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
     expect(stale[0]?.documentationChanged).toBe(false);
+    expect(stale[0]?.latestImplementationCommit).toBe(implementationCommit);
     expect(stale[0]?.requiredDocumentationFiles).toEqual([
       "apps/plasmon/src/os/windowing/README.md",
       "apps/plasmon/src/os/windowing/AGENTS.md",
     ]);
 
     expect(() => reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root)).toThrow(
-      "owning documentation content has not changed",
+      "no committed substantive owning-documentation edit exists at or after the latest owned implementation commit",
     );
 
     writeFileSync(
       childReadmePath,
       `${readFileSync(childReadmePath, "utf8").trimEnd()}\n\nDocument the changed windowing behavior.\n`,
     );
+    expect(() => reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root)).toThrow(
+      "commit the owned implementation/documentation change surface before refreshing the marker",
+    );
+
+    git(root, ["add", "apps/plasmon/src/os/windowing/README.md"]);
+    git(root, ["commit", "-m", "document child change"]);
+    const documentationCommit = git(root, ["rev-parse", "HEAD"]);
+
     const refreshed = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
     expect(refreshed.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
     expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
+    expect(refreshed.latestImplementationCommit).toBe(implementationCommit);
+    expect(refreshed.latestDocumentationCommit).toBe(documentationCommit);
     expect(documentationReviewStatus(registry, root).filter((entry) => entry.stale)).toEqual([]);
 
     const marker = parseReviewMarker(readFileSync(childReadmePath, "utf8"));
     expect(marker?.digest).toBe(refreshed.digest);
-    expect(marker?.base).toBe(git(root, ["rev-parse", "HEAD"]));
+    expect(marker?.base).toBe(documentationCommit);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("machine marker edits do not count as documentation content maintenance", () => {
+test("machine marker commits do not count as substantive documentation maintenance", () => {
   const registry = fixtureRegistry();
   const root = createFixture();
   try {
@@ -167,19 +179,29 @@ test("machine marker edits do not count as documentation content maintenance", (
     git(root, ["add", "."]);
     git(root, ["commit", "-m", "review baseline"]);
 
+    const modelPath = resolve(root, "apps/plasmon/src/os/windowing/model.ts");
+    writeFileSync(modelPath, "export const model = 2;\n");
+    git(root, ["add", "apps/plasmon/src/os/windowing/model.ts"]);
+    git(root, ["commit", "-m", "change child"]);
+    const implementationCommit = git(root, ["rev-parse", "HEAD"]);
+
     const readmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
     const marker = parseReviewMarker(readFileSync(readmePath, "utf8"));
     expect(marker).not.toBeNull();
     writeFileSync(
       readmePath,
-      upsertReviewMarker(readFileSync(readmePath, "utf8"), marker!.digest, git(root, ["rev-parse", "HEAD"])),
+      upsertReviewMarker(readFileSync(readmePath, "utf8"), marker!.digest, implementationCommit),
     );
+    git(root, ["add", "apps/plasmon/src/os/windowing/README.md"]);
+    git(root, ["commit", "-m", "marker only"]);
 
+    const forgedMarker = parseReviewMarker(readFileSync(readmePath, "utf8"));
+    expect(forgedMarker).not.toBeNull();
     const boundary = registry.boundaries.find((entry) => entry.path === "apps/plasmon/src/os/windowing")!;
-    const changes = documentationChangesSinceReview(boundary, marker, root);
-    expect(changes.baselineAvailable).toBe(true);
-    expect(changes.changed).toBe(false);
-    expect(changes.changedFiles).toEqual([]);
+    const maintenance = documentationMaintenanceSinceReview(boundary, forgedMarker, registry, root);
+    expect(maintenance.baselineAvailable).toBe(true);
+    expect(maintenance.changed).toBe(false);
+    expect(maintenance.changedFiles).toEqual([]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -203,6 +225,9 @@ test("status formatter emits actionable stale output and a nonzero result", () =
           "apps/plasmon/src/os/windowing/README.md",
           "apps/plasmon/src/os/windowing/AGENTS.md",
         ],
+        latestImplementationCommit: "3".repeat(40),
+        latestDocumentationCommit: null,
+        uncommittedReviewFiles: [],
       },
     ]);
 
@@ -210,7 +235,7 @@ test("status formatter emits actionable stale output and a nonzero result", () =
     expect(error).toHaveBeenCalledWith("STALE apps/plasmon/src/os/windowing: owned implementation changed");
     expect(error).toHaveBeenCalledWith("  - apps/plasmon/src/os/windowing/model.ts");
     expect(error).toHaveBeenCalledWith(
-      "  required documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
+      "  required committed documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
     );
     expect(error).toHaveBeenCalledWith(
       "  run: npm --workspace neutron-plasmon run docs:review -- apps/plasmon/src/os/windowing",
@@ -233,6 +258,9 @@ test("status formatter emits actionable stale output and a nonzero result", () =
           "apps/plasmon/src/os/windowing/README.md",
           "apps/plasmon/src/os/windowing/AGENTS.md",
         ],
+        latestImplementationCommit: null,
+        latestDocumentationCommit: null,
+        uncommittedReviewFiles: [],
       },
     ])).toBe(0);
     expect(log).toHaveBeenCalledWith("Documentation review fingerprints current: 1 boundaries.");
