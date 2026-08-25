@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { loadDocumentationBoundaryRegistry } from "../docs/documentation-boundaries.mjs";
 import {
   computeOwnedFingerprint,
+  documentationChangesSinceReview,
   documentationReviewStatus,
   nearestBoundaryForPath,
   parseReviewMarker,
@@ -103,7 +104,7 @@ test("fingerprints are deterministic and documentation markers do not recurse", 
   }
 });
 
-test("status stales only the nearest boundary and review previews before refreshing its marker", () => {
+test("status stales only the nearest boundary and review requires owning documentation maintenance", () => {
   const registry = fixtureRegistry();
   const root = createFixture();
   try {
@@ -131,14 +132,54 @@ test("status stales only the nearest boundary and review previews before refresh
     const stale = documentationReviewStatus(registry, root).filter((entry) => entry.stale);
     expect(stale.map((entry) => entry.boundary)).toEqual(["apps/plasmon/src/os/windowing"]);
     expect(stale[0]?.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
+    expect(stale[0]?.documentationChanged).toBe(false);
+    expect(stale[0]?.requiredDocumentationFiles).toEqual([
+      "apps/plasmon/src/os/windowing/README.md",
+      "apps/plasmon/src/os/windowing/AGENTS.md",
+    ]);
 
+    expect(() => reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root)).toThrow(
+      "owning documentation content has not changed",
+    );
+
+    writeFileSync(
+      childReadmePath,
+      `${readFileSync(childReadmePath, "utf8").trimEnd()}\n\nDocument the changed windowing behavior.\n`,
+    );
     const refreshed = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
     expect(refreshed.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
+    expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
     expect(documentationReviewStatus(registry, root).filter((entry) => entry.stale)).toEqual([]);
 
     const marker = parseReviewMarker(readFileSync(childReadmePath, "utf8"));
     expect(marker?.digest).toBe(refreshed.digest);
     expect(marker?.base).toBe(git(root, ["rev-parse", "HEAD"]));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("machine marker edits do not count as documentation content maintenance", () => {
+  const registry = fixtureRegistry();
+  const root = createFixture();
+  try {
+    reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "review baseline"]);
+
+    const readmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
+    const marker = parseReviewMarker(readFileSync(readmePath, "utf8"));
+    expect(marker).not.toBeNull();
+    writeFileSync(
+      readmePath,
+      upsertReviewMarker(readFileSync(readmePath, "utf8"), marker!.digest, git(root, ["rev-parse", "HEAD"])),
+    );
+
+    const boundary = registry.boundaries.find((entry) => entry.path === "apps/plasmon/src/os/windowing")!;
+    const changes = documentationChangesSinceReview(boundary, marker, root);
+    expect(changes.baselineAvailable).toBe(true);
+    expect(changes.changed).toBe(false);
+    expect(changes.changedFiles).toEqual([]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -155,12 +196,22 @@ test("status formatter emits actionable stale output and a nonzero result", () =
         marker: { digest: "0".repeat(64), base: "2".repeat(40) },
         stale: true,
         changedFiles: ["apps/plasmon/src/os/windowing/model.ts"],
+        documentationBaselineAvailable: true,
+        documentationChanged: false,
+        documentationChangedFiles: [],
+        requiredDocumentationFiles: [
+          "apps/plasmon/src/os/windowing/README.md",
+          "apps/plasmon/src/os/windowing/AGENTS.md",
+        ],
       },
     ]);
 
     expect(result).toBe(1);
     expect(error).toHaveBeenCalledWith("STALE apps/plasmon/src/os/windowing: owned implementation changed");
     expect(error).toHaveBeenCalledWith("  - apps/plasmon/src/os/windowing/model.ts");
+    expect(error).toHaveBeenCalledWith(
+      "  required documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
+    );
     expect(error).toHaveBeenCalledWith(
       "  run: npm --workspace neutron-plasmon run docs:review -- apps/plasmon/src/os/windowing",
     );
@@ -175,6 +226,13 @@ test("status formatter emits actionable stale output and a nonzero result", () =
         marker: { digest: "1".repeat(64), base: "2".repeat(40) },
         stale: false,
         changedFiles: [],
+        documentationBaselineAvailable: true,
+        documentationChanged: false,
+        documentationChangedFiles: [],
+        requiredDocumentationFiles: [
+          "apps/plasmon/src/os/windowing/README.md",
+          "apps/plasmon/src/os/windowing/AGENTS.md",
+        ],
       },
     ])).toBe(0);
     expect(log).toHaveBeenCalledWith("Documentation review fingerprints current: 1 boundaries.");
