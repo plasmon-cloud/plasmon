@@ -1,6 +1,5 @@
 # Plasmon Shared Resource Provider
 
-<!-- plasmon-docs-review:v1 sha256=df3daadad3fd8209f78ae699114f86e3c147c07b10fa4aa0f96a310a1a800619 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 Status: **Phase A provider/storage is implemented. Phase B grant/revoke orchestration is implemented against the frozen Plasmon `ResourceAuthorizationService`; lease-bound cross-AppScope provider access remains fail-closed because the frozen abstraction cannot faithfully express the accepted MTN 0.2 call path.**
 

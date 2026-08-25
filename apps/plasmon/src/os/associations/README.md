@@ -1,6 +1,5 @@
 # Associations and Open With
 
-<!-- plasmon-docs-review:v1 sha256=c12a9d75cc12cd0b1e6fa0df29670fa9c9e61141a6a4e8820fe74aa7b036ff51 base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 `associations/**` implements Plasmon's shared handler catalog, deterministic resource matching, user defaults, Open With model, and logical resource/compatibility parsers used by the association system.
 

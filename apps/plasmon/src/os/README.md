@@ -1,6 +1,5 @@
 # Plasmon OS architecture
 
-<!-- plasmon-docs-review:v1 sha256=08b7090d9c14a35feae77f2b631705ea3d535905ebbb442e49ec151dd554f921 base=79fe320ffb661db23730e689d6f8e13178ba3a6d -->
 
 `apps/plasmon/src/os/` is the canonical shared desktop-OS layer for Plasmon. It composes filesystem, associations, process/window management, desktop/FileManager, Shell, Neutron integration, Sharing, and shared presentation while leaving Kernel authority with Neutron.
 

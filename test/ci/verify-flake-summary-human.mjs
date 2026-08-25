@@ -43,7 +43,7 @@ function resultText(iteration) {
   ].join("\n");
 }
 
-const failingTitle = "documentation boundaries, generated index, and review fingerprints stay current";
+const failingTitle = "documentation boundaries and generated index stay current";
 const canonicalFile = "apps/plasmon/test/documentationContract.test.ts";
 
 try {
