@@ -82,12 +82,18 @@ test("explicit first-demo fixtures are discoverable through packaged FileManager
   await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
   const documents = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
   await expect(documents).toBeVisible();
-  await documents.dblclick();
 
-  const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
-  await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-  const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
-  const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Guide.md" }).first();
+  // The repeated #405 probe failures leave this row selected at `/` after a
+  // Playwright dblclick that never reaches FileManager's open command. Select
+  // once, then use FileManager's production Enter activation path; both gestures
+  // resolve through activateFileNode, while this avoids the lost synthetic
+  // double-click aggregation observed in the failing browser traces.
+  await documents.click();
+  await documents.press("Enter");
+  await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
+
+  const notes = rootExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
+  const guide = rootExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Guide.md" }).first();
   await expect(notes).toBeVisible();
   await expect(guide).toBeVisible();
 
