@@ -45,6 +45,28 @@ function fixtureRegistry() {
   };
 }
 
+function inheritedFixtureRegistry() {
+  return {
+    schema: "plasmon-documentation-boundaries-v1",
+    root: "apps/plasmon",
+    discoveryRoots: [],
+    boundaries: [
+      {
+        path: "apps/plasmon/src/os",
+        kind: "os-root",
+        readme: "local",
+        agents: { mode: "local" },
+      },
+      {
+        path: "apps/plasmon/src/os/windowing",
+        kind: "os-subsystem",
+        readme: "local",
+        agents: { mode: "inherited", from: "apps/plasmon/src/os/AGENTS.md" },
+      },
+    ],
+  };
+}
+
 function createFixture() {
   const root = mkdtempSync(resolve(tmpdir(), "plasmon-doc-review-"));
   for (const path of ["apps/plasmon/src/os", "apps/plasmon/src/os/windowing"]) {
@@ -231,6 +253,82 @@ test("deleted implementation still requires documentation committed after the de
     expect(refreshed.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
     expect(refreshed.latestImplementationCommit).toBe(deletionCommit);
     expect(refreshed.latestDocumentationCommit).toBe(finalDocumentationCommit);
+    expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("local AGENTS maintenance satisfies a stale boundary", () => {
+  const registry = fixtureRegistry();
+  const root = createFixture();
+  try {
+    reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "review baseline"]);
+
+    const modelPath = resolve(root, "apps/plasmon/src/os/windowing/model.ts");
+    writeFileSync(modelPath, "export const model = 2;\n");
+    git(root, ["add", modelPath]);
+    git(root, ["commit", "-m", "change child"]);
+
+    const agentsPath = resolve(root, "apps/plasmon/src/os/windowing/AGENTS.md");
+    writeFileSync(agentsPath, `${readFileSync(agentsPath, "utf8").trimEnd()}\nDocument the changed windowing rules.\n`);
+    git(root, ["add", agentsPath]);
+    git(root, ["commit", "-m", "document child rules"]);
+
+    const refreshed = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/AGENTS.md"]);
+    expect(
+      documentationReviewStatus(registry, root).find((entry) => entry.boundary === "apps/plasmon/src/os/windowing")?.stale,
+    ).toBe(false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("inherited boundaries require their README rather than an ancestor AGENTS edit", () => {
+  const registry = inheritedFixtureRegistry();
+  const root = createFixture();
+  try {
+    const boundary = registry.boundaries.find((entry) => entry.path === "apps/plasmon/src/os/windowing")!;
+    const childReadmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
+    const ancestorAgentsPath = resolve(root, "apps/plasmon/src/os/AGENTS.md");
+    reviewDocumentationBoundary(boundary.path, registry, root);
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "review baseline"]);
+
+    writeFileSync(resolve(root, "apps/plasmon/src/os/windowing/model.ts"), "export const model = 2;\n");
+    git(root, ["add", "apps/plasmon/src/os/windowing/model.ts"]);
+    git(root, ["commit", "-m", "change child"]);
+
+    writeFileSync(
+      ancestorAgentsPath,
+      `${readFileSync(ancestorAgentsPath, "utf8").trimEnd()}\nDocument the shared OS rules.\n`,
+    );
+    git(root, ["add", ancestorAgentsPath]);
+    git(root, ["commit", "-m", "document ancestor rules"]);
+
+    const stale = documentationMaintenanceSinceReview(
+      boundary,
+      parseReviewMarker(readFileSync(childReadmePath, "utf8")),
+      registry,
+      root,
+    );
+    expect(stale.requiredFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
+    expect(stale.changed).toBe(false);
+    expect(stale.latestDocumentationCommit).toBeNull();
+    expect(() => reviewDocumentationBoundary(boundary.path, registry, root)).toThrow(
+      "no committed substantive owning-documentation edit exists at or after the latest owned implementation commit",
+    );
+
+    writeFileSync(
+      childReadmePath,
+      `${readFileSync(childReadmePath, "utf8").trimEnd()}\nDocument the inherited windowing contract.\n`,
+    );
+    git(root, ["add", childReadmePath]);
+    git(root, ["commit", "-m", "document child contract"]);
+    const refreshed = reviewDocumentationBoundary(boundary.path, registry, root);
     expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
   } finally {
     rmSync(root, { recursive: true, force: true });
