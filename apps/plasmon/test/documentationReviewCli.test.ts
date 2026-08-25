@@ -104,7 +104,7 @@ function runReview(root: string, boundary: string) {
   );
 }
 
-test("documentation review CLI requires owning documentation edits before refresh", () => {
+test("documentation review CLI requires committed owning documentation edits before refresh", () => {
   const root = createFixture();
   try {
     writeFileSync(resolve(root, "apps/plasmon/src/os/windowing/model.ts"), "export const model = 2;\n");
@@ -117,7 +117,7 @@ test("documentation review CLI requires owning documentation edits before refres
     expect(stale.stderr).toContain("STALE apps/plasmon/src/os/windowing: owned implementation changed");
     expect(stale.stderr).toContain("  - apps/plasmon/src/os/windowing/model.ts");
     expect(stale.stderr).toContain(
-      "  required documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
+      "  required committed documentation edit: apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
     );
     expect(stale.stderr).toContain(
       "  run: npm --workspace neutron-plasmon run docs:review -- apps/plasmon/src/os/windowing",
@@ -127,17 +127,34 @@ test("documentation review CLI requires owning documentation edits before refres
     const refused = runReview(root, "apps/plasmon/src/os/windowing");
     expect(refused.status).toBe(1);
     expect(refused.stdout).toContain("Review surface for apps/plasmon/src/os/windowing:");
-    expect(refused.stdout).toContain("REQUIRED: edit apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md");
-    expect(refused.stderr).toContain("owning documentation content has not changed since the previous review");
+    expect(refused.stdout).toContain(
+      "REQUIRED: edit and commit apps/plasmon/src/os/windowing/README.md or apps/plasmon/src/os/windowing/AGENTS.md",
+    );
+    expect(refused.stderr).toContain(
+      "no committed substantive owning-documentation edit exists at or after the latest owned implementation commit",
+    );
 
     const readmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
     writeFileSync(
       readmePath,
       `${readFileSync(readmePath, "utf8").trimEnd()}\n\nDocument the changed windowing behavior.\n`,
     );
+
+    const uncommitted = runReview(root, "apps/plasmon/src/os/windowing");
+    expect(uncommitted.status).toBe(1);
+    expect(uncommitted.stdout).toContain("COMMIT FIRST: apps/plasmon/src/os/windowing/README.md");
+    expect(uncommitted.stderr).toContain(
+      "commit the owned implementation/documentation change surface before refreshing the marker",
+    );
+
+    git(root, ["add", "apps/plasmon/src/os/windowing/README.md"]);
+    git(root, ["commit", "-m", "document child change"]);
+    const documentationCommit = git(root, ["rev-parse", "HEAD"]);
+
     const accepted = runReview(root, "apps/plasmon/src/os/windowing");
     expect(accepted.status).toBe(0);
-    expect(accepted.stdout).toContain("edited: apps/plasmon/src/os/windowing/README.md");
+    expect(accepted.stdout).toContain("maintained: apps/plasmon/src/os/windowing/README.md");
+    expect(accepted.stdout).toContain(`documentation commit: ${documentationCommit}`);
     expect(accepted.stdout).toContain("Updated apps/plasmon/src/os/windowing/README.md");
     expect(accepted.stderr).toBe("");
 
