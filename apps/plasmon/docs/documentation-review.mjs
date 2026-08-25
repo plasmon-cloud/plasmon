@@ -32,9 +32,28 @@ function gitZ(repoRoot, args) {
   return output.split("\0").filter(Boolean).map(slash);
 }
 
+function gitFile(repoRoot, ref, path) {
+  try {
+    return execFileSync("git", ["show", `${ref}:${path}`], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    return null;
+  }
+}
+
 function fileBytes(path) {
   const stat = lstatSync(path);
   return stat.isSymbolicLink() ? Buffer.from(readlinkSync(path)) : readFileSync(path);
+}
+
+function normalizedDocumentationContent(path, content) {
+  const withoutMarker = path.endsWith("/README.md")
+    ? content.replace(REVIEW_MARKER_PATTERN, "")
+    : content;
+  return `${withoutMarker.replaceAll("\r\n", "\n").trimEnd()}\n`;
 }
 
 export function gitBlobIdentity(bytes) {
@@ -58,6 +77,12 @@ export function nearestBoundaryForPath(path, registry) {
 
 export function isBoundaryDocumentationFile(path, boundary) {
   return path === `${boundary.path}/README.md` || path === `${boundary.path}/AGENTS.md`;
+}
+
+export function requiredDocumentationFiles(boundary) {
+  const files = [`${boundary.path}/README.md`];
+  if (boundary.agents?.mode === "local") files.push(`${boundary.path}/AGENTS.md`);
+  return files;
 }
 
 export function listRepositoryFiles(repoRoot = defaultRepoRoot) {
@@ -143,6 +168,41 @@ export function representativeChangedFiles(boundaryPath, registry, repoRoot, mar
   return [...new Set(ownedImplementationFiles(boundaryPath, registry, candidate))].slice(0, limit);
 }
 
+export function documentationChangesSinceReview(boundary, marker, repoRoot = defaultRepoRoot) {
+  const requiredFiles = requiredDocumentationFiles(boundary);
+  if (!marker) {
+    return {
+      baselineAvailable: true,
+      changed: true,
+      changedFiles: requiredFiles.filter((path) => existsSync(resolve(repoRoot, path))),
+      requiredFiles,
+    };
+  }
+
+  let baselineAvailable = true;
+  const changedFiles = [];
+  for (const path of requiredFiles) {
+    const absolute = resolve(repoRoot, path);
+    if (!existsSync(absolute)) continue;
+    const previous = gitFile(repoRoot, marker.base, path);
+    if (previous === null) {
+      baselineAvailable = false;
+      continue;
+    }
+    const current = readFileSync(absolute, "utf8");
+    if (normalizedDocumentationContent(path, current) !== normalizedDocumentationContent(path, previous)) {
+      changedFiles.push(path);
+    }
+  }
+
+  return {
+    baselineAvailable,
+    changed: baselineAvailable && changedFiles.length > 0,
+    changedFiles,
+    requiredFiles,
+  };
+}
+
 export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) {
   const files = listRepositoryFiles(repoRoot);
   const status = [];
@@ -153,6 +213,9 @@ export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) 
     const marker = parseReviewMarker(readme);
     const state = computeOwnedFingerprint(boundary.path, registry, repoRoot, files);
     const stale = !marker || marker.digest !== state.digest;
+    const documentation = stale
+      ? documentationChangesSinceReview(boundary, marker, repoRoot)
+      : { baselineAvailable: true, changed: false, changedFiles: [], requiredFiles: requiredDocumentationFiles(boundary) };
     status.push({
       boundary: boundary.path,
       digest: state.digest,
@@ -161,6 +224,10 @@ export function documentationReviewStatus(registry, repoRoot = defaultRepoRoot) 
       changedFiles: stale
         ? representativeChangedFiles(boundary.path, registry, repoRoot, marker, state.files)
         : [],
+      documentationBaselineAvailable: documentation.baselineAvailable,
+      documentationChanged: documentation.changed,
+      documentationChangedFiles: documentation.changedFiles,
+      requiredDocumentationFiles: documentation.requiredFiles,
     });
   }
 
@@ -177,6 +244,7 @@ export function prepareDocumentationReview(boundaryPath, registry, repoRoot = de
   const previous = parseReviewMarker(readme);
   const state = computeOwnedFingerprint(boundary.path, registry, repoRoot, files);
   const changedFiles = representativeChangedFiles(boundary.path, registry, repoRoot, previous, state.files, 20);
+  const documentation = documentationChangesSinceReview(boundary, previous, repoRoot);
   const base = headSha(repoRoot);
   return {
     boundary: boundary.path,
@@ -186,12 +254,28 @@ export function prepareDocumentationReview(boundaryPath, registry, repoRoot = de
     previous,
     readmePath,
     updatedReadme: upsertReviewMarker(readme, state.digest, base),
+    documentationBaselineAvailable: documentation.baselineAvailable,
+    documentationChanged: documentation.changed,
+    documentationChangedFiles: documentation.changedFiles,
+    requiredDocumentationFiles: documentation.requiredFiles,
   };
 }
 
 export function reviewDocumentationBoundary(boundaryPath, registry, repoRoot = defaultRepoRoot, options = {}) {
   const review = prepareDocumentationReview(boundaryPath, registry, repoRoot);
   options.beforeWrite?.(review);
+  if (review.previous && !review.documentationBaselineAvailable) {
+    throw new Error(
+      `${review.boundary}: previous documentation baseline ${review.previous.base} is unavailable; refusing marker refresh. ` +
+      `Use a repository checkout containing that history and edit ${review.requiredDocumentationFiles.join(" or ")} before review.`,
+    );
+  }
+  if (review.previous && !review.documentationChanged) {
+    throw new Error(
+      `${review.boundary}: owning documentation content has not changed since the previous review. ` +
+      `Edit ${review.requiredDocumentationFiles.join(" or ")} before refreshing the marker.`,
+    );
+  }
   writeFileSync(review.readmePath, review.updatedReadme);
   return review;
 }
@@ -207,6 +291,13 @@ export function printStatus(status) {
     const reason = entry.marker ? "owned implementation changed" : "review marker missing";
     console.error(`STALE ${entry.boundary}: ${reason}`);
     for (const path of entry.changedFiles) console.error(`  - ${path}`);
+    if (entry.marker && !entry.documentationBaselineAvailable) {
+      console.error(`  documentation baseline unavailable: ${entry.marker.base}`);
+    } else if (entry.marker && entry.documentationChangedFiles.length === 0) {
+      console.error(`  required documentation edit: ${entry.requiredDocumentationFiles.join(" or ")}`);
+    } else {
+      for (const path of entry.documentationChangedFiles) console.error(`  documentation edited: ${path}`);
+    }
     console.error(`  run: npm --workspace neutron-plasmon run docs:review -- ${entry.boundary}`);
   }
   return 1;
@@ -218,7 +309,15 @@ function printReviewSurface(review) {
     console.log("  (no owned implementation changes since the previous review base)");
   }
   for (const path of review.changedFiles) console.log(`  - ${path}`);
-  console.log("If the README/AGENTS remain accurate, refreshing the marker is a valid marker-only acknowledgement.");
+  console.log("Owning documentation maintenance:");
+  if (!review.documentationBaselineAvailable) {
+    console.log(`  baseline unavailable: ${review.previous?.base ?? "none"}`);
+  } else if (review.documentationChangedFiles.length === 0) {
+    console.log(`  REQUIRED: edit ${review.requiredDocumentationFiles.join(" or ")}`);
+  } else {
+    for (const path of review.documentationChangedFiles) console.log(`  edited: ${path}`);
+  }
+  console.log("A marker refresh is valid only after the owning documentation content has been edited.");
 }
 
 function runCli() {
@@ -237,13 +336,18 @@ function runCli() {
       process.exitCode = 2;
       return;
     }
-    const result = reviewDocumentationBoundary(boundaryPath, registry, defaultRepoRoot, {
-      beforeWrite: printReviewSurface,
-    });
-    console.log(`Updated ${result.boundary}/README.md`);
-    console.log(`  sha256=${result.digest}`);
-    console.log(`  base=${result.base}`);
-    console.log("This marker records an explicit documentation review acknowledgement; it does not prove semantic correctness.");
+    try {
+      const result = reviewDocumentationBoundary(boundaryPath, registry, defaultRepoRoot, {
+        beforeWrite: printReviewSurface,
+      });
+      console.log(`Updated ${result.boundary}/README.md`);
+      console.log(`  sha256=${result.digest}`);
+      console.log(`  base=${result.base}`);
+      console.log("This marker records that the owned implementation and owning documentation were reviewed together; it does not prove semantic correctness.");
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    }
     return;
   }
 
