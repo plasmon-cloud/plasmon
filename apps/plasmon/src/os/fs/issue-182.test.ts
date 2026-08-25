@@ -46,6 +46,8 @@ test("issue #367/#182: intentional user root deletion remains durable across rec
 
   const root = await fs.resolvePath("/");
   assert.ok(root);
+  const managedGames = await fs.resolvePath("/Games");
+  assert.ok(managedGames);
 
   const created = await fs.mkdir(root.id, "My Projects");
   const renamed = await fs.rename(created.id, "Renamed Projects");
@@ -62,5 +64,6 @@ test("issue #367/#182: intentional user root deletion remains durable across rec
 
   assert.equal(await recomposed.resolvePath("/My Projects"), null);
   assert.equal(await recomposed.resolvePath("/Renamed Projects"), null);
+  assert.equal((await recomposed.resolvePath("/Games"))?.id, managedGames.id);
   assert.equal(await recomposed.resolvePath("/Downloads"), null);
 });
