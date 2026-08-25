@@ -171,6 +171,72 @@ test("status stales only the nearest boundary and review requires committed owni
   }
 });
 
+test("deleted implementation still requires documentation committed after the deletion", () => {
+  const registry = fixtureRegistry();
+  const root = createFixture();
+  try {
+    reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    git(root, ["add", "."]);
+    git(root, ["commit", "-m", "review baseline"]);
+
+    const readmePath = resolve(root, "apps/plasmon/src/os/windowing/README.md");
+    writeFileSync(
+      readmePath,
+      `${readFileSync(readmePath, "utf8").trimEnd()}\n\nDocument the planned model retirement.\n`,
+    );
+    git(root, ["add", "apps/plasmon/src/os/windowing/README.md"]);
+    git(root, ["commit", "-m", "document planned retirement"]);
+    const earlyDocumentationCommit = git(root, ["rev-parse", "HEAD"]);
+
+    const modelPath = resolve(root, "apps/plasmon/src/os/windowing/model.ts");
+    rmSync(modelPath);
+    const boundary = registry.boundaries.find((entry) => entry.path === "apps/plasmon/src/os/windowing")!;
+    const marker = parseReviewMarker(readFileSync(readmePath, "utf8"));
+    expect(marker).not.toBeNull();
+    expect(() => reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root)).toThrow(
+      "commit the owned implementation/documentation change surface before refreshing the marker",
+    );
+
+    git(root, ["add", "-A", "apps/plasmon/src/os/windowing/model.ts"]);
+    git(root, ["commit", "-m", "delete child implementation"]);
+    const deletionCommit = git(root, ["rev-parse", "HEAD"]);
+
+    const maintenance = documentationMaintenanceSinceReview(boundary, marker, registry, root);
+    expect(maintenance.baselineAvailable).toBe(true);
+    expect(maintenance.changed).toBe(false);
+    expect(maintenance.latestImplementationCommit).toBe(deletionCommit);
+    expect(maintenance.latestDocumentationCommit).toBeNull();
+    expect(earlyDocumentationCommit).not.toBe(deletionCommit);
+
+    const stale = documentationReviewStatus(registry, root).find(
+      (entry) => entry.boundary === "apps/plasmon/src/os/windowing",
+    );
+    expect(stale?.stale).toBe(true);
+    expect(stale?.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
+    expect(stale?.latestImplementationCommit).toBe(deletionCommit);
+    expect(stale?.documentationChanged).toBe(false);
+    expect(() => reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root)).toThrow(
+      "no committed substantive owning-documentation edit exists at or after the latest owned implementation commit",
+    );
+
+    writeFileSync(
+      readmePath,
+      `${readFileSync(readmePath, "utf8").trimEnd()}\n\nRecord the completed model retirement.\n`,
+    );
+    git(root, ["add", "apps/plasmon/src/os/windowing/README.md"]);
+    git(root, ["commit", "-m", "document completed retirement"]);
+    const finalDocumentationCommit = git(root, ["rev-parse", "HEAD"]);
+
+    const refreshed = reviewDocumentationBoundary("apps/plasmon/src/os/windowing", registry, root);
+    expect(refreshed.changedFiles).toContain("apps/plasmon/src/os/windowing/model.ts");
+    expect(refreshed.latestImplementationCommit).toBe(deletionCommit);
+    expect(refreshed.latestDocumentationCommit).toBe(finalDocumentationCommit);
+    expect(refreshed.documentationChangedFiles).toEqual(["apps/plasmon/src/os/windowing/README.md"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("machine marker commits do not count as substantive documentation maintenance", () => {
   const registry = fixtureRegistry();
   const root = createFixture();
