@@ -1,6 +1,5 @@
 # Video
 
-<!-- plasmon-docs-review:v1 sha256=83aa658e346da43f7edf5910e2fc572a0daa0fc857257dc0c38836178b56d63f base=0c9f91b341800f91113aeb269a6438165eb825c8 -->
 
 Video is the native browser-media player for association-selected video files and supported web media targets.
 
