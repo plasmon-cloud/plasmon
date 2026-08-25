@@ -1,6 +1,6 @@
 # Plasmon filesystem
 
-<!-- plasmon-docs-review:v1 sha256=93eeaeaf60d8324da3e9f14e497c516a608ef7d1afee068d1aaabc6c41f2a3f4 base=a7226b077f8cc2286a562047aa7a4bb305ffecd9 -->
+<!-- plasmon-docs-review:v1 sha256=b48517f272acb79ea0d4edeb0c987168f345fcccc895a5c32840d278feb9501f base=03b846c68a96e4fe8d613221adc1d8b20dbaa1d2 -->
 
 `fs/**` implements the filesystem authority behind the public `FsService`/`FsEventSource` contracts. Higher layers consume those services; they do not own repository or storage semantics.
 
