@@ -1,7 +1,5 @@
 # Plasmon documentation map
 
-<!-- plasmon-docs-review:v1 sha256=6fd5f34eb9d39ba3d15bdf9b0c20c3ef16823a3920104c93d3f69a0ea9c2166b base=0c96705a95fa0b512e872ab94f2f42697945737a -->
-
 This directory is the durable cross-subsystem documentation home for Plasmon. The repository is authoritative for Plasmon architecture, terminology, testing rules, and implementation guidance; chat, handoffs, and external project context are coordination and bootstrap aids only.
 
 GitHub Issues are the canonical work and acceptance queue. Stable product knowledge belongs in scoped README/AGENTS files, canonical documents here, executable tests, contracts, or implementation.
@@ -31,7 +29,7 @@ Use the nearest meaningful documentation boundary rather than adding documentati
 
 The machine-readable boundary inventory is [`documentation-boundaries.json`](documentation-boundaries.json). It is the single source for which Plasmon directories are documentation boundaries, whether they require local README/AGENTS files or inherit AGENTS ownership, and which roots require direct-child classification. Do not duplicate that inventory in prose or external project context.
 
-Review fingerprints make implementation drift visible at those boundaries. [`DOCUMENTATION_REVIEW.md`](DOCUMENTATION_REVIEW.md) defines the `docs:review:status` / `docs:review` workflow, nearest-boundary ownership, and the rule that refreshing a marker records deliberate review rather than proving semantic correctness.
+Documentation automation is limited to machine-provable contracts: declared boundaries must exist, required README/AGENTS ownership must resolve, discovery roots must classify their first-class children, and the generated index below must match the registry. Semantic documentation freshness is not represented by a whole-tree digest or review marker. When implementation changes a durable invariant, authority boundary, public seam, or other lasting guidance, update the owning documentation in that work; ordinary implementation changes do not require no-op documentation edits.
 
 <!-- plasmon-documentation-boundaries:start -->
 <!-- Generated from documentation-boundaries.json by documentation-boundaries.mjs. Do not edit this table by hand. -->
