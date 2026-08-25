@@ -38,3 +38,29 @@ test("issue #182: bootstrap preserves an existing Downloads tree without guessin
   assert.equal(preservedChild?.id, child.id);
   assert.equal(new TextDecoder().decode(await reloaded.read(child.id)), "preserve me");
 });
+
+test("issue #367/#182: intentional user root deletion remains durable across recomposition", async () => {
+  const repository = new MemoryFsRepository();
+  const fs = new PersistentFsService(repository);
+  await bootstrapFilesystem(fs);
+
+  const root = await fs.resolvePath("/");
+  assert.ok(root);
+
+  const created = await fs.mkdir(root.id, "My Projects");
+  const renamed = await fs.rename(created.id, "Renamed Projects");
+  assert.equal(renamed.id, created.id);
+  assert.equal(await fs.resolvePath("/My Projects"), null);
+  assert.equal((await fs.resolvePath("/Renamed Projects"))?.id, created.id);
+
+  await fs.remove(created.id);
+  assert.equal(await fs.resolvePath("/My Projects"), null);
+  assert.equal(await fs.resolvePath("/Renamed Projects"), null);
+
+  const recomposed = new PersistentFsService(repository);
+  await bootstrapFilesystem(recomposed);
+
+  assert.equal(await recomposed.resolvePath("/My Projects"), null);
+  assert.equal(await recomposed.resolvePath("/Renamed Projects"), null);
+  assert.equal(await recomposed.resolvePath("/Downloads"), null);
+});
