@@ -29,6 +29,9 @@ test("#111 Shell consumes shared Visual semantics instead of owning a parallel t
     "--plasmon-font-xl:",
   ]) expect(shellCss).not.toContain(retiredDeclaration);
 
+  expect(shellCss).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  expect(shellCss).not.toContain("rgba(");
+
   for (const sharedToken of [
     "--plasmon-control-background:",
     "--plasmon-control-hover:",
@@ -80,8 +83,9 @@ test("#111 Start and Search marks consume shared Visual assets instead of duplic
   expect(shellSurfaces).toContain("function TrayMark");
 });
 
-test("#111 Midnight overrides shared semantic tokens so descendant surfaces inherit one theme", () => {
-  const midnight = shellCss.match(/\.plasmon-shell\[data-plasmon-theme="plasmon-midnight"\]\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? "";
+test("#111 theme variants belong to Visual and override shared semantics for all descendant surfaces", () => {
+  expect(shellCss).not.toContain("data-plasmon-theme=\"plasmon-midnight\"");
+  const midnight = visualTokens.match(/\.plasmon-shell\[data-plasmon-theme="plasmon-midnight"\]\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? "";
   expect(midnight).not.toBe("");
 
   for (const token of [
