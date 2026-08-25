@@ -31,7 +31,7 @@ Use the nearest meaningful documentation boundary rather than adding documentati
 
 The machine-readable boundary inventory is [`documentation-boundaries.json`](documentation-boundaries.json). It is the single source for which Plasmon directories are documentation boundaries, whether they require local README/AGENTS files or inherit AGENTS ownership, and which roots require direct-child classification. Do not duplicate that inventory in prose or external project context.
 
-Review fingerprints make implementation drift visible at those boundaries. [`DOCUMENTATION_REVIEW.md`](DOCUMENTATION_REVIEW.md) defines the `docs:review:status` / `docs:review` workflow, nearest-boundary ownership, and the rule that refreshing a marker records deliberate review rather than proving semantic correctness.
+Review fingerprints make implementation drift visible at those boundaries. [`DOCUMENTATION_REVIEW.md`](DOCUMENTATION_REVIEW.md) defines the `docs:review:status` / `docs:review` workflow, nearest-boundary ownership, and the conservative maintenance rule: every owned implementation change must include a real edit to the owning boundary README or local AGENTS file before its marker can be refreshed. The marker records deliberate review; it is not semantic proof that the documentation is correct.
 
 <!-- plasmon-documentation-boundaries:start -->
 <!-- Generated from documentation-boundaries.json by documentation-boundaries.mjs. Do not edit this table by hand. -->
