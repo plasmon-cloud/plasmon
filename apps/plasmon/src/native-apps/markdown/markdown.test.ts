@@ -5,6 +5,7 @@ import {
   isSafeMarkdownHref,
   MARKDOWN_SANITIZE_CONFIG,
   parseMarkdownHtml,
+  prepareMarkdownSourceForParsing,
   renderSafeMarkdown,
   type MarkdownSanitizer,
 } from "./render.ts";
@@ -31,6 +32,26 @@ test("basic Markdown Preview source produces semantic heading, paragraph, and li
   expect(html).toContain("<li>one</li>");
   expect(html).toContain("<li>two</li>");
   expect(html).not.toContain("# Big Heading");
+});
+
+test("compact top-level headings are normalized only for parser input", () => {
+  const source = "#hello\n\nParagraph with inline #tag.\n\n    #indented\n\n```md\n#fenced\n```\n\n##compact";
+  const prepared = prepareMarkdownSourceForParsing(source);
+
+  expect(source.startsWith("#hello")).toBe(true);
+  expect(prepared).toStartWith("# hello");
+  expect(prepared).toContain("Paragraph with inline #tag.");
+  expect(prepared).toContain("    #indented");
+  expect(prepared).toContain("```md\n#fenced\n```");
+  expect(prepared).toContain("##compact");
+
+  const html = parseMarkdownHtml(source);
+  expect(html).toContain("<h1>hello</h1>");
+  expect(html).toContain("Paragraph with inline #tag.");
+  expect(html).toContain("<code>#indented");
+  expect(html).toContain("#fenced");
+  expect(html).not.toContain("<h1>fenced</h1>");
+  expect(html).toContain("##compact");
 });
 
 test("Markdown Preview presentation preserves heading hierarchy and visible list markers after resets", () => {
