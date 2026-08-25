@@ -6,7 +6,6 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const PROGRAM_FILES_WORKER_PATH = `/app/${APP_ID}/System/Program Files/MonacoEditor/editor.worker.js`;
 const BROWSER_WORKER_PATH = `/app/${APP_ID}/runtime/monaco/editor.worker.js`;
 const BROWSER_TRANSPORT_PATH = `/app/${APP_ID}/runtime/monaco/worker-sources.js`;
 
@@ -36,7 +35,7 @@ test.afterEach(async ({ browserName }, testInfo) => {
   );
 });
 
-test("#391 slim packaged Monaco uses Program Files editor-worker authority through the opaque-origin transport", { tag: ["@issue-89", "@issue-391"] }, async ({
+test("#391 slim packaged Monaco executes the installed editor-worker through the opaque-origin transport", { tag: ["@issue-89", "@issue-391"] }, async ({
   page,
   request,
   browserName,
@@ -105,24 +104,22 @@ test("#391 slim packaged Monaco uses Program Files editor-worker authority throu
     if (pathname === BROWSER_TRANSPORT_PATH) browserTransportLoaded = true;
   });
 
-  const [canonical, mirror, transport, missingCanonicalTypescript, missingMirrorTypescript, retired] = await Promise.all([
-    request.get(new URL(PROGRAM_FILES_WORKER_PATH, kernelUrl).href),
+  // Package-level coverage proves the canonical Program Files worker inventory.
+  // The installed browser boundary exposes the generated URL-safe mirror and
+  // opaque preload derived from that same canonical byte stream.
+  const [mirror, transport, missingMirrorTypescript, retired] = await Promise.all([
     request.get(new URL(BROWSER_WORKER_PATH, kernelUrl).href),
     request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href),
-    request.get(new URL(`/app/${APP_ID}/System/Program Files/MonacoEditor/ts.worker.js`, kernelUrl).href),
     request.get(new URL(`/app/${APP_ID}/runtime/monaco/ts.worker.js`, kernelUrl).href),
     request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href),
   ]);
-  expect(canonical.ok(), "slim Monaco editor worker must be served from installed Program Files").toBe(true);
   expect(mirror.ok(), "slim Monaco URL-safe editor-worker mirror must remain installed").toBe(true);
   expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
-  expect(missingCanonicalTypescript.ok(), "slim r2 must not restore the superseded Program Files ts.worker.js payload").toBe(false);
   expect(missingMirrorTypescript.ok(), "slim r2 must not expose a shadow ts.worker.js mirror").toBe(false);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
 
-  const canonicalBytes = await canonical.body();
-  expect(canonicalBytes.length, "installed Program Files editor worker must contain runtime bytes").toBeGreaterThan(100);
-  expect(await mirror.body(), "URL-safe editor-worker mirror must be byte-identical to Program Files authority").toEqual(canonicalBytes);
+  const mirrorBytes = await mirror.body();
+  expect(mirrorBytes.length, "installed editor-worker mirror must contain runtime bytes").toBeGreaterThan(100);
   const transportScope: Record<string, unknown> = {};
   runInNewContext(await transport.text(), transportScope);
   const transported = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string> | undefined;
@@ -131,8 +128,8 @@ test("#391 slim packaged Monaco uses Program Files editor-worker authority throu
   ]);
   expect(
     Buffer.from(transported?.["editor.worker.js"] ?? "", "utf8"),
-    "opaque transport bytes must be byte-identical to Program Files authority",
-  ).toEqual(canonicalBytes);
+    "opaque transport bytes must be byte-identical to the installed editor-worker mirror",
+  ).toEqual(mirrorBytes);
 
   await page.goto(kernelUrl);
   await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
