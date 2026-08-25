@@ -6,7 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-test("#86 diagnostic text selects without stealing FileEntry drag", { tag: ["@r2-quarantine", "@issue-86", "@issue-330"] }, async ({ page }) => {
+test("#86 diagnostic text selects without stealing FileEntry drag", { tag: ["@issue-86", "@issue-330"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -69,12 +69,14 @@ test("#86 diagnostic text selects without stealing FileEntry drag", { tag: ["@r2
     await expect(sourceRename).toBeVisible();
     const sourceDocumentName = await sourceRename.inputValue();
     await sourceRename.press("Escape");
+    await expect(sourceRename).toHaveCount(0);
 
     await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Folder" }).click();
     const folderRename = explorerWindow.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(folderRename).toBeVisible();
     const collisionFolderName = await folderRename.inputValue();
     await folderRename.press("Escape");
+    await expect(folderRename).toHaveCount(0);
 
     const collisionFolder = fileManager.locator("[data-fm-node-id]", { hasText: collisionFolderName }).first();
     await expect(collisionFolder).toBeVisible();

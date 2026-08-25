@@ -5,7 +5,7 @@ import type { ResourceIconPresentation } from "../visual/index.ts";
 import {
   fallbackFileResourcePresentation,
   fileVisualKind,
-  resolveFileResourcePresentation,
+  tryResolveFileResourcePresentation,
   type FileVisualKind,
 } from "./file-icons.ts";
 
@@ -33,17 +33,16 @@ export function useFileEntryResolvedPresentation(
 
   useEffect(() => {
     let active = true;
-    const fallback = fallbackFileResourcePresentation(node, associations);
     // FileEntry is NodeId-keyed. Preserve its last resolved presentation while
-    // authoritative FsNode snapshots re-resolve instead of flashing back to the
-    // generic shortcut fallback and cancelling an in-flight packaged icon load.
-    void resolveFileResourcePresentation(fs, node, associations)
+    // authoritative FsNode snapshots re-resolve. If asynchronous shortcut
+    // enrichment is temporarily unavailable, retaining the last-known artwork
+    // is more truthful than publishing a generic fallback and then replacing it
+    // again on the next successful refresh.
+    void tryResolveFileResourcePresentation(fs, node, associations)
       .then((resolved) => {
-        if (active) setResourcePresentation(resolved);
+        if (active && resolved) setResourcePresentation(resolved);
       })
-      .catch(() => {
-        if (active) setResourcePresentation(fallback);
-      });
+      .catch(() => undefined);
     return () => { active = false; };
   }, [associations, fs, node]);
 

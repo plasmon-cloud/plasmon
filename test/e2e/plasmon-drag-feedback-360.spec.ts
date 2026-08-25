@@ -271,7 +271,7 @@ test("#360 Desktop ghost preserves icon/name geometry, translucency, grab offset
   }
 });
 
-test("#360 Desktop item moves into an already-open folder window", { tag: ["@r2-quarantine", "@issue-360", "@issue-420"] }, async ({ page }) => {
+test("#360 Desktop item moves into an already-open folder window", async ({ page }) => {
   const { frame, iframe, files, health } = await launchPlasmon(page);
   try {
     const source = await createDesktopTextDocument(frame, files);
@@ -310,7 +310,7 @@ test("#360 Desktop item moves into an already-open folder window", { tag: ["@r2-
   }
 });
 
-test("#360 target feedback changes A to B to invalid and invalid, cancel, and unmount paths clear drag state", { tag: ["@r2-quarantine", "@issue-360", "@issue-420"] }, async ({ page }) => {
+test("#360 target feedback changes A to B to invalid and invalid, cancel, and unmount paths clear drag state", async ({ page }) => {
   const { frame, health } = await launchPlasmon(page);
   try {
     const { explorer, address, explorerFiles } = await openRootExplorer(frame);
@@ -385,7 +385,7 @@ test("#360 target feedback changes A to B to invalid and invalid, cancel, and un
   }
 });
 
-test("#360 multi-selection keeps a recognizable grouped preview and moves the selected group", { tag: ["@r2-quarantine", "@issue-360", "@issue-420"] }, async ({ page }) => {
+test("#360 multi-selection keeps a recognizable grouped preview and moves the selected group", async ({ page }) => {
   const { frame, iframe, files, health } = await launchPlasmon(page);
   try {
     const first = await createDesktopTextDocument(frame, files);

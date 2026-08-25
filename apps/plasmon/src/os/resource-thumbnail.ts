@@ -27,9 +27,44 @@ export interface LoadedImageThumbnail {
   revoke(): void;
 }
 
-function loadedThumbnail(bytes: Uint8Array, mime: string, urlApi: ThumbnailObjectUrlApi): LoadedImageThumbnail {
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function bytesAsDataUrl(bytes: Uint8Array, mime: string): string {
+  let encoded = "";
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0;
+    const hasSecond = index + 1 < bytes.length;
+    const hasThird = index + 2 < bytes.length;
+    const second = hasSecond ? bytes[index + 1]! : 0;
+    const third = hasThird ? bytes[index + 2]! : 0;
+    const bits = (first << 16) | (second << 8) | third;
+
+    encoded += BASE64_ALPHABET[(bits >>> 18) & 0x3f];
+    encoded += BASE64_ALPHABET[(bits >>> 12) & 0x3f];
+    encoded += hasSecond ? BASE64_ALPHABET[(bits >>> 6) & 0x3f] : "=";
+    encoded += hasThird ? BASE64_ALPHABET[bits & 0x3f] : "=";
+  }
+  return `data:${mime};base64,${encoded}`;
+}
+
+async function loadedThumbnail(
+  bytes: Uint8Array,
+  mime: string,
+  urlApi: ThumbnailObjectUrlApi,
+): Promise<LoadedImageThumbnail> {
   const blob = new Blob([bytes], { type: mime });
   const url = urlApi.createObjectURL(blob);
+  if (url.startsWith("blob:null/")) {
+    urlApi.revokeObjectURL(url);
+    return {
+      // Opaque-origin installed frames cannot load blob:null URLs. Encode from
+      // the already-read bounded bytes without depending on DOM-only FileReader,
+      // so the shared loader remains testable in Bun and usable in the browser.
+      url: bytesAsDataUrl(bytes, mime),
+      revoke() {},
+    };
+  }
+
   let revoked = false;
   return {
     url,
