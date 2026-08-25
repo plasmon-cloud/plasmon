@@ -1,6 +1,6 @@
 # Plasmon OS architecture
 
-<!-- plasmon-docs-review:v1 sha256=220463345237d3d9c30bab2608370b6b890bcdffb7845d7d5048ed05d7733b27 base=1b083268b6a3d930ad4ecad2d67d98c0167c0938 -->
+<!-- plasmon-docs-review:v1 sha256=1de98cdc3adc772f3d434adb047db6679a23d0ef30430da034e9866a573188ef base=9278ff63f39a58528bde8cf715cb3cd3fc4c136e -->
 
 `apps/plasmon/src/os/` is the canonical shared desktop-OS layer for Plasmon. It composes filesystem, associations, process/window management, desktop/FileManager, Shell, Neutron integration, Sharing, and shared presentation while leaving Kernel authority with Neutron.
 
@@ -11,6 +11,7 @@
 - `associations/**` owns generic handler matching and defaults.
 - `process/**` and `windowing/**` own Plasmon-local native app lifecycle/window state.
 - `context-menu-boundary.ts` owns only the reusable browser-event ownership decision for first-party context menus. Specialized Shell/FileManager/application menus retain command authority; editable controls and explicitly foreign/iframe content remain unclaimed.
+- `resource-command.ts` owns only bounded cross-surface user-action orchestration for commands with demonstrated multiple production consumers. The initial Open command preserves stable NodeId intent and delegates classification, shortcuts, handlers, directory behavior, and opening to the existing filesystem authority.
 - `neutron/**` adapts verified Kernel behavior; it must not invent missing Kernel capabilities.
 - `integration/**` composes public implementations and should not absorb subsystem policy.
 - `sharing/**` owns explicit provider publication/storage semantics and only the authorization orchestration faithfully expressible through current contracts; MTN remains authoritative for cross-AppScope authorization and live provider calls.
