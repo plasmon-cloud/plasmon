@@ -49,7 +49,7 @@ Review fingerprints make implementation drift visible at those boundaries. [`DOC
 | `apps/plasmon/src/native-apps/emulatorjs` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/explorer` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/jsdos` | runtime-host | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
-| `apps/plasmon/src/native-apps/markdown` | native-app | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
+| `apps/plasmon/src/native-apps/markdown` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/photos` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/properties` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
 | `apps/plasmon/src/native-apps/recycle-bin` | native-app | local | inherited from `apps/plasmon/src/native-apps/AGENTS.md` |
