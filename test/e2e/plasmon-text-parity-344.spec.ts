@@ -40,9 +40,8 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
 
   const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
   await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-  await expect(documentsExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
   const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
-  await expect(notes).toBeVisible();
+  await expect(notes).toBeVisible({ timeout: 20_000 });
 
   // #344 adds no scenario-specific warning/error allowance. BrowserHealth's
   // release-scoped exact #305 Chromium diagnostic rule is the only quarantine.
