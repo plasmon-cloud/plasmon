@@ -18,7 +18,6 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
-    'test/e2e/plasmon-demo-review.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
@@ -31,6 +30,7 @@ export const browserLanes = Object.freeze({
 // than placing unavailable game/full-worker paths in the required smoke lane.
 export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-golden-path.spec.ts',
+  'test/e2e/plasmon-demo-review.spec.ts',
   'test/e2e/plasmon-demo-monaco-packaged.spec.ts',
   'test/e2e/plasmon-monaco-workers-89.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',

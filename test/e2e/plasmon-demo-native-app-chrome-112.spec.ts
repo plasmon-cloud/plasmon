@@ -83,11 +83,13 @@ test("[demo profile] #112 — packaged representative apps expose shared chrome 
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
     const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+    const documentsFavorite = rootExplorer.getByRole("complementary", { name: "Favorites" })
+      .getByRole("button", { name: "Documents", exact: true });
     const documents = app.locator(".explorer-app").last();
     const documentsAddress = documents.getByRole("textbox", { name: "Address" });
     await expect(documentsEntry).toBeVisible();
-    await documentsAddress.fill("/Documents");
-    await documentsAddress.press("Enter");
+    await expect(documentsFavorite).toBeVisible();
+    await documentsFavorite.click();
     await expect(documentsAddress).toHaveValue("/Documents");
     await expect(documents).toBeVisible({ timeout: 20_000 });
     await documents.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first().dblclick();

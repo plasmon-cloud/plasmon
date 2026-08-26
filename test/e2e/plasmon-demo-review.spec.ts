@@ -132,9 +132,11 @@ test(
   await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+  const siblingFavorite = siblingWindow.getByRole("complementary", { name: "Favorites" })
+    .getByRole("button", { name: "Documents", exact: true });
   await expect(siblingDocuments).toBeVisible();
-  await siblingAddress.fill("/Documents");
-  await siblingAddress.press("Enter");
+  await expect(siblingFavorite).toBeVisible();
+  await siblingFavorite.click();
   await expect(siblingAddress).toHaveValue("/Documents");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
