@@ -63,6 +63,11 @@ export async function readHiddenVisibilityPreferences(fs: FsService): Promise<Hi
     ?? cloneHiddenVisibilityPreferences();
 }
 
+/** Return the OS-wide hidden-resource visibility decision for shared consumers. */
+export async function shouldShowHiddenResources(fs: FsService): Promise<boolean> {
+  return (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
+}
+
 /**
  * Shared OS hidden-resource visibility preference. Persistence stays on the
  * filesystem/background boundary; Settings, Search, Start, and Explorer all
