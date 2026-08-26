@@ -58,8 +58,10 @@ test(
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    await rootExplorer.getByRole("complementary", { name: "Favorites" })
-      .getByRole("button", { name: "Documents", exact: true }).click();
+    const documentsEntry = rootExplorer.getByRole("listbox", { name: "Files" })
+      .getByRole("option", { name: "Documents", exact: true });
+    await expect(documentsEntry).toBeVisible();
+    await documentsEntry.dblclick();
 
     const documentsExplorer = app.locator(".explorer-app").last();
     const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
