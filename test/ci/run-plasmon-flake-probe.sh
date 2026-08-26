@@ -75,10 +75,32 @@ case "$target" in
     ;;
 esac
 
+uses_demo_profile() {
+  PROFILE_TEST_FILE="$test_file" PROFILE_TEST_FILES_JSON="$test_files_json" node --input-type=module -e '
+    import { optionalCoreBrowserTests } from "./test/ci/plasmon-test-inventory.mjs";
+    const selected = [];
+    if (process.env.PROFILE_TEST_FILE) selected.push(process.env.PROFILE_TEST_FILE);
+    selected.push(...JSON.parse(process.env.PROFILE_TEST_FILES_JSON || "[]"));
+    process.exit(selected.some((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
+  '
+}
+
+# Profile-specific browser tests require the repository-authored demo seeds.
+# Preserve the bounded local deployment for ordinary/all probes.
+deployment_scope=local
+if [ "$target" = exact ] || [ "$target" = exact-set ]; then
+  if uses_demo_profile; then deployment_scope=demo; fi
+fi
+if [ "$deployment_scope" = demo ]; then
+  export NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json
+else
+  export NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json
+fi
+
 # Standalone callers retain the original fresh-environment behavior. Repeated
 # packet callers set PLASMON_PLAYWRIGHT_ENV_READY=1 after the shared harness has
 # already prepared packages, started PocketIC, checked status, and installed the
-# bounded local deployment once for the packet.
+# selected deployment once for the packet.
 if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
   npm ci
 
@@ -89,9 +111,14 @@ if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
     npm --workspace neutron-plasmon test
   fi
 
-  npm run plasmon:local:prepare
-
-  npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
+  if [ "$deployment_scope" = demo ]; then
+    npm --workspace neutron-design-system run build
+    npm run "plasmon:${deployment_scope}:prepare"
+    npm run "plasmon:${deployment_scope}:serve" > /tmp/plasmon-pocketic.log 2>&1 &
+  else
+    npm run plasmon:local:prepare
+    npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
+  fi
   server_pid=$!
 
   cleanup() {
@@ -125,12 +152,17 @@ if [ "${PLASMON_PLAYWRIGHT_ENV_READY:-0}" != "1" ]; then
     exit 1
   fi
 
-  npm run plasmon:local:status
-  npm run plasmon:local:reinstall
+  if [ "$deployment_scope" = demo ]; then
+    npm run "plasmon:${deployment_scope}:status"
+    npm run "plasmon:${deployment_scope}:reinstall"
+  else
+    npm run plasmon:local:status
+    npm run plasmon:local:reinstall
+  fi
 fi
 
 run_one() {
-  NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json \
+  NEUTRON_NDEPLOY_CONFIG="${NEUTRON_NDEPLOY_CONFIG:-plasmon-local.ndeploy.json}" \
     npx playwright test \
       --workers=1 \
       --retries=0 \
