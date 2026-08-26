@@ -27,14 +27,9 @@ test("[demo profile] #344 — packaged Text exposes accepted Monaco parity affor
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
-  // Reach Text through the real filesystem and association path used by the
-  // existing packaged Monaco acceptance; this test owns parity presentation,
-  // not a second Monaco worker/readiness authority.
-  const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-  await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-  await rootShortcut.dblclick();
-  const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+  // Reach Text through the demo package's Desktop shortcut and the normal
+  // filesystem/association path; this test owns parity presentation, not a
+  // second Monaco worker/readiness authority.
   const notes = app.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
   await expect(notes).toBeVisible({ timeout: 20_000 });
 

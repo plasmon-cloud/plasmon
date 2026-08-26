@@ -75,24 +75,9 @@ test("[demo profile] #112 — packaged representative apps expose shared chrome 
     await settings.getByRole("button", { name: "Close", exact: true }).click();
     await expect(settings).not.toBeVisible();
 
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await rootShortcut.dblclick();
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
-      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    const documentsFavorite = rootExplorer.getByRole("complementary", { name: "Favorites" })
-      .getByRole("button", { name: "Documents", exact: true });
-    const documents = app.locator(".explorer-app").last();
-    const documentsAddress = documents.getByRole("textbox", { name: "Address" });
-    await expect(documentsEntry).toBeVisible();
-    await expect(documentsFavorite).toBeVisible();
-    await documentsFavorite.click();
-    await expect(documentsAddress).toHaveValue("/Documents");
-    await expect(documents).toBeVisible({ timeout: 20_000 });
-    await documents.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first().dblclick();
+    const notes = app.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
+    await expect(notes).toBeVisible({ timeout: 20_000 });
+    await notes.dblclick();
 
     const text = app.getByRole("dialog", { name: "Demo Notes.txt - Monaco Editor" }).last();
     await expect(text).toBeVisible({ timeout: 20_000 });

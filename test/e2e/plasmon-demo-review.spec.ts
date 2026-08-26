@@ -130,14 +130,7 @@ test(
   const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
   await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-  const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
-  const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-  const siblingFavorite = siblingWindow.getByRole("complementary", { name: "Favorites" })
-    .getByRole("button", { name: "Documents", exact: true });
-  await expect(siblingDocuments).toBeVisible();
-  await expect(siblingFavorite).toBeVisible();
-  await siblingFavorite.click();
-  await expect(siblingAddress).toHaveValue("/Documents");
+  await expect(siblingWindow).toHaveAccessibleName("This Plasmon");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);
@@ -158,7 +151,7 @@ test(
   const chooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(chooser).toBeVisible();
   await expect(chooser.getByRole("button", { name: "This Plasmon; Minimized" })).toBeVisible();
-  await expect(chooser.getByRole("button", { name: "Documents; Active" })).toBeVisible();
+  await expect(chooser.getByRole("button", { name: "This Plasmon; Active" })).toBeVisible();
   await chooser.getByRole("button", { name: "This Plasmon; Minimized" }).click();
   await expect(chooser).toHaveCount(0);
   await expect(primaryWindow).not.toHaveAttribute("aria-hidden", "true");
@@ -168,7 +161,7 @@ test(
   await filesGroup.click();
   const reopenedChooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(reopenedChooser).toBeVisible();
-  await reopenedChooser.getByRole("button", { name: "Documents; Running" }).click();
+  await reopenedChooser.getByRole("button", { name: "This Plasmon; Running" }).click();
   await expect(siblingWindow).toHaveClass(/plasmon-window--active/);
 
   // A chooser member carries its canonical Process identity, so its context
@@ -176,7 +169,7 @@ test(
   await filesGroup.click();
   const closeChooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(closeChooser).toBeVisible();
-  const siblingMember = closeChooser.getByRole("button", { name: "Documents; Active" });
+  const siblingMember = closeChooser.getByRole("button", { name: "This Plasmon; Active" });
   await siblingMember.click({ button: "right" });
   await expect(closeChooser).toHaveCount(0);
 

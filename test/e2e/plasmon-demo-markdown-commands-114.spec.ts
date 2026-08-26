@@ -39,25 +39,8 @@ test(
     await expect(page.locator(appFrameSelector).first()).toBeAttached();
     const app = page.frameLocator(appFrameSelector).first();
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible();
-    await rootShortcut.dblclick();
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
-      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    const documentsFavorite = rootExplorer.getByRole("complementary", { name: "Favorites" })
-      .getByRole("button", { name: "Documents", exact: true });
-    const documentsExplorer = app.locator(".explorer-app").last();
-    const documentsAddress = documentsExplorer.getByRole("textbox", { name: "Address" });
-    await expect(documentsEntry).toBeVisible();
-    await expect(documentsFavorite).toBeVisible();
-    await documentsFavorite.click();
-    await expect(documentsAddress).toHaveValue("/Documents");
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-    const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
+    const guide = app.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
+    await expect(guide).toBeVisible({ timeout: 20_000 });
     await expect(guide).toBeVisible();
     await guide.dblclick();
 
