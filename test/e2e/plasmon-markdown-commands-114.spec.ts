@@ -36,8 +36,8 @@ test(
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const documents = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await documents.dblclick();
+    await rootExplorer.getByRole("complementary", { name: "Favorites" })
+      .getByRole("button", { name: "Documents", exact: true }).click();
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });

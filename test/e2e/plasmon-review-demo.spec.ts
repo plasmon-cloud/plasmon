@@ -131,9 +131,8 @@ test(
 
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   await expect(siblingAddress).toHaveValue("/");
-  const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-  await expect(siblingDocuments).toBeVisible();
-  await siblingDocuments.dblclick();
+  await siblingWindow.getByRole("complementary", { name: "Favorites" })
+    .getByRole("button", { name: "Documents", exact: true }).click();
   await expect(siblingAddress).toHaveValue("/Documents");
   await expect(siblingWindow).toHaveAccessibleName("Documents");
 

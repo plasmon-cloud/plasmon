@@ -51,8 +51,8 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await documentsEntry.dblclick();
+    await rootExplorer.getByRole("complementary", { name: "Favorites" })
+      .getByRole("button", { name: "Documents", exact: true }).click();
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
