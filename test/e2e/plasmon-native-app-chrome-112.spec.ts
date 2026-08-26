@@ -73,9 +73,11 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    await rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
+    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+    await documentsEntry.dblclick();
     const documents = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documents).toBeVisible({ timeout: 20_000 });
+    await expect(documents.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
     await documents.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first().dblclick();
 
     const text = app.getByRole("dialog", { name: "Demo Notes.txt - Monaco Editor" }).last();

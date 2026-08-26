@@ -135,6 +135,7 @@ test(
   await expect(siblingDocuments).toBeVisible();
   await siblingDocuments.dblclick();
   await expect(siblingAddress).toHaveValue("/Documents");
+  await expect(siblingWindow).toHaveAccessibleName("Documents");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);

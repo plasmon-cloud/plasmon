@@ -41,6 +41,7 @@ test(
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
+    await expect(documentsExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
     const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
     await expect(guide).toBeVisible();
     await guide.dblclick();
