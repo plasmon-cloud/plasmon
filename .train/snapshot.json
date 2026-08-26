@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-26T20:39:27.123485Z",
+  "captured_at": "2026-08-26T20:46:33.735497Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 7,
     "open_issues": 33,
     "open_product_prs": 6
   },
-  "generation": "18ed67d91c90f24d025bf0b9eb233b7e2d18acd0",
+  "generation": "6dd51ada3995161d0ce80389be41790f563884a7",
   "issues": [
     {
       "area": "Repo",
@@ -3270,196 +3270,196 @@
       "checks": [
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 46-50/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948616"
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 26-30/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014385"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 21-25/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948593"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 31-35/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948579"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 41-45/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948542"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 4-4/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948535"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 3-3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948518"
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 41-45/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014352"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 16-20/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948510"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948509"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 36-40/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948493"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 2-2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948490"
-        },
-        {
-          "conclusion": "success",
           "name": "Flake baseline all iterations 7-7/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948478"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014337"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 11-15/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948477"
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 6-10/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014336"
         },
         {
-          "conclusion": "success",
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 11-15/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014335"
+        },
+        {
+          "conclusion": null,
           "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948475"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014326"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 6-10/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948464"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948439"
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 21-25/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014317"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 26-30/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948424"
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 36-40/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014316"
         },
         {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948396"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 16-20/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014307"
         },
         {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 1-5/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948389"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 31-35/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014302"
         },
         {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Flake baseline all iterations 8-8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948384"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014276"
         },
         {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948344"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014266"
         },
         {
-          "conclusion": "success",
-          "name": "Determine flake probe applicability and configuration",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310882495"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 1-5/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014259"
         },
         {
-          "conclusion": "success",
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 46-50/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014254"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014241"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014232"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014229"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014222"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014221"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98320014189"
+        },
+        {
+          "conclusion": null,
           "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115485/job/98310548454"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875629/job/98319998389"
         },
         {
           "conclusion": "skipped",
           "name": "Dispatch targeted 50-iteration flake probe",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115596/job/98310469454"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115484/job/98310467371"
-        },
-        {
-          "conclusion": "success",
-          "name": "Review semantic + package",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115585/job/98310467350"
-        },
-        {
-          "conclusion": "success",
-          "name": "Vanilla Neutron packaged Review",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115585/job/98310467115"
-        },
-        {
-          "conclusion": "success",
-          "name": "Fast Bun tests",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115408/job/98310467087"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875170/job/98319997072"
         },
         {
           "conclusion": "success",
           "name": "Determine Kernel CI applicability",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115485/job/98310466929"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875629/job/98319952765"
         },
         {
           "conclusion": "success",
-          "name": "Packaged browser persistence",
+          "name": "Fast Bun tests",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115648/job/98310466868"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875550/job/98319952486"
         },
         {
-          "conclusion": "success",
-          "name": "Packaged Playwright demo acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115533/job/98310466796"
-        },
-        {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Packaged Playwright specialist acceptance",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875371/job/98319952366"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged Playwright demo acceptance",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875371/job/98319952104"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability and configuration",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115533/job/98310466682"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875414/job/98319952060"
+        },
+        {
+          "conclusion": "success",
+          "name": "Review semantic + package",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875163/job/98319951522"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged browser persistence",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875238/job/98319951405"
+        },
+        {
+          "conclusion": null,
+          "name": "Vanilla Neutron packaged Review",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875163/job/98319951366"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged refactor smoke",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011875112/job/98319951016"
         }
       ],
       "ci": "running",
       "ci_owned": false,
       "conflict": false,
       "draft": true,
-      "head": "88735040272d56d439139dd73bcb246f65baf250",
+      "head": "c70e519a6bee1fb841dc45693bb2b3edc55104df",
       "head_branch": "fix/issue-181-demo-deployment-seeds-v2",
       "issue": 181,
       "mergeable": true,
@@ -3470,7 +3470,7 @@
       "review": "pending",
       "state": "open",
       "title": "#181 Seed demo files and Desktop shortcuts in plasmon:demo",
-      "updated_at": "2026-08-26T20:11:04Z",
+      "updated_at": "2026-08-26T20:43:55Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/432"
     },
     {
@@ -3479,202 +3479,70 @@
       "blocking_review": null,
       "checks": [
         {
-          "conclusion": "success",
-          "name": "Flake characterization summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97984739301"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake probe summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97984739291"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 4-4/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983405321"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 2-2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983402057"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 41-45/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983372524"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 46-50/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983372332"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 31-35/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371674"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 21-25/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371628"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 26-30/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371493"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 16-20/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371327"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 11-15/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371324"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371201"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 7-7/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371038"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983371005"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 36-40/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370949"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 6-10/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370947"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:3-files:e6961cb335ed iterations 1-5/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370924"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 8-8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370732"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370606"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370516"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370511"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 3-3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983370252"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine flake probe applicability and configuration",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870381/job/97983369781"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine Kernel CI applicability",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870456/job/97983368041"
-        },
-        {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870456/job/97983366727"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999877/job/98320416954"
         },
         {
           "conclusion": "skipped",
           "name": "Dispatch targeted 50-iteration flake probe",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870464/job/97980395330"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999853/job/98320405551"
         },
         {
-          "conclusion": "success",
-          "name": "Packaged browser persistence",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870430/job/97980393674"
+          "conclusion": null,
+          "name": "Packaged refactor smoke",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999876/job/98320376868"
         },
         {
-          "conclusion": "success",
+          "conclusion": null,
+          "name": "Determine flake probe applicability and configuration",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999899/job/98320376709"
+        },
+        {
+          "conclusion": null,
           "name": "Packaged Playwright specialist acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870469/job/97980393527"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999938/job/98320376350"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged browser persistence",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999856/job/98320376116"
         },
         {
           "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999877/job/98320375803"
+        },
+        {
+          "conclusion": "failure",
           "name": "Fast Bun tests",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870508/job/97980393489"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32902870429/job/97980392915"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33011999835/job/98320375719"
         }
       ],
-      "ci": "green",
+      "ci": "running",
       "ci_owned": false,
-      "conflict": true,
+      "conflict": false,
       "draft": false,
-      "head": "b8f330d2e7383c78e089c2b8f738b0bb8c9ce038",
+      "head": "ffa9a5c7959080fd5018f415fcfd6813b622c8de",
       "head_branch": "work/issue-429-hidden-resource-visibility-r2",
       "issue": 429,
-      "mergeable": false,
-      "mergeable_state": "dirty",
+      "mergeable": true,
+      "mergeable_state": "blocked",
       "number": 433,
       "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
       "title": "#429 Add global hidden-resource visibility policy",
-      "updated_at": "2026-08-25T21:47:29Z",
+      "updated_at": "2026-08-26T20:45:23Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/433"
     },
     {
