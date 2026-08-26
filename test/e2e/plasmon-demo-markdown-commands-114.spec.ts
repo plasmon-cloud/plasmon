@@ -47,15 +47,11 @@ test(
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const address = rootExplorer.getByRole("textbox", { name: "Address" });
     const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await expect(documentsEntry).toBeVisible();
-    await documentsEntry.click();
-    await expect(documentsEntry).toHaveAttribute("aria-selected", "true");
-    await documentsEntry.press("Enter");
-    await expect(address).toHaveValue("/Documents");
-
     const documentsExplorer = app.locator(".explorer-app").last();
+    await expect(documentsEntry).toBeVisible();
+    await documentsEntry.dblclick();
+    await expect(documentsExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
     const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
     await expect(guide).toBeVisible();

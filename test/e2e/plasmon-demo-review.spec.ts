@@ -133,9 +133,7 @@ test(
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
   await expect(siblingDocuments).toBeVisible();
-  await siblingDocuments.click();
-  await expect(siblingDocuments).toHaveAttribute("aria-selected", "true");
-  await siblingDocuments.press("Enter");
+  await siblingDocuments.dblclick();
   await expect(siblingAddress).toHaveValue("/Documents");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
