@@ -206,8 +206,7 @@ jobs:
               return list(best.values())
 
           def flake_check(name):
-              text = str(name or "").lower()
-              return "flake probe" in text or "flake characterization" in text
+              return "flake" in str(name or "").lower()
 
           def ci_state(checks):
               if not checks:
