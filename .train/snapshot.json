@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-26T20:20:22.682334Z",
+  "captured_at": "2026-08-26T20:31:01.450333Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 7,
     "open_issues": 33,
     "open_product_prs": 6
   },
-  "generation": "ed04ae3d0b67f835067c1274bb63865e4ce10bf4",
+  "generation": "0fc1d9a4467f0d96e868e9db8ee469e40346f618",
   "issues": [
     {
       "area": "Repo",
@@ -421,7 +421,9 @@
     },
     {
       "area": "Testing",
-      "assignees": [],
+      "assignees": [
+        "3E4B54"
+      ],
       "blocked_by": [],
       "ci_owned": true,
       "dependencies_ready": true,
@@ -439,7 +441,7 @@
       "title": "Backfill a headless runtime-selection regression for js-dos and EmulatorJS",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T20:24:29Z",
+      "updated_at": "2026-08-26T20:25:54Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/83"
     },
     {
@@ -2036,6 +2038,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky"
       ],
       "number": 289,
@@ -2046,7 +2049,7 @@
       "title": "Packaged Browser PocketIC process exits mid-Specialist execution",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:51:05Z",
+      "updated_at": "2026-08-26T20:28:42Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/289"
     },
     {
@@ -2653,6 +2656,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -2664,7 +2668,7 @@
       "title": "[r2 CI] Repair and restore installed Review discovery acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T23:36:23Z",
+      "updated_at": "2026-08-26T20:26:45Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/401"
     },
     {
@@ -2677,6 +2681,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -2688,7 +2693,7 @@
       "title": "[r2 CI] Repair and restore taskbar context-menu geometry acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T23:36:24Z",
+      "updated_at": "2026-08-26T20:27:11Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/402"
     },
     {
@@ -2701,6 +2706,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -2712,7 +2718,7 @@
       "title": "[r2 CI] Repair and restore #175 packaged Search geometry acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T23:36:24Z",
+      "updated_at": "2026-08-26T20:27:29Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/403"
     },
     {
@@ -2725,6 +2731,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -2736,7 +2743,7 @@
       "title": "[r2 CI] Repair and restore #194 packaged Start surface acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T23:36:25Z",
+      "updated_at": "2026-08-26T20:27:54Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/404"
     },
     {
