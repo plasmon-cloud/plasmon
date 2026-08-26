@@ -1,12 +1,13 @@
 {
-  "captured_at": "2026-08-26T21:08:33.147515Z",
+  "captured_at": "2026-08-26T21:16:11.248430Z",
   "counts": {
+    "invalid_scheduling_metadata": 3,
     "issues": 133,
     "open_ci_prs": 7,
     "open_issues": 33,
     "open_product_prs": 6
   },
-  "generation": "6d02898d8dc5baf9448b2ba4ee2612615da2f3f4",
+  "generation": "39f1aadb7dfccc7bf055a2386699c4733c6d32da",
   "issues": [
     {
       "area": "Repo",
@@ -23,6 +24,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Retire legacy gui2 desktop implementation from the active OS branch",
       "type": "Task",
       "unlocks": 0,
@@ -46,6 +51,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Audit and retire the legacy src/platform compatibility layer",
       "type": "Task",
       "unlocks": 0,
@@ -67,6 +76,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Audit and remove stale launcher-era CSS from the active Plasmon bundle",
       "type": "Task",
       "unlocks": 0,
@@ -90,6 +103,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add deterministic left/right edge snapping to native windows",
       "type": "Feature",
       "unlocks": 0,
@@ -111,6 +128,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Expose Create Shortcut in FileManager using the canonical shortcut primitive",
       "type": "Feature",
       "unlocks": 0,
@@ -132,6 +153,10 @@
       "open_pr": 477,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add a native Recycle Bin surface for restore, permanent delete, and empty",
       "type": "Feature",
       "unlocks": 0,
@@ -155,6 +180,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add EmulatorJS as a second association-driven game runtime",
       "type": "Feature",
       "unlocks": 0,
@@ -178,6 +207,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add Send to Desktop shortcut command for eligible resources",
       "type": "Feature",
       "unlocks": 0,
@@ -201,6 +234,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Extract Shell overlay state into a headless production controller",
       "type": "Task",
       "unlocks": 0,
@@ -222,6 +259,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add an Alt-Tab window switcher that consumes Windowing focus history",
       "type": "Feature",
       "unlocks": 0,
@@ -243,6 +284,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Persist js-dos game progress across close and reopen through Plasmon filesystem state",
       "type": "Feature",
       "unlocks": 1,
@@ -266,6 +311,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Render Desktop/FileManager drag previews above the window stack",
       "type": "Bug",
       "unlocks": 0,
@@ -295,6 +344,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add packaged Monaco acceptance for Text and Markdown editors",
       "type": "Task",
       "unlocks": 0,
@@ -320,6 +373,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Replace raw taskbar runtime flags with coherent pinned/running/active/launching presentation state",
       "type": "Feature",
       "unlocks": 0,
@@ -344,6 +401,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill a headless shortcut lifecycle regression across creation and open surfaces",
       "type": "Task",
       "unlocks": 0,
@@ -367,6 +428,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill a headless native document close lifecycle regression across Process and Windowing",
       "type": "Task",
       "unlocks": 0,
@@ -390,6 +455,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill a headless taskbar lifecycle regression across Shell, Process, and Windowing",
       "type": "Task",
       "unlocks": 0,
@@ -413,6 +482,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill a headless filesystem bootstrap regression across managed system roots",
       "type": "Task",
       "unlocks": 0,
@@ -438,6 +511,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill a headless runtime-selection regression for js-dos and EmulatorJS",
       "type": "Task",
       "unlocks": 0,
@@ -461,6 +538,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Allow FileManager error and diagnostic text to be mouse-selectable",
       "type": "Bug",
       "unlocks": 1,
@@ -486,6 +567,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Remove the managed System subfolder from the default Start Menu layout",
       "type": "Bug",
       "unlocks": 1,
@@ -511,6 +596,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Exclude runtime-only native hosts such as js-dos from Start application seeding",
       "type": "Bug",
       "unlocks": 0,
@@ -536,6 +625,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Package Monaco runtime workers under the canonical Program Files runtime path",
       "type": "Task",
       "unlocks": 2,
@@ -563,6 +656,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Present Neutron application projections as applications in Shell Search without raw .neutron/runtime tokens",
       "type": "Bug",
       "unlocks": 0,
@@ -590,6 +687,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Stop showing the technical search safety-limit warning for ordinary result truncation",
       "type": "Bug",
       "unlocks": 0,
@@ -615,6 +716,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Preserve image aspect ratio in FileManager thumbnails instead of cropping with object-fit cover",
       "type": "Bug",
       "unlocks": 0,
@@ -640,6 +745,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Let selected Desktop filenames expand beyond the icon footprint without changing icon placement",
       "type": "Bug",
       "unlocks": 1,
@@ -661,6 +770,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Replace generated glyph placeholder icons with packaged native application identity assets",
       "type": "Feature",
       "unlocks": 0,
@@ -685,6 +798,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Migrate Issue-to-Issue sequencing from blocked labels to native GitHub dependencies",
       "type": "Task",
       "unlocks": 0,
@@ -708,6 +825,10 @@
       "open_pr": 485,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Run an integrated packaged acceptance gate against the 2026-08-11 review baseline",
       "type": "Task",
       "unlocks": 0,
@@ -729,6 +850,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Replace emoji pin controls with the shared Shell pin icon presentation",
       "type": "Bug",
       "unlocks": 0,
@@ -754,6 +879,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Expose a filesystem-backed Show Hidden Files preference in FileManager",
       "type": "Feature",
       "unlocks": 0,
@@ -779,6 +908,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Establish coherent shared chrome and theme consumption across first-party native apps",
       "type": "Task",
       "unlocks": 0,
@@ -806,6 +939,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Bring Text's Monaco editor chrome and status affordances to desktop-editor parity",
       "type": "Feature",
       "unlocks": 1,
@@ -835,6 +972,10 @@
       "open_pr": null,
       "priority": "High",
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add Markdown formatter and discoverable Monaco command affordances",
       "type": "Feature",
       "unlocks": 0,
@@ -860,6 +1001,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Provide a reliable explicit packaged demo-game fixture path",
       "type": "Task",
       "unlocks": 0,
@@ -885,6 +1030,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Present game resources with real artwork thumbnails when available",
       "type": "Feature",
       "unlocks": 0,
@@ -912,6 +1061,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Generate screenshot thumbnails for persisted game save/snapshot resources",
       "type": "Feature",
       "unlocks": 0,
@@ -935,6 +1088,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Implement the Plasmon MTN authorization adapter only after deliberate release of the live-sharing boundary",
       "type": "Task",
       "unlocks": 0,
@@ -956,6 +1113,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Establish the r2 shared RTL harness and representative integration test layer",
       "type": "Task",
       "unlocks": 0,
@@ -983,6 +1144,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make Start Menu reconciliation idempotent when managed folders already exist",
       "type": "Bug",
       "unlocks": 1,
@@ -1006,6 +1171,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make Review.neutron first-demo workflow readable and self-explanatory",
       "type": "Bug",
       "unlocks": 0,
@@ -1027,6 +1196,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Stop speculative Neutron icon probing from flooding packaged browser errors",
       "type": "Bug",
       "unlocks": 0,
@@ -1048,6 +1221,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Avoid restoring trashed Desktop resources onto occupied icon positions",
       "type": "Bug",
       "unlocks": 0,
@@ -1069,6 +1246,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make FileManager List view a distinct compact column layout",
       "type": "Feature",
       "unlocks": 0,
@@ -1092,6 +1273,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Use canonical .sys resources as the single native-application projection in Search",
       "type": "Bug",
       "unlocks": 1,
@@ -1117,6 +1302,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Keep Search panel geometry stable while switching result categories",
       "type": "Bug",
       "unlocks": 0,
@@ -1140,6 +1329,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Prevent browser context menus from leaking through Plasmon-owned UI",
       "type": "Bug",
       "unlocks": 0,
@@ -1161,6 +1354,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Keep repeated native-window placement inside the usable Plasmon viewport",
       "type": null,
       "unlocks": 0,
@@ -1182,6 +1382,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Infer canonical file MIME and language metadata from filename extensions",
       "type": "Bug",
       "unlocks": 0,
@@ -1203,6 +1407,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make Text and Markdown autosave an explicit opt-in preference",
       "type": "Feature",
       "unlocks": 0,
@@ -1228,6 +1436,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make Photos Expand fill the Plasmon workspace when browser fullscreen is unavailable",
       "type": "Bug",
       "unlocks": 0,
@@ -1251,6 +1463,10 @@
       "open_pr": 432,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Seed representative demo files and Desktop shortcuts in plasmon:demo",
       "type": "Task",
       "unlocks": 0,
@@ -1272,6 +1488,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Align root and Favorites inventory and remove Downloads from the default model",
       "type": "Feature",
       "unlocks": 0,
@@ -1293,6 +1513,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Complete taskbar context-menu placement and core window actions",
       "type": "Feature",
       "unlocks": 0,
@@ -1314,6 +1538,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Verify and preserve Plasmon filesystem persistence across real browser restarts",
       "type": null,
       "unlocks": 0,
@@ -1335,6 +1566,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Establish r2 refactor-guard smoke suite for Plasmon production boundaries",
       "type": "Task",
       "unlocks": 0,
@@ -1356,6 +1591,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Converge resource classification and MIME inference behind one canonical seam",
       "type": "Task",
       "unlocks": 0,
@@ -1377,6 +1616,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Converge resource presentation and icon identity across Plasmon surfaces",
       "type": "Task",
       "unlocks": 0,
@@ -1400,6 +1643,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct Desktop FileEntry as the r2 presentation-architecture pilot",
       "type": "Task",
       "unlocks": 2,
@@ -1425,6 +1672,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Extract Desktop layout and placement policy into a deterministic controller",
       "type": "Task",
       "unlocks": 0,
@@ -1454,6 +1705,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct Search as an isolated stable rendered surface",
       "type": "Task",
       "unlocks": 2,
@@ -1483,6 +1738,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct Start Menu as a focused filesystem-backed surface",
       "type": "Task",
       "unlocks": 1,
@@ -1514,6 +1773,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Decompose FileManager rendering and browser interaction from canonical commands",
       "type": "Task",
       "unlocks": 2,
@@ -1545,6 +1808,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct FileManager Icons, List and Details as explicit view strategies",
       "type": "Task",
       "unlocks": 1,
@@ -1576,6 +1843,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Decompose Shell root into focused surface controllers and rendered adapters",
       "type": "Task",
       "unlocks": 2,
@@ -1605,6 +1876,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct taskbar presentation around canonical Process and Windowing state",
       "type": "Task",
       "unlocks": 1,
@@ -1634,6 +1909,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconstruct native-window browser interaction and chrome over existing WindowManager authority",
       "type": "Task",
       "unlocks": 1,
@@ -1664,6 +1943,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Isolate Monaco as a shared editor browser-runtime host for Text and Markdown",
       "type": "Task",
       "unlocks": 2,
@@ -1705,6 +1988,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Consolidate visual tokens and remove superseded presentation code after r2 migrations",
       "type": "Task",
       "unlocks": 0,
@@ -1728,6 +2015,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make packaged js-dos storage bootstrap compatible with the Plasmon runtime sandbox",
       "type": "Bug",
       "unlocks": 0,
@@ -1749,6 +2040,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Eliminate packaged BrowserHealth folder.svg ERR_ABORTED failure",
       "type": null,
       "unlocks": 0,
@@ -1770,6 +2068,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Refresh r2 CI push coverage and release-era guard documentation",
       "type": "Task",
       "unlocks": 0,
@@ -1791,6 +2093,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Make required r2 Playwright gates fail when any test attempt is flaky",
       "type": null,
       "unlocks": 0,
@@ -1812,6 +2121,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Require the r2 packaged browser gates in the active release ruleset",
       "type": null,
       "unlocks": 0,
@@ -1842,6 +2158,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Restore quarantined r2 golden-path right-snap preview acceptance",
       "type": "Task",
       "unlocks": 2,
@@ -1872,6 +2192,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Restore quarantined r2 EmulatorJS packaged readiness acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -1898,6 +2222,10 @@
       "open_pr": 453,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Evidence: prior r2 sibling-window lifetime failure under parallel Specialist execution",
       "type": "Task",
       "unlocks": 0,
@@ -1919,6 +2247,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Run all five required gates on every r2 release push",
       "type": null,
       "unlocks": 0,
@@ -1944,6 +2279,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Stabilize packaged Explorer normalization drag before geometry assertion",
       "type": "Task",
       "unlocks": 2,
@@ -1969,6 +2308,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Quarantine flaky shared #43 left snap-preview browser assertion",
       "type": "Task",
       "unlocks": 1,
@@ -2001,6 +2344,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Restore quarantined #277 left snap-preview acceptance to required Specialist CI",
       "type": "Task",
       "unlocks": 0,
@@ -2022,6 +2369,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Stabilize packaged Monaco Explorer create-document readiness",
       "type": "Bug",
       "unlocks": 0,
@@ -2046,6 +2397,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Packaged Browser PocketIC process exits mid-Specialist execution",
       "type": "Task",
       "unlocks": 0,
@@ -2072,6 +2427,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add label-triggered fresh-run flake probe for r2 browser acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2098,6 +2457,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2] Flaky / unrelated CI failure ledger",
       "type": "Task",
       "unlocks": 0,
@@ -2124,6 +2487,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Quarantine grouped Explorer chooser-title readiness flake",
       "type": "Task",
       "unlocks": 0,
@@ -2149,6 +2516,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] BrowserHealth Chromium sandbox-warning contamination",
       "type": "Task",
       "unlocks": 0,
@@ -2175,6 +2546,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Fast Bun job cancellation / time-limit recurrence",
       "type": "Task",
       "unlocks": 0,
@@ -2201,6 +2576,10 @@
       "open_pr": 454,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Restore quarantined #63 Alt-Tab multi-instance acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2227,6 +2606,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Investigate intermittent frontend tool-call concurrency exhaustion",
       "type": "Task",
       "unlocks": 0,
@@ -2253,6 +2636,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore flaky #66 drag-preview acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2276,6 +2663,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore flaky #66 drag-preview acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2302,6 +2693,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore #86 diagnostic-selection acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2327,6 +2722,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill packaged Text editor parity acceptance for #113",
       "type": "Task",
       "unlocks": 0,
@@ -2352,6 +2751,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Reconcile the post-refactor Luna gate audit into the canonical r2 work ledger",
       "type": "Task",
       "unlocks": 0,
@@ -2377,6 +2780,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Make Desktop/FileManager drag previews spatially faithful and add contextual drop feedback",
       "type": "Feature",
       "unlocks": 0,
@@ -2402,6 +2809,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill #174 canonical native .sys Search regression coverage",
       "type": "Task",
       "unlocks": 0,
@@ -2427,6 +2838,10 @@
       "open_pr": 484,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Backfill #182 user-directory deletion persistence across recomposition",
       "type": "Task",
       "unlocks": 0,
@@ -2448,6 +2863,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Add canonical full-Luna promotion manifest and verifier",
       "type": "Task",
       "unlocks": 0,
@@ -2469,6 +2888,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Perform final full-Luna r2 certification at one exact release SHA",
       "type": null,
       "unlocks": 0,
@@ -2492,6 +2918,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Preserve drop-point placement when dragging resources from Explorer onto Desktop",
       "type": "Bug",
       "unlocks": 0,
@@ -2517,6 +2947,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Remove persistent FileManager move-completion text from end-user surfaces",
       "type": "Bug",
       "unlocks": 0,
@@ -2540,6 +2974,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Enforce Plasmon documentation boundaries and freshness in the fast test lane",
       "type": "Task",
       "unlocks": 0,
@@ -2565,6 +3003,10 @@
       "open_pr": 494,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Reconcile #89 Monaco worker acceptance with the slim r2 package profile",
       "type": "Task",
       "unlocks": 0,
@@ -2590,6 +3032,13 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] Repair and restore #360 open-folder drop acceptance",
       "type": null,
       "unlocks": 0,
@@ -2615,6 +3064,13 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] Repair and restore #360 drag-target feedback cleanup acceptance",
       "type": null,
       "unlocks": 0,
@@ -2640,6 +3096,13 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] Repair and restore #360 grouped drag acceptance",
       "type": null,
       "unlocks": 0,
@@ -2665,6 +3128,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore installed Review discovery acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2690,6 +3157,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore taskbar context-menu geometry acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2715,6 +3186,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore #175 packaged Search geometry acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2740,6 +3215,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore #194 packaged Start surface acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2764,6 +3243,10 @@
       "open_pr": 498,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore first-demo packaged fixture acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2788,6 +3271,10 @@
       "open_pr": 499,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore #371 Explorer-to-Desktop placement acceptance",
       "type": "Task",
       "unlocks": 0,
@@ -2811,6 +3298,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Rename Flake Probe attempts to probe iterations",
       "type": "Task",
       "unlocks": 0,
@@ -2837,6 +3328,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Make Flake Probe iteration count and scope configurable",
       "type": "Task",
       "unlocks": 0,
@@ -2862,6 +3357,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Automatically characterize modified Playwright tests with 50 probe iterations",
       "type": "Task",
       "unlocks": 0,
@@ -2887,6 +3386,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Run targeted 50-iteration probes from ci:flake-probe",
       "type": "Task",
       "unlocks": 0,
@@ -2910,6 +3413,13 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "Text Save As/rename preserves stale MIME and blocks Monaco language changes",
       "type": null,
       "unlocks": 0,
@@ -2934,6 +3444,10 @@
       "open_pr": 496,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "Regression: restore basic Markdown Preview presentation",
       "type": "Bug",
       "unlocks": 0,
@@ -2959,6 +3473,10 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 CI] Repair and restore flaky #360 drag-feedback acceptances",
       "type": "Task",
       "unlocks": 0,
@@ -2985,6 +3503,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 UX] Make Search document/media results compact and render canonical thumbnails",
       "type": "Bug",
       "unlocks": 0,
@@ -3011,6 +3533,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 UX] Remove managed Settings and Properties shortcuts from the default Start inventory",
       "type": "Bug",
       "unlocks": 0,
@@ -3036,6 +3562,10 @@
       "open_pr": 433,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r3 UX] Add OS-wide hidden-resource visibility setting and enforce it in Start/Search",
       "type": "Bug",
       "unlocks": 0,
@@ -3059,6 +3589,10 @@
       "open_pr": 495,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "ci: eliminate Text language-transition browser flake and remove the R2 quarantine",
       "type": "Task",
       "unlocks": 0,
@@ -3083,6 +3617,13 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] Flake Probe summary can fail integrity after workflow reruns",
       "type": null,
       "unlocks": 0,
@@ -3107,6 +3648,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 UX] Hide hidden resources and hidden shortcut targets from Start/Search by default",
       "type": "Bug",
       "unlocks": 0,
@@ -3132,6 +3677,13 @@
       "open_pr": 459,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] Preserve PocketIC child-exit evidence for #289 recurrence",
       "type": null,
       "unlocks": 0,
@@ -3157,6 +3709,13 @@
       "open_pr": null,
       "priority": null,
       "product": false,
+      "scheduling_metadata": {
+        "errors": [
+          "missing-desire",
+          "missing-effort"
+        ],
+        "valid": false
+      },
       "title": "[r2 CI] #180 Photos restore probe snapshots opening animation",
       "type": null,
       "unlocks": 0,
@@ -3181,6 +3740,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 Luna A] Audit Desktop / FileManager / Filesystem RED gates",
       "type": "Task",
       "unlocks": 0,
@@ -3205,6 +3768,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 Luna B] Audit Shell / Windowing / Taskbar RED gates",
       "type": "Task",
       "unlocks": 0,
@@ -3229,6 +3796,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 Luna C] Audit Native Apps / Editors / Media RED gates",
       "type": "Task",
       "unlocks": 0,
@@ -3254,6 +3825,10 @@
       "open_pr": null,
       "priority": null,
       "product": true,
+      "scheduling_metadata": {
+        "errors": [],
+        "valid": true
+      },
       "title": "[r2 Luna D] Independently cross-check all remaining RED gates",
       "type": "Task",
       "unlocks": 0,
@@ -3269,208 +3844,208 @@
       "blocking_review": null,
       "checks": [
         {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358458"
-        },
-        {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 21-25/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358438"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 41-45/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358412"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358392"
-        },
-        {
-          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 46-50/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358378"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 16-20/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358323"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 11-15/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358319"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 31-35/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358306"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 36-40/50",
           "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358304"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358280"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 6-10/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358279"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 26-30/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358274"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761555"
         },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 3-3/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358272"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 1-5/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358267"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761518"
         },
         {
           "conclusion": "success",
-          "name": "Flake baseline all iterations 8-8/10",
+          "name": "Flake baseline all iterations 1-1/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358263"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761508"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 21-25/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761476"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 16-20/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761461"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 31-35/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761434"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 36-40/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761421"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 6-10/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761414"
         },
         {
           "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
+          "name": "Flake baseline all iterations 5-5/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358256"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358247"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761408"
         },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 4-4/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358242"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761403"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 11-15/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761374"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 41-45/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761361"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761360"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 1-5/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761345"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 26-30/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761341"
         },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 7-7/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358235"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761337"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 8-8/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761336"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761334"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761307"
         },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 2-2/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322358234"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine flake probe applicability and configuration",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012429995/job/98322288687"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327761277"
         },
         {
           "conclusion": "success",
           "name": "kernel",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430046/job/98321994018"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097310/job/98327752263"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability and configuration",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097568/job/98327692472"
         },
         {
           "conclusion": "skipped",
           "name": "Dispatch targeted 50-iteration flake probe",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430051/job/98321891854"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged Playwright demo acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430193/job/98321891306"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged Playwright specialist acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430193/job/98321890943"
-        },
-        {
-          "conclusion": "success",
-          "name": "Review semantic + package",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430022/job/98321890822"
-        },
-        {
-          "conclusion": "success",
-          "name": "Fast Bun tests",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430073/job/98321890773"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430074/job/98321890612"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097265/job/98327692241"
         },
         {
           "conclusion": "success",
           "name": "Vanilla Neutron packaged Review",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430022/job/98321890607"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097371/job/98327692064"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright demo acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097366/job/98327691894"
+        },
+        {
+          "conclusion": "success",
+          "name": "Review semantic + package",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097371/job/98327691856"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097292/job/98327691754"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097366/job/98327691731"
         },
         {
           "conclusion": "success",
           "name": "Packaged browser persistence",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430013/job/98321890460"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097307/job/98327691526"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097273/job/98327691360"
         },
         {
           "conclusion": "success",
           "name": "Determine Kernel CI applicability",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33012430046/job/98321890180"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33014097310/job/98327691290"
         }
       ],
       "ci": "running",
       "ci_owned": false,
       "conflict": false,
       "draft": true,
-      "head": "2a13d0ba8740dc201d075669210c14f265a60b11",
+      "flake_evidence": null,
+      "head": "fd0bc67a44142ffaf88d13b143bbb7fdbfef61c8",
       "head_branch": "fix/issue-181-demo-deployment-seeds-v2",
       "issue": 181,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 432,
-      "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
       "title": "#181 Seed demo files and Desktop shortcuts in plasmon:demo",
-      "updated_at": "2026-08-26T20:50:34Z",
+      "updated_at": "2026-08-26T21:10:29Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/432"
     },
     {
@@ -3663,13 +4238,13 @@
       "ci_owned": false,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "ffa9a5c7959080fd5018f415fcfd6813b622c8de",
       "head_branch": "work/issue-429-hidden-resource-visibility-r2",
       "issue": 429,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 433,
-      "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
@@ -3807,13 +4382,13 @@
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "54f8dafbbe5c0d052638e1d973ac048edcc69580",
       "head_branch": "ci/issue-251-desktop-root-activation",
       "issue": 251,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 453,
-      "owner": null,
       "product": false,
       "review": "approved",
       "state": "open",
@@ -4011,13 +4586,13 @@
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "8dcbc1b1f0ec809a5072da2e572bb35d950757e4",
       "head_branch": "ci/issue-308-alt-tab-restoration",
       "issue": 308,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 454,
-      "owner": null,
       "product": false,
       "review": "approved",
       "state": "open",
@@ -4215,13 +4790,13 @@
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "3eb70f724904c16dc9a759e4750eb9e082f03e93",
       "head_branch": "sol-ci-c/289-pocketic-exit-diagnostics",
       "issue": 470,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 459,
-      "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
@@ -4419,13 +4994,13 @@
       "ci_owned": false,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "81a3b6ce996cb74591a2100fc3c0661a4bb2f5fd",
       "head_branch": "train/product/issue-45",
       "issue": 45,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 477,
-      "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
@@ -4563,13 +5138,13 @@
       "ci_owned": false,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "0fce32b684ced41d2807d649a903a1e2e9ca8941",
       "head_branch": "train/product/issue-367",
       "issue": 367,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 484,
-      "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
@@ -4653,13 +5228,13 @@
       "ci_owned": false,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "d87f7e37198422a991557f3da7fda4f1135dd95f",
       "head_branch": "train/product/issue-107",
       "issue": 107,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 485,
-      "owner": "default",
       "product": true,
       "review": "pending",
       "state": "open",
@@ -4857,13 +5432,13 @@
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "09ec7e97d38b1e20ca5f5a1a86af26229db7ae8b",
       "head_branch": "train/ci/issue-391",
       "issue": 391,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 494,
-      "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
@@ -5051,17 +5626,17 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32897883869/job/97964620576"
         }
       ],
-      "ci": "unknown_red",
+      "ci": "flake",
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "8d83b6ccc881903375ddf6eaae2dcaabade7729e",
       "head_branch": "train/ci/issue-434",
       "issue": 434,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 495,
-      "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
@@ -5249,17 +5824,17 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32898526828/job/97966640484"
         }
       ],
-      "ci": "unknown_red",
+      "ci": "flake",
       "ci_owned": false,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "835982a2a04d1a201313844db789ce606b138f84",
       "head_branch": "train/product/issue-416",
       "issue": 416,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 496,
-      "owner": null,
       "product": true,
       "review": "pending",
       "state": "open",
@@ -5447,17 +6022,17 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/32912693629/job/98009886834"
         }
       ],
-      "ci": "unknown_red",
+      "ci": "flake",
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "f90bdea60815dbfe38a88f412d79792dc99112b0",
       "head_branch": "train/ci/issue-405",
       "issue": 405,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 498,
-      "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
@@ -5655,13 +6230,13 @@
       "ci_owned": true,
       "conflict": false,
       "draft": false,
+      "flake_evidence": null,
       "head": "aa6b3ffcd9aaffc6e03fb15a34df00c2add2a89f",
       "head_branch": "train/ci/issue-406",
       "issue": 406,
       "mergeable": true,
       "mergeable_state": "blocked",
       "number": 499,
-      "owner": null,
       "product": false,
       "review": "pending",
       "state": "open",
