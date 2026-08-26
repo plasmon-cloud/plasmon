@@ -18,6 +18,7 @@ const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-drag-placement-371.spec.ts': { count: 1, issues: ['@issue-371', '@issue-406'] },
   'test/e2e/plasmon-monaco-workers-89.spec.ts': { count: 1, issues: ['@issue-89', '@issue-391'] },
   'test/e2e/plasmon-text-language-transition.spec.ts': { count: 1, issues: ['@issue-415', '@issue-434'] },
+  'test/e2e/plasmon-markdown-commands-114.spec.ts': { count: 1, issues: ['@issue-114', '@issue-416', '@issue-507'] },
 });
 
 function sameSet(actual, expected) {
@@ -108,7 +109,8 @@ async function verify(inventory) {
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
   assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
-  for (const path of browserLanes.specialist) {
+  const quarantineAuditedPaths = sorted(new Set([...browserLanes.specialist, ...optionalCoreBrowserTests]));
+  for (const path of quarantineAuditedPaths) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
     const quarantineTags = source.match(/tag:\s*\[[^\]]*"@r2-quarantine"[^\]]*\]/g) ?? [];
     const expected = activeQuarantines[path];
@@ -136,6 +138,12 @@ async function verify(inventory) {
     '#304 executable debt must retain the required blob-backed preview assertion',
   );
 
+  const markdownCommands = await readFile(resolve(repoRoot, 'test/e2e/plasmon-markdown-commands-114.spec.ts'), 'utf8');
+  assert(
+    markdownCommands.includes('{ tag: ["@r2-quarantine", "@issue-114", "@issue-416", "@issue-507"] }'),
+    '#507 quarantine must remain isolated to the exact #114/#416 Markdown packaged acceptance',
+  );
+
   const browserHealth = await readFile(resolve(repoRoot, 'test/e2e/plasmon-browser-health.ts'), 'utf8');
   assert(browserHealth.includes('#305'), 'BrowserHealth exact warning quarantine must remain linked to #305');
   assert(browserHealth.includes('An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.'), 'BrowserHealth #305 rule must remain exact-message bounded');
@@ -144,7 +152,7 @@ async function verify(inventory) {
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
   assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
   assert(quarantineDoc.includes('#277') && quarantineDoc.includes('#279'), 'Quarantine documentation must retain #277 history and #279 restoration ownership');
-  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308', '#320', '#330', '#391', '#406', '#420', '#434']) {
+  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308', '#320', '#330', '#391', '#406', '#420', '#434', '#507']) {
     assert(quarantineDoc.includes(issue), `Quarantine documentation must preserve ${issue} disposition`);
   }
 
