@@ -15,8 +15,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: automation/train-snapshot
-          fetch-depth: 0
-      - name: Patch exact helper and remove this runner
+      - name: Patch snapshot helper atomically
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
@@ -30,10 +32,10 @@ jobs:
               raise SystemExit('expected flake_check block not found')
           p.write_text(s.replace(old, new))
           PY
-          git rm .github/workflows/v66-flake-simplify.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/plasmon-train-snapshot.yml
-          git commit -m "Simplify v6.6 flake check classification"
-          git pull --rebase origin automation/train-snapshot
-          git push origin HEAD:automation/train-snapshot
+          SHA=$(gh api "repos/$REPO/contents/.github/workflows/plasmon-train-snapshot.yml?ref=automation/train-snapshot" --jq .sha)
+          CONTENT=$(base64 -w0 .github/workflows/plasmon-train-snapshot.yml)
+          gh api --method PUT "repos/$REPO/contents/.github/workflows/plasmon-train-snapshot.yml" \
+            -f message='Simplify v6.6 flake check classification' \
+            -f content="$CONTENT" \
+            -f sha="$SHA" \
+            -f branch='automation/train-snapshot'
