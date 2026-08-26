@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: automation/train-snapshot
+          fetch-depth: 0
       - name: Patch exact helper and remove this runner
         shell: bash
         run: |
@@ -34,4 +35,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/workflows/plasmon-train-snapshot.yml
           git commit -m "Simplify v6.6 flake check classification"
+          git pull --rebase origin automation/train-snapshot
           git push origin HEAD:automation/train-snapshot
