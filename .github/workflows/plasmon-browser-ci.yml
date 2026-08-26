@@ -130,12 +130,12 @@ jobs:
             npm run plasmon:demo:reinstall
             npm run test:e2e:plasmon:demo
             NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json npx --no-install playwright test --workers=1 --retries=0 --grep-invert @r2-quarantine \
-              test/e2e/plasmon-markdown-commands-114.spec.ts \
-              test/e2e/plasmon-monaco-packaged.spec.ts \
-              test/e2e/plasmon-native-app-chrome-112.spec.ts \
-              test/e2e/plasmon-photos-expand-180.spec.ts \
-              test/e2e/plasmon-text-language-transition.spec.ts \
-              test/e2e/plasmon-text-parity-344.spec.ts
+              test/e2e/plasmon-markdown-commands-114-demo.spec.ts \
+              test/e2e/plasmon-monaco-packaged-demo.spec.ts \
+              test/e2e/plasmon-native-app-chrome-112-demo.spec.ts \
+              test/e2e/plasmon-photos-expand-180-demo.spec.ts \
+              test/e2e/plasmon-text-language-transition-demo.spec.ts \
+              test/e2e/plasmon-text-parity-344-demo.spec.ts
           '
 
       - name: Upload Demo Playwright report
