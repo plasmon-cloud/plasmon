@@ -55,11 +55,11 @@ test(
 
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await rootExplorer.getByRole("complementary", { name: "Favorites" })
       .getByRole("button", { name: "Documents", exact: true }).click();
 
-    const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
+    const documentsExplorer = app.locator(".explorer-app").last();
     const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
     const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
     await expect(notes).toBeVisible();

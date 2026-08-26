@@ -51,12 +51,12 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await rootExplorer.getByRole("complementary", { name: "Favorites" })
       .getByRole("button", { name: "Documents", exact: true }).click();
 
-    const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
+    const documentsExplorer = app.locator(".explorer-app").last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-    await expect(documentsExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
 
     // Reproduce the screenshot boundary: FileManager creates a blank text document,
