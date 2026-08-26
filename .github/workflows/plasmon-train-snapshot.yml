@@ -80,6 +80,8 @@ jobs:
           TARGET = os.environ["TARGET_BRANCH"]
           MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
           OUT = Path(os.environ["SNAPSHOT_PATH"])
+          DESIRE = {"High", "Medium", "Low"}
+          EFFORT = {"Low", "Medium", "High"}
 
           def gh(path, *args):
               cmd = ["gh", "api", "--method", "GET", "-H", "X-GitHub-Api-Version: 2026-03-10", path, *args]
@@ -111,19 +113,15 @@ jobs:
           def field_values(number):
               try:
                   rows = gh_pages(f"repos/{REPO}/issues/{number}/issue-field-values")
-              except Exception:
-                  return {}
+              except Exception as exc:
+                  return {}, f"field-values-unavailable:{type(exc).__name__}"
               out = {}
               for row in rows if isinstance(rows, list) else []:
                   name = row.get("issue_field_name")
                   option = row.get("single_select_option") or {}
                   if name and option.get("name"):
                       out[str(name)] = str(option["name"])
-              return out
-
-          def train_owner(body):
-              match = re.search(r"(?im)^\s*Train-Owner\s*:\s*(\S[^\r\n]*)$", str(body or ""))
-              return match.group(1).strip() if match else None
+              return out, None
 
           milestones = gh_pages(f"repos/{REPO}/milestones", {"state": "all"})
           milestone = next((x for x in milestones if x.get("title") == MILESTONE_TITLE), None)
@@ -164,46 +162,38 @@ jobs:
               for dep in deps if isinstance(deps, list) else []:
                   if dep.get("number") is None:
                       continue
-                  n = int(dep["number"])
-                  nums.append(n)
-                  states[str(n)] = str(dep.get("state") or "unknown")
-              dependency_map[number] = sorted(set(nums))
-              dependency_states[number] = states
+                  n = int(dep["number"]); nums.append(n); states[str(n)] = str(dep.get("state") or "unknown")
+              dependency_map[number] = sorted(set(nums)); dependency_states[number] = states
 
           unlocks = {int(x["number"]): 0 for x in raw_issues}
           for deps in dependency_map.values():
               for parent in deps:
-                  if parent in unlocks:
-                      unlocks[parent] += 1
+                  if parent in unlocks: unlocks[parent] += 1
 
           issues = []
           for raw in raw_issues:
               number = int(raw["number"])
-              fields = field_values(number)
+              fields, field_error = field_values(number)
               labs = labels(raw)
               ci_owned = any(x.lower().startswith("ci:") for x in labs) or str(raw.get("title") or "").startswith("[r2 CI]")
               deps, states = dependency_map[number], dependency_states[number]
               dependencies_ready = all(str(states.get(str(n), "unknown")).lower() in {"closed", "completed", "merged", "integrated", "superseded", "waived"} for n in deps)
+              desire, effort = fields.get("Desire"), fields.get("Effort")
+              metadata_errors = []
+              if field_error: metadata_errors.append(field_error)
+              if not desire: metadata_errors.append("missing-desire")
+              elif desire not in DESIRE: metadata_errors.append(f"invalid-desire:{desire}")
+              if not effort: metadata_errors.append("missing-effort")
+              elif effort not in EFFORT: metadata_errors.append(f"invalid-effort:{effort}")
               issues.append({
-                  "number": number,
-                  "title": raw.get("title") or "",
-                  "open": str(raw.get("state") or "open").lower() == "open",
-                  "product": not ci_owned,
-                  "ci_owned": ci_owned,
-                  "assignees": [x.get("login") for x in raw.get("assignees") or [] if x.get("login")],
-                  "labels": labs,
-                  "priority": fields.get("Priority"),
-                  "desire": fields.get("Desire"),
-                  "effort": fields.get("Effort"),
-                  "area": fields.get("Area"),
+                  "number": number, "title": raw.get("title") or "", "open": str(raw.get("state") or "open").lower() == "open",
+                  "product": not ci_owned, "ci_owned": ci_owned,
+                  "assignees": [x.get("login") for x in raw.get("assignees") or [] if x.get("login")], "labels": labs,
+                  "priority": fields.get("Priority"), "desire": desire, "effort": effort, "area": fields.get("Area"),
                   "type": (raw.get("type") or {}).get("name") if isinstance(raw.get("type"), dict) else raw.get("type"),
-                  "blocked_by": deps,
-                  "dependency_states": states,
-                  "dependencies_ready": dependencies_ready,
-                  "unlocks": unlocks.get(number, 0),
-                  "open_pr": issue_to_pr.get(number),
-                  "url": raw.get("html_url"),
-                  "updated_at": raw.get("updated_at"),
+                  "scheduling_metadata": {"valid": not metadata_errors, "errors": metadata_errors},
+                  "blocked_by": deps, "dependency_states": states, "dependencies_ready": dependencies_ready, "unlocks": unlocks.get(number, 0),
+                  "open_pr": issue_to_pr.get(number), "url": raw.get("html_url"), "updated_at": raw.get("updated_at"),
               })
           issue_rows = {int(x["number"]): x for x in issues}
 
@@ -212,109 +202,100 @@ jobs:
               best = {}
               for run in payload.get("check_runs") or []:
                   name = str(run.get("name") or "")
-                  if name not in best or int(run.get("id") or 0) > int(best[name].get("id") or 0):
-                      best[name] = run
+                  if name not in best or int(run.get("id") or 0) > int(best[name].get("id") or 0): best[name] = run
               return list(best.values())
+
+          def flake_check(name):
+              text = str(name or "").lower()
+              return "flake probe" in text or "flake characterization" in text
 
           def ci_state(checks):
               if not checks:
                   return "pending"
+              # Terminal red is authoritative immediately; an unrelated running
+              # check must not hide evidence that is already inspectable.
+              failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
+              if failed:
+                  names = {str(x.get("name") or "").lower() for x in failed}
+                  if names and all(flake_check(n) for n in names): return "flake"
+                  if names and all("inherited" in n for n in names): return "inherited_failure"
+                  if names and all("infra" in n or "infrastructure" in n for n in names): return "infra_failure"
+                  return "unknown_red"
               if any(str(x.get("status") or "").lower() != "completed" for x in checks):
                   return "running"
-              failed = [x for x in checks if str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
-              if not failed:
-                  return "green"
-              names = {str(x.get("name") or "").lower() for x in failed}
-              if names and all("flake probe" in n for n in names):
-                  return "flake"
-              return "unknown_red"
+              return "green"
+
+          def flake_evidence(checks, head_sha):
+              """Parse only an explicit machine-readable exact-head marker.
+
+              Train intentionally does not infer flakiness from workflow names,
+              modified-test hints, or prose. Producers may emit one line:
+              PLASMON_FLAKE_EVIDENCE={...json...}
+              """
+              for run in checks:
+                  if not flake_check(run.get("name")): continue
+                  output = run.get("output") or {}
+                  text = "\n".join(str(output.get(k) or "") for k in ("summary", "text"))
+                  for line in text.splitlines():
+                      if not line.startswith("PLASMON_FLAKE_EVIDENCE="): continue
+                      try: row = json.loads(line.split("=", 1)[1])
+                      except Exception: continue
+                      if not isinstance(row, dict): continue
+                      evidence = {
+                          "head_matches": str(row.get("head_sha") or "") == head_sha,
+                          "complete": bool(row.get("complete")), "infrastructure_collapse": bool(row.get("infrastructure_collapse")),
+                          "test": row.get("test"), "passes": int(row.get("passes") or 0), "failures": int(row.get("failures") or 0),
+                          "independent_confirmation": bool(row.get("independent_confirmation")),
+                          "characterization_iterations": int(row.get("characterization_iterations") or 0),
+                          "source_check": run.get("name"), "source_url": run.get("details_url"),
+                      }
+                      return evidence
+              return None
 
           def review_facts(number, head_sha):
               reviews = gh_pages(f"repos/{REPO}/pulls/{number}/reviews")
               latest_by_user = {}
               for row in reviews:
-                  user = str((row.get("user") or {}).get("login") or row.get("user", {}).get("id") or "unknown")
-                  if int(row.get("id") or 0) >= int((latest_by_user.get(user) or {}).get("id") or 0):
-                      latest_by_user[user] = row
+                  user = str((row.get("user") or {}).get("login") or (row.get("user") or {}).get("id") or "unknown")
+                  if int(row.get("id") or 0) >= int((latest_by_user.get(user) or {}).get("id") or 0): latest_by_user[user] = row
               blocking = [x for x in latest_by_user.values() if str(x.get("state") or "").upper() == "CHANGES_REQUESTED"]
-              blocking.sort(key=lambda x: int(x.get("id") or 0), reverse=True)
-              blocker = blocking[0] if blocking else None
+              blocking.sort(key=lambda x: int(x.get("id") or 0), reverse=True); blocker = blocking[0] if blocking else None
               exact = [x for x in latest_by_user.values() if str(x.get("commit_id") or "") == head_sha]
-              if blocker:
-                  review = "changes_requested"
-              elif any(str(x.get("state") or "").upper() == "APPROVED" for x in exact):
-                  review = "approved"
-              else:
-                  review = "pending"
+              if blocker: review = "changes_requested"
+              elif any(str(x.get("state") or "").upper() == "APPROVED" for x in exact): review = "approved"
+              else: review = "pending"
               normalized = None
               if blocker:
-                  normalized = {
-                      "id": blocker.get("id"),
-                      "state": blocker.get("state"),
-                      "commit_id": blocker.get("commit_id"),
-                      "body": blocker.get("body") or "",
-                      "user": (blocker.get("user") or {}).get("login"),
-                  }
+                  normalized = {"id": blocker.get("id"), "state": blocker.get("state"), "commit_id": blocker.get("commit_id"), "body": blocker.get("body") or "", "user": (blocker.get("user") or {}).get("login")}
               return review, normalized
 
           prs = []
           for raw in raw_prs:
-              number = int(raw["number"])
-              issue = pr_to_issue.get(number)
-              if issue is None:
-                  continue
+              number = int(raw["number"]); issue = pr_to_issue.get(number)
+              if issue is None: continue
               detail = gh(f"repos/{REPO}/pulls/{number}")
               head_sha, base = detail["head"]["sha"], detail["base"]["ref"]
-              checks = latest_check_runs(head_sha)
-              mergeable_state = str(detail.get("mergeable_state") or "unknown").lower()
+              checks = latest_check_runs(head_sha); mergeable_state = str(detail.get("mergeable_state") or "unknown").lower()
               conflict = detail.get("mergeable") is False and mergeable_state == "dirty"
-              review, blocker = review_facts(number, head_sha)
-              issue_row = issue_rows[issue]
+              review, blocker = review_facts(number, head_sha); issue_row = issue_rows[issue]
               prs.append({
-                  "number": number,
-                  "issue": issue,
-                  "title": detail.get("title") or "",
-                  "state": "open",
-                  "head": head_sha,
-                  "head_branch": detail["head"]["ref"],
-                  "base": base,
-                  "base_valid": base == TARGET or base in open_pr_heads,
-                  "draft": bool(detail.get("draft")),
-                  "owner": train_owner(detail.get("body")),
-                  "product": bool(issue_row["product"]),
-                  "ci_owned": bool(issue_row["ci_owned"]),
-                  "conflict": bool(conflict),
-                  "mergeable": detail.get("mergeable"),
-                  "mergeable_state": mergeable_state,
-                  "review": review,
-                  "blocking_review": blocker,
-                  "ci": ci_state(checks),
+                  "number": number, "issue": issue, "title": detail.get("title") or "", "state": "open", "head": head_sha,
+                  "head_branch": detail["head"]["ref"], "base": base, "base_valid": base == TARGET or base in open_pr_heads,
+                  "draft": bool(detail.get("draft")), "product": bool(issue_row["product"]), "ci_owned": bool(issue_row["ci_owned"]),
+                  "conflict": bool(conflict), "mergeable": detail.get("mergeable"), "mergeable_state": mergeable_state,
+                  "review": review, "blocking_review": blocker, "ci": ci_state(checks), "flake_evidence": flake_evidence(checks, head_sha),
                   "checks": [{"name": x.get("name"), "status": x.get("status"), "conclusion": x.get("conclusion"), "url": x.get("details_url")} for x in checks],
-                  "url": detail.get("html_url"),
-                  "updated_at": detail.get("updated_at"),
+                  "url": detail.get("html_url"), "updated_at": detail.get("updated_at"),
               })
 
           snapshot = {
-              "schema": "plasmon-train-snapshot-v1",
-              "captured_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
-              "repo": REPO,
-              "target": TARGET,
-              "target_sha": target_sha,
-              "milestone": MILESTONE_TITLE,
-              "generation": os.environ["GITHUB_SHA"],
-              "issues": issues,
-              "prs": prs,
-              "counts": {
-                  "issues": len(issues),
-                  "open_issues": sum(1 for x in issues if x["open"]),
-                  "open_product_prs": sum(1 for x in prs if x["product"]),
-                  "open_ci_prs": sum(1 for x in prs if x["ci_owned"]),
-              },
+              "schema": "plasmon-train-snapshot-v1", "captured_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+              "repo": REPO, "target": TARGET, "target_sha": target_sha, "milestone": MILESTONE_TITLE, "generation": os.environ["GITHUB_SHA"],
+              "issues": issues, "prs": prs,
+              "counts": {"issues": len(issues), "open_issues": sum(1 for x in issues if x["open"]), "open_product_prs": sum(1 for x in prs if x["product"]), "open_ci_prs": sum(1 for x in prs if x["ci_owned"]), "invalid_scheduling_metadata": sum(bool(x["scheduling_metadata"]["errors"]) for x in issues if x["open"])},
           }
-          OUT.parent.mkdir(parents=True, exist_ok=True)
-          tmp = OUT.with_suffix(".tmp")
-          tmp.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          tmp.replace(OUT)
+          OUT.parent.mkdir(parents=True, exist_ok=True); tmp = OUT.with_suffix(".tmp")
+          tmp.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8"); tmp.replace(OUT)
           print(f"wrote {OUT} with {len(issues)} issues and {len(prs)} lane PRs")
           PY
 
@@ -333,12 +314,8 @@ jobs:
           from pathlib import Path
           path = Path(os.environ["STATUS_PATH"])
           path.write_text(json.dumps({
-              "schema": "plasmon-train-bootstrap-status-v1",
-              "generation": os.environ["GITHUB_SHA"],
-              "run_id": os.environ["GITHUB_RUN_ID"],
-              "state": "completed",
-              "conclusion": "success",
-              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+              "schema": "plasmon-train-bootstrap-status-v1", "generation": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"],
+              "state": "completed", "conclusion": "success", "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
           }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           PY
           git add "$SNAPSHOT_PATH" "$STATUS_PATH"
@@ -353,12 +330,8 @@ jobs:
           from pathlib import Path
           path = Path(os.environ["STATUS_PATH"])
           path.write_text(json.dumps({
-              "schema": "plasmon-train-bootstrap-status-v1",
-              "generation": os.environ["GITHUB_SHA"],
-              "run_id": os.environ["GITHUB_RUN_ID"],
-              "state": "completed",
-              "conclusion": "failure",
-              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
+              "schema": "plasmon-train-bootstrap-status-v1", "generation": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"],
+              "state": "completed", "conclusion": "failure", "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
           }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           PY
           git add "$STATUS_PATH"
