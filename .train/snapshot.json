@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-26T21:55:10.914588Z",
+  "captured_at": "2026-08-26T22:17:56.543539Z",
   "counts": {
     "invalid_scheduling_metadata": 3,
     "issues": 133,
@@ -7,7 +7,7 @@
     "open_issues": 33,
     "open_product_prs": 6
   },
-  "generation": "d509682819dfbef036f38ce08e46e29ddc8577f0",
+  "generation": "5d09cb28f40abcbcdce61f8cf1f2d3363aeebbd1",
   "issues": [
     {
       "area": "Repo",
@@ -3264,6 +3264,7 @@
       "effort": "Medium",
       "labels": [
         "ci:flaky",
+        "needs-acceptance-criteria",
         "release-blocker"
       ],
       "number": 406,
@@ -3278,7 +3279,7 @@
       "title": "[r2 CI] Repair and restore #371 Explorer-to-Desktop placement acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T03:17:53Z",
+      "updated_at": "2026-08-26T22:09:55Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/406"
     },
     {
@@ -3844,190 +3845,190 @@
       "blocking_review": null,
       "checks": [
         {
-          "conclusion": "success",
-          "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490138/job/98335985701"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 2-2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980329"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 31-35/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163376"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 31-35/50",
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 36-40/50",
           "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980327"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 4-4/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980326"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 8-8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980321"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 16-20/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980311"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 46-50/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980310"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980304"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 36-40/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980301"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980297"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 26-30/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980293"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 3-3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980291"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 41-45/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980287"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 11-15/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980272"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980271"
-        },
-        {
-          "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 21-25/50",
-          "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980253"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980250"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980232"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163375"
         },
         {
           "conclusion": "success",
           "name": "Flake baseline all iterations 7-7/10",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980225"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163340"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 6-10/50",
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 46-50/50",
           "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980224"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163233"
         },
         {
           "conclusion": null,
-          "name": "Flake characterization characterization:targeted:7-files:dd01b3766a60 iterations 1-5/50",
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 26-30/50",
           "status": "in_progress",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335980223"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163200"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 1-5/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163177"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163166"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 6-10/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163141"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 41-45/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163132"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 1-1/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163107"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 16-20/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163099"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163085"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163070"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163065"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 8-8/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163064"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 21-25/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163061"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:7-files:794b3bc06a97 iterations 11-15/50",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163060"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163054"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343163043"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343162972"
+        },
+        {
+          "conclusion": "success",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018612857/job/98343161842"
         },
         {
           "conclusion": "skipped",
           "name": "Dispatch targeted 50-iteration flake probe",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490174/job/98335941653"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Vanilla Neutron packaged Review",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490132/job/98335940285"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged Playwright specialist acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490111/job/98335940155"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613065/job/98343097095"
         },
         {
           "conclusion": "success",
           "name": "Review semantic + package",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490132/job/98335940041"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613293/job/98343096522"
+        },
+        {
+          "conclusion": "success",
+          "name": "Vanilla Neutron packaged Review",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613293/job/98343095913"
         },
         {
           "conclusion": "success",
           "name": "Fast Bun tests",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490129/job/98335940015"
-        },
-        {
-          "conclusion": "failure",
-          "name": "Packaged Playwright demo acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490111/job/98335939953"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine Kernel CI applicability",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490138/job/98335939951"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613159/job/98343095662"
         },
         {
           "conclusion": "success",
           "name": "Determine flake probe applicability and configuration",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490116/job/98335939950"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490128/job/98335939919"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613101/job/98343095153"
         },
         {
           "conclusion": "success",
           "name": "Packaged browser persistence",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33016490177/job/98335939871"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613180/job/98343094878"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018613106/job/98343094640"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018612804/job/98343093374"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018612857/job/98343093209"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Packaged Playwright demo acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33018612804/job/98343093085"
         }
       ],
       "ci": "unknown_red",
@@ -4035,7 +4036,7 @@
       "conflict": false,
       "draft": true,
       "flake_evidence": null,
-      "head": "9ba72e104cfb4bdff069e7018831e4608abeea03",
+      "head": "18bf91543d4b48307b531f772cf4cba17a701875",
       "head_branch": "fix/issue-181-demo-deployment-seeds-v2",
       "issue": 181,
       "mergeable": true,
@@ -4045,7 +4046,7 @@
       "review": "pending",
       "state": "open",
       "title": "#181 Seed demo files and Desktop shortcuts in plasmon:demo",
-      "updated_at": "2026-08-26T21:40:53Z",
+      "updated_at": "2026-08-26T22:07:00Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/432"
     },
     {
@@ -5155,7 +5156,13 @@
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #485 / Issue #107\nExact head: `d87f7e37198422a991557f3da7fda4f1135dd95f`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-26T21:59:17Z\nReview ID: `pr-485-d87f7e371984-1787780759738-dc3fdbf6`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > The bundled Issue #107 body, acceptance criteria, related-issue requirements, current two-file delta, exact-head CI, and the current report contents were inspected.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #107 has no screenshot/video attachments; the linked canonical Issue comments and current report evidence rules were inspected, including the explicit manual-evidence requirements.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > The historical gate, current-r2 finding matrix, canonical Issues #72/#88/#90/#109/#121, and the required packaged inventory were inspected where relevant.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > The desired result is durable integrated acceptance evidence that separates headless, packaged/browser, and human/manual claims rather than claiming that a green package boot closes the baseline.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The report preserves the no-reimplementation/no-Doom-seed boundaries, optional-profile distinction, quarantined browser limitation, and rule that lower-layer evidence cannot be promoted.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > The PR is a report-only two-file acceptance refresh and does not attempt to repair the listed Product gaps or create duplicate product Issues.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > The PR targets release/0.1.0-r2; applicable release/reviewer and Plasmon evidence guidance were consulted, and no package bytes, manifest, or schema changed.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > The declared base and exact head e884d1adc1ce53dc44d0ad5f29eb4981722fd61c were verified; the report's parent history and report-only integration assumptions were inspected.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The report explicitly treats historical rows as provenance and does not credit optional or unmerged browser sources as current required acceptance.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > The exact-head report now records success and failure dispositions across the current-r2 matrix, including PASS rows, explicit FAIL rows for Neutron Search/runtime inventory, NOT-YET-TESTABLE empty/visible Trash and browser/manual boundaries, and the #109 AUTOMATED PASS / MANUAL PENDING boundary. The updated blocker list also carries the remaining user-visible gaps instead of promoting narrower evidence.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > This is documentation-only; no async/resource implementation is introduced, and the cited browser/CI evidence is external execution evidence rather than code with new lifecycle ownership.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > The two-file scope is disciplined and exact-head CI is green; the blocker is an acceptance-evidence inconsistency, not unrelated Product regression.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > The report keeps canonical Issue ownership and explicitly says Product defects remain with their canonical Issues rather than being repaired in the gate.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > The report distinguishes filesystem/Process/Windowing/Neutron boundaries, required installed projections, browser quarantine, and human visual evidence.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > No second acceptance database or product authority is introduced; the Markdown report is a durable evidence index.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > The report cites concrete Fast, headless, Smoke, Specialist, and manual evidence layers and does not use source presence alone as proof.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > The report applies the repository's lowest-honest-layer rules, including NOT-YET-TESTABLE for missing browser/manual boundaries and no promotion from deterministic tests.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > The current matrix names actual test/spec inventories and concrete blockers rather than relaxing assertions or treating optional sources as required execution.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > Issue #107 requires package/browser execution plus manual review, and the report identifies Fast, headless, required Smoke/Specialist, optional-profile, quarantined, and manual layers.\n- [x] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > The exact-head CI bundle records passing packaged Smoke and Specialist executions, while the current report explicitly separates those browser assertions from human evidence: the #109 row is AUTOMATED PASS / MANUAL PENDING and the blocker list retains the bounded packaged/manual visual review. The report therefore inspects and honestly records each required evidence boundary rather than claiming manual acceptance.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > Exact CI run IDs and conclusions are recorded separately from the acceptance claims, and the report explicitly says green package/browser lanes do not close unresolved rows.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > No durable schema or application state changes; the report's durable concern is evidence provenance and current-vs-historical acceptance status.\n- [x] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > The exact-head diff updates durable documentation guidance in apps/plasmon/docs/README.md, removes the obsolete fingerprint workflow and its package/test contracts, and adds tests for the retained structural boundary contract. The acceptance report now accurately documents the #109 manual-pending evidence and current blockers, satisfying the applicable integration/documentation obligation.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > Only the acceptance report and its documentation fingerprint changed; no generated product artifact, dependency, or unrelated cleanup is present.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > The exact head/base were recorded from the bundle and refreshed immediately before submission; queue still reports PR #485 COMPLETE at e884d1adc1ce53dc44d0ad5f29eb4981722fd61c.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > The reviewer only inspected evidence and used the review workflow; it did not modify product code, merge, force-push, or alter another agent's work.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > The disposition blocks an acceptance-report inconsistency, not CI; green Fast/Smoke/Specialist results are recorded as execution evidence only.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] Current integration is packaged and launched in the supported Neutron/browser environment.\n  > The exact-head bundle records green Fast Bun, packaged persistence, packaged refactor smoke, and Packaged Playwright specialist acceptance checks for d87f7e37198422a991557f3da7fda4f1135dd95f. The report identifies the supported Neutron/PocketIC package/browser launch and limits the claim to the exercised installed-package surface.\n    - [x] Production code represents the behavior.\n      > The exact-head report states that this is documentation-only gate work and identifies the supported Product basis at release/0.1.0-r2. The packaged checks therefore exercise the existing production behavior; this criterion does not require the report PR to add a second implementation.\n    - [x] An executable test covers it.\n      > The exact-head report names the executable Fast, Packaged Smoke, and Packaged Browser checks and records all required lanes as passed; the inventory verifier assigns Plasmon browser specs to the required smoke/specialist lanes. This is executable packaged evidence, not a prose-only claim.\n    - [x] The test observes behavior rather than source shape.\n      > The packaged Smoke test asserts installed package responses, launcher/tile visibility, semantic Start/Search controls, native Settings/taskbar behavior, browser geometry, and Monaco readiness. These are runtime/package observations rather than source-presence assertions; the report also limits claims to the exercised surface.\n\n- [x] Every still-relevant 2026-08-11 review finding is retested or explicitly marked not yet testable with a concrete blocker.\n  > The current-r2 matrix covers each relevant finding with PASS, FAIL, SUPERSEDED, or NOT-YET-TESTABLE, and every unaccepted boundary names a concrete blocker. The updated report explicitly includes #109's manual-pending state and the retained blocker list, correcting the prior omission.\n    - [x] Production code represents the behavior.\n      > The report maps each finding to the current production basis and its owning subsystem/Issue, while explicitly marking unavailable acceptance layers rather than inventing behavior. The matrix cites the existing Trash, Search, Start, FileManager, package, and Neutron implementations/tests for represented behavior.\n    - [x] An executable test covers it.\n      > The exact-head inventory and test source provide executable coverage for the current findings: the required Smoke/Specialist suite covers packaged behaviors such as Search/native opening and pin affordance, while Fast/headless tests cover filesystem, Start, taskbar, and Trash semantics. Findings whose stronger browser/manual path is unavailable are explicitly marked NOT-YET-TESTABLE rather than falsely treated as passed.\n    - [x] The test observes behavior rather than source shape.\n      > The inspected tests assert runtime outcomes: taskbar state transitions follow Process/Windowing lifecycle, and packaged pin tests observe visible roles, labels, aria state, loaded artwork, and state changes in Start/taskbar contexts. The evidence is behavioral and explicitly avoids treating source presence or constants as acceptance.\n\n- [x] Evidence distinguishes headless, packaged/browser, and human/manual acceptance.\n  > The current report labels each row by evidence layer\u2014Fast/model, headless, packaged/browser, optional profile, quarantined boundary, or human/manual\u2014and explicitly records #109 as automated pass/manual pending. The blocker list prevents weaker evidence from being promoted.\n    - [x] Production code represents the behavior.\n      > The report maps each claim back to existing Plasmon production behavior and owning layers, while clearly stating that unresolved packaged/manual boundaries are not represented as completed behavior. No competing implementation or authority is introduced by the gate.\n    - [x] An executable test covers it.\n      > Executable coverage exists at the stated layers: Fast/headless tests exercise canonical Process/Windowing and filesystem behavior, while the required packaged Smoke/Specialist inventory executes installed browser journeys. The report separately marks optional, quarantined, and human/manual rows as unavailable rather than claiming an executable test proves them.\n    - [x] The test observes behavior rather than source shape.\n      > The inspected packaged tests observe user-visible state and geometry\u2014taskbar accessible names/state transitions, native-window counts, installed launcher/app frames, snap previews, and viewport bounds. They do not merely inspect source files or constants, and the report keeps manual visual claims separate.\n\n- [x] Previously source-fixed items such as Download, folder-drop feedback, Photos fallback, Video unsupported-format handling, and Start/Search click-away receive actual packaged/manual disposition.\n  > The current-r2 matrix gives each named item an explicit disposition: Download is NOT-YET-TESTABLE at the browser boundary, folder-drop is blocked by quarantine, Start/Search click-away is manual/interaction, and Photos/Video remain outside required browser coverage. #109 is now explicitly AUTOMATED PASS / MANUAL PENDING with its concrete visual blocker.\n    - [x] Production code represents the behavior.\n      > The exact head contains the owning production paths for the named behaviors: FileManager import/download interaction, Shell Start/Search, Photos fullscreen fallback, and Video media/error handling. The report correctly evaluates their acceptance layer without adding a parallel implementation.\n    - [x] An executable test covers it.\n      > Executable coverage exists for the source-fixed behavior at honest layers: FileManager download helpers, Photos fullscreen/fallback, Video media handling, Search state, and packaged pin affordance have corresponding tests/specs. The report does not misrepresent absent browser/manual coverage; it records those stronger checks as NOT-YET-TESTABLE or MANUAL PENDING.\n    - [x] The test observes behavior rather than source shape.\n      > The inspected tests assert behavior: Photos verifies fallback results and rejection handling, Video verifies support/error messages and URL cleanup, and FileManager download verifies chunked reads/blob naming/cleanup. The packaged pin test observes rendered controls, labels, artwork, and state transitions; missing higher-level browser/manual claims remain explicitly unaccepted.\n\n- [ ] Canonical Issues are updated with pass/fail evidence without falsely accepting unrelated criteria.\n  > :x: The exact-head PR updates the repository report but does not update the canonical GitHub Issue threads with the current d87f7e3 evidence. `gh issue view 107` shows prior historical comments and no comment recording this report/head; therefore the Issue #107 requirement to update canonical Issues with current pass/fail evidence is not satisfied.\n    - [x] Production code represents the behavior.\n      > The report maps findings to canonical Issues and preserves production ownership: for example #45/#107 for Trash, #90 for Search presentation, #120 for installed projection activation, and #109 for pin visual acceptance. It records product behavior and gaps without introducing a substitute implementation.\n    - [ ] An executable test covers it.\n      > :x: No executable test in the exact head verifies that the current report evidence was posted to canonical GitHub Issue threads. The repository tests cover local documentation structure and product behavior, but cannot establish the missing #107/#109 current Issue updates; `gh issue view 107` confirms the current-head evidence is absent.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: The executable documentation tests observe local boundary/index structure and absence of obsolete review metadata, not canonical GitHub Issue updates or current evidence mapping. Since the required Issue-thread update is missing, no behavioral test evidence can support this subcheck.\n\n- [x] Distinct newly observed defects are filed separately rather than hidden in the gate report.\n  > The exact-head report explicitly states that no distinct new Product implementation defect was established by the required Fast/Smoke/Specialist execution and records unresolved acceptance layers instead of creating duplicate Product work.\n    - [x] Production code represents the behavior.\n      > `gh pr view 485` shows the PR changes only the acceptance report. No new Product implementation or defect-fixing path is introduced, so there is no hidden production behavior requiring a separate defect Issue.\n    - [x] An executable test covers it.\n      > The exact-head required Fast, packaged Smoke, persistence, and Specialist checks all passed, and the report records their outcomes without identifying a new Product failure. Because this PR adds no Product behavior, no additional defect regression test is required beyond the executed gate evidence.\n    - [x] The test observes behavior rather than source shape.\n      > The PR has only the durable gate report as its changed file, while the report is grounded in executed Fast/packaged browser results and explicitly distinguishes unresolved acceptance gaps from Product defects. It does not use source presence as evidence of a new defect-free behavior.\n\n- [x] The final gate report identifies the remaining user-visible blockers to the next Plasmon review.\n  > The current-r2 blocker list explicitly identifies the seven remaining evidence gaps, including the previously omitted #109 packaged/manual pin review, and names Trash, installed .neutron activation, Download, quarantined folder-drop, optional profiles, and human visual review. This is a complete blocker disposition even though the gate remains open.\n    - [x] Production code represents the behavior.\n      > The current report's blocker list now carries the relevant production-owned behavior and acceptance boundaries, including Trash, .neutron activation, Download, folder-drop, optional runtimes, visual evidence, and #109. It records ownership without moving authority into the report.\n    - [x] An executable test covers it.\n      > The final report is grounded in the exact-head executable gate evidence: Fast Bun, packaged persistence, packaged refactor smoke, and Specialist browser checks passed. It uses those tests to support the claims they cover and identifies the untested Trash, Download, optional-profile, quarantined, and manual gaps instead of treating missing tests as passes.\n    - [x] The test observes behavior rather than source shape.\n      > The report's supporting tests observe installed-package behavior\u2014served assets, visible launcher/app surfaces, semantic Search/Settings/taskbar interactions, geometry bounds, editor readiness, and browser health. The blocker list is derived from these observations and does not substitute source-only or green-CI claims for missing manual acceptance.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
+        "commit_id": "d87f7e37198422a991557f3da7fda4f1135dd95f",
+        "id": 5035424628,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "skipped",
@@ -5236,16 +5243,22 @@
       "mergeable_state": "blocked",
       "number": 485,
       "product": true,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#107 Refresh integrated packaged acceptance on current r2",
-      "updated_at": "2026-08-25T19:28:00Z",
+      "updated_at": "2026-08-26T21:59:23Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/485"
     },
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "BLOCKING REVIEW\n\nExact head: `09ec7e97d38b1e20ca5f5a1a86af26229db7ae8b`\n\nIssue #391 has an empty canonical Acceptance criteria section and explicitly preserves the original #89 restoration contract: installed Program Files authority, real TypeScript worker construction/message exchange, and strict worker/page/BrowserHealth checks. This PR changes production worker mapping, removes the quarantine, changes the fixture to JavaScript, removes page-error assertions, and no longer requests or byte-compares the installed Program Files worker. Restore the original contract or obtain explicit canonical authorization for the slim replacement. The bundled complete-review tool could not submit because GitHub rejects the deprecated `pullRequest.projectCards` GraphQL field.",
+        "commit_id": "09ec7e97d38b1e20ca5f5a1a86af26229db7ae8b",
+        "id": 5035466933,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "skipped",
@@ -5440,10 +5453,10 @@
       "mergeable_state": "blocked",
       "number": 494,
       "product": false,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#391 Restore slim Monaco worker acceptance",
-      "updated_at": "2026-08-26T16:46:13Z",
+      "updated_at": "2026-08-26T22:06:41Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/494"
     },
     {
@@ -6043,7 +6056,13 @@
     {
       "base": "release/0.1.0-r2",
       "base_valid": true,
-      "blocking_review": null,
+      "blocking_review": {
+        "body": "BLOCKING REVIEW\n\nExact head: `aa6b3ffcd9aaffc6e03fb15a34df00c2add2a89f`\n\nIssue #406's canonical Acceptance criteria section is empty, so the required formal contract cannot be certified from the Issue. The prose restoration requirements are concrete and the exact-head CI is green, but a complete disposition still requires an explicit canonical acceptance matrix (or an authorized update to the Issue contract) before this quarantine-removal claim can be treated as merge-ready. The bundled complete-review session was repeatedly replaced by the concurrent reviewer state and could not finalize; this is the exact-head blocking disposition.",
+        "commit_id": "aa6b3ffcd9aaffc6e03fb15a34df00c2add2a89f",
+        "id": 5035481109,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
       "checks": [
         {
           "conclusion": "success",
@@ -6238,10 +6257,10 @@
       "mergeable_state": "blocked",
       "number": 499,
       "product": false,
-      "review": "pending",
+      "review": "changes_requested",
       "state": "open",
       "title": "#406 Restore #371 Explorer-to-Desktop acceptance",
-      "updated_at": "2026-08-26T03:17:44Z",
+      "updated_at": "2026-08-26T22:09:13Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/499"
     }
   ],
