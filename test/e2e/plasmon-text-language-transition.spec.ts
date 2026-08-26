@@ -52,6 +52,8 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
+      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
     await rootExplorer.getByRole("complementary", { name: "Favorites" })
       .getByRole("button", { name: "Documents", exact: true }).click();
 
