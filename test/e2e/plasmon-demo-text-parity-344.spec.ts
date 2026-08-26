@@ -89,13 +89,17 @@ test("[demo profile] #344 — packaged Text exposes accepted Monaco parity affor
     await expect(notesWindow.locator(".monaco-editor .quick-input-widget")).toBeVisible();
     await page.keyboard.press("Escape");
 
-    // Return focus to the real running Explorer through the taskbar before
-    // using its browser file-import control; Monaco currently owns the active
-    // window and otherwise legitimately intercepts pointer input.
-    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
-    await expect(filesTask).toBeVisible();
-    await filesTask.click();
-    await expect(rootExplorer).toHaveClass(/plasmon-window--active/);
+    // Close the shortcut-opened Text window before opening a fresh Explorer;
+    // Monaco otherwise legitimately intercepts pointer input to the Desktop.
+    await notesWindow.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(notesWindow).not.toBeVisible();
+
+    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
+    await expect(rootShortcut).toBeVisible({ timeout: 20_000 });
+    await rootShortcut.dblclick();
+    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
+    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
 
     // Import a representative JavaScript resource through normal Explorer UI so
     // the packaged Text window proves shared resource classification drives the
