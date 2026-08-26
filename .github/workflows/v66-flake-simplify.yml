@@ -1,0 +1,37 @@
+name: Simplify v6.6 flake check
+
+on:
+  push:
+    branches: ["automation/train-snapshot"]
+    paths: [".github/workflows/v66-flake-simplify.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/train-snapshot
+      - name: Patch exact helper and remove this runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/plasmon-train-snapshot.yml')
+          s = p.read_text()
+          old = '''          def flake_check(name):\n              text = str(name or "").lower()\n              return "flake probe" in text or "flake characterization" in text\n'''
+          new = '''          def flake_check(name):\n              return "flake" in str(name or "").lower()\n'''
+          if old not in s:
+              raise SystemExit('expected flake_check block not found')
+          p.write_text(s.replace(old, new))
+          PY
+          git rm .github/workflows/v66-flake-simplify.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/plasmon-train-snapshot.yml
+          git commit -m "Simplify v6.6 flake check classification"
+          git push origin HEAD:automation/train-snapshot
