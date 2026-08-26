@@ -131,8 +131,8 @@ test(
 
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   await expect(siblingAddress).toHaveValue("/");
-  await siblingWindow.getByRole("complementary", { name: "Favorites" })
-    .getByRole("button", { name: "Documents", exact: true }).click();
+  await siblingAddress.fill("/Documents");
+  await siblingAddress.press("Enter");
   await expect(siblingAddress).toHaveValue("/Documents");
   await expect(siblingWindow).toHaveAccessibleName("Documents");
 
