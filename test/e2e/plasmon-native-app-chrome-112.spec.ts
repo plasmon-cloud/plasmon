@@ -22,7 +22,7 @@ async function surfacePalette(surface: Locator): Promise<{ background: string; c
   });
 }
 
-test("#112 — packaged representative apps expose shared chrome for visual review", async ({ page }, testInfo) => {
+test("[demo profile] #112 — packaged representative apps expose shared chrome for visual review", { tag: ["@demo-profile", "@issue-112"] }, async ({ page }, testInfo) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   await page.goto(kernelUrl);
@@ -82,9 +82,13 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
+    const address = rootExplorer.getByRole("textbox", { name: "Address" });
     const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
     await expect(documentsEntry).toBeVisible();
-    await documentsEntry.dblclick();
+    await documentsEntry.click();
+    await expect(documentsEntry).toHaveAttribute("aria-selected", "true");
+    await documentsEntry.press("Enter");
+    await expect(address).toHaveValue("/Documents");
     const documents = app.locator(".explorer-app").last();
     await expect(documents).toBeVisible({ timeout: 20_000 });
     await documents.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first().dblclick();

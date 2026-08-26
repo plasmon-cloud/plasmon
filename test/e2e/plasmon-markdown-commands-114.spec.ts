@@ -8,8 +8,8 @@ const TILE_ID = "main";
 const BASIC_MARKDOWN_SOURCE = "# Big Heading\n\nNormal paragraph.\n\n- one\n- two";
 
 test(
-  "#114 packaged Markdown exposes formatter, commands, and basic rendered Preview",
-  { tag: ["@issue-114", "@issue-416"] },
+  "[demo profile] #114 packaged Markdown exposes formatter, commands, and basic rendered Preview",
+  { tag: ["@demo-profile", "@issue-114", "@issue-416"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -47,9 +47,13 @@ test(
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
+    const address = rootExplorer.getByRole("textbox", { name: "Address" });
     const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
     await expect(documentsEntry).toBeVisible();
-    await documentsEntry.dblclick();
+    await documentsEntry.click();
+    await expect(documentsEntry).toHaveAttribute("aria-selected", "true");
+    await documentsEntry.press("Enter");
+    await expect(address).toHaveValue("/Documents");
 
     const documentsExplorer = app.locator(".explorer-app").last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });

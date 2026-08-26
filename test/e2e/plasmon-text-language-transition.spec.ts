@@ -23,7 +23,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
+test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {

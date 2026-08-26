@@ -6,7 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-test("#344 — packaged Text exposes accepted Monaco parity affordances", async ({ page }) => {
+test("[demo profile] #344 — packaged Text exposes accepted Monaco parity affordances", { tag: ["@demo-profile", "@issue-344"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
 

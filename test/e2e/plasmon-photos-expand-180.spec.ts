@@ -6,6 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 const FIXTURE_NAME = "Demo Artwork.svg";
+const DEMO_PROFILE_TAG = "@demo-profile";
 const GEOMETRY_TOLERANCE_PX = 1;
 
 function geometryMatches(
@@ -60,7 +61,7 @@ async function hasMaximizedManagerGeometry(window: Locator): Promise<boolean> {
   });
 }
 
-test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", async ({ page }) => {
+test("[demo profile] #180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", { tag: [DEMO_PROFILE_TAG, "@issue-180"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -89,6 +90,12 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
         messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
         urlPathPrefix: "/app/gemma/model-worker.js",
         reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+      },
+      {
+        kind: "requestfailed",
+        message: "net::ERR_BLOCKED_BY_ORB",
+        urlPathPrefix: "/app/hello/static/icon.svg",
+        reason: "Known unrelated optional-app icon URL-resolution diagnostic outside #180 Photos fullscreen behavior",
       },
     ],
   });

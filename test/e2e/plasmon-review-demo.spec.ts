@@ -7,7 +7,7 @@ const PLASMON_TILE_ID = "main";
 const REVIEW_APP_ID = "review";
 const REVIEW_TILE_ID = "review";
 
-test("Plasmon demo discovers and opens the installed Review Element", async ({ page, request }) => {
+test("[demo profile] Plasmon demo discovers and opens the installed Review Element", { tag: ["@demo-profile"] }, async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -74,8 +74,8 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
 });
 
 test(
-  "#118 groups canonical Explorer processes and focuses individual members",
-  { tag: ["@issue-303"] },
+  "[demo profile] #118 groups canonical Explorer processes and focuses individual members",
+  { tag: ["@demo-profile", "@issue-303"] },
   async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -130,10 +130,12 @@ test(
   const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
   await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+  const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
   const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
   await expect(siblingDocuments).toBeVisible();
-  await siblingDocuments.dblclick();
-  const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
+  await siblingDocuments.click();
+  await expect(siblingDocuments).toHaveAttribute("aria-selected", "true");
+  await siblingDocuments.press("Enter");
   await expect(siblingAddress).toHaveValue("/Documents");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
