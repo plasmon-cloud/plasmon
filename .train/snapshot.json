@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-26T03:27:51.478733Z",
+  "captured_at": "2026-08-26T03:34:32.984518Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 7,
     "open_issues": 33,
     "open_product_prs": 7
   },
-  "generation": "426ebe65fbe2d11110009d1a9fcc2dbddbafad7c",
+  "generation": "113bf13f7f4eaf1de8808fadc075bb65418f77d9",
   "issues": [
     {
       "area": "Repo",
