@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-08-26T20:31:01.450333Z",
+  "captured_at": "2026-08-26T20:39:27.123485Z",
   "counts": {
     "issues": 133,
     "open_ci_prs": 7,
     "open_issues": 33,
     "open_product_prs": 6
   },
-  "generation": "0fc1d9a4467f0d96e868e9db8ee469e40346f618",
+  "generation": "18ed67d91c90f24d025bf0b9eb233b7e2d18acd0",
   "issues": [
     {
       "area": "Repo",
@@ -3281,15 +3281,15 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948593"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 31-35/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948579"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 41-45/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948542"
         },
         {
@@ -3371,9 +3371,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948396"
         },
         {
-          "conclusion": null,
+          "conclusion": "failure",
           "name": "Flake characterization characterization:targeted:25-files:4365c733f01b iterations 1-5/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33009115668/job/98310948389"
         },
         {
@@ -4226,7 +4226,7 @@
       "review": "pending",
       "state": "open",
       "title": "#470 Retain PocketIC child-exit and runner diagnostics",
-      "updated_at": "2026-08-25T18:15:48Z",
+      "updated_at": "2026-08-26T20:34:16Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/459"
     },
     {
@@ -5066,7 +5066,7 @@
       "review": "pending",
       "state": "open",
       "title": "#434 Stabilize Text first-demo bootstrap readiness",
-      "updated_at": "2026-08-25T20:53:10Z",
+      "updated_at": "2026-08-26T20:35:42Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/495"
     },
     {
@@ -5462,7 +5462,7 @@
       "review": "pending",
       "state": "open",
       "title": "#405 Stabilize first-demo Documents activation",
-      "updated_at": "2026-08-25T23:53:19Z",
+      "updated_at": "2026-08-26T20:37:01Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/498"
     },
     {
