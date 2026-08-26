@@ -20,6 +20,7 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-text-language-transition.spec.ts` — `#415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
+| #114/#416 Markdown packaged Preview readiness | `test/e2e/plasmon-markdown-commands-114.spec.ts` — `#114 packaged Markdown exposes formatter, commands, and basic rendered Preview` — tags `@r2-quarantine @issue-114 @issue-416 @issue-507` | Product PR #496 exact-head characterization `32898526927`: 48/50 pass; iterations 8 and 25 fail the same exact acceptance while the 10/10 baseline and required gates are green | #507 |
 
 ## #279 left-snap / snap-preview restoration proof
 
@@ -66,6 +67,12 @@ Exact repair head `e7481f69c123fadd09b86001a278a520f7a2a4b8` produced 10/10 clea
 The #391 quarantine is limited to the single #89 packaged Monaco worker acceptance. PR #389's exact head passes the acceptance in required Packaged Browser CI but fails it on two of ten fresh retry-free flake-probe attempts, and independent PR #363 was 10/10 clean. The observed failures occur during editor-input readiness before the worker authority/message assertions. Product Issue #89 remains the canonical worker behavior owner while #391 owns CI stability and restoration; no Monaco worker assertion is removed or weakened.
 
 The #434 quarantine is limited to the single #415 Text language-transition acceptance. The test remains in the Specialist inventory and its FileManager rename, Save As, Monaco model identity, language status, tokenization, reopen persistence, round-trip-to-plaintext, and strict BrowserHealth assertions remain unchanged; only the exact test is tagged. PR #418 and unrelated PR #427 independently reproduce readiness failures on one of ten fresh retry-free iterations each, at different setup boundaries before the #415 language assertions. Product Issue #415 remains the behavior owner while #434 owns CI stability and restoration.
+
+## #507 Markdown packaged Preview restoration
+
+Issue #507 owns CI diagnosis and restoration for the single `test/e2e/plasmon-markdown-commands-114.spec.ts` acceptance confirmed flaky on Product PR #496. The test remains a profile-specific browser acceptance and retains all #114 formatter/Monaco command/Preview structure and presentation assertions plus #416 compact-heading behavior and strict BrowserHealth; only the exact test receives `@r2-quarantine @issue-507`. Product Issues #114 and #416 remain the behavior owners.
+
+Exact head `835982a2a04d1a201313844db789ce606b138f84` produced a complete 50-iteration retry-free characterization with 48/50 passes and two failures of this same acceptance, after an earlier independent suspect occurrence on PR #418. No sleep, retry, timeout inflation, assertion weakening, warning suppression, broad skip, or Product-only test hook is authorized.
 
 ## #244 right-snap / snap-preview restoration
 
@@ -119,6 +126,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-first-demo.spec.ts` — required.
+- `test/e2e/plasmon-markdown-commands-114.spec.ts` — retained as profile-specific browser evidence; its single #114/#416 acceptance is quarantined through #507 pending deterministic CI restoration proof.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
 
@@ -141,5 +149,7 @@ For #420 specifically, each of the three exact #360 acceptances must be exercise
 For #391 specifically, the exact #89 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining installed Program Files authority, opaque-origin `blob:` transport, real editor + TypeScript worker construction/message exchange, and strict worker/page/browser-health assertions before this quarantine is removed.
 
 For #434 specifically, the exact #415 Text language-transition acceptance must be run **unquarantined** with retries=0 and pass a clean 10/10 fresh Flake Probe while retaining FileManager rename and Save As transitions, Monaco model identity, JavaScript/plaintext status and tokenization, reopen persistence, round-trip behavior, and strict BrowserHealth before this quarantine is removed.
+
+For #507 specifically, the exact #114/#416 Markdown packaged acceptance must be run **unquarantined** with retries=0 and pass a clean 10/10 baseline plus 50/50 targeted characterization while preserving every formatter, Monaco command, Preview structure/presentation, compact-heading, persistence/editor, and strict BrowserHealth assertion before this quarantine is removed.
 
 No new quarantine is implied by a failed run. Preserve the evidence, classify it in #295, create/reuse the dedicated repair Issue, and add an explicit narrow quarantine change only when authorized.
