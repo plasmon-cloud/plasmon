@@ -26,7 +26,15 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
 test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  const health = installPlasmonBrowserHealth(page, {
+    firstPartyOrigins: [kernelUrl],
+    allow: [{
+      kind: "console.error",
+      messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+      urlPathPrefix: "/app/gemma/model-worker.js",
+      reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+    }],
+  });
 
   try {
     await page.goto(kernelUrl);

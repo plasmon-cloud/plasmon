@@ -13,7 +13,15 @@ test(
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-    const browserHealth = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+    const browserHealth = installPlasmonBrowserHealth(page, {
+      firstPartyOrigins: [kernelUrl],
+      allow: [{
+        kind: "console.error",
+        messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+        urlPathPrefix: "/app/gemma/model-worker.js",
+        reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+      }],
+    });
 
     await page.goto(kernelUrl);
     await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");

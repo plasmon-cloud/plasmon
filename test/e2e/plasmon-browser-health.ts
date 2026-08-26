@@ -41,12 +41,6 @@ const R2_KNOWN_BROWSER_HEALTH_ALLOW: readonly BrowserHealthAllowRule[] = Object.
     message: R2_KNOWN_CHROMIUM_SANDBOX_WARNING,
     reason: "#305 exact Chromium sandbox diagnostic quarantine; unknown warnings remain failures",
   },
-  {
-    kind: "console.error",
-    messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
-    urlPathPrefix: "/app/gemma/model-worker.js",
-    reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
-  },
 ]);
 
 function urlPathMatches(prefix: string, url: string | undefined): boolean {

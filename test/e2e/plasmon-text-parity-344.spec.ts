@@ -40,7 +40,15 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
 
   // #344 adds no scenario-specific warning/error allowance. BrowserHealth's
   // release-scoped exact #305 Chromium diagnostic rule is the only quarantine.
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  const health = installPlasmonBrowserHealth(page, {
+    firstPartyOrigins: [kernelUrl],
+    allow: [{
+      kind: "console.error",
+      messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+      urlPathPrefix: "/app/gemma/model-worker.js",
+      reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+    }],
+  });
   try {
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const beforeNotes = await windows.count();

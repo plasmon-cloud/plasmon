@@ -84,6 +84,12 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
         urlPathPrefix: "/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
       },
+      {
+        kind: "console.error",
+        messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+        urlPathPrefix: "/app/gemma/model-worker.js",
+        reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+      },
     ],
   });
 

@@ -54,6 +54,12 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
         urlPathPrefix: "/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #112 shared native-app chrome",
       },
+      {
+        kind: "console.error",
+        messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+        urlPathPrefix: "/app/gemma/model-worker.js",
+        reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+      },
     ],
   });
 
