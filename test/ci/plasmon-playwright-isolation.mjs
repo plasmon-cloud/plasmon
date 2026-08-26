@@ -7,7 +7,7 @@ const namedTargetFiles = new Map([
   ["right-snap", ["test/e2e/plasmon-golden-path-right-snap.spec.ts"]],
   ["left-snap", ["test/e2e/plasmon-golden-path-left-snap.spec.ts"]],
   ["window-lifetime", ["test/e2e/plasmon-golden-path-window-lifetime.spec.ts"]],
-  ["monaco", ["test/e2e/plasmon-monaco-packaged-demo.spec.ts"]],
+  ["monaco", ["test/e2e/plasmon-demo-monaco-packaged.spec.ts"]],
   ["emulatorjs", ["test/e2e/plasmon-emulatorjs-proof.spec.ts"]],
   ["saved-preview", ["test/e2e/plasmon-demo-game.spec.ts"]],
 ]);

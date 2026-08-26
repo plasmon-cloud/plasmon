@@ -200,7 +200,7 @@ case "$target" in
     run_one test/e2e/plasmon-golden-path-window-lifetime.spec.ts
     ;;
   monaco)
-    run_one test/e2e/plasmon-monaco-packaged-demo.spec.ts
+    run_one test/e2e/plasmon-demo-monaco-packaged.spec.ts
     ;;
   emulatorjs)
     run_one test/e2e/plasmon-emulatorjs-proof.spec.ts
