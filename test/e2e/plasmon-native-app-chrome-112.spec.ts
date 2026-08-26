@@ -82,8 +82,7 @@ test("#112 — packaged representative apps expose shared chrome for visual revi
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     await expect(rootExplorer.getByRole("listbox", { name: "Files" })
       .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const documentsEntry = rootExplorer.getByRole("listbox", { name: "Files" })
-      .getByRole("option", { name: "Documents", exact: true });
+    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
     await expect(documentsEntry).toBeVisible();
     await documentsEntry.dblclick();
     const documents = app.locator(".explorer-app").last();
