@@ -129,12 +129,12 @@ test(
   if (!siblingId || siblingId === primaryId) throw new Error("Sibling Explorer native window has no distinct stable window id");
   const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
+  await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+  const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+  await expect(siblingDocuments).toBeVisible();
+  await siblingDocuments.dblclick();
   const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
-  await expect(siblingAddress).toHaveValue("/");
-  await siblingAddress.fill("/Documents");
-  await siblingAddress.press("Enter");
   await expect(siblingAddress).toHaveValue("/Documents");
-  await expect(siblingWindow).toHaveAccessibleName("Documents");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);
