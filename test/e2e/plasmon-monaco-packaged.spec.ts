@@ -55,9 +55,8 @@ test(
 
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const rootAddress = rootExplorer.getByRole("textbox", { name: "Address" });
-    await rootAddress.fill("/Documents");
-    await rootAddress.press("Enter");
+    await rootExplorer.getByRole("complementary", { name: "Favorites" })
+      .getByRole("button", { name: "Documents", exact: true }).click();
 
     const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });

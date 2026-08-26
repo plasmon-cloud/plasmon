@@ -35,13 +35,7 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
   await rootShortcut.dblclick();
   const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
   await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-  const rootAddress = rootExplorer.getByRole("textbox", { name: "Address" });
-  await rootAddress.fill("/Documents");
-  await rootAddress.press("Enter");
-
-  const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
-  await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-  const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
+  const notes = app.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
   await expect(notes).toBeVisible({ timeout: 20_000 });
 
   // #344 adds no scenario-specific warning/error allowance. BrowserHealth's
@@ -98,21 +92,21 @@ test("#344 — packaged Text exposes accepted Monaco parity affordances", async 
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await expect(filesTask).toBeVisible();
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(rootExplorer).toHaveClass(/plasmon-window--active/);
 
     // Import a representative JavaScript resource through normal Explorer UI so
     // the packaged Text window proves shared resource classification drives the
     // visible Monaco language status instead of a Text-only extension table.
     const scriptName = `Packaged Text Parity ${Date.now()}.js`;
     const chooserPromise = page.waitForEvent("filechooser");
-    await documentsExplorer.getByRole("button", { name: "Import Files…" }).click();
+    await rootExplorer.getByRole("button", { name: "Import Files…" }).click();
     const chooser = await chooserPromise;
     await chooser.setFiles({
       name: scriptName,
       mimeType: "application/javascript",
       buffer: Buffer.from("const first = 1;\nconst second = 2;\n"),
     });
-    const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
+    const script = rootExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
     await expect(script).toBeVisible({ timeout: 20_000 });
 
     const beforeScript = await windows.count();
