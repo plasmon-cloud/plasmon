@@ -12,7 +12,7 @@ const COMPACT_HEADING_SOURCE = "#hello";
 
 test(
   "#114 packaged Markdown exposes formatter, commands, and basic rendered Preview",
-  { tag: ["@issue-114", "@issue-416"] },
+  { tag: ["@r2-quarantine", "@issue-114", "@issue-416", "@issue-507"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
