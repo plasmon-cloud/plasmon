@@ -1,12 +1,12 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { FsNode } from "../contracts/index.ts";
-import { PinIcon, SystemIcon } from "../visual/primitives.tsx";
+import { PinIcon, SystemIcon, type ResourceIconPresentation } from "../visual/primitives.tsx";
 import { ShellIcon } from "./icon.tsx";
 import type { StartSurfaceViewState } from "./start-surface-state.ts";
 import "./startSurface.scss";
 
 export interface StartItemPresentation {
-  icon?: string;
+  icon?: string | ResourceIconPresentation;
   shortcut: boolean;
   subtitle: string;
   context?: { kind: "native" | "element"; id: string };
