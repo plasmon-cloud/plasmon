@@ -1,6 +1,7 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { FsNode, FsService } from "./contracts/index.ts";
 import { readResourcePreviewMetadata } from "./fs/resourcePreview.ts";
+import { readSharedShortcut } from "./fs/shortcut.ts";
 import {
   canLoadImageThumbnail,
   canLoadVideoThumbnail,
@@ -17,10 +18,42 @@ interface ThumbnailState {
   url: string;
 }
 
+async function resolveThumbnailNode(
+  fs: FsService,
+  node: FsNode,
+  signal: AbortSignal,
+): Promise<FsNode | null> {
+  let current = node;
+  const visited = new Set<string>();
+
+  while (!signal.aborted) {
+    if (visited.has(current.id)) return null;
+    visited.add(current.id);
+
+    if (readResourcePreviewMetadata(current)
+      || canLoadImageThumbnail(current)
+      || canLoadVideoThumbnail(current)) {
+      return current;
+    }
+
+    const shortcut = readSharedShortcut(current);
+    if (!shortcut || shortcut.target.kind !== "node") return null;
+    try {
+      current = await fs.stat(shortcut.target.nodeId);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Browser lifecycle adapter for bounded filesystem thumbnails. The loader owns
  * no classification policy beyond the canonical filesystem classifier and any
- * object/media resources are aborted/revoked on replacement or unmount.
+ * object/media resources are aborted/revoked on replacement or unmount. A
+ * node-target shortcut may borrow the target resource's thumbnail while the
+ * caller retains shortcut composition/overlay presentation.
  */
 export function useResourceThumbnail(
   fs: FsService,
@@ -32,6 +65,8 @@ export function useResourceThumbnail(
   const ownVideoMime = node ? videoThumbnailMime(node) : null;
   const canLoadOwnImage = node ? canLoadImageThumbnail(node) : false;
   const canLoadOwnVideo = node ? canLoadVideoThumbnail(node) : false;
+  const shortcut = node ? readSharedShortcut(node) : null;
+  const shortcutTargetNodeId = shortcut?.target.kind === "node" ? shortcut.target.nodeId : null;
   const sourceKey = node
     ? JSON.stringify([
         node.id,
@@ -44,6 +79,7 @@ export function useResourceThumbnail(
         preview?.byteSize ?? null,
         ownImageMime,
         ownVideoMime,
+        shortcutTargetNodeId,
       ])
     : null;
   const [thumbnail, setThumbnail] = useState<ThumbnailState | null>(null);
@@ -59,13 +95,16 @@ export function useResourceThumbnail(
     }
 
     const hasReferencedPreview = preview !== null;
-    if (!hasReferencedPreview && !canLoadOwnImage && !canLoadOwnVideo) {
+    if (!hasReferencedPreview && !canLoadOwnImage && !canLoadOwnVideo && !shortcutTargetNodeId) {
       setThumbnail(null);
       return undefined;
     }
 
     const load = () => {
-      void loadResourceThumbnail(fs, node, URL, { signal: controller.signal })
+      void resolveThumbnailNode(fs, node, controller.signal)
+        .then((thumbnailNode) => thumbnailNode
+          ? loadResourceThumbnail(fs, thumbnailNode, URL, { signal: controller.signal })
+          : null)
         .then((nextThumbnail) => {
           if (!nextThumbnail) {
             if (active) setThumbnail(null);
