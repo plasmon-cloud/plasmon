@@ -43,7 +43,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
     // Use only the ordinary Root/Documents filesystem. The test creates every
-    // resource it opens, so it does not depend on demo assets or another test.
+    // resource it opens and owns its setup independently.
     const rootShortcut = app.getByRole("region", { name: "Desktop" }).locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
     await rootShortcut.click();
