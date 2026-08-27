@@ -121,7 +121,9 @@ test("#429 — packaged Start follows global visibility for an existing hidden t
     await shortcutRename.fill(START_FIXTURE_NAME);
     await shortcutRename.press("Enter");
 
-    const shortcut = files.getByRole("option").filter({ hasText: START_FIXTURE_NAME }).first();
+    // Match the shortcut's exact name; the hidden target filename contains the
+    // same words and must not be selected for Cut.
+    const shortcut = files.getByRole("option", { name: START_FIXTURE_NAME, exact: true });
     await expect(shortcut).toBeVisible({ timeout: 20_000 });
     await shortcut.click();
     const cut = toolbar.getByRole("button", { name: "Cut", exact: true });
