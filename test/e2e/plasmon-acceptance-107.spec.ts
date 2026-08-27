@@ -37,15 +37,16 @@ async function openExplorer(app: FrameLocator): Promise<Locator> {
   await expect(windows).toHaveCount(before + 1, { timeout: 20_000 });
   const explorer = windows.last();
   await expect(explorer.getByRole("region", { name: "File Explorer" })).toBeVisible();
-  await expect(explorer.getByRole("textbox", { name: "Address" })).toBeVisible();
+  await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
   return explorer;
 }
 
-async function navigateExplorer(explorer: Locator, path: string): Promise<void> {
-  const address = explorer.getByRole("textbox", { name: "Address" });
-  await address.fill(path);
-  await address.press("Enter");
-  await expect(address).toHaveValue(path, { timeout: 20_000 });
+async function openRootDirectory(explorer: Locator, name: string): Promise<void> {
+  const files = explorer.getByRole("listbox", { name: "Files" });
+  const directory = files.locator('[data-fm-node-id][data-fm-kind="directory"]', { hasText: name }).first();
+  await expect(directory).toBeVisible({ timeout: 20_000 });
+  await directory.dblclick();
+  await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue(`/${name}`, { timeout: 20_000 });
 }
 
 async function createTextDocument(explorer: Locator, name: string) {
@@ -97,8 +98,8 @@ test("#107 packaged Search dismisses on an outside workspace click without launc
 test("#107 directly activates installed /Apps/Review.neutron and produces a browser-owned FileManager download", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
-    const explorer = await openExplorer(app);
-    await navigateExplorer(explorer, "/Apps");
+    let explorer = await openExplorer(app);
+    await openRootDirectory(explorer, "Apps");
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
     const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review" }).first();
     await expect(reviewProjection).toBeVisible({ timeout: 20_000 });
@@ -109,7 +110,10 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
     const review = page.frameLocator(reviewSelector).last();
     await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 10_000 });
 
-    await navigateExplorer(explorer, "/Desktop");
+    // Re-open Root rather than typing into Explorer's display-only address field.
+    // The real FileManager navigation boundary is canonical directory activation.
+    explorer = await openExplorer(app);
+    await openRootDirectory(explorer, "Desktop");
     const chooser = page.waitForEvent("filechooser");
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     const filename = `issue-107-download-${Date.now()}.txt`;
@@ -141,7 +145,7 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
   const { app, health } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
-    await navigateExplorer(explorer, "/Desktop");
+    await openRootDirectory(explorer, "Desktop");
     const suffix = Date.now();
     const restoreName = `Issue 107 Restore ${suffix}.txt`;
     const deleteName = `Issue 107 Permanent ${suffix}.txt`;
@@ -186,7 +190,7 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
   const { app, health } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
-    await navigateExplorer(explorer, "/Desktop");
+    await openRootDirectory(explorer, "Desktop");
     const chooser = page.waitForEvent("filechooser");
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     const filename = `issue-107-unsupported-${Date.now()}.webm`;
