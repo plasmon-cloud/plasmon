@@ -140,13 +140,11 @@ jobs:
               for source, pattern in [
                   (body, r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b"),
                   (body, r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b"),
-                  (title, r"^(#?)(\d+)\b"),
+                  (title, r"^#(\d+)\b"),
               ]:
                   match = re.search(pattern, source)
-                  if match:
-                      n = int(match.groups()[-1])
-                      if n in lane_numbers:
-                          return n
+                  if match and int(match.group(1)) in lane_numbers:
+                      return int(match.group(1))
               return None
 
           pr_to_issue = {int(pr["number"]): issue for pr in raw_prs if (issue := map_pr(pr))}
@@ -213,6 +211,8 @@ jobs:
           def ci_state(checks):
               if not checks:
                   return "pending"
+              # Terminal red is authoritative immediately; an unrelated running
+              # check must not hide evidence that is already inspectable.
               failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
               if failed:
                   names = {str(x.get("name") or "").lower() for x in failed}
@@ -245,6 +245,8 @@ jobs:
                                   path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test)
                                   for path in changed_files
                               )
+                              # Only infer an explicit negative from a path-like
+                              # test identity. A title-only identity is unknown.
                               modified_in_pr = True if matched else (False if "/" in test else None)
                       else:
                           modified_in_pr = bool(producer_modified)
