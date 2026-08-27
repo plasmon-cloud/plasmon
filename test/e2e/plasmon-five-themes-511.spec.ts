@@ -50,6 +50,7 @@ async function computed(locator: Locator, property: "backgroundColor" | "color" 
 }
 
 test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the packaged app", async ({ page }) => {
+  test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -81,10 +82,15 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible();
+    await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
-    await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 30_000 });
+    // Match the established packaged-Shell acceptance boundary: the Taskbar is
+    // the canonical user-visible signal that the app frame has mounted. Waiting
+    // on an internal aria-busy attribute made this test uniquely vulnerable to
+    // a slow first iframe boot even though the same launch passed on retry.
+    const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+    await expect(taskbar).toBeVisible({ timeout: 60_000 });
 
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
