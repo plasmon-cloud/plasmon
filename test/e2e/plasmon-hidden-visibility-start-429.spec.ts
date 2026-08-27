@@ -51,8 +51,14 @@ async function expectStartFixture(plasmon: FrameLocator, visible: boolean): Prom
   await expect(start).toBeVisible();
   await expect(plasmon.getByText("Loading Start Menu…")).toHaveCount(0, { timeout: 30_000 });
   const fixture = start.getByText(START_FIXTURE_NAME, { exact: true });
-  if (visible) await expect(fixture).toBeVisible({ timeout: 20_000 });
-  else await expect(fixture).toHaveCount(0);
+  if (visible) {
+    await expect(fixture).toBeVisible({ timeout: 20_000 });
+    // Let the shared icon request settle before hiding the row again; otherwise
+    // removing the image while it is loading creates a false BrowserHealth
+    // failure for this otherwise self-contained acceptance.
+    const icon = fixture.locator("xpath=ancestor::button[1]").locator("img").first();
+    await expect.poll(() => icon.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+  } else await expect(fixture).toHaveCount(0);
   await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 }
 
