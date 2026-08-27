@@ -75,7 +75,7 @@ test("#426 resource thumbnails use canonical image classification without a priv
   expect(revoked).toEqual(["blob:canonical-image"]);
 });
 
-test("#509 SVG resources render their own vector bytes through the canonical image thumbnail path", async () => {
+test("#509 direct SVG resources preserve vector bytes and MIME in the bounded image loader", async () => {
   const { fs, node, content } = await createSvg();
 
   expect(node.mime).toBeUndefined();
