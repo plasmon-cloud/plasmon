@@ -7,6 +7,7 @@ import {
   createVideoThumbnailCleanup,
   imageThumbnailMime,
   loadImageThumbnail,
+  loadResourceThumbnail,
   MAX_IMAGE_THUMBNAIL_BYTES,
   MAX_VIDEO_THUMBNAIL_BYTES,
   representativeVideoFrameTime,
@@ -22,6 +23,16 @@ async function createImage() {
   const created = await fs.createFile(root.id, "photo.png");
   await fs.write(created.id, Uint8Array.from([137, 80, 78, 71]), { truncate: true });
   return { fs, node: await fs.stat(created.id) };
+}
+
+async function createSvg() {
+  const fs = new PersistentFsService(new MemoryFsRepository());
+  const root = await fs.resolvePath("/");
+  if (!root || root.kind !== "directory") throw new Error("test filesystem root unavailable");
+  const content = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="#7c3aed"/></svg>';
+  const created = await fs.createFile(root.id, "vector.svg");
+  await fs.write(created.id, new TextEncoder().encode(content), { truncate: true });
+  return { fs, node: await fs.stat(created.id), content };
 }
 
 function fileNode(name: string, size: number, mime?: string): FsNode {
@@ -62,6 +73,48 @@ test("#426 resource thumbnails use canonical image classification without a priv
   loaded?.revoke();
   loaded?.revoke();
   expect(revoked).toEqual(["blob:canonical-image"]);
+});
+
+test("#509 SVG resources render their own vector bytes through the canonical image thumbnail path", async () => {
+  const { fs, node, content } = await createSvg();
+
+  expect(node.mime).toBeUndefined();
+  expect(imageThumbnailMime(node)).toBe("image/svg+xml");
+  expect(canLoadImageThumbnail(node)).toBe(true);
+
+  const blobs: Blob[] = [];
+  const revoked: string[] = [];
+  const loaded = await loadResourceThumbnail(fs, node, {
+    createObjectURL(blob) {
+      blobs.push(blob);
+      return "blob:svg-thumbnail";
+    },
+    revokeObjectURL(url) {
+      revoked.push(url);
+    },
+  });
+
+  expect(loaded?.url).toBe("blob:svg-thumbnail");
+  expect(blobs).toHaveLength(1);
+  expect(blobs[0]?.type).toBe("image/svg+xml");
+  expect(await blobs[0]?.text()).toBe(content);
+  loaded?.revoke();
+  expect(revoked).toEqual(["blob:svg-thumbnail"]);
+
+  const opaqueRevoked: string[] = [];
+  const opaque = await loadImageThumbnail(fs, node, {
+    createObjectURL() {
+      return "blob:null/svg-thumbnail-509";
+    },
+    revokeObjectURL(url) {
+      opaqueRevoked.push(url);
+    },
+  });
+  expect(opaque?.url).toStartWith("data:image/svg+xml;base64,");
+  expect(opaqueRevoked).toEqual(["blob:null/svg-thumbnail-509"]);
+
+  expect(canLoadImageThumbnail(fileNode("empty.svg", 0))).toBe(false);
+  expect(canLoadImageThumbnail(fileNode("large.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1))).toBe(false);
 });
 
 test("#93 sandbox-null object URLs are revoked and replaced by a loadable data URL", async () => {
