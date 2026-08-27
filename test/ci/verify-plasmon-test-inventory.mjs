@@ -16,7 +16,7 @@ const activeQuarantines = Object.freeze({
   'test/e2e/plasmon-golden-path-window-lifetime.spec.ts': { count: 2, issues: ['@issue-251', '@issue-308'] },
   'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
   'test/e2e/plasmon-monaco-workers-89.spec.ts': { count: 1, issues: ['@issue-89', '@issue-391'] },
-  'test/e2e/plasmon-text-language-transition.spec.ts': { count: 1, issues: ['@issue-415', '@issue-434'] },
+  'test/e2e/plasmon-demo-text-language-transition.spec.ts': { count: 1, issues: ['@issue-415', '@issue-434'] }
 });
 
 function sameSet(actual, expected) {
