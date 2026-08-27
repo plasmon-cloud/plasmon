@@ -18,6 +18,12 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
 
+## #308 Alt-Tab multi-instance restoration
+
+Issue #308 restores the exact `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` acceptance to required serialized Specialist execution. The exact restoration head `a3e2686bf49626075cb302093d980c6028e32698` preserves its complete Windowing MRU and BrowserHealth assertions while removing only the quarantine tag.
+
+Flake Probe run `32757831146` produced ten successful retries=0 baseline packets and fifty successful targeted characterization packets, exceeding the required clean first-attempt evidence without sleeps, retries, timeout inflation, weakened assertions, or Product hooks.
+
 ## #279 left-snap / snap-preview restoration proof
 
 Issue #279 restores `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap` — to required serialized Specialist execution. This is the restoration owner for the quarantine created under #277. The test retains `@issue-277` history and adds `@issue-279`; it no longer carries `@r2-quarantine` on the restoration head.
@@ -32,13 +38,7 @@ The #308 Alt-Tab acceptance retains the second-Explorer quarantine independently
 
 Issue #251 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — to required serialized Specialist execution. The exact restoration head `342a9f1e19482f806232ce4c33c5da2a8d43600e` preserves the real Desktop FileManager selection and Enter activation path, exact second-window and Root-address assertions, 60 close/reopen cycles, and strict browser boundaries without sleeps, retries, timeout inflation, weakened counts, or Product hooks.
 
-Flake Probe run `32757768636` produced ten successful retries=0 baseline packets on the exact restoration head, exceeding the five-clean first-attempt requirement. The quarantine tag and inventory entry were removed only for #251.
-
-## #308 Alt-Tab multi-instance restoration
-
-Issue #308 restores the `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` acceptance in `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` to required serialized Specialist execution. The exact restoration head `a3e2686bf49626075cb302093d980c6028e32698` preserves distinct native-window IDs, MRU cycling, minimize/restore, Escape cancellation, close lifecycle, and BrowserHealth assertions while removing only the quarantine tag.
-
-Flake Probe run `32757831146` produced ten successful retries=0 baseline packets and fifty successful targeted characterization packets on the exact restoration head. This exceeds the required clean first-attempt evidence without sleeps, retries, timeout inflation, weakened assertions, or Product hooks.
+Flake Probe run `32757768636` produced ten successful retries=0 baseline packets on the exact restoration head, exceeding the five-clean first-attempt requirement. The quarantine tag and inventory entry were removed only for #251; the separate #308 Alt-Tab acceptance remains quarantined pending its own restoration evidence.
 
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
@@ -55,6 +55,8 @@ The preserved retry-free failures reached the directory-drop operation/refresh p
 Issue #303 restores `test/e2e/plasmon-demo-review.spec.ts` — `[demo profile] #118 groups canonical Explorer processes and focuses individual members` — to required Specialist execution. The repair binds the already-created primary Explorer by stable native-window identity and waits for that same production window to publish accessible name `This Plasmon` before minimizing it. The final grouped chooser assertion remains exactly `This Plasmon; Minimized`; no sleep, retry, timeout inflation, Product hook, fallback selector, or weakened chooser assertion is introduced.
 
 Exact repair head `af8e6e763ad7e9a75433d8a16e9d7fc92913038e` produced 10/10 clean retry-free baseline packets and 50/50 targeted characterization packets, for 60/60 clean first-attempt executions with no chooser-title recurrence. The exact #118 acceptance is therefore removed from `@r2-quarantine` while the rest of `plasmon-demo-review.spec.ts` remains required and unchanged.
+
+Issue #500 supplies the neutral Markdown companion acceptance in `test/e2e/plasmon-markdown-commands-114.spec.ts`. It creates a unique Markdown resource through packaged FileManager operations and exercises Markdown commands and preview semantics without demo assets, demo filenames, query fixtures, or unrelated application state.
 
 ## #420 drag-feedback request-cancellation restoration
 
@@ -124,6 +126,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
 - `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — required; #251 sibling-lifetime and #63 Alt-Tab acceptances are restored and retain their complete lifecycle assertions.
 - `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
+- `test/e2e/plasmon-markdown-commands-114.spec.ts` — required; #500 provides neutral Markdown command and Preview coverage.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-explorer-documents-405.spec.ts` — required; #405 verifies neutral Root-to-Documents activation and creates its own destination file.
