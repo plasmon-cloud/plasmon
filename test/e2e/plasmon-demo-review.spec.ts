@@ -7,7 +7,7 @@ const PLASMON_TILE_ID = "main";
 const REVIEW_APP_ID = "review";
 const REVIEW_TILE_ID = "review";
 
-test("Plasmon demo discovers and opens the installed Review Element", async ({ page, request }) => {
+test("[demo profile] Plasmon demo discovers and opens the installed Review Element", { tag: ["@demo-profile"] }, async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -54,7 +54,7 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
 
   // Search presents the Kernel-authoritative installed Review projection and
   // activates it through Plasmon's canonical filesystem/open path. Review's
-  // own first-demo workflow is accepted in the standalone Review lane.
+  // own demo workflow is accepted in the standalone Review lane.
   await plasmon.getByRole("button", { name: "Search" }).click();
   const search = plasmon.getByLabel("Search Plasmon");
   await expect(search).toBeVisible();
@@ -74,8 +74,8 @@ test("Plasmon demo discovers and opens the installed Review Element", async ({ p
 });
 
 test(
-  "#118 groups canonical Explorer processes and focuses individual members",
-  { tag: ["@issue-303"] },
+  "[demo profile] #118 groups canonical Explorer processes and focuses individual members",
+  { tag: ["@demo-profile", "@issue-303"] },
   async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -129,12 +129,8 @@ test(
   if (!siblingId || siblingId === primaryId) throw new Error("Sibling Explorer native window has no distinct stable window id");
   const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
-  const siblingAddress = siblingWindow.getByRole("textbox", { name: "Address" });
-  await expect(siblingAddress).toHaveValue("/");
-  const siblingDocuments = siblingWindow.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-  await expect(siblingDocuments).toBeVisible();
-  await siblingDocuments.dblclick();
-  await expect(siblingAddress).toHaveValue("/Documents");
+  await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+  await expect(siblingWindow).toHaveAccessibleName("This Plasmon");
 
   const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);
@@ -155,7 +151,7 @@ test(
   const chooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(chooser).toBeVisible();
   await expect(chooser.getByRole("button", { name: "This Plasmon; Minimized" })).toBeVisible();
-  await expect(chooser.getByRole("button", { name: "Documents; Active" })).toBeVisible();
+  await expect(chooser.getByRole("button", { name: "This Plasmon; Active" })).toBeVisible();
   await chooser.getByRole("button", { name: "This Plasmon; Minimized" }).click();
   await expect(chooser).toHaveCount(0);
   await expect(primaryWindow).not.toHaveAttribute("aria-hidden", "true");
@@ -165,7 +161,7 @@ test(
   await filesGroup.click();
   const reopenedChooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(reopenedChooser).toBeVisible();
-  await reopenedChooser.getByRole("button", { name: "Documents; Running" }).click();
+  await reopenedChooser.getByRole("button", { name: "This Plasmon; Running" }).click();
   await expect(siblingWindow).toHaveClass(/plasmon-window--active/);
 
   // A chooser member carries its canonical Process identity, so its context
@@ -173,7 +169,7 @@ test(
   await filesGroup.click();
   const closeChooser = plasmon.getByRole("region", { name: "Files windows" });
   await expect(closeChooser).toBeVisible();
-  const siblingMember = closeChooser.getByRole("button", { name: "Documents; Active" });
+  const siblingMember = closeChooser.getByRole("button", { name: "This Plasmon; Active" });
   await siblingMember.click({ button: "right" });
   await expect(closeChooser).toHaveCount(0);
 

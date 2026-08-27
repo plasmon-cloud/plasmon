@@ -78,3 +78,72 @@ jobs:
           path: playwright-report/
           if-no-files-found: error
           retention-days: 14
+
+  packaged-demo:
+    name: Packaged Playwright demo acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package and run Plasmon demo browser acceptance
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm ci
+            npm --workspace neutron-design-system run build
+            npm run plasmon:demo:prepare
+
+            npm run plasmon:demo:serve > /tmp/plasmon-demo-pocketic.log 2>&1 &
+            server_pid=$!
+            trap '\''status=$?; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/plasmon-demo-pocketic.log || true; fi; exit "$status"'\'' EXIT
+
+            pocketic_ready=0
+            for attempt in $(seq 1 180); do
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                echo "PocketIC demo serve exited before becoming ready" >&2
+                cat /tmp/plasmon-demo-pocketic.log >&2 || true
+                exit 1
+              fi
+              if grep -q "^PocketIC .* is ready$" /tmp/plasmon-demo-pocketic.log 2>/dev/null; then
+                pocketic_ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [ "$pocketic_ready" -ne 1 ]; then
+              echo "PocketIC demo serve did not complete startup" >&2
+              cat /tmp/plasmon-demo-pocketic.log >&2 || true
+              exit 1
+            fi
+
+            npm run plasmon:demo:status
+            npm run plasmon:demo:reinstall
+            npm run test:e2e:plasmon:demo
+            NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json npx --no-install playwright test --workers=1 --retries=0 --grep-invert @r2-quarantine \
+              test/e2e/plasmon-demo-markdown-commands-114.spec.ts \
+              test/e2e/plasmon-demo-monaco-packaged.spec.ts \
+              test/e2e/plasmon-demo-native-app-chrome-112.spec.ts \
+              test/e2e/plasmon-demo-photos-expand-180.spec.ts \
+              test/e2e/plasmon-demo-review.spec.ts \
+              test/e2e/plasmon-demo-text-language-transition.spec.ts \
+              test/e2e/plasmon-demo-text-parity-344.spec.ts
+          '
+
+      - name: Upload Demo Playwright report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-demo-report-${{ github.run_attempt }}
+          path: playwright-report/
+          if-no-files-found: error
+          retention-days: 14

@@ -3,7 +3,7 @@ import type { FsNode, FsService } from "../contracts/index.ts";
 import { StartSurface, type StartItemPresentation } from "./StartSurface.tsx";
 import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
 import { projectStartSurfaceView, type StartTrailItem } from "./start-surface-state.ts";
-import { listStartMenuFolder } from "./startMenu.ts";
+import { listVisibleStartMenuFolder } from "./startVisibility.ts";
 
 export interface StartSurfaceControllerProps {
   active: boolean;
@@ -79,7 +79,7 @@ export function StartSurfaceController({
     if (!active || !currentFolder) return undefined;
     let mounted = true;
     setBusy(true);
-    void listStartMenuFolder(fs, currentFolder.id)
+    void listVisibleStartMenuFolder(fs, currentFolder.id)
       .then((nodes) => {
         if (!mounted) return;
         setItems(nodes);
