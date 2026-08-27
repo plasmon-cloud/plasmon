@@ -1,0 +1,54 @@
+@layer app {
+  :root {
+    /*
+     * Plasmon-owned icon artwork uses this small semantic palette. These are
+     * presentation slots, not filesystem/resource semantics; externally
+     * authored application icons and user media remain untouched.
+     */
+    --plasmon-icon-primary: #17373a;
+    --plasmon-icon-secondary: #63c6ca;
+    --plasmon-icon-accent: #84e3b0;
+    --plasmon-icon-outline: #91d9ba;
+    --plasmon-icon-highlight: #d7f7e6;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-dark"] {
+    --plasmon-icon-primary: #17373a;
+    --plasmon-icon-secondary: #63c6ca;
+    --plasmon-icon-accent: #84e3b0;
+    --plasmon-icon-outline: #91d9ba;
+    --plasmon-icon-highlight: #d7f7e6;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-midnight"] {
+    --plasmon-icon-primary: #30264f;
+    --plasmon-icon-secondary: #8070d8;
+    --plasmon-icon-accent: #b9abff;
+    --plasmon-icon-outline: #cabfff;
+    --plasmon-icon-highlight: #eeeaff;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-ember"] {
+    --plasmon-icon-primary: #49301c;
+    --plasmon-icon-secondary: #d57b34;
+    --plasmon-icon-accent: #ffb454;
+    --plasmon-icon-outline: #efad69;
+    --plasmon-icon-highlight: #ffe2b6;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-glacier"] {
+    --plasmon-icon-primary: #c7e0e9;
+    --plasmon-icon-secondary: #4ca0bb;
+    --plasmon-icon-accent: #087ea4;
+    --plasmon-icon-outline: #397c91;
+    --plasmon-icon-highlight: #ffffff;
+  }
+
+  .plasmon-shell[data-plasmon-theme="plasmon-rosewood"] {
+    --plasmon-icon-primary: #542238;
+    --plasmon-icon-secondary: #c45e7d;
+    --plasmon-icon-accent: #ff8faa;
+    --plasmon-icon-outline: #ef91a9;
+    --plasmon-icon-highlight: #ffe1e9;
+  }
+}
