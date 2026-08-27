@@ -108,14 +108,25 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     await explorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
     await expect(explorerAddress).toHaveValue("/Documents");
     await expect(explorer).toHaveAccessibleName("Documents");
-    const notes = explorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
-    await expect(notes).toBeVisible();
+
+    // Theme acceptance should not depend on a particular seeded demo filename.
+    // Create the text resource through FileManager so this test owns its Monaco
+    // fixture while still exercising the supported Explorer -> Text launch path.
+    const generatedName = `Issue 511 Theme Probe ${Date.now()}.txt`;
+    await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    const generatedRename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
+    await expect(generatedRename).toBeVisible();
+    await generatedRename.fill(generatedName);
+    await generatedRename.press("Enter");
+
+    const themeProbe = explorer.locator("[data-fm-node-id]", { hasText: generatedName }).first();
+    await expect(themeProbe).toBeVisible({ timeout: 20_000 });
     const beforeText = await windows.count();
-    await notes.dblclick();
+    await themeProbe.dblclick();
     await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
 
     const textWindow = windows.last();
-    await expect(textWindow).toHaveAccessibleName("First Demo Notes.txt - Monaco Editor");
+    await expect(textWindow).toHaveAccessibleName(`${generatedName} - Monaco Editor`);
     const monacoSurface = textWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
     // Monaco's root is a layout container and can remain transparent. The
