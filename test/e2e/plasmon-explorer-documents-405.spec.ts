@@ -22,7 +22,7 @@ async function openPlasmon(page: Page): Promise<FrameLocator> {
   return app;
 }
 
-test("#405 Explorer activates the standard Documents directory without demo fixtures", async ({ page }) => {
+test("#405 Explorer activates the standard Documents directory without demo fixtures", { tag: ["@issue-405", "@issue-498"] }, async ({ page }) => {
   test.setTimeout(120_000);
   const app = await openPlasmon(page);
   const desktop = app.getByRole("region", { name: "Desktop" });
