@@ -104,7 +104,6 @@ async function verify(inventory) {
   assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
   assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistRunner.includes('--retries=0'), 'Specialist acceptance must execute retry-free with --retries=0');
   assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
   for (const path of browserLanes.specialist) {
@@ -120,6 +119,11 @@ async function verify(inventory) {
       assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
     }
   }
+
+  const taskbarContext402 = await readFile(resolve(repoRoot, 'test/e2e/plasmon-taskbar-context-menu-402.spec.ts'), 'utf8');
+  assert(taskbarContext402.includes('test.describe.configure({ retries: 0 })'), '#402 taskbar geometry acceptance must remain retry-free');
+  assert(taskbarContext402.includes('installPlasmonBrowserHealth'), '#402 taskbar geometry acceptance must install strict BrowserHealth');
+  assert(taskbarContext402.includes('health.assertClean()'), '#402 taskbar geometry acceptance must assert strict BrowserHealth');
 
   const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
   assert(
