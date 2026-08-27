@@ -16,7 +16,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | --- | --- | --- | --- |
 | Alt-Tab multi-instance setup | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — tags `@r2-quarantine @issue-63 @issue-308` | second-Explorer creation failure occurs before Alt-Tab semantics are reached | #308 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
-| #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
 
@@ -60,7 +59,11 @@ Trace evidence identified the aborted `file.svg` as presentation churn on the sa
 
 #420 remains the restoration owner until its required exact-head unquarantined retries=0 proof completes.
 
-The #406 quarantine is limited to the single #371 Explorer-to-Desktop placement acceptance. It is now present on `release/0.1.0-r2`, satisfying #406's integration boundary for temporary quarantine. The test body and its same-NodeId move, drop-target, grab-offset, ghost-release, committed-position, and strict BrowserHealth assertions remain unchanged; only the exact test is tagged. Product Issue #371 remains the behavior owner while #406 owns repair and restoration.
+## #406 Explorer-to-Desktop placement restoration
+
+Issue #406 restores `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — to required Specialist execution. Historical trace classification showed the #371 same-NodeId filesystem move and persisted Desktop placement were already correct; the original 47 px geometry displacement was caused by #317 runtime-concurrency error-banner contamination, and the later BrowserHealth recurrence was the separately repaired #420 presentation-lifecycle signature.
+
+Exact unquarantined head `31c4bfd22b6b93ae1573153f940f4eb31e12ca85` completed Flake Probe run `32912928369` with 10/10 clean retry-free baseline packets and 50/50 clean targeted characterization iterations. Fast, Smoke, Specialist, Persistence, and Kernel CI were also green on that head. The acceptance retains same NodeId, filesystem parent-move authority, grab offset, drag-preview/drop-target, ghost/release geometry, committed Desktop position, existing geometry tolerances, and strict BrowserHealth; only the #406 quarantine boundary is removed.
 
 ## #330 diagnostic-selection / New Folder rename restoration
 
@@ -120,7 +123,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
 - `test/e2e/plasmon-drag-preview-66.spec.ts` — required; #320 restores the exact #66 acceptance with its canonical final directory-drop assertion unchanged.
 - `test/e2e/plasmon-drag-feedback-360.spec.ts` — required; #420 restores the open-folder move, target-transition/invalid/cancel/unmount, and grouped multi-selection acceptances while the Desktop ghost/release-continuity acceptance remains continuously required.
-- `test/e2e/plasmon-drag-placement-371.spec.ts` — retained; its single #371/#406 placement acceptance is quarantined pending deterministic repair and restoration proof.
+- `test/e2e/plasmon-drag-placement-371.spec.ts` — required; #406 restores the exact #371 placement acceptance with 60/60 clean retry-free evidence and unchanged same-NodeId/geometry/BrowserHealth assertions.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-demo-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
 
@@ -138,7 +141,7 @@ For #304 specifically, the dedicated saved-preview acceptance must be run **unqu
 
 For #320 specifically, the exact #66 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the final canonical Explorer directory-drop assertion before this quarantine is removed.
 
-For #406 specifically, the exact #371 acceptance must be run **unquarantined** with retries=0 and pass five consecutive clean first-attempt packaged Specialist executions while retaining same-NodeId move authority, canonical Desktop placement, grab-offset/ghost-release geometry, committed-position assertions, and strict BrowserHealth before this quarantine is removed.
+For #406 specifically, restoration was satisfied by exact unquarantined head `31c4bfd22b6b93ae1573153f940f4eb31e12ca85`: 10/10 clean retry-free baseline packets plus 50/50 targeted characterization iterations, with same-NodeId move authority, canonical Desktop placement, grab-offset/ghost-release geometry, committed-position assertions, existing tolerances, and strict BrowserHealth unchanged.
 
 For #420 specifically, each of the three exact #360 acceptances must be exercised **unquarantined** with retries=0 and pass five consecutive clean first-attempt packaged Specialist executions before its quarantine is removed. The canonical same-NodeId move, target-transition/invalid/cancel/unmount cleanup, destination feedback, grouped-preview/grouped-move assertions, and strict BrowserHealth must remain intact; no generic request-abort or asset allowance is an acceptable restoration.
 
