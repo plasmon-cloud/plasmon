@@ -51,6 +51,6 @@ export function useFileEntryResolvedPresentation(
     iconPresentation: thumbnailUrl
       ? { kind: "thumbnail", src: thumbnailUrl, mediaKind: "image" }
       : resourcePresentation.presentation,
-    shortcut: !thumbnailUrl && resourcePresentation.shortcut,
+    shortcut: resourcePresentation.shortcut,
   };
 }
