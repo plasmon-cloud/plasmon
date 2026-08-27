@@ -134,6 +134,7 @@ jobs:
               test/e2e/plasmon-demo-monaco-packaged.spec.ts \
               test/e2e/plasmon-demo-native-app-chrome-112.spec.ts \
               test/e2e/plasmon-demo-photos-expand-180.spec.ts \
+              test/e2e/plasmon-demo-review.spec.ts \
               test/e2e/plasmon-demo-text-language-transition.spec.ts \
               test/e2e/plasmon-demo-text-parity-344.spec.ts
           '
