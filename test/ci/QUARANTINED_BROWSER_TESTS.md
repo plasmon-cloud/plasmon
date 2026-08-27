@@ -26,13 +26,19 @@ The restored acceptance uses the shared real-titlebar pointer helper: Playwright
 
 Quarantine removal is provisional until #279's exact-head proof completes. The restoration head must remain retries=0 and pass the requested fresh 10+50 flake-probe evidence plus the Issue-required clean first-attempt Specialist evidence. Any owned red resets the restoration claim; no sleep, timeout inflation, retry-as-fix, Product hook, or geometry weakening is allowed.
 
-The #308 Alt-Tab acceptance retains the second-Explorer quarantine independently; #251's sibling-lifetime acceptance has been restored below after its dedicated repair and retry-free evidence.
+## #308 Alt-Tab multi-instance restoration
+
+Issue #308 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — to required serialized Specialist execution. PR #454 removed only the exact `@r2-quarantine` tag and #308 inventory entry while preserving the full Alt-Tab MRU, minimize/restore, Escape-cancel, close, and strict BrowserHealth assertions.
+
+The shared Explorer activation repair selects the unique Desktop Root and uses the real FileManager listbox Enter boundary for both Explorer launches. It does not add sleeps, retries, timeout inflation, forced actions, weakened window-count assertions, direct Process calls, or Product test hooks.
+
+PR #454 final head `0c97db5f2d83c119d54a6f95cc160f056d2f9d61` was approved with the exact acceptance unquarantined, the packaged Specialist job green, and ten retry-free first-attempt Flake Probe baseline executions clean, exceeding #308's required five-clean restoration proof. PR #454 merged as `922b04618fa393678cf05c18d849d63eb40a445d`. The exact #63 acceptance now carries only `@issue-63` and `@issue-308`; its independent #308 restoration lifecycle is complete.
 
 ## #251 Desktop Root Explorer sibling restoration
 
 Issue #251 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — to required serialized Specialist execution. The exact restoration head `342a9f1e19482f806232ce4c33c5da2a8d43600e` preserves the real Desktop FileManager selection and Enter activation path, exact second-window and Root-address assertions, 60 close/reopen cycles, and strict browser boundaries without sleeps, retries, timeout inflation, weakened counts, or Product hooks.
 
-Flake Probe run `32757768636` produced ten successful retries=0 baseline packets on the exact restoration head, exceeding the five-clean first-attempt requirement. The quarantine tag and inventory entry were removed only for #251; the separate #308 Alt-Tab acceptance remains quarantined pending its own restoration evidence.
+Flake Probe run `32757768636` produced ten successful retries=0 baseline packets on the exact restoration head, exceeding the five-clean first-attempt requirement. The quarantine tag and inventory entry were removed for #251; #308's separate Alt-Tab restoration is recorded independently above.
 
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
