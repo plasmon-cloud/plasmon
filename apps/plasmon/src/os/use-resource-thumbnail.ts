@@ -2,11 +2,11 @@ import { useEffect, useState, type RefObject } from "react";
 import type { FsNode, FsService } from "./contracts/index.ts";
 import { readResourcePreviewMetadata } from "./fs/resourcePreview.ts";
 import { readSharedShortcut } from "./fs/shortcut.ts";
+import { loadResolvedResourceThumbnail } from "./resource-thumbnail-resolution.ts";
 import {
   canLoadImageThumbnail,
   canLoadVideoThumbnail,
   imageThumbnailMime,
-  loadResourceThumbnail,
   videoThumbnailMime,
   type LoadedImageThumbnail,
 } from "./resource-thumbnail.ts";
@@ -16,36 +16,6 @@ interface ThumbnailState {
   elementRef: RefObject<HTMLElement | null>;
   sourceKey: string;
   url: string;
-}
-
-async function resolveThumbnailNode(
-  fs: FsService,
-  node: FsNode,
-  signal: AbortSignal,
-): Promise<FsNode | null> {
-  let current = node;
-  const visited = new Set<string>();
-
-  while (!signal.aborted) {
-    if (visited.has(current.id)) return null;
-    visited.add(current.id);
-
-    if (readResourcePreviewMetadata(current)
-      || canLoadImageThumbnail(current)
-      || canLoadVideoThumbnail(current)) {
-      return current;
-    }
-
-    const shortcut = readSharedShortcut(current);
-    if (!shortcut || shortcut.target.kind !== "node") return null;
-    try {
-      current = await fs.stat(shortcut.target.nodeId);
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
 }
 
 /**
@@ -101,10 +71,7 @@ export function useResourceThumbnail(
     }
 
     const load = () => {
-      void resolveThumbnailNode(fs, node, controller.signal)
-        .then((thumbnailNode) => thumbnailNode
-          ? loadResourceThumbnail(fs, thumbnailNode, URL, { signal: controller.signal })
-          : null)
+      void loadResolvedResourceThumbnail(fs, node, URL, { signal: controller.signal })
         .then((nextThumbnail) => {
           if (!nextThumbnail) {
             if (active) setThumbnail(null);
