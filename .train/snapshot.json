@@ -1,13 +1,13 @@
 {
-  "captured_at": "2026-08-27T20:09:43.493402Z",
+  "captured_at": "2026-08-27T20:26:11.748454Z",
   "counts": {
     "invalid_scheduling_metadata": 0,
-    "issues": 132,
-    "open_ci_prs": 2,
-    "open_issues": 16,
+    "issues": 130,
+    "open_ci_prs": 3,
+    "open_issues": 13,
     "open_product_prs": 0
   },
-  "generation": "abb00e9c25c1cc94cc436654877b534a996731da",
+  "generation": "82b317e8e429bb6a9bfd21e22262fad59c5e9736",
   "issues": [
     {
       "area": "Repo",
@@ -149,7 +149,7 @@
       "effort": "Medium",
       "labels": [],
       "number": 45,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
@@ -160,7 +160,7 @@
       "title": "Add a native Recycle Bin surface for restore, permanent delete, and empty",
       "type": "Feature",
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:49:44Z",
+      "updated_at": "2026-08-27T20:13:08Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/45"
     },
     {
@@ -290,7 +290,7 @@
       },
       "title": "Persist js-dos game progress across close and reopen through Plasmon filesystem state",
       "type": "Feature",
-      "unlocks": 1,
+      "unlocks": 0,
       "updated_at": "2026-08-17T23:29:46Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/64"
     },
@@ -981,37 +981,6 @@
       "unlocks": 0,
       "updated_at": "2026-08-18T00:54:43Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/123"
-    },
-    {
-      "area": "Games",
-      "assignees": [],
-      "blocked_by": [
-        64
-      ],
-      "ci_owned": false,
-      "dependencies_ready": true,
-      "dependency_states": {
-        "64": "closed"
-      },
-      "desire": "Medium",
-      "effort": "Medium",
-      "labels": [
-        "blocked"
-      ],
-      "number": 124,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": true,
-      "scheduling_metadata": {
-        "errors": [],
-        "valid": true
-      },
-      "title": "Generate screenshot thumbnails for persisted game save/snapshot resources",
-      "type": "Feature",
-      "unlocks": 0,
-      "updated_at": "2026-08-25T00:50:42Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/124"
     },
     {
       "area": "Testing",
@@ -2296,34 +2265,6 @@
     },
     {
       "area": "Testing",
-      "assignees": [],
-      "blocked_by": [],
-      "ci_owned": true,
-      "dependencies_ready": true,
-      "dependency_states": {},
-      "desire": "High",
-      "effort": "Medium",
-      "labels": [
-        "blocked",
-        "ci:flaky"
-      ],
-      "number": 289,
-      "open": true,
-      "open_pr": null,
-      "priority": null,
-      "product": false,
-      "scheduling_metadata": {
-        "errors": [],
-        "valid": true
-      },
-      "title": "Packaged Browser PocketIC process exits mid-Specialist execution",
-      "type": "Task",
-      "unlocks": 0,
-      "updated_at": "2026-08-26T20:28:42Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/issues/289"
-    },
-    {
-      "area": "Testing",
       "assignees": [
         "3E4B54"
       ],
@@ -2379,7 +2320,7 @@
       "title": "[r2] Flaky / unrelated CI failure ledger",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T22:49:14Z",
+      "updated_at": "2026-08-27T20:14:02Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/295"
     },
     {
@@ -3031,7 +2972,6 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
-        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -3047,7 +2987,7 @@
       "title": "[r2 CI] Repair and restore installed Review discovery acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T20:26:45Z",
+      "updated_at": "2026-08-27T20:19:42Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/401"
     },
     {
@@ -3060,7 +3000,6 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
-        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -3076,7 +3015,7 @@
       "title": "[r2 CI] Repair and restore taskbar context-menu geometry acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T20:27:11Z",
+      "updated_at": "2026-08-27T20:19:53Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/402"
     },
     {
@@ -3089,7 +3028,6 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
-        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -3105,7 +3043,7 @@
       "title": "[r2 CI] Repair and restore #175 packaged Search geometry acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T20:27:29Z",
+      "updated_at": "2026-08-27T20:20:10Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/403"
     },
     {
@@ -3118,7 +3056,6 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
-        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -3134,14 +3071,12 @@
       "title": "[r2 CI] Repair and restore #194 packaged Start surface acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-26T20:27:54Z",
+      "updated_at": "2026-08-27T20:20:24Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/404"
     },
     {
       "area": "Testing",
-      "assignees": [
-        "3E4B54"
-      ],
+      "assignees": [],
       "blocked_by": [],
       "ci_owned": true,
       "dependencies_ready": true,
@@ -3149,6 +3084,7 @@
       "desire": "High",
       "effort": "Medium",
       "labels": [
+        "blocked",
         "ci:flaky",
         "release-blocker"
       ],
@@ -3164,7 +3100,7 @@
       "title": "[r2 CI] Repair and restore first-demo packaged fixture acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-27T19:54:22Z",
+      "updated_at": "2026-08-27T20:09:19Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/405"
     },
     {
@@ -3469,7 +3405,7 @@
       ],
       "number": 434,
       "open": true,
-      "open_pr": null,
+      "open_pr": 536,
       "priority": null,
       "product": false,
       "scheduling_metadata": {
@@ -3479,7 +3415,7 @@
       "title": "ci: eliminate Text language-transition browser flake and remove the R2 quarantine",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-27T13:44:14Z",
+      "updated_at": "2026-08-27T20:23:11Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/434"
     },
     {
@@ -3779,7 +3715,9 @@
     },
     {
       "area": "File Manager",
-      "assignees": [],
+      "assignees": [
+        "3E4B54"
+      ],
       "blocked_by": [],
       "ci_owned": false,
       "dependencies_ready": true,
@@ -3799,7 +3737,7 @@
       "title": "[r2 UX] Name FileManager-created shortcuts with a \" - Shortcut\" suffix",
       "type": "Bug",
       "unlocks": 0,
-      "updated_at": "2026-08-27T18:11:25Z",
+      "updated_at": "2026-08-27T20:13:39Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/516"
     }
   ],
@@ -4007,14 +3945,219 @@
       "head_branch": "ci/issue-308-alt-tab-restoration",
       "issue": 308,
       "mergeable": true,
-      "mergeable_state": "blocked",
+      "mergeable_state": "clean",
       "number": 454,
       "product": false,
-      "review": "pending",
+      "review": "approved",
       "state": "open",
       "title": "#308 Restore Alt-Tab acceptance on deterministic Explorer activation",
-      "updated_at": "2026-08-27T19:21:39Z",
+      "updated_at": "2026-08-27T20:18:16Z",
       "url": "https://github.com/plasmon-cloud/plasmon/pull/454"
+    },
+    {
+      "base": "release/0.1.0-r2",
+      "base_valid": true,
+      "blocking_review": {
+        "body": "## :x: BLOCKING REVIEW / not ready for approval yet.\n\nReview record: PR #494 / Issue #391\nExact head: `24a98d3b9be462f0ec4410eac5efa768a6863552`\nDeclared base: `release/0.1.0-r2`\nReview timestamp: 2026-08-27T20:10:11Z\nReview ID: `pr-494-24a98d3b9be4-1787860469315-054d0f37`\n\n### 1. Issue and evidence fully inspected\nRead the complete Issue and inspect all evidence before judging the implementation.\n\n- [x] The complete canonical Issue was read, including body, acceptance criteria, comments, links, and dependencies.\n  > Fresh `gh issue view 391 --comments` inspected the complete Issue body, seven acceptance criteria, flake/quarantine history, Coordinator slim-r2 disposition, restoration proof, and latest R3 ownership clarification.\n- [x] Every Issue attachment or linked evidence artifact was inspected, including screenshots, videos, and comparison references.\n  > Issue #391 has no attached screenshots/videos; its linked evidence is the historical Flake Probe/Packaged Browser runs and PR #393, all identified in the Issue and inspected in the bundle/current comments.\n- [x] Related Issues, parent/ancestor PRs, and existing accepted behavior were inspected where relevant.\n  > Fresh related-Issue inspection covered Product #89, source PR #265, ledger #295, closed #369, open #370, and the clarified R3 owners #526/#527; PR #494 targets `release/0.1.0-r2` from `train/ci/issue-391`.\n\n### 2. Issue intent, scope, and protected behavior understood\nIdentify the user problem and intended observable behavior independently of the PR description.\n\n- [x] The user problem and desired observable behavior were stated independently of the PR implementation.\n  > Issue #391\u2019s problem is the quarantined/unstable historical Monaco acceptance under the slim r2 package; its desired behavior is truthful installed editor-worker acceptance, not merely a green test. The PR description matches that independently stated goal.\n- [x] Protected behavior, explicit non-goals, and compatibility boundaries were identified.\n  > The Issue and implementation preserve the slim-package boundary, installed Program Files authority, opaque-origin `blob:` transport, strict BrowserHealth, no retries/sleeps/hooks, and no `ts.worker.js` re-bloat; full language-service parity remains outside r2.\n- [x] The PR scope matches the Issue intent rather than a narrower or implementation-defined substitute.\n  > Fresh PR diff against the declared base contains only ten files: Monaco policy/tests, the Monaco browser acceptance, CI quarantine/inventory records, and the kernel certified-path support needed for spaces in `Program Files`; this matches Issue #391\u2019s slim worker restoration scope.\n\n### 3. Release policy and integration context verified\nCheck release-specific authority, declared bases, stacked dependencies, and which parent work is actually creditable.\n\n- [x] Current assignment, release policy, target branch, and package/version constraints were read.\n  > `SPECIFIC-REVIEW.md` confirms target `release/0.1.0-r2`, Plasmon v0.1.0, manifest version 100, and required CI policy; the current manifest remains version 100 and no package-version bump is required.\n- [x] The declared PR base, stacked-parent relationship, and integration assumptions were verified.\n  > GitHub confirms PR #494 declares base `release/0.1.0-r2`, head `train/ci/issue-391`, and exact head `24a98d3b9be462f0ec4410eac5efa768a6863552`; its integration assumption is the current slim r2 package.\n- [x] Only merged or otherwise explicitly creditable parent behavior was counted as implemented.\n  > The review credits the explicit Coordinator slim-r2 disposition and the declared release base only; the PR itself does not rely on an unmerged parent Product implementation. Historical #89 behavior is treated as superseded only where Issue #391 authorizes it.\n\n### 4. Implementation correctness and failure paths verified\nReview success, failure, boundary, asynchronous, cancellation, cleanup, and regression behavior\u2014not only the happy path.\n\n- [x] Success, failure, empty, exceptional, and boundary paths were inspected where applicable.\n  > Fresh inspection covers positive and negative boundaries: missing Monaco resources fail closed, absent TypeScript/retired paths are rejected, Program Files/mirror/transport bytes are compared, editor readiness/tokenization and worker errors are asserted, and kernel tests cover `%20` acceptance versus other escapes.\n- [x] Async ownership, cancellation, teardown, cleanup, error visibility, and resource ownership were inspected where applicable.\n  > The acceptance installs listeners before navigation, polls bounded readiness/message state, captures page/worker errors, and disposes BrowserHealth in `finally`; the supervisor observes child exit with rejection handling and preserves termination delegation.\n- [x] The change does not materially regress unrelated accepted behavior.\n  > The ten-file diff keeps changes tied to the slim worker path and the encoded-space HTTP boundary; existing path rejection cases remain tested, Monaco full-profile mappings remain covered, and exact-head Fast/Kernel/packaged checks pass.\n\n### 5. Architecture, authority, and subsystem boundaries preserved\nConfirm that behavior remains in the canonical owning layer and does not create parallel authority or cross a product boundary.\n\n- [x] The canonical owning service, model, controller, or adapter remains authoritative.\n  > `monacoEnvironment.ts` remains the worker-policy/browser adapter owner, while Program Files is explicitly the sole logical runtime authority and opaque transports are adapters; kernel path validation remains Kernel-owned.\n- [x] Relevant identity, filesystem, Neutron, Process, Windowing, Shell, security, or other subsystem boundaries remain intact.\n  > The test preserves filesystem/Program Files identity, Kernel-certified HTTP handling, Neutron opaque-origin isolation, classic `blob:` worker construction, and strict BrowserHealth; it does not move package or security authority into Plasmon UI code.\n- [x] No duplicate authority, hidden parallel implementation, or convenience architecture was introduced.\n  > The Monaco README and adapter explicitly define Program Files as the sole logical authority; URL-safe and opaque copies are compatibility transports, and `installMonacoEnvironment` remains a single guarded adapter rather than a second worker catalog.\n\n### 6. Tests are honest, deterministic, and sufficient\nTests must observe production behavior at the lowest truthful layer and must not be weakened or made circular.\n\n- [x] Tests assert user-visible or contract behavior rather than source shape, incidental structure, or constants alone.\n  > The browser test observes HTTP bytes, installed editor readiness/language, rendered token classes, Worker origin/type/blob URL, message counts, warnings, page errors, and BrowserHealth; the focused policy test is appropriately limited to deterministic mapping behavior.\n- [x] Tests use the lowest honest layer with deterministic control and appropriate negative/boundary cases.\n  > Deterministic worker mapping and missing-source behavior are covered in Bun; installed bytes, opaque-origin transport, editor readiness, tokenization, and worker exchange use packaged Playwright polling. The acceptance has no sleeps, forced/fallback assertions, or broad quarantine, and inventory keeps it required.\n- [x] Fixtures, examples, tolerances, and bounds match the Issue rather than being relaxed to fit the implementation.\n  > The acceptance uses an independently created `.js` fixture and exact Program Files/mirror byte equality, keeps the test required and unquarantined, and uses bounded runtime assertions without relaxing the slim contract or restoring heavyweight workers.\n\n### 7. Runtime, packaged, browser, and manual evidence verified\nUse real packaged/browser/manual evidence whenever the claim depends on layout, assets, runtime, persistence, or visual parity.\n\n- [x] The required evidence layer for the Issue was identified correctly.\n  > Issue #391 expressly requires installed package/browser evidence for Program Files bytes, opaque-origin worker execution, editor readiness/tokenization, and BrowserHealth; the PR targets the required packaged Specialist lane.\n- [x] Packaged, browser, runtime, persistence, or human/manual evidence was inspected where the claim requires it.\n  > Fresh run inspection confirms completed successful Packaged Specialist/demo jobs and Flake Probe baseline/characterization jobs; the bundle and logs establish the unquarantined exact acceptance ran repeatedly at the required packaged/browser boundary.\n- [x] Execution evidence is distinguished from CI status and is not replaced by a green status label.\n  > Fresh logs show the Specialist job actually ran `plasmon-monaco-workers-89.spec.ts` and finished 31 passed, while Flake Probe summary and per-iteration jobs separately record execution; the review does not rely on aggregate green status alone.\n\n### 8. Compatibility, regressions, documentation, and release obligations reviewed\nCheck durable state, compatibility, scope, documentation, generated artifacts, and applicable release obligations.\n\n- [x] Durable state, persistence, migration, serialized contracts, and upgrade/restart behavior were reviewed where applicable.\n  > Fresh diff review shows no application schema, document persistence, migration, or serialized-state change; the kernel adjustment only validates encoded HTTP asset paths, while Monaco worker policy and tests affect runtime assets.\n- [ ] Required architecture, API, developer-facing, persistence, or integration documentation was reviewed or updated where applicable.\n  > :x: The changed `QUARANTINED_BROWSER_TESTS.md` still says full language-service parity belongs to `#369/#370`, but the latest canonical #391 clarification says #369 is closed/not-planned and #527 owns the future Product parity while #370 is architecture-only. Update the durable documentation/ledger wording to match the current authority.\n- [x] Scope, generated artifacts, dependency changes, release obligations, and unrelated work were reviewed.\n  > The declared-base diff is limited to the Kernel encoded-space support and its checked-in certified-assets binding/test, Monaco policy/test/docs, and narrow CI inventory/quarantine records. No dependencies or Plasmon manifest bytes changed; r2 policy requires no version bump, and the binding update is the required generated certification metadata.\n\n### 9. Exact-head and reviewer-operational disposition verified\nThe formal disposition must be bound to the current exact head and must follow reviewer independence and reporting rules.\n\n- [x] The exact PR head and declared base were recorded and refreshed immediately before output.\n  > Fresh `gh pr view` confirms PR #494 is OPEN at exact head `24a98d3b9be462f0ec4410eac5efa768a6863552` with declared base `release/0.1.0-r2`; this will be refreshed again before disposition.\n- [x] The reviewer did not implement product changes, merge, force-push, or alter another agent's work.\n  > The reviewer made no repository edits or Git operations; the only local change is the pre-existing unrelated `packages/neutron-cli/src/index.ts`, which remains untouched. No merge or force-push occurred.\n- [x] CI status and failures are recorded as merge/infrastructure evidence, not used as product-correctness proof.\n  > Fresh run/log inspection confirms the successful flake summary and the Specialist job\u2019s actual #391 execution; these are recorded as execution evidence, not treated as proof beyond the tested contract.\n\n### 10. Acceptance criteria represented in production code and tests\nEvery Issue acceptance criterion must have production implementation and at least one honest executable test in this PR or an already-merged or pending-merge parent branch. Each criterion below comes directly from the linked Issue.\n\n- [x] The slim r2 package installs `editor.worker.js` beneath `/System/Program Files/MonacoEditor` and does not add `ts.worker.js` or other heavyweight language-service workers to the slim artifact.\n  > The slim package guard requires the Program Files editor worker, the package test enumerates only the configured slim worker set in Program Files and runtime mirrors, and exact-head packaged checks pass.\n    - [x] Production code represents the behavior.\n      > Production packaging defines the slim profile as a single `editor.worker.js` output under `System/Program Files/MonacoEditor`; the transport generator selects the same single worker and the package guard rejects the legacy top-level path.\n    - [x] An executable test covers it.\n      > `packaging.test.ts` exercises slim output acceptance and missing-editor failure, while the package test enumerates the actual built worker paths; exact-head Fast and packaged jobs passed these contracts.\n    - [x] The test observes behavior rather than source shape.\n      > The package test enumerates actual built files and evaluates the generated transport script, and the browser test requests the installed resources; these observe artifact/runtime behavior rather than only source declarations.\n\n- [x] The installed browser acceptance directly requests `/System/Program Files/MonacoEditor/editor.worker.js` and proves the URL-safe `runtime/monaco/editor.worker.js` mirror plus opaque `worker-sources.js` preload are byte-identical to that Program Files authority.\n  > The current exact-head packaged test directly requests Program Files, URL-safe mirror, and opaque transport; it compares mirror and decoded preload bytes to Program Files and the Specialist job passed the test.\n    - [x] Production code represents the behavior.\n      > `monacoWorkerTransport.ts` bundles one exact worker byte stream and writes it to canonical Program Files plus compatibility mirrors; `monacoEnvironment.ts` selects the Program Files path and only materializes that same source for opaque frames.\n    - [x] An executable test covers it.\n      > The exact packaged Specialist test performs live requests to Program Files, URL-safe mirror, and opaque preload, compares their bytes, and the exact-head Specialist job passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes live HTTP responses and decoded transport bytes from the installed package, including byte equality and resource presence/absence; it is not a source-string or constant-only assertion.\n\n- [x] A real installed Text editor opens a JavaScript resource, reaches Monaco ready state, reports canonical JavaScript language state, and renders visible syntax tokenization.\n  > The installed packaged test imports a real `.js` resource, opens it in Text, asserts Monaco ready and JavaScript language state, and observes more than one visible Monaco syntax-token class; the Specialist job passed.\n    - [x] Production code represents the behavior.\n      > Production `editorLanguageForResource` uses canonical resource classification and defaults to plaintext, while `MonacoEditorHost` owns real Monaco readiness and exposes the language/ready state; the worker adapter is installed through the shared host.\n    - [x] An executable test covers it.\n      > The exact packaged Specialist test asserts the real editor\u2019s `data-editor-ready`, `data-editor-language=javascript`, visible JavaScript label, and rendered token classes; its job passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test uses live DOM readiness/language labels and rendered `.monaco-editor` token classes from the installed browser; it does not inspect source or assert a policy constant.\n\n- [x] The real shipped Monaco editor worker is constructed inside Neutron's opaque origin through the classic `blob:` compatibility transport, exchanges messages in both directions, and emits no Worker errors.\n  > The exact packaged test instruments real Worker construction, verifies opaque origin/null, classic type and blob URL, requires bidirectional messages with zero errors, and passed in the required Specialist job.\n    - [x] Production code represents the behavior.\n      > Production `createMonacoWorker` uses the canonical Program Files worker for normal origins and the same preloaded bytes in a classic `blob:` Worker for Neutron\u2019s opaque origin; the shared editor host installs this adapter.\n    - [x] An executable test covers it.\n      > The executable packaged test records real Worker construction and message events, then asserts opaque origin, classic type, blob URL, bidirectional exchange, and zero worker errors; the exact Specialist job passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes runtime Worker records, actual message counts, origin/type/blob URL, warnings, page errors, and BrowserHealth; it does not infer opaque execution from source shape.\n\n- [x] The acceptance retains explicit page-error checks, worker warning/error checks, and strict BrowserHealth; no retries, sleeps, timeout inflation, fallback assertions, or product-only test hooks are introduced.\n  > The exact acceptance collects page errors and worker warnings, asserts zero worker/page/browser-health errors, disposes BrowserHealth in `finally`, and the reported flake runs use retry-free bounded polling without sleeps or fallback assertions.\n    - [x] Production code represents the behavior.\n      > Production keeps BrowserHealth and Monaco worker lifecycle in shared adapters: opaque Worker construction revokes the blob URL on constructor failure, while the existing BrowserHealth boundary records page/runtime failures without product-only suppression.\n    - [x] An executable test covers it.\n      > The executable acceptance collects page errors and warning signatures, observes worker errors, calls strict `health.assertClean()`, and disposes the health monitor; exact-head Fast and Specialist checks passed.\n    - [x] The test observes behavior rather than source shape.\n      > The test observes actual browser event streams, Worker metadata/error events, page errors, BrowserHealth state, and cleanup execution; it does not assert source structure.\n\n- [x] The exact acceptance runs unquarantined with retries=0 and satisfies the required restoration proof before #391 is closed.\n  > The exact test is required/unquarantined in inventory, and Flake Probe run `33107831937` completed 10/10 baseline plus 50/50 characterization iterations with retries disabled, exceeding the five-clean restoration threshold; the Issue remains open until closure bookkeeping.\n    - [x] Production code represents the behavior.\n      > Production slim policy, package generation, and shared Monaco adapter represent the retained r2 behavior without restoring heavyweight workers; the quarantine removal is limited to this acceptance.\n    - [x] An executable test covers it.\n      > All 10 Flake baseline and 10 characterization job groups in exact run `33107831937` succeeded, and the Specialist inventory executes the unquarantined test; this supplies the retry-free restoration proof.\n    - [x] The test observes behavior rather than source shape.\n      > The repeated acceptance observes installed bytes, editor DOM state, Worker runtime metadata/messages, error streams, and BrowserHealth at runtime; the restoration proof is not a source-presence claim.\n\n- [ ] `QUARANTINED_BROWSER_TESTS.md`, executable inventory verification, and ledger #295 accurately record the restoration and the FUTURE/SUPERSEDED full-language-service-worker portion.\n  > :x: The changed quarantine documentation still says full language-service parity belongs to `#369/#370`, but canonical Issue #391\u2019s latest clarification assigns future Product parity to #527, says #369 is closed/not-planned, and limits #370 to architecture. The restoration record is therefore stale until corrected.\n    - [x] Production code represents the behavior.\n      > Production packaging and Monaco policy represent the retained slim worker behavior and explicitly preserve the full-profile mapping separately; the stale future-owner reference is a documentation/ledger defect, not missing production representation.\n    - [ ] An executable test covers it.\n      > :x: The executable inventory verifier confirms quarantine tags and required inclusion, and Monaco tests cover slim/full mappings, but no executable check validates the stale `#369/#370` future-owner wording against the canonical #527 clarification. The documentation criterion therefore remains partially unverified.\n    - [ ] The test observes behavior rather than source shape.\n      > :x: Fresh exact-head inspection confirms the changed quarantine documentation still says full language-service parity belongs to `#369/#370`, while canonical Issue #391 assigns future Product parity to #527 (blocked by #526), says #369 is closed/not-planned, and limits #370 to architecture. The durable restoration record is not accurate until corrected.\n\n### Summary\n> Approval is allowed only when every checkbox above is checked. CI status is recorded separately and is not used as proof that the Issue is solved.\n\n",
+        "commit_id": "24a98d3b9be462f0ec4410eac5efa768a6863552",
+        "id": 5045215987,
+        "state": "CHANGES_REQUESTED",
+        "user": "plasmon-code-reviewer[bot]"
+      },
+      "changed_test_files": [],
+      "checks": [
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 31-35/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700315"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 26-30/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700296"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 8-8/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700285"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 46-50/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700278"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 36-40/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700266"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 11-15/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700238"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 6-10/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700231"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 21-25/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700216"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 41-45/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700199"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700184"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 16-20/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700183"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700176"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700174"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 7-7/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700171"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700169"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 1-1/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700159"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700155"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 9-9/10",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700150"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 1-5/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700141"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98660700127"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine flake probe applicability and configuration",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619209/job/98659548188"
+        },
+        {
+          "conclusion": "success",
+          "name": "kernel",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619284/job/98659499114"
+        },
+        {
+          "conclusion": null,
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619183/job/98659160764"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright demo acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619183/job/98659160420"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619195/job/98659151665"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619206/job/98659110169"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged browser persistence",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619193/job/98659087947"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Dispatch targeted 50-iteration flake probe",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619192/job/98659080039"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112619284/job/98659078925"
+        }
+      ],
+      "ci": "running",
+      "ci_owned": true,
+      "conflict": false,
+      "draft": false,
+      "flake_evidence": null,
+      "head": "bb4bc9cdef75b80be05b8d1a3ced50ea2e036f9b",
+      "head_branch": "train/ci/issue-391",
+      "issue": 391,
+      "mergeable": true,
+      "mergeable_state": "blocked",
+      "number": 494,
+      "product": false,
+      "review": "changes_requested",
+      "state": "open",
+      "title": "#391 Restore slim Monaco worker acceptance",
+      "updated_at": "2026-08-27T20:17:39Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/494"
     },
     {
       "base": "release/0.1.0-r2",
@@ -4023,209 +4166,197 @@
       "changed_test_files": [],
       "checks": [
         {
-          "conclusion": "success",
-          "name": "Flake characterization summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98651332859"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 21-25/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660231079"
         },
         {
-          "conclusion": "success",
-          "name": "Flake probe summary",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98651332858"
-        },
-        {
-          "conclusion": "success",
-          "name": "kernel",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831931/job/98642735697"
-        },
-        {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Flake baseline all iterations 9-9/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478563"
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660231060"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 46-50/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478442"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 46-50/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660231053"
         },
         {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 2-2/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478398"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 41-45/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660231051"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 16-20/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478369"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 31-35/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230999"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 21-25/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478358"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 36-40/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230944"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 1-5/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478331"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 6-10/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230935"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 26-30/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478320"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 41-45/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478308"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 11-15/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478307"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 3-3/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478303"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 31-35/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478300"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 4-4/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478296"
-        },
-        {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Flake baseline all iterations 7-7/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478294"
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230934"
         },
         {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 36-40/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478287"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 16-20/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230920"
         },
         {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 1-1/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478277"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 11-15/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230915"
         },
         {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 6-6/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478257"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake characterization characterization:targeted:1-files:f9f245cabdd0 iterations 6-10/50",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478247"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 5-5/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478226"
-        },
-        {
-          "conclusion": "success",
-          "name": "Flake baseline all iterations 10-10/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478220"
-        },
-        {
-          "conclusion": "success",
+          "conclusion": null,
           "name": "Flake baseline all iterations 8-8/10",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642478206"
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230913"
         },
         {
-          "conclusion": "skipped",
-          "name": "Dispatch targeted 50-iteration flake probe",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831951/job/98642368013"
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 1-5/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230911"
         },
         {
-          "conclusion": "success",
-          "name": "Fast Bun tests",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831996/job/98642366922"
+          "conclusion": null,
+          "name": "Flake baseline all iterations 4-4/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230881"
         },
         {
-          "conclusion": "success",
-          "name": "Packaged Playwright demo acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831962/job/98642366728"
+          "conclusion": null,
+          "name": "Flake baseline all iterations 10-10/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230876"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake characterization characterization:targeted:1-files:a683dbf9cda7 iterations 26-30/50",
+          "status": "queued",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230869"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 5-5/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230861"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 6-6/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230850"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 1-1/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230842"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 3-3/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230835"
+        },
+        {
+          "conclusion": null,
+          "name": "Flake baseline all iterations 2-2/10",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98660230827"
+        },
+        {
+          "conclusion": null,
+          "name": "kernel",
+          "status": "in_progress",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623311/job/98660176888"
         },
         {
           "conclusion": "success",
           "name": "Determine flake probe applicability and configuration",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831937/job/98642366661"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged Playwright specialist acceptance",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831962/job/98642366494"
-        },
-        {
-          "conclusion": "success",
-          "name": "Packaged refactor smoke",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831911/job/98642366472"
-        },
-        {
-          "conclusion": "success",
-          "name": "Determine Kernel CI applicability",
-          "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831931/job/98642366262"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623322/job/98659430027"
         },
         {
           "conclusion": "success",
           "name": "Packaged browser persistence",
           "status": "completed",
-          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33107831885/job/98642366214"
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623337/job/98659177672"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged refactor smoke",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623501/job/98659174583"
+        },
+        {
+          "conclusion": "failure",
+          "name": "Packaged Playwright demo acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623411/job/98659099021"
+        },
+        {
+          "conclusion": "success",
+          "name": "Packaged Playwright specialist acceptance",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623411/job/98659098694"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Dispatch targeted 50-iteration flake probe",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623562/job/98659095939"
+        },
+        {
+          "conclusion": "success",
+          "name": "Fast Bun tests",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623329/job/98659094396"
+        },
+        {
+          "conclusion": "success",
+          "name": "Determine Kernel CI applicability",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33112623311/job/98659093612"
         }
       ],
-      "ci": "green",
+      "ci": "unknown_red",
       "ci_owned": true,
       "conflict": false,
       "draft": false,
       "flake_evidence": null,
-      "head": "24a98d3b9be462f0ec4410eac5efa768a6863552",
-      "head_branch": "train/ci/issue-391",
-      "issue": 391,
+      "head": "e122fa1fc36687703a85a551633116752731261d",
+      "head_branch": "train/ci/issue-434",
+      "issue": 434,
       "mergeable": true,
       "mergeable_state": "blocked",
-      "number": 494,
+      "number": 536,
       "product": false,
       "review": "pending",
       "state": "open",
-      "title": "#391 Restore slim Monaco worker acceptance",
-      "updated_at": "2026-08-27T19:24:59Z",
-      "url": "https://github.com/plasmon-cloud/plasmon/pull/494"
+      "title": "#434 Restore demo Text language-transition acceptance",
+      "updated_at": "2026-08-27T20:24:42Z",
+      "url": "https://github.com/plasmon-cloud/plasmon/pull/536"
     }
   ],
   "repo": "plasmon-cloud/plasmon",
