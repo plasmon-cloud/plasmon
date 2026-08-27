@@ -49,10 +49,9 @@ async function openRootDirectory(explorer: Locator, name: string): Promise<void>
   await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue(`/${name}`, { timeout: 20_000 });
 }
 
-async function importFiles(explorer: Locator): Promise<ReturnType<Page["waitForEvent"]>> {
+async function importFiles(page: Page, explorer: Locator) {
   const files = explorer.getByRole("listbox", { name: "Files" });
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
-  const page = explorer.page();
   const chooser = page.waitForEvent("filechooser");
   await toolbar.getByRole("button", { name: "Import Files…", exact: true }).click();
   return chooser;
@@ -123,7 +122,7 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
     // The real FileManager navigation boundary is canonical directory activation.
     explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
-    const chooser = await importFiles(explorer);
+    const chooser = await importFiles(page, explorer);
     const filename = `issue-107-download-${Date.now()}.txt`;
     const expected = Buffer.from("Issue #107 browser download acceptance\n");
     await chooser.setFiles({ name: filename, mimeType: "text/plain", buffer: expected });
@@ -200,7 +199,7 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
-    const chooser = await importFiles(explorer);
+    const chooser = await importFiles(page, explorer);
     const filename = `issue-107-unsupported-${Date.now()}.webm`;
     await chooser.setFiles({
       name: filename,
