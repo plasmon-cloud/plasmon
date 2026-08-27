@@ -66,6 +66,46 @@ test("#466 Search applies canonical default hidden state to resources, native pr
   }
 });
 
+test("#429 global hidden visibility widens Search without regressing #466 projection filtering", async () => {
+  const env = createHeadlessPlasmonEnvironment();
+  await env.ready;
+  try {
+    const root = await env.node("/");
+    if (!root) throw new Error("Filesystem root is unavailable");
+
+    const hiddenFile = await env.services.fs.createFile(root.id, ".global-hidden-429.txt", { mime: "text/plain" });
+    const hiddenShortcut = await createShortcut(
+      env.services.fs,
+      root.id,
+      { kind: "node", nodeId: hiddenFile.id },
+      { name: "Global Hidden 429 target" },
+    );
+
+    await env.services.hiddenVisibility.setAlwaysShowHiddenFiles(true);
+    const nativeApps = env.services.nativeApps.list();
+
+    const properties = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "Properties");
+    expect(properties.results.some((result) =>
+      result.kind === "native-app" && result.app.handlerId === "native:properties"
+    )).toBe(true);
+
+    const hidden = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "global-hidden-429");
+    expect(hidden.results.some((result) => "node" in result && result.node.id === hiddenFile.id)).toBe(true);
+
+    const shortcut = await searchShellVisibleByDefault(
+      env.services.fs,
+      nativeApps,
+      [],
+      "Global Hidden 429 target",
+    );
+    expect(shortcut.results.some((result) =>
+      result.kind === "start-shortcut" && result.node.id === hiddenShortcut.id
+    )).toBe(true);
+  } finally {
+    env.dispose();
+  }
+});
+
 test("#466 Start hides canonical hidden targets without deleting or rewriting shortcuts", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;

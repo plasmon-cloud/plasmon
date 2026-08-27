@@ -54,6 +54,7 @@ test("#428 — packaged Start omits managed Settings and Properties while keepin
     await expect(plasmon.getByText("Loading Start Menu…")).toHaveCount(0, { timeout: 30_000 });
 
     const startItems = panel.locator("[data-start-item]");
+    await expect(startItems.filter({ hasText: "Files" })).toBeVisible({ timeout: 30_000 });
     const itemNames = await startItems.locator("strong").allTextContents();
     // `native:explorer` is the Explorer application identity; its current
     // product-facing native-app name is `Files`.

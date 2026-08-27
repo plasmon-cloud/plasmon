@@ -18,12 +18,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
 
-## #308 Alt-Tab multi-instance restoration
-
-Issue #308 restores the exact `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` acceptance to required serialized Specialist execution. The exact restoration head `a3e2686bf49626075cb302093d980c6028e32698` preserves its complete Windowing MRU and BrowserHealth assertions while removing only the quarantine tag.
-
-Flake Probe run `32757831146` produced ten successful retries=0 baseline packets and fifty successful targeted characterization packets, exceeding the required clean first-attempt evidence without sleeps, retries, timeout inflation, weakened assertions, or Product hooks.
-
 ## #279 left-snap / snap-preview restoration proof
 
 Issue #279 restores `test/e2e/plasmon-golden-path-left-snap.spec.ts` — `packaged Plasmon previews and commits left snap` — to required serialized Specialist execution. This is the restoration owner for the quarantine created under #277. The test retains `@issue-277` history and adds `@issue-279`; it no longer carries `@r2-quarantine` on the restoration head.

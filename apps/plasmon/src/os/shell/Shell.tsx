@@ -18,6 +18,7 @@ import type {
   ProcessId,
   WindowManager,
 } from "../contracts/index.ts";
+import type { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import {
   activateSearchFilesystemResult,
@@ -86,6 +87,7 @@ export interface ShellProps {
   filesystemOpen: ShellFilesystemOpener;
   openService?: OpenService;
   startMenu: StartMenuReconciliationController;
+  hiddenVisibility: HiddenVisibilityPreferenceStore;
   children?: ReactNode;
   now?: () => Date;
 }
@@ -104,6 +106,7 @@ export function Shell({
   filesystemOpen,
   openService,
   startMenu,
+  hiddenVisibility,
   children,
   now = () => new Date(),
 }: ShellProps) {
@@ -499,6 +502,7 @@ export function Shell({
       active={flyout === "start"}
       fs={fs}
       reconciliation={startMenu}
+      hiddenVisibility={hiddenVisibility}
       fsRevision={startFsRevision}
       busyId={busyId}
       preferencesReady={preferencesReady}

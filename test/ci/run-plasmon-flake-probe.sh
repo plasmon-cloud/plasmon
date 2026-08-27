@@ -81,7 +81,11 @@ uses_demo_profile() {
     const selected = [];
     if (process.env.PROFILE_TEST_FILE) selected.push(process.env.PROFILE_TEST_FILE);
     selected.push(...JSON.parse(process.env.PROFILE_TEST_FILES_JSON || "[]"));
-    process.exit(selected.some((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
+    // An exact-set probe can contain both profile-specific and ordinary tests.
+    // Do not force ordinary tests into the demo deployment: their strict
+    // BrowserHealth assertions must run against the local profile, while the
+    // dedicated demo CI lane covers the profile-specific acceptance.
+    process.exit(selected.length > 0 && selected.every((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
   '
 }
 
