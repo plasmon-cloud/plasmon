@@ -14,7 +14,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 
 | Required-CI quarantine | Exact spec/test | Known signature | Repair / restoration Issue |
 | --- | --- | --- | --- |
-| Explorer sibling lifetime | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — tags `@r2-quarantine @issue-251` | second Explorer creation stays at native-window count 1 instead of 2 | #251 |
 | Alt-Tab multi-instance setup | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — tags `@r2-quarantine @issue-63 @issue-308` | second-Explorer creation failure occurs before Alt-Tab semantics are reached | #308 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
 | #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
@@ -29,7 +28,13 @@ The restored acceptance uses the shared real-titlebar pointer helper: Playwright
 
 Quarantine removal is provisional until #279's exact-head proof completes. The restoration head must remain retries=0 and pass the requested fresh 10+50 flake-probe evidence plus the Issue-required clean first-attempt Specialist evidence. Any owned red resets the restoration claim; no sleep, timeout inflation, retry-as-fix, Product hook, or geometry weakening is allowed.
 
-The #251 and #308 tests currently exhibit the same second-Explorer setup signature, but workflow v4.0 tracks their quarantine removal independently because each confirmed flaky test has its own dedicated repair Issue.
+The #308 Alt-Tab acceptance retains the second-Explorer quarantine independently; #251's sibling-lifetime acceptance has been restored below after its dedicated repair and retry-free evidence.
+
+## #251 Desktop Root Explorer sibling restoration
+
+Issue #251 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `packaged Plasmon repeatedly opens and closes reachable Explorer siblings` — to required serialized Specialist execution. The exact restoration head `342a9f1e19482f806232ce4c33c5da2a8d43600e` preserves the real Desktop FileManager selection and Enter activation path, exact second-window and Root-address assertions, 60 close/reopen cycles, and strict browser boundaries without sleeps, retries, timeout inflation, weakened counts, or Product hooks.
+
+Flake Probe run `32757768636` produced ten successful retries=0 baseline packets on the exact restoration head, exceeding the five-clean first-attempt requirement. The quarantine tag and inventory entry were removed only for #251; the separate #308 Alt-Tab acceptance remains quarantined pending its own restoration evidence.
 
 The #304 quarantine is intentionally narrower than the surrounding demo-game journey. The normal packaged fixture opening, #250 coverage, #123 static artwork behavior, #202 sandbox-storage contract, and #64 save/reopen persistence acceptance remain required. Static package artwork is not an accepted substitute for #124's blob-backed saved preview.
 
@@ -107,7 +112,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-golden-path.spec.ts` — required; #268 is not broad-skipped.
 - `test/e2e/plasmon-golden-path-left-snap.spec.ts` — required on #279's restoration head; exact left preview/snap geometry remains fail-closed.
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
-- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; only the sibling-lifetime acceptance under #251 and the #63 Alt-Tab acceptance under #308 are quarantined.
+- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; the #251 sibling-lifetime acceptance is required, while only the #63 Alt-Tab acceptance under #308 remains quarantined.
 - `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
