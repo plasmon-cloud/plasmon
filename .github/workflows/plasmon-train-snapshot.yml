@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 1
+          fetch-depth: 2
 
       - name: Build normalized train snapshot
         env:
@@ -190,8 +190,6 @@ jobs:
           def ci_state(checks):
               if not checks:
                   return "pending"
-              # Terminal red is authoritative immediately; an unrelated running
-              # check must not hide evidence that is already inspectable.
               failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
               if failed:
                   names = {str(x.get("name") or "").lower() for x in failed}
@@ -204,7 +202,6 @@ jobs:
               return "green"
 
           def flake_evidence(checks, head_sha, changed_files):
-              """Parse explicit exact-head evidence and bind the failing test to this PR diff."""
               for run in checks:
                   if not flake_check(run.get("name")): continue
                   output = run.get("output") or {}
@@ -220,12 +217,7 @@ jobs:
                           if changed_files is None or not test:
                               modified_in_pr = None
                           else:
-                              matched = any(
-                                  path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test)
-                                  for path in changed_files
-                              )
-                              # Only infer an explicit negative from a path-like
-                              # test identity. A title-only identity is unknown.
+                              matched = any(path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test) for path in changed_files)
                               modified_in_pr = True if matched else (False if "/" in test else None)
                       else:
                           modified_in_pr = bool(producer_modified)
