@@ -34,13 +34,23 @@ export function applicationResourcePresentation(src?: string | null): ResourceIc
   return { kind: "application", src: isImageResourceReference(src) ? src : null };
 }
 
-/** Visual identity for an already-authoritative native handler. */
+/**
+ * Visual identity for an already-authoritative native handler.
+ *
+ * Known Plasmon first-party handlers intentionally resolve to owned semantic
+ * artwork even when their registry metadata still contains a legacy packaged
+ * SVG path. Treating that path as an arbitrary application image would render
+ * it through <img>, isolating its hard-coded SVG colors from the Shell theme.
+ * Unknown/native-extension handlers retain their registered authored image.
+ */
 export function nativeHandlerResourcePresentation(
   handlerId: string,
   registeredIcon?: string | null,
 ): ResourceIconPresentation {
+  const owned = NATIVE_PRESENTATION_BY_HANDLER[handlerId];
+  if (owned) return owned;
   if (isImageResourceReference(registeredIcon)) return applicationResourcePresentation(registeredIcon);
-  return NATIVE_PRESENTATION_BY_HANDLER[handlerId] ?? applicationResourcePresentation();
+  return applicationResourcePresentation();
 }
 
 export interface ResourcePresentationOptions {
