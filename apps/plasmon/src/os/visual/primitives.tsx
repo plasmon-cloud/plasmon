@@ -1,11 +1,6 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
-import {
-  FILE_TYPE_ICON_ASSETS,
-  SHORTCUT_OVERLAY_ASSET,
-  SYSTEM_ICON_ASSETS,
-  type FileTypeIconName,
-  type SystemIconName,
-} from "./assets.ts";
+import { type FileTypeIconName, type SystemIconName } from "./assets.ts";
+import { OwnedFileTypeIcon, OwnedShortcutOverlay, OwnedSystemIcon } from "./owned-icon-art.tsx";
 import { ICON_IMAGE_OBJECT_FIT, THUMBNAIL_OBJECT_FIT, resolveImagePresentation } from "./presentation.ts";
 import { iconContextCssVariables, type IconContext } from "./sizing.ts";
 
@@ -39,8 +34,9 @@ export interface SystemIconProps {
   className?: string | undefined;
 }
 
+/** Plasmon-owned system artwork is inline SVG so inherited theme tokens reach its fills/strokes. */
 export function SystemIcon({ icon, className }: SystemIconProps) {
-  return <img className={`plasmon-icon-art${className ? ` ${className}` : ""}`} src={SYSTEM_ICON_ASSETS[icon]} alt="" draggable={false} />;
+  return <OwnedSystemIcon icon={icon} className={className} />;
 }
 
 export interface PinIconProps {
@@ -67,8 +63,9 @@ export interface FileTypeIconProps {
   className?: string | undefined;
 }
 
+/** Plasmon-owned file-type artwork is inline SVG so inherited theme tokens reach its fills/strokes. */
 export function FileTypeIcon({ icon, className }: FileTypeIconProps) {
-  return <img className={`plasmon-icon-art${className ? ` ${className}` : ""}`} src={FILE_TYPE_ICON_ASSETS[icon]} alt="" draggable={false} />;
+  return <OwnedFileTypeIcon icon={icon} className={className} />;
 }
 
 export interface NativeAppIconProps {
@@ -100,7 +97,7 @@ export interface ShortcutOverlayProps {
 export function ShortcutOverlay({ className }: ShortcutOverlayProps) {
   return (
     <span className={`plasmon-shortcut-overlay${className ? ` ${className}` : ""}`} aria-hidden="true">
-      <img src={SHORTCUT_OVERLAY_ASSET} alt="" draggable={false} />
+      <OwnedShortcutOverlay className="plasmon-icon-art" />
     </span>
   );
 }
