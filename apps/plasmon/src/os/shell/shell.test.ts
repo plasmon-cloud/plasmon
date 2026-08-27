@@ -81,7 +81,8 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     pinnedNative: [],
     pinnedElements: [],
     themeId: "plasmon-dark",
-    wallpaper: "aurora",
+    wallpaper: { mode: "follow-theme" },
+    taskbarAlignment: "center",
     ...patch,
   };
 }
