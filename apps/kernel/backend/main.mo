@@ -47,6 +47,7 @@ import ActivationMemory "./memory/activation/v1";
 import ActivationService "./activation/Service";
 import Array "mo:core/Array";
 import Blob "mo:core/Blob";
+import Char "mo:core/Char";
 import Cycles "mo:core/Cycles";
 import Error "mo:core/Error";
 import Int "mo:core/Int";
@@ -274,18 +275,19 @@ module {
         if (url.size() == 0 or Text.encodeUtf8(url).size() > MAX_HTTP_URL_BYTES) {
             return null;
         };
-        // Fragments are never part of an HTTP request target. Percent escapes
-        // and backslashes are forbidden in the certified path so path
-        // splitting cannot disagree with the gateway's canonical expression
-        // path. Publications may ignore query aliases; portable blobs reject
-        // a non-empty query before route lookup.
+        // Fragments are never part of an HTTP request target. Decode only the
+        // one escaped byte needed for ordinary package paths containing a
+        // space; reject every other escape so path splitting cannot disagree
+        // with the gateway's canonical expression path. Publications may
+        // ignore query aliases; portable blobs reject a non-empty query before
+        // route lookup.
         if (Text.contains(url, #char '#')) return null;
-        let path = stripAfter(url, '?');
+        let rawPath = stripAfter(url, '?');
+        let ?path = decodeHttpPath(rawPath) else return null;
         if (
-            Text.contains(path, #char '%') or
+            not Text.startsWith(path, #char '/') or
             Text.contains(path, #char '\\')
         ) return null;
-        if (not Text.startsWith(path, #char '/')) return null;
         if (Text.contains(path, #text "//")) return null;
         for (char in path.chars()) {
             if (char < ' ' or char == '\u{7f}') return null;
@@ -299,6 +301,27 @@ module {
             };
         };
         ?path;
+    };
+
+    func decodeHttpPath(path : Text) : ?Text {
+        let chars = path.chars();
+        var decoded = "";
+        label scan loop {
+            switch (chars.next()) {
+                case null break scan;
+                case (?char) {
+                    if (char == '%') {
+                        let ?high = chars.next() else return null;
+                        let ?low = chars.next() else return null;
+                        if (high != '2' or low != '0') return null;
+                        decoded #= " ";
+                    } else {
+                        decoded #= Char.toText(char);
+                    };
+                };
+            };
+        };
+        ?decoded;
     };
 
     public func supportedHttpCertificationVersion(version : ?Nat16) : Bool {
