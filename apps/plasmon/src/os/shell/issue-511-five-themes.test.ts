@@ -10,6 +10,8 @@ import {
 
 const visualTokens = readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8");
 const settingsSurface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
+const fileManagerStyles = readFileSync(new URL("../file-manager/file-manager.scss", import.meta.url), "utf8");
+const windowingStyles = readFileSync(new URL("../windowing/windowing.scss", import.meta.url), "utf8");
 
 const THEME_PALETTE_TOKENS = [
   "--plasmon-desktop-background:",
@@ -103,4 +105,56 @@ test("#511 major assembled-surface colors are intentionally distinct across all 
     expect(values.every(Boolean)).toBe(true);
     expect(new Set(values).size).toBe(5);
   }
+});
+
+test("#511 FileManager and Explorer consume the shared theme palette rather than a fixed dark palette", () => {
+  for (const token of [
+    "var(--plasmon-desktop-background)",
+    "var(--plasmon-window-background)",
+    "var(--plasmon-panel-background)",
+    "var(--plasmon-panel-elevated)",
+    "var(--plasmon-control-background)",
+    "var(--plasmon-control-hover)",
+    "var(--plasmon-border-subtle)",
+    "var(--plasmon-border-strong)",
+    "var(--plasmon-text-primary)",
+    "var(--plasmon-text-secondary)",
+    "var(--plasmon-text-subtle)",
+    "var(--plasmon-selection)",
+    "var(--plasmon-selection-border)",
+    "var(--plasmon-focus-ring)",
+    "var(--plasmon-danger)",
+  ]) expect(fileManagerStyles).toContain(token);
+
+  for (const retiredColor of [
+    "#0d1320",
+    "#111827",
+    "#151c2b",
+    "#75a7ff",
+    "#eef3fb",
+    "#171f30",
+  ]) expect(fileManagerStyles.toLowerCase()).not.toContain(retiredColor);
+
+  expect(fileManagerStyles).toContain(
+    ".plasmon-desktop { position: relative; width: 100%; height: 100%; min-height: 320px; overflow: hidden; background: var(--plasmon-desktop-background); }",
+  );
+});
+
+test("#511 Windowing consumes explicit native-window titlebar and content theme semantics", () => {
+  for (const token of [
+    "var(--plasmon-window-background)",
+    "var(--plasmon-window-titlebar)",
+    "var(--plasmon-border-subtle)",
+    "var(--plasmon-border-strong)",
+    "var(--plasmon-text-primary)",
+    "var(--plasmon-control-hover)",
+    "var(--plasmon-selection)",
+    "var(--plasmon-selection-border)",
+    "var(--plasmon-focus-ring)",
+    "var(--plasmon-danger)",
+  ]) expect(windowingStyles).toContain(token);
+
+  expect(windowingStyles).not.toContain("var(--plasmon-surface-elevated");
+  expect(windowingStyles).not.toContain("var(--plasmon-surface,");
+  expect(windowingStyles).not.toContain("var(--plasmon-text,");
 });
