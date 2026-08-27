@@ -140,11 +140,13 @@ jobs:
               for source, pattern in [
                   (body, r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b"),
                   (body, r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b"),
-                  (title, r"^#(\d+)\b"),
+                  (title, r"^(#?)(\d+)\b"),
               ]:
                   match = re.search(pattern, source)
-                  if match and int(match.group(1)) in lane_numbers:
-                      return int(match.group(1))
+                  if match:
+                      n = int(match.groups()[-1])
+                      if n in lane_numbers:
+                          return n
               return None
 
           pr_to_issue = {int(pr["number"]): issue for pr in raw_prs if (issue := map_pr(pr))}
@@ -211,8 +213,6 @@ jobs:
           def ci_state(checks):
               if not checks:
                   return "pending"
-              # Terminal red is authoritative immediately; an unrelated running
-              # check must not hide evidence that is already inspectable.
               failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
               if failed:
                   names = {str(x.get("name") or "").lower() for x in failed}
@@ -224,13 +224,8 @@ jobs:
                   return "running"
               return "green"
 
-          def flake_evidence(checks, head_sha):
-              """Parse only an explicit machine-readable exact-head marker.
-
-              Train intentionally does not infer flakiness from workflow names,
-              modified-test hints, or prose. Producers may emit one line:
-              PLASMON_FLAKE_EVIDENCE={...json...}
-              """
+          def flake_evidence(checks, head_sha, changed_files):
+              """Parse explicit exact-head evidence and bind the failing test to this PR diff."""
               for run in checks:
                   if not flake_check(run.get("name")): continue
                   output = run.get("output") or {}
@@ -240,15 +235,29 @@ jobs:
                       try: row = json.loads(line.split("=", 1)[1])
                       except Exception: continue
                       if not isinstance(row, dict): continue
-                      evidence = {
+                      test = str(row.get("test") or "").strip()
+                      producer_modified = row.get("modified_in_pr")
+                      if producer_modified is None:
+                          if changed_files is None or not test:
+                              modified_in_pr = None
+                          else:
+                              matched = any(
+                                  path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test)
+                                  for path in changed_files
+                              )
+                              modified_in_pr = True if matched else (False if "/" in test else None)
+                      else:
+                          modified_in_pr = bool(producer_modified)
+                      return {
                           "head_matches": str(row.get("head_sha") or "") == head_sha,
                           "complete": bool(row.get("complete")), "infrastructure_collapse": bool(row.get("infrastructure_collapse")),
                           "test": row.get("test"), "passes": int(row.get("passes") or 0), "failures": int(row.get("failures") or 0),
                           "independent_confirmation": bool(row.get("independent_confirmation")),
                           "characterization_iterations": int(row.get("characterization_iterations") or 0),
+                          "modified_in_pr": modified_in_pr,
+                          "independent_from_pr": bool(row.get("independent_from_pr") or row.get("preexisting_canonical_flake")),
                           "source_check": run.get("name"), "source_url": run.get("details_url"),
                       }
-                      return evidence
               return None
 
           def review_facts(number, head_sha):
@@ -274,7 +283,11 @@ jobs:
               if issue is None: continue
               detail = gh(f"repos/{REPO}/pulls/{number}")
               head_sha, base = detail["head"]["sha"], detail["base"]["ref"]
-              checks = latest_check_runs(head_sha); mergeable_state = str(detail.get("mergeable_state") or "unknown").lower()
+              checks = latest_check_runs(head_sha); ci = ci_state(checks); changed_files = None
+              if ci == "flake":
+                  try: changed_files = {str(x.get("filename") or "") for x in gh_pages(f"repos/{REPO}/pulls/{number}/files")}
+                  except Exception: pass
+              mergeable_state = str(detail.get("mergeable_state") or "unknown").lower()
               conflict = detail.get("mergeable") is False and mergeable_state == "dirty"
               review, blocker = review_facts(number, head_sha); issue_row = issue_rows[issue]
               prs.append({
@@ -282,7 +295,8 @@ jobs:
                   "head_branch": detail["head"]["ref"], "base": base, "base_valid": base == TARGET or base in open_pr_heads,
                   "draft": bool(detail.get("draft")), "product": bool(issue_row["product"]), "ci_owned": bool(issue_row["ci_owned"]),
                   "conflict": bool(conflict), "mergeable": detail.get("mergeable"), "mergeable_state": mergeable_state,
-                  "review": review, "blocking_review": blocker, "ci": ci_state(checks), "flake_evidence": flake_evidence(checks, head_sha),
+                  "review": review, "blocking_review": blocker, "ci": ci, "flake_evidence": flake_evidence(checks, head_sha, changed_files),
+                  "changed_test_files": sorted(x for x in (changed_files or set()) if x.startswith("test/")),
                   "checks": [{"name": x.get("name"), "status": x.get("status"), "conclusion": x.get("conclusion"), "url": x.get("details_url")} for x in checks],
                   "url": detail.get("html_url"), "updated_at": detail.get("updated_at"),
               })
