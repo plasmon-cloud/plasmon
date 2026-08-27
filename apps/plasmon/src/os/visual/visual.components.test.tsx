@@ -17,9 +17,10 @@ test("native app presentation preserves developer artwork and contain sizing", (
   expect(markup).toContain("object-fit:contain");
 });
 
-test("native app presentation has a non-letter application fallback", () => {
+test("native app presentation has a theme-aware non-letter application fallback", () => {
   const markup = renderToStaticMarkup(<NativeAppIcon src={null} />);
-  expect(markup).toContain("static/plasmon/icons/application.svg");
+  expect(markup).toContain('data-plasmon-owned-icon="system:application"');
+  expect(markup).toContain('fill="var(--plasmon-icon-primary)"');
 });
 
 test("shared native app chrome preserves caller semantics and only adds presentation classes", () => {
@@ -42,14 +43,15 @@ test("shared native app chrome preserves caller semantics and only adds presenta
   expect(markup).toContain('class="plasmon-native-app-status"');
 });
 
-test("shared pin presentation uses canonical artwork and structural pinned state", () => {
+test("shared pin presentation uses theme-aware canonical artwork and structural pinned state", () => {
   const unpinned = renderToStaticMarkup(<PinIcon pinned={false} />);
   const pinned = renderToStaticMarkup(<PinIcon pinned />);
 
-  expect(unpinned).toContain("static/plasmon/icons/pin.svg");
+  expect(unpinned).toContain('data-plasmon-owned-icon="system:pin"');
+  expect(unpinned).toContain('fill="var(--plasmon-icon-primary)"');
   expect(unpinned).toContain('data-pin-state="unpinned"');
   expect(unpinned).not.toContain("is-pinned");
-  expect(pinned).toContain("static/plasmon/icons/pin.svg");
+  expect(pinned).toContain('data-plasmon-owned-icon="system:pin"');
   expect(pinned).toContain('data-pin-state="pinned"');
   expect(pinned).toContain("plasmon-pin-icon is-pinned");
   expect(pinned).toContain("plasmon-pin-icon__state");
@@ -67,14 +69,15 @@ test("generic application presentation preserves handler artwork", () => {
   expect(markup).toContain("data-icon-context=\"file-list\"");
 });
 
-test("generic application presentation uses the shared fallback when artwork is absent", () => {
+test("generic application presentation uses the theme-aware shared fallback when artwork is absent", () => {
   const markup = renderToStaticMarkup(
     <ResourceIcon context="file-list" presentation={{ kind: "application", src: null }} />,
   );
-  expect(markup).toContain("static/plasmon/icons/application.svg");
+  expect(markup).toContain('data-plasmon-owned-icon="system:application"');
+  expect(markup).toContain('fill="var(--plasmon-icon-primary)"');
 });
 
-test("resource shortcut keeps target artwork and adds only the lower-left overlay", () => {
+test("resource shortcut keeps authored target artwork and adds only the theme-aware lower-left overlay", () => {
   const markup = renderToStaticMarkup(
     <ResourceIcon
       context="desktop"
@@ -87,7 +90,8 @@ test("resource shortcut keeps target artwork and adds only the lower-left overla
   );
   expect(markup).toContain("/games/doom/icon.png");
   expect(markup).toContain("plasmon-custom-icon");
-  expect(markup).toContain("static/plasmon/icons/shortcut-overlay.svg");
+  expect(markup).toContain('data-plasmon-owned-icon="shortcut-overlay"');
+  expect(markup).toContain('stroke="var(--plasmon-icon-accent)"');
   expect(markup).toContain("--plasmon-icon-frame-size:var(--plasmon-icon-desktop-frame)");
   expect(markup).toContain("--plasmon-icon-art-size:var(--plasmon-icon-desktop-art)");
 });
