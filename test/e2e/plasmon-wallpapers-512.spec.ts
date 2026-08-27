@@ -32,10 +32,6 @@ async function redirectToFirstDemo(route: Route): Promise<void> {
   });
 }
 
-async function wallpaperImage(locator: ReturnType<ReturnType<typeof test.extend>["prototype"]> extends never ? never : any): Promise<string> {
-  return locator.evaluate((element: Element) => getComputedStyle(element).backgroundImage);
-}
-
 test("#512 generated wallpapers follow themes until the user pins one", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
