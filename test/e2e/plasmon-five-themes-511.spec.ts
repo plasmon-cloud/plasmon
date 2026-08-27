@@ -93,14 +93,20 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     await rootShortcut.dblclick();
     await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
 
+    // Window creation is only the process boundary. Explorer publishes its
+    // title and FileManager tree asynchronously, so bind its canonical Address
+    // control before asserting presentation. `.fm-root` is the active reusable
+    // FileManager root; `.fm-window` was a stale selector and never existed here.
     const explorer = windows.last();
+    const explorerAddress = explorer.getByRole("textbox", { name: "Address" });
+    await expect(explorerAddress).toHaveValue("/", { timeout: 20_000 });
     await expect(explorer).toHaveAccessibleName("This Plasmon");
     const explorerTitlebar = explorer.locator(".plasmon-window__titlebar");
-    const fileManager = explorer.locator(".fm-window");
+    const fileManager = explorer.locator(".fm-root").first();
     await expect(fileManager).toBeVisible();
 
     await explorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
-    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
+    await expect(explorerAddress).toHaveValue("/Documents");
     await expect(explorer).toHaveAccessibleName("Documents");
     const notes = explorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
