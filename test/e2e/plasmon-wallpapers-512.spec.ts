@@ -32,6 +32,10 @@ async function redirectToFirstDemo(route: Route): Promise<void> {
   });
 }
 
+async function wallpaperImage(locator: ReturnType<ReturnType<typeof test.extend>["prototype"]> extends never ? never : any): Promise<string> {
+  return locator.evaluate((element: Element) => getComputedStyle(element).backgroundImage);
+}
+
 test("#512 generated wallpapers follow themes until the user pins one", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -94,19 +98,23 @@ test("#512 generated wallpapers follow themes until the user pins one", async ({
     await expect(pinned).toHaveAttribute("aria-pressed", "true");
     await expect(follow).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    const pinnedBackground = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
 
     await settings.getByRole("button", { name: "Glacier", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-glacier");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).toBe(pinnedBackground);
 
     await settings.getByRole("button", { name: "Midnight", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-midnight");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).toBe(pinnedBackground);
 
     await follow.click();
     await expect(follow).toHaveAttribute("aria-pressed", "true");
     await expect(pinned).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "midnight-orbit");
+    expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).not.toBe(pinnedBackground);
 
     health.assertClean();
   } finally {
