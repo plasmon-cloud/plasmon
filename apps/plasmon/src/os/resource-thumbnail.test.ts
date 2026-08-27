@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
-import type { FsNode } from "./contracts/index.ts";
-import { MemoryFsRepository, PersistentFsService } from "./fs/index.ts";
+import type { FsNode, FsService } from "./contracts/index.ts";
+import { MemoryFsRepository, PersistentFsService, shortcutMetadata } from "./fs/index.ts";
+import {
+  loadResolvedResourceThumbnail,
+  resolveResourceThumbnailNode,
+} from "./resource-thumbnail-resolution.ts";
 import {
   canLoadImageThumbnail,
   canLoadVideoThumbnail,
@@ -49,6 +53,38 @@ function fileNode(name: string, size: number, mime?: string): FsNode {
     metadata: {},
   };
 }
+
+function shortcutNode(name: string, targetNodeId: string): FsNode {
+  return {
+    ...fileNode(name, 0),
+    kind: "shortcut",
+    metadata: shortcutMetadata({ kind: "node", nodeId: targetNodeId }),
+  };
+}
+
+function thumbnailFs(nodes: readonly FsNode[], unreadableIds: ReadonlySet<string> = new Set()): FsService {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  return {
+    stat: async (id) => {
+      const found = byId.get(id);
+      if (!found) throw new Error(`missing ${id}`);
+      return found;
+    },
+    read: async (id) => {
+      if (unreadableIds.has(id)) throw new Error(`unreadable ${id}`);
+      const found = byId.get(id);
+      if (!found) throw new Error(`missing ${id}`);
+      return new Uint8Array(found.size);
+    },
+  } as unknown as FsService;
+}
+
+const unreachableUrlApi: ThumbnailObjectUrlApi = {
+  createObjectURL() {
+    throw new Error("failure-path test unexpectedly created an object URL");
+  },
+  revokeObjectURL() {},
+};
 
 test("#426 resource thumbnails use canonical image classification without a private suffix table", async () => {
   const { fs, node } = await createImage();
@@ -115,6 +151,42 @@ test("#509 direct SVG resources preserve vector bytes and MIME in the bounded im
 
   expect(canLoadImageThumbnail(fileNode("empty.svg", 0))).toBe(false);
   expect(canLoadImageThumbnail(fileNode("large.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1))).toBe(false);
+});
+
+test("#509 shortcut thumbnail resolution fails closed for missing, cyclic, unsupported, empty, and over-limit targets", async () => {
+  const missing = shortcutNode("missing-shortcut", "node-gone");
+  expect(await resolveResourceThumbnailNode(thumbnailFs([]), missing)).toBeNull();
+
+  const cycleA = shortcutNode("cycle-a", "node-cycle-b");
+  const cycleB = shortcutNode("cycle-b", cycleA.id);
+  expect(await resolveResourceThumbnailNode(thumbnailFs([cycleA, cycleB]), cycleA)).toBeNull();
+
+  const unsupported = fileNode("notes.txt", 32, "text/plain");
+  const unsupportedShortcut = shortcutNode("unsupported-shortcut", unsupported.id);
+  expect(await resolveResourceThumbnailNode(
+    thumbnailFs([unsupported]),
+    unsupportedShortcut,
+  )).toBeNull();
+
+  const empty = fileNode("empty.svg", 0);
+  const emptyShortcut = shortcutNode("empty-shortcut", empty.id);
+  expect(await resolveResourceThumbnailNode(thumbnailFs([empty]), emptyShortcut)).toBeNull();
+
+  const overLimit = fileNode("over-limit.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1);
+  const overLimitShortcut = shortcutNode("over-limit-shortcut", overLimit.id);
+  expect(await resolveResourceThumbnailNode(
+    thumbnailFs([overLimit]),
+    overLimitShortcut,
+  )).toBeNull();
+});
+
+test("#509 unreadable shortcut targets fall back without leaking loader errors", async () => {
+  const unreadable = fileNode("unreadable.svg", 64);
+  const shortcut = shortcutNode("unreadable-shortcut", unreadable.id);
+  const fs = thumbnailFs([unreadable], new Set([unreadable.id]));
+
+  expect((await resolveResourceThumbnailNode(fs, shortcut))?.id).toBe(unreadable.id);
+  expect(await loadResolvedResourceThumbnail(fs, shortcut, unreachableUrlApi)).toBeNull();
 });
 
 test("#93 sandbox-null object URLs are revoked and replaced by a loadable data URL", async () => {
