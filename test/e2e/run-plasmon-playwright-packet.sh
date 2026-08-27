@@ -25,7 +25,7 @@ if PROFILE_TEST_FILE="${PROBE_TEST_FILE:-}" PROFILE_TEST_FILES_JSON="${PROBE_TES
   const selected = [];
   if (process.env.PROFILE_TEST_FILE) selected.push(process.env.PROFILE_TEST_FILE);
   selected.push(...JSON.parse(process.env.PROFILE_TEST_FILES_JSON || "[]"));
-  process.exit(selected.some((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
+  process.exit(selected.length > 0 && selected.every((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
 '; then
   deployment_scope=demo
 fi
