@@ -51,6 +51,8 @@ Issue #303 restores `test/e2e/plasmon-demo-review.spec.ts` — `[demo profile] #
 
 Exact repair head `af8e6e763ad7e9a75433d8a16e9d7fc92913038e` produced 10/10 clean retry-free baseline packets and 50/50 targeted characterization packets, for 60/60 clean first-attempt executions with no chooser-title recurrence. The exact #118 acceptance is therefore removed from `@r2-quarantine` while the rest of `plasmon-demo-review.spec.ts` remains required and unchanged.
 
+Issue #500 supplies the neutral Markdown companion acceptance in `test/e2e/plasmon-markdown-commands-114.spec.ts`. It creates a unique Markdown resource through packaged FileManager operations and exercises Markdown commands and preview semantics without demo assets, demo filenames, query fixtures, or unrelated application state.
+
 ## #420 drag-feedback request-cancellation restoration
 
 Issue #420 restores the three #360 acceptances in `test/e2e/plasmon-drag-feedback-360.spec.ts` to required Specialist execution. Their same-NodeId move, target-transition/invalid/cancel/unmount cleanup, destination feedback, grouped-preview/grouped-move assertions, and strict BrowserHealth remain unchanged.
@@ -119,6 +121,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
 - `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; the #251 sibling-lifetime acceptance is required, while only the #63 Alt-Tab acceptance under #308 remains quarantined.
 - `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
+- `test/e2e/plasmon-markdown-commands-114.spec.ts` — required; #500 provides neutral Markdown command and Preview coverage.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-explorer-documents-405.spec.ts` — required; #405 verifies neutral Root-to-Documents activation and creates its own destination file.
