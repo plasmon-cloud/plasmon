@@ -1,0 +1,85 @@
+name: Fix Train v6.7 helper
+
+on:
+  push:
+    branches:
+      - automation/train-snapshot
+    paths:
+      - .github/workflows/fix-train-v67-helper.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: automation/train-snapshot
+          fetch-depth: 0
+      - name: Restore exact packaged helper
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/plasmon-train-snapshot.yml')
+          s = p.read_text()
+          old = '''                  (title, r"^(#?)(\\d+)\\b"),
+              ]:
+                  match = re.search(pattern, source)
+                  if match:
+                      n = int(match.groups()[-1])
+                      if n in lane_numbers:
+                          return n
+'''
+          new = '''                  (title, r"^#(\\d+)\\b"),
+              ]:
+                  match = re.search(pattern, source)
+                  if match and int(match.group(1)) in lane_numbers:
+                      return int(match.group(1))
+'''
+          if old not in s:
+              raise SystemExit('map_pr correction target missing')
+          s = s.replace(old, new, 1)
+          old = '''          def ci_state(checks):
+              if not checks:
+                  return "pending"
+              failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
+'''
+          new = '''          def ci_state(checks):
+              if not checks:
+                  return "pending"
+              # Terminal red is authoritative immediately; an unrelated running
+              # check must not hide evidence that is already inspectable.
+              failed = [x for x in checks if str(x.get("status") or "").lower() == "completed" and str(x.get("conclusion") or "").lower() not in {"success", "skipped", "neutral"}]
+'''
+          if old not in s:
+              raise SystemExit('ci_state correction target missing')
+          s = s.replace(old, new, 1)
+          old = '''                              matched = any(
+                                  path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test)
+                                  for path in changed_files
+                              )
+                              modified_in_pr = True if matched else (False if "/" in test else None)
+'''
+          new = '''                              matched = any(
+                                  path and (test == path or test.startswith(path + "::") or test.startswith(path + ":") or path in test)
+                                  for path in changed_files
+                              )
+                              # Only infer an explicit negative from a path-like
+                              # test identity. A title-only identity is unknown.
+                              modified_in_pr = True if matched else (False if "/" in test else None)
+'''
+          if old not in s:
+              raise SystemExit('modified-test correction target missing')
+          p.write_text(s.replace(old, new, 1))
+          PY
+          actual=$(git hash-object .github/workflows/plasmon-train-snapshot.yml)
+          test "$actual" = "b7145254ae20a0298d5d912c09ab7d150e1cdc42"
+      - name: Commit exact helper
+        run: |
+          git config user.name "plasmon-train-snapshot"
+          git config user.email "plasmon-train-snapshot@users.noreply.github.com"
+          git add .github/workflows/plasmon-train-snapshot.yml
+          git commit -m "Correct Plasmon Train v6.7 snapshot helper"
+          git push origin HEAD:automation/train-snapshot
