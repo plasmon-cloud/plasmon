@@ -29,14 +29,14 @@ export interface RecycleBinProps {
   process: ProcessController;
   trash: FilesystemTrashService;
   fsEvents?: FsEventSource;
+  /** Deterministic adapter seam; installed Plasmon uses the in-app confirmation UI. */
   confirmAction?: (message: string) => boolean;
 }
 
 type BusyAction = "restore" | "delete" | "empty" | null;
-
-function defaultConfirm(message: string): boolean {
-  return typeof window !== "undefined" ? window.confirm(message) : false;
-}
+type ConfirmationRequest =
+  | { action: "delete"; ids: NodeId[]; message: string }
+  | { action: "empty"; message: string };
 
 function countLabel(count: number, noun = "item"): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -68,13 +68,14 @@ export function RecycleBin({
   process,
   trash,
   fsEvents,
-  confirmAction = defaultConfirm,
+  confirmAction,
 }: RecycleBinProps) {
   const model = useMemo(() => new RecycleBinModel(trash), [trash]);
   const [items, setItems] = useState<RecycleBinItem[]>([]);
   const [selected, setSelected] = useState<Set<NodeId>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<BusyAction>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const refreshGeneration = useRef(0);
@@ -117,7 +118,7 @@ export function RecycleBin({
     [items, selected],
   );
   const allSelected = items.length > 0 && selectedIds.length === items.length;
-  const controlsDisabled = busy !== null || loading;
+  const controlsDisabled = busy !== null || loading || confirmation !== null;
 
   const toggleItem = (id: NodeId, checked: boolean) => {
     setSelected((current) => {
@@ -155,15 +156,12 @@ export function RecycleBin({
     }
   };
 
-  const deleteSelected = async () => {
-    if (selectedIds.length === 0 || controlsDisabled) return;
-    const label = countLabel(selectedIds.length);
-    if (!confirmAction(`Permanently delete ${label}? This cannot be undone.`)) return;
+  const permanentlyDeleteConfirmed = async (ids: NodeId[]) => {
     setBusy("delete");
     setError(null);
     setNotice(null);
     try {
-      const removed = await model.permanentlyDelete(selectedIds);
+      const removed = await model.permanentlyDelete(ids);
       setNotice(`Permanently deleted ${countLabel(removed)}.`);
       setSelected(new Set());
       await refresh(false);
@@ -174,9 +172,18 @@ export function RecycleBin({
     }
   };
 
-  const emptyRecycleBin = async () => {
-    if (items.length === 0 || controlsDisabled) return;
-    if (!confirmAction(`Permanently delete all ${countLabel(items.length)} in Recycle Bin? This cannot be undone.`)) return;
+  const deleteSelected = () => {
+    if (selectedIds.length === 0 || controlsDisabled) return;
+    const ids = [...selectedIds];
+    const message = `Permanently delete ${countLabel(ids.length)}? This cannot be undone.`;
+    if (confirmAction) {
+      if (confirmAction(message)) void permanentlyDeleteConfirmed(ids);
+      return;
+    }
+    setConfirmation({ action: "delete", ids, message });
+  };
+
+  const emptyConfirmed = async () => {
     setBusy("empty");
     setError(null);
     setNotice(null);
@@ -192,6 +199,24 @@ export function RecycleBin({
     }
   };
 
+  const emptyRecycleBin = () => {
+    if (items.length === 0 || controlsDisabled) return;
+    const message = `Permanently delete all ${countLabel(items.length)} in Recycle Bin? This cannot be undone.`;
+    if (confirmAction) {
+      if (confirmAction(message)) void emptyConfirmed();
+      return;
+    }
+    setConfirmation({ action: "empty", message });
+  };
+
+  const confirmPendingAction = () => {
+    const pending = confirmation;
+    if (!pending || busy !== null || loading) return;
+    setConfirmation(null);
+    if (pending.action === "empty") void emptyConfirmed();
+    else void permanentlyDeleteConfirmed(pending.ids);
+  };
+
   return (
     <section className="recycle-bin" aria-label="Recycle Bin">
       <header className="recycle-bin__header">
@@ -204,7 +229,7 @@ export function RecycleBin({
           type="button"
           className="recycle-bin__danger-button"
           disabled={controlsDisabled || items.length === 0}
-          onClick={() => { void emptyRecycleBin(); }}
+          onClick={emptyRecycleBin}
         >
           {busy === "empty" ? "Emptying…" : "Empty Recycle Bin"}
         </button>
@@ -222,7 +247,7 @@ export function RecycleBin({
           type="button"
           className="recycle-bin__danger-button"
           disabled={controlsDisabled || selectedIds.length === 0}
-          onClick={() => { void deleteSelected(); }}
+          onClick={deleteSelected}
         >
           {busy === "delete" ? "Deleting…" : `Delete permanently${selectedIds.length ? ` (${selectedIds.length})` : ""}`}
         </button>
@@ -279,6 +304,33 @@ export function RecycleBin({
           </div>
         )}
       </div>
+
+      {confirmation ? (
+        <div className="recycle-bin__confirmation-backdrop">
+          <div
+            className="recycle-bin__confirmation"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="recycle-bin-confirmation-title"
+            aria-describedby="recycle-bin-confirmation-message"
+          >
+            <h2 id="recycle-bin-confirmation-title">
+              {confirmation.action === "empty" ? "Empty Recycle Bin?" : "Delete permanently?"}
+            </h2>
+            <p id="recycle-bin-confirmation-message">{confirmation.message}</p>
+            <div className="recycle-bin__confirmation-actions">
+              <button type="button" onClick={() => setConfirmation(null)}>Cancel</button>
+              <button
+                type="button"
+                className="recycle-bin__danger-button"
+                onClick={confirmPendingAction}
+              >
+                {confirmation.action === "empty" ? "Confirm Empty Recycle Bin" : "Confirm permanent delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
