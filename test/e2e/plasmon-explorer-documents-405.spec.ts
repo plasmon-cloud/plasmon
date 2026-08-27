@@ -22,7 +22,7 @@ async function openPlasmon(page: Page): Promise<FrameLocator> {
   return app;
 }
 
-test("#405 Explorer activates the standard Documents directory without demo fixtures", { tag: ["@issue-405", "@issue-498"] }, async ({ page }) => {
+test("#405 Explorer activates the standard Documents directory", { tag: ["@issue-405", "@issue-498"] }, async ({ page }) => {
   test.setTimeout(120_000);
   const app = await openPlasmon(page);
   const desktop = app.getByRole("region", { name: "Desktop" });
@@ -48,7 +48,7 @@ test("#405 Explorer activates the standard Documents directory without demo fixt
   await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
 
   // Create the observed resource in the destination, proving that the
-  // directory is live and user-editable without relying on seeded demo files.
+  // directory is live and user-editable.
   const fileName = `Issue 405 ${Date.now()}.txt`;
   await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
   const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
