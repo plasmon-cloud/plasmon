@@ -1,5 +1,11 @@
 import type { ResourceArtworkMetadata } from "../fs/resourceArtwork.ts";
 import type { ResourceClassification } from "../fs/resourcePolicy.ts";
+import {
+  FILE_TYPE_ICON_ASSETS,
+  SYSTEM_ICON_ASSETS,
+  type FileTypeIconName,
+  type SystemIconName,
+} from "./assets.ts";
 import type { ResourceIconPresentation } from "./primitives.tsx";
 
 const FILE_PRESENTATION_BY_CONTENT: Readonly<Record<ResourceClassification["type"]["contentKind"], ResourceIconPresentation>> = Object.freeze({
@@ -26,8 +32,28 @@ const NATIVE_PRESENTATION_BY_HANDLER: Readonly<Record<string, ResourceIconPresen
   "native:video": { kind: "file-type", icon: "video" },
 });
 
+const SYSTEM_PRESENTATION_BY_ASSET = new Map<string, ResourceIconPresentation>(
+  (Object.entries(SYSTEM_ICON_ASSETS) as Array<[SystemIconName, string]>).map(
+    ([icon, src]) => [src, { kind: "system", icon }],
+  ),
+);
+const FILE_PRESENTATION_BY_ASSET = new Map<string, ResourceIconPresentation>(
+  (Object.entries(FILE_TYPE_ICON_ASSETS) as Array<[FileTypeIconName, string]>).map(
+    ([icon, src]) => [src, { kind: "file-type", icon }],
+  ),
+);
+
 export function isImageResourceReference(value: string | null | undefined): value is string {
   return !!value && /^(?:https?:|data:image\/|\/|\.\.?\/|[^/:?#]+\/)/u.test(value);
+}
+
+/**
+ * Recognize only exact canonical Plasmon asset references. Arbitrary application
+ * and .neutron icon URLs are deliberately not inferred as owned artwork.
+ */
+export function plasmonOwnedAssetPresentation(src?: string | null): ResourceIconPresentation | null {
+  if (!src) return null;
+  return SYSTEM_PRESENTATION_BY_ASSET.get(src) ?? FILE_PRESENTATION_BY_ASSET.get(src) ?? null;
 }
 
 export function applicationResourcePresentation(src?: string | null): ResourceIconPresentation {
