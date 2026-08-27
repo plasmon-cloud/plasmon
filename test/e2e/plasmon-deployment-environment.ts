@@ -142,6 +142,8 @@ async function runCommand(command: string[], cwd: string, env?: NodeJS.ProcessEn
   }
 }
 
+// Runtime diagnostics do not depend on a particular application fixture or
+// browser acceptance profile.
 async function printLinuxRuntimeDiagnostics(reason: string): Promise<void> {
   if (process.platform !== "linux") return;
   console.error(`[plasmon-runtime-diagnostics] ${reason}`);
