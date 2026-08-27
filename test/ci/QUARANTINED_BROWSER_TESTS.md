@@ -121,6 +121,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
+- `test/e2e/plasmon-explorer-documents-405.spec.ts` — required; #405 verifies neutral Root-to-Documents activation and creates its own destination file.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required; #245 restores the production readiness/canvas/core-start proof while retaining loader/local-asset/network-safety coverage. The PR #417 one-off fixture-selection observation is not quarantined without independent recurrence.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
 - `test/e2e/plasmon-drag-preview-66.spec.ts` — required; #320 restores the exact #66 acceptance with its canonical final directory-drop assertion unchanged.
