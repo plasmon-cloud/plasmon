@@ -45,14 +45,6 @@ async function activateSearchResult(plasmon: FrameLocator, query: string, title:
   await expect(search.panel).toHaveCount(0);
 }
 
-async function activateTaskbarWindow(plasmon: FrameLocator, label: string): Promise<void> {
-  const taskbar = plasmon.getByRole("navigation", { name: "Taskbar" });
-  const task = taskbar.getByRole("button", { name: new RegExp(`^${label};`) }).first();
-  await expect(task).toBeVisible({ timeout: 20_000 });
-  if (await task.getAttribute("aria-pressed") !== "true") await task.click();
-  await expect(task).toHaveAttribute("aria-pressed", "true");
-}
-
 async function expectStartFixture(plasmon: FrameLocator, visible: boolean): Promise<void> {
   await plasmon.getByRole("button", { name: "Start", exact: true }).click();
   const start = plasmon.getByRole("region", { name: "Start menu" });
@@ -165,7 +157,10 @@ test("#429 — packaged Start follows global visibility for an existing hidden t
     await expectStartFixture(plasmon, true);
 
     // Returning global visibility OFF immediately filters the same Start entry.
-    await activateTaskbarWindow(plasmon, "Settings");
+    // The previous Settings window was intentionally closed before opening
+    // Start, so reopen it through the ordinary Search activation boundary.
+    await activateSearchResult(plasmon, "Settings", "Settings");
+    await expect(settings).toBeVisible({ timeout: 20_000 });
     await globalHidden.uncheck();
     await expect(globalHidden).not.toBeChecked();
     await settings.getByRole("button", { name: "Close", exact: true }).click();
