@@ -6,6 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const PROGRAM_FILES_WORKER_PATH = `/app/${APP_ID}/System/Program Files/MonacoEditor/editor.worker.js`;
 const BROWSER_WORKER_PATH = `/app/${APP_ID}/runtime/monaco/editor.worker.js`;
 const BROWSER_TRANSPORT_PATH = `/app/${APP_ID}/runtime/monaco/worker-sources.js`;
 
@@ -106,23 +107,26 @@ test("#391 slim packaged Monaco executes the installed editor-worker through the
     if (pathname === BROWSER_TRANSPORT_PATH) browserTransportLoaded = true;
   });
 
-  // The URL-safe mirror is the HTTP-accessible package transport. The
-  // filesystem-level Program Files authority is covered by the focused core
-  // tests; every browser transport must still be byte-identical to this
-  // installed worker payload.
-  const [mirror, transport, missingMirrorTypescript, retired] = await Promise.all([
+  // Program Files is the installed logical authority. The URL-safe mirror is
+  // the HTTP-accessible package transport, and every opaque browser transport
+  // must remain byte-identical to that authority.
+  const [programFiles, mirror, transport, missingMirrorTypescript, retired] = await Promise.all([
+    request.get(new URL(PROGRAM_FILES_WORKER_PATH, kernelUrl).href),
     request.get(new URL(BROWSER_WORKER_PATH, kernelUrl).href),
     request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href),
     request.get(new URL(`/app/${APP_ID}/runtime/monaco/ts.worker.js`, kernelUrl).href),
     request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href),
   ]);
+  expect(programFiles.ok(), "slim Monaco Program Files editor-worker authority must remain installed").toBe(true);
   expect(mirror.ok(), "slim Monaco URL-safe editor-worker mirror must remain installed").toBe(true);
   expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
   expect(missingMirrorTypescript.ok(), "slim r2 must not expose a shadow ts.worker.js mirror").toBe(false);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
 
+  const programFilesBytes = await programFiles.body();
   const mirrorBytes = await mirror.body();
-  expect(mirrorBytes.length, "installed editor worker must contain runtime bytes").toBeGreaterThan(100);
+  expect(programFilesBytes.length, "installed Program Files editor worker must contain runtime bytes").toBeGreaterThan(100);
+  expect(mirrorBytes, "URL-safe editor worker must be byte-identical to Program Files authority").toEqual(programFilesBytes);
   const transportScope: Record<string, unknown> = {};
   runInNewContext(await transport.text(), transportScope);
   const transported = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string> | undefined;
