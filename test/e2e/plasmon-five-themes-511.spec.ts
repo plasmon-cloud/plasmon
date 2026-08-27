@@ -86,29 +86,37 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     const shell = app.locator(".plasmon-shell");
     await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 30_000 });
 
+    const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+    const beforeExplorer = await windows.count();
     await rootShortcut.dblclick();
+    await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
 
-    const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(explorer).toBeVisible({ timeout: 20_000 });
+    const explorer = windows.last();
+    await expect(explorer).toHaveAccessibleName("This Plasmon");
     const explorerTitlebar = explorer.locator(".plasmon-window__titlebar");
     const fileManager = explorer.locator(".fm-window");
     await expect(fileManager).toBeVisible();
 
     await explorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
-    const documents = app.getByRole("dialog", { name: "Documents" }).last();
-    await expect(documents).toBeVisible({ timeout: 20_000 });
-    const notes = documents.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
+    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
+    await expect(explorer).toHaveAccessibleName("Documents");
+    const notes = explorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
+    const beforeText = await windows.count();
     await notes.dblclick();
+    await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
 
-    const textWindow = app.getByRole("dialog", { name: /First Demo Notes\.txt - Monaco Editor/ }).last();
-    await expect(textWindow).toBeVisible({ timeout: 20_000 });
+    const textWindow = windows.last();
+    await expect(textWindow).toHaveAccessibleName("First Demo Notes.txt - Monaco Editor");
     const monacoSurface = textWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-    const monaco = textWindow.locator(".monaco-editor").first();
-    await expect(monaco).toBeVisible();
+    // Monaco's root is a layout container and can remain transparent. The
+    // internal background node is the rendered editor canvas that receives
+    // the color projected from the active Plasmon Visual palette.
+    const monacoCanvas = textWindow.locator(".monaco-editor-background").first();
+    await expect(monacoCanvas).toBeVisible();
 
     await app.getByRole("button", { name: "Start" }).click();
     const start = app.getByRole("region", { name: "Start menu" });
@@ -143,8 +151,8 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
 
       await expect.poll(() => computed(explorerTitlebar, "backgroundColor")).toBe(titlebar);
       await expect.poll(() => computed(fileManager, "backgroundColor")).toBe(windowBackground);
-      await expect.poll(() => computed(monaco, "backgroundColor")).toBe(windowBackground);
-      observed.monaco.add(await computed(monaco, "backgroundColor"));
+      await expect.poll(() => computed(monacoCanvas, "backgroundColor")).toBe(windowBackground);
+      observed.monaco.add(await computed(monacoCanvas, "backgroundColor"));
 
       const scheme = await computed(shell, "colorScheme");
       expect(scheme).toContain(theme.scheme);
