@@ -14,7 +14,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 
 | Required-CI quarantine | Exact spec/test | Known signature | Repair / restoration Issue |
 | --- | --- | --- | --- |
-| Alt-Tab multi-instance setup | `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — tags `@r2-quarantine @issue-63 @issue-308` | second-Explorer creation failure occurs before Alt-Tab semantics are reached | #308 |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
 | #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
@@ -119,7 +118,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-golden-path.spec.ts` — required; #268 is not broad-skipped.
 - `test/e2e/plasmon-golden-path-left-snap.spec.ts` — required on #279's restoration head; exact left preview/snap geometry remains fail-closed.
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
-- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; the #251 sibling-lifetime acceptance is required, while only the #63 Alt-Tab acceptance under #308 remains quarantined.
+- `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — required; #251 sibling-lifetime and #63 Alt-Tab acceptances are restored and retain their complete lifecycle assertions.
 - `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-markdown-commands-114.spec.ts` — required; #500 provides neutral Markdown command and Preview coverage.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.

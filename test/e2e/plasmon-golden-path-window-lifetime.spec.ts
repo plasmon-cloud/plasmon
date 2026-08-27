@@ -97,7 +97,7 @@ test(
 
 test(
   "#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
-  { tag: ["@r2-quarantine", "@issue-63", "@issue-308"] },
+  { tag: ["@issue-63", "@issue-308"] },
   async ({ page }) => {
     const { app, kernelUrl } = await openInstalledPlasmon(page);
     const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
