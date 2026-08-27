@@ -62,6 +62,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
 
     const documentsExplorer = rootExplorer;
+    const documentsWindow = rootExplorer.locator("xpath=ancestor::*[@data-window-id][1]");
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const generatedName = `Issue 415 Generated ${Date.now()}.js`;
     const plainName = `Issue 415 Plain ${Date.now()}.txt`;
@@ -103,7 +104,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await expect(filesTask).toBeVisible();
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
     await plainEntry.dblclick();
     await expect(windows).toHaveCount(beforeGeneratedText + 2, { timeout: 20_000 });
     const textWindow = windows.last();
@@ -138,7 +139,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(textWindow.getByText("Saved", { exact: true })).toBeVisible();
 
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
     const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
     await expect(script).toBeVisible({ timeout: 20_000 });
     const beforeReopen = await windows.count();
