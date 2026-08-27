@@ -5,7 +5,7 @@ The r2 Specialist lane keeps its complete spec inventory present and filters onl
 Required Specialist runs serialized and uses Playwright filtering:
 
 ```text
-playwright test --workers=1 --grep-invert @r2-quarantine ...
+playwright test --workers=1 --retries=0 --grep-invert @r2-quarantine ...
 ```
 
 Every active quarantine below has a dedicated repair Issue. Unknown failures, deterministic Product failures, PocketIC loss, runner cancellation, and all unlisted browser-health diagnostics continue to fail CI.
@@ -56,6 +56,12 @@ Issue #303 restores `test/e2e/plasmon-demo-review.spec.ts` — `[demo profile] #
 
 Exact repair head `af8e6e763ad7e9a75433d8a16e9d7fc92913038e` produced 10/10 clean retry-free baseline packets and 50/50 targeted characterization packets, for 60/60 clean first-attempt executions with no chooser-title recurrence. The exact #118 acceptance is therefore removed from `@r2-quarantine` while the rest of `plasmon-demo-review.spec.ts` remains required and unchanged.
 
+## #402 taskbar context-menu geometry restoration
+
+Issue #402 restores `taskbar context menus stay source-adjacent and expose canonical Close and alignment` as the dedicated required Specialist spec `test/e2e/plasmon-taskbar-context-menu-402.spec.ts`. The acceptance was already untagged, but commit `9e0284a10c65e2fb2ac1fd8657a1086eb03a911b` moved the containing demo-review file to profile-specific inventory, so it no longer executed in required Specialist despite the quarantine ledger describing it as restored. The dedicated split corrects only that lane identity; the demo-profile #118/#303 acceptance remains in `plasmon-demo-review.spec.ts` with its existing ownership and metadata.
+
+The historical #402 failure remains classified as shared attempt/runtime collapse: Flake Probe `32301996596` attempt 5 failed at the first `page.goto` after shared PocketIC process loss, before taskbar/context-menu setup or any geometry assertion. The restored Specialist acceptance keeps canonical Close delegation and process disappearance, 4–10 px source gap, <=3 px item-center delta, 7 px viewport containment, left alignment at 8–12 px, status-edge <=12 px, and centered alignment <=2 px. It adds no sleeps, timeout inflation, retries, Product hooks, tolerance widening, or lifecycle weakening. Final repeated-run evidence is recorded on ledger #295.
+
 Issue #500 supplies the neutral Markdown companion acceptance in `test/e2e/plasmon-markdown-commands-114.spec.ts`. It creates a unique Markdown resource through packaged FileManager operations and exercises Markdown commands and preview semantics without demo assets, demo filenames, query fixtures, or unrelated application state.
 
 ## #420 drag-feedback request-cancellation restoration
@@ -70,7 +76,7 @@ Trace evidence identified the aborted `file.svg` as presentation churn on the sa
 
 Issue #406 restores `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — to required Specialist execution. Historical trace classification showed the #371 same-NodeId filesystem move and persisted Desktop placement were already correct; the original 47 px geometry displacement was caused by #317 runtime-concurrency error-banner contamination, and the later BrowserHealth recurrence was the separately repaired #420 presentation-lifecycle signature.
 
-Exact unquarantined head `31c4bfd22b6b93ae1573153f940f4eb31e12ca85` completed Flake Probe run `32912928369` with 10/10 clean retry-free baseline packets and 50/50 clean targeted characterization iterations. Fast, Smoke, Specialist, Persistence, and Kernel CI were also green on that head. The acceptance retains same NodeId, filesystem parent-move authority, grab offset, drag-preview/drop-target, ghost/release geometry, committed Desktop position, existing geometry tolerances, and strict BrowserHealth; only the #406 quarantine boundary is removed.
+Exact unquarantined head `31c4bfd22b6b93ae1573153f940f4eb31e12ca85` completed Flake Probe run `32912928369` with 10/10 clean retry-free baseline packets and 50/50 clean targeted characterization iterations. Fast, Smoke, Specialist, Persistence, and Kernel CI were also green on that head. The acceptance retains same NodeId, filesystem parent-move authority, canonical Desktop placement, grab offset, drag-preview/drop-target, ghost/release geometry, committed Desktop position, existing geometry tolerances, and strict BrowserHealth; only the #406 quarantine boundary is removed.
 
 ## #330 diagnostic-selection / New Folder rename restoration
 
@@ -129,6 +135,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-markdown-commands-114.spec.ts` — required; #500 provides neutral Markdown command and Preview coverage.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
 - `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
+- `test/e2e/plasmon-taskbar-context-menu-402.spec.ts` — required; #402 preserves canonical Close lifecycle, source-adjacent placement, viewport clamping, and left/center alignment with the existing geometry tolerances.
 - `test/e2e/plasmon-explorer-documents-405.spec.ts` — required; #405 verifies neutral Root-to-Documents activation and creates its own destination file.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required; #245 restores the production readiness/canvas/core-start proof while retaining loader/local-asset/network-safety coverage. The PR #417 one-off fixture-selection observation is not quarantined without independent recurrence.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
@@ -152,6 +159,8 @@ For #279 specifically, the exact left-snap acceptance must remain unquarantined 
 For #304 specifically, the dedicated saved-preview acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the required `blob:` preview contract before this quarantine is removed. Static artwork remains a failure for that acceptance.
 
 For #320 specifically, the exact #66 acceptance must be run **unquarantined** and pass five consecutive clean first attempts with retries=0 while retaining the final canonical Explorer directory-drop assertion before this quarantine is removed.
+
+For #402 specifically, `test/e2e/plasmon-taskbar-context-menu-402.spec.ts` must remain required and unquarantined with retries=0 and pass five consecutive clean first-attempt packaged Specialist executions. Canonical Close/process lifecycle, 4–10 px source adjacency, <=3 px task-item centering, 7 px viewport containment, 8–12 px left alignment, <=12 px status-edge spacing, and <=2 px centered alignment remain fail-closed.
 
 For #406 specifically, restoration was satisfied by exact unquarantined head `31c4bfd22b6b93ae1573153f940f4eb31e12ca85`: 10/10 clean retry-free baseline packets plus 50/50 targeted characterization iterations, with same-NodeId move authority, canonical Desktop placement, grab-offset/ghost-release geometry, committed-position assertions, existing tolerances, and strict BrowserHealth unchanged.
 
