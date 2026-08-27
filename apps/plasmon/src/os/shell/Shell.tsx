@@ -45,6 +45,7 @@ import {
 import {
   cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
+  effectiveShellWallpaper,
   saveShellPreferencesNonDestructive,
   ShellPreferenceStore,
   togglePinned,
@@ -126,6 +127,7 @@ export function Shell({
   const { processes, windowStates, focusedWindowId } = useNativeShellSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElementSnapshot(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
+  const effectiveWallpaperId = effectiveShellWallpaper(effectivePreferences.themeId, effectivePreferences.wallpaper);
   const preferencesReady = preferences !== null;
 
   useEffect(() => {
@@ -479,8 +481,9 @@ export function Shell({
       : null;
 
   return <div
-    className={`plasmon-shell plasmon-shell--wallpaper-${effectivePreferences.wallpaper}`}
+    className={`plasmon-shell plasmon-shell--wallpaper-${effectiveWallpaperId}`}
     data-plasmon-theme={effectivePreferences.themeId}
+    data-plasmon-wallpaper={effectiveWallpaperId}
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
@@ -543,10 +546,7 @@ export function Shell({
       preferences={effectivePreferences}
       preferencesReady={preferencesReady}
       onSelectTheme={selectTheme}
-      onToggleWallpaper={() => persistPreferences({
-        ...effectivePreferences,
-        wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora",
-      })}
+      onSelectWallpaper={(wallpaper) => persistPreferences({ ...effectivePreferences, wallpaper })}
       onSelectTaskbarAlignment={selectTaskbarAlignment}
     /> : null}
 
