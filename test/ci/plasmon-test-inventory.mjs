@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:url';
 import { fileURLToPath } from 'node:url';
 
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -18,6 +18,7 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
+    'test/e2e/plasmon-taskbar-context-menu-402.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
