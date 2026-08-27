@@ -10,6 +10,10 @@ test("apps.describe projects authoritative installed tile and tray icons to pack
   const app = registryApp({
     id: "hackathon_icon",
     name: "Hackathon Icon",
+    background: {
+      path: "service.html",
+      description: "Installed icon authority fixture",
+    },
     tiles: [
       {
         id: "main",
