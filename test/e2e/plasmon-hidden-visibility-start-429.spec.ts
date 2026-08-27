@@ -155,12 +155,19 @@ test("#429 — packaged Start follows global visibility for an existing hidden t
     // rewriting the shortcut or relying on Explorer's local visibility state.
     await globalHidden.check();
     await expect(globalHidden).toBeChecked();
+    // Settings is a native window and can remain above the Shell flyout after
+    // its preference mutation. Close it before opening Start so the assertion
+    // observes the visible production Start surface rather than z-order.
+    await settings.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(settings).not.toBeVisible();
     await expectStartFixture(plasmon, true);
 
     // Returning global visibility OFF immediately filters the same Start entry.
     await activateTaskbarWindow(plasmon, "Settings");
     await globalHidden.uncheck();
     await expect(globalHidden).not.toBeChecked();
+    await settings.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(settings).not.toBeVisible();
     await expectStartFixture(plasmon, false);
 
     health.assertClean();
