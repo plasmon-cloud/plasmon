@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 export const PLASMON_LOCAL_MANIFEST = "plasmon-local.ndeploy.json";
 export const PLASMON_DEMO_MANIFEST = "plasmon.ndeploy.json";
+export const PLASMON_WORKSPACE = "neutron-plasmon";
 
 export type PlasmonDeploymentScope = "local" | "demo";
 
@@ -43,6 +44,12 @@ export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): str
     case "demo":
       return PLASMON_DEMO_MANIFEST;
   }
+}
+
+export function packageProfileForDeployment(manifestPath: string, workspace: string): string | undefined {
+  return manifestPath === PLASMON_DEMO_MANIFEST && workspace === PLASMON_WORKSPACE
+    ? "demo"
+    : undefined;
 }
 
 function repositoryRoot(): string {
@@ -111,12 +118,23 @@ export function workspacesToPackage(artifacts: readonly DeploymentArtifact[]): s
   return [...new Set(artifacts.map((artifact) => artifact.workspace))];
 }
 
-async function runCommand(command: string[], cwd: string): Promise<void> {
+function packageEnvironmentForDeployment(manifestPath: string, workspace: string): NodeJS.ProcessEnv | undefined {
+  if (workspace !== PLASMON_WORKSPACE) return undefined;
+
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.PLASMON_PACKAGE_PROFILE;
+  const profile = packageProfileForDeployment(manifestPath, workspace);
+  if (profile) env.PLASMON_PACKAGE_PROFILE = profile;
+  return env;
+}
+
+async function runCommand(command: string[], cwd: string, env?: NodeJS.ProcessEnv): Promise<void> {
   const child = Bun.spawn(command, {
     cwd,
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
+    ...(env ? { env } : {}),
   });
   const exitCode = await child.exited;
   if (exitCode !== 0) {
@@ -180,9 +198,15 @@ export async function prepareDeploymentEnvironment(
   options: DeploymentEnvironmentOptions,
 ): Promise<DeploymentArtifact[]> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
+  const manifestPath = options.manifestPath;
+  if (!manifestPath) throw new Error("Deployment manifest must be selected explicitly");
   const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
   for (const workspace of workspacesToPackage(artifacts)) {
-    await runCommand(["npm", "--workspace", workspace, "run", "package"], repoRoot);
+    await runCommand(
+      ["npm", "--workspace", workspace, "run", "package"],
+      repoRoot,
+      packageEnvironmentForDeployment(manifestPath, workspace),
+    );
   }
   await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   return artifacts;

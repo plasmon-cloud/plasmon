@@ -19,7 +19,7 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
 | #371 Explorer-to-Desktop placement | `test/e2e/plasmon-drag-placement-371.spec.ts` — `#371 Explorer to Desktop drop commits the icon where the ghost is released` — tags `@r2-quarantine @issue-371 @issue-406` | PR #372 retry-free probe `32320470807` passed 2/10 and failed 8/10; unrelated PR #418 probe `32513444540` independently recurred on attempt 4 while #371 was unchanged | #406 |
 | #89 packaged Monaco worker / editor-input readiness | `test/e2e/plasmon-monaco-workers-89.spec.ts` — `#89 packaged Monaco workers use Program Files authority through the opaque-origin transport` — tags `@r2-quarantine @issue-89 @issue-391` | PR #389 exact-head flake probe `32317329247`: 8/10 pass; attempts 4/10 and 10/10 fail during editor-input readiness while same-head required Specialist passes | #391 |
-| #415 Text language-transition browser readiness | `test/e2e/plasmon-text-language-transition.spec.ts` — `#415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
+| #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
 
 ## #279 left-snap / snap-preview restoration proof
 
@@ -43,9 +43,9 @@ The preserved retry-free failures reached the directory-drop operation/refresh p
 
 ## #303 grouped Explorer chooser-title restoration
 
-Issue #303 restores `test/e2e/plasmon-review-demo.spec.ts` — `#118 groups canonical Explorer processes and focuses individual members` — to required Specialist execution. The repair binds the already-created primary Explorer by stable native-window identity and waits for that same production window to publish accessible name `This Plasmon` before minimizing it. The final grouped chooser assertion remains exactly `This Plasmon; Minimized`; no sleep, retry, timeout inflation, Product hook, fallback selector, or weakened chooser assertion is introduced.
+Issue #303 restores `test/e2e/plasmon-demo-review.spec.ts` — `[demo profile] #118 groups canonical Explorer processes and focuses individual members` — to required Specialist execution. The repair binds the already-created primary Explorer by stable native-window identity and waits for that same production window to publish accessible name `This Plasmon` before minimizing it. The final grouped chooser assertion remains exactly `This Plasmon; Minimized`; no sleep, retry, timeout inflation, Product hook, fallback selector, or weakened chooser assertion is introduced.
 
-Exact repair head `af8e6e763ad7e9a75433d8a16e9d7fc92913038e` produced 10/10 clean retry-free baseline packets and 50/50 targeted characterization packets, for 60/60 clean first-attempt executions with no chooser-title recurrence. The exact #118 acceptance is therefore removed from `@r2-quarantine` while the rest of `plasmon-review-demo.spec.ts` remains required and unchanged.
+Exact repair head `af8e6e763ad7e9a75433d8a16e9d7fc92913038e` produced 10/10 clean retry-free baseline packets and 50/50 targeted characterization packets, for 60/60 clean first-attempt executions with no chooser-title recurrence. The exact #118 acceptance is therefore removed from `@r2-quarantine` while the rest of `plasmon-demo-review.spec.ts` remains required and unchanged.
 
 ## #420 drag-feedback request-cancellation restoration
 
@@ -108,17 +108,16 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-golden-path-left-snap.spec.ts` — required on #279's restoration head; exact left preview/snap geometry remains fail-closed.
 - `test/e2e/plasmon-golden-path-right-snap.spec.ts` — required; #244 restores snapped -> restore -> opposite-edge/right-snap preview and geometry proof.
 - `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — retained; only the sibling-lifetime acceptance under #251 and the #63 Alt-Tab acceptance under #308 are quarantined.
-- `test/e2e/plasmon-monaco-packaged.spec.ts` — required.
+- `test/e2e/plasmon-demo-monaco-packaged.spec.ts` — required.
 - `test/e2e/plasmon-monaco-workers-89.spec.ts` — retained; its single #89/#391 acceptance is quarantined pending editor-readiness root-cause repair and restoration proof.
-- `test/e2e/plasmon-review-demo.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
+- `test/e2e/plasmon-demo-review.spec.ts` — required; #303 restores the exact #118 grouped Explorer chooser-title acceptance with 60/60 clean first-attempt proof.
 - `test/e2e/plasmon-emulatorjs-proof.spec.ts` — required; #245 restores the production readiness/canvas/core-start proof while retaining loader/local-asset/network-safety coverage. The PR #417 one-off fixture-selection observation is not quarantined without independent recurrence.
 - `test/e2e/plasmon-demo-game.spec.ts` — retained; only the dedicated #124/#304 saved-preview blob-readiness acceptance is quarantined. The broad #250/#123/#202/#64 demo-game journey remains required.
 - `test/e2e/plasmon-drag-preview-66.spec.ts` — required; #320 restores the exact #66 acceptance with its canonical final directory-drop assertion unchanged.
 - `test/e2e/plasmon-drag-feedback-360.spec.ts` — required; #420 restores the open-folder move, target-transition/invalid/cancel/unmount, and grouped multi-selection acceptances while the Desktop ghost/release-continuity acceptance remains continuously required.
 - `test/e2e/plasmon-drag-placement-371.spec.ts` — retained; its single #371/#406 placement acceptance is quarantined pending deterministic repair and restoration proof.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
-- `test/e2e/plasmon-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
-- `test/e2e/plasmon-first-demo.spec.ts` — required.
+- `test/e2e/plasmon-demo-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
 
