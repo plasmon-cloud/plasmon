@@ -73,7 +73,9 @@ Exact repair head `e7481f69c123fadd09b86001a278a520f7a2a4b8` produced 10/10 clea
 
 The #391 quarantine is limited to the single #89 packaged Monaco worker acceptance. PR #389's exact head passes the acceptance in required Packaged Browser CI but fails it on two of ten fresh retry-free flake-probe attempts, and independent PR #363 was 10/10 clean. The observed failures occur during editor-input readiness before the worker authority/message assertions. Product Issue #89 remains the canonical worker behavior owner while #391 owns CI stability and restoration; no Monaco worker assertion is removed or weakened.
 
-The #434 quarantine is limited to the single #415 Text language-transition acceptance. The test remains in the Specialist inventory and its FileManager rename, Save As, Monaco model identity, language status, tokenization, reopen persistence, round-trip-to-plaintext, and strict BrowserHealth assertions remain unchanged; only the exact test is tagged. PR #418 and unrelated PR #427 independently reproduce readiness failures on one of ten fresh retry-free iterations each, at different setup boundaries before the #415 language assertions. Product Issue #415 remains the behavior owner while #434 owns CI stability and restoration.
+The #434 quarantine is limited to the demo-profile #415 Text language-transition acceptance. The demo test remains in the profile-specific inventory with its FileManager rename, Save As, Monaco model identity, language status, tokenization, reopen persistence, round-trip-to-plaintext, and strict BrowserHealth assertions unchanged. PR #418 and unrelated PR #427 independently reproduced readiness failures before the #415 language assertions. Product Issue #415 remains the behavior owner while #434 owns the demo-profile restoration.
+
+Issue #505 supplies the neutral companion acceptance in `test/e2e/plasmon-text-language-transition.spec.ts`. It creates both source resources through ordinary packaged FileManager operations and runs as required Specialist coverage without `plasmon:demo`, demo assets, demo filenames, query fixtures, or Gemma allowances.
 
 ## #244 right-snap / snap-preview restoration
 
@@ -125,7 +127,8 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-drag-feedback-360.spec.ts` — required; #420 restores the open-folder move, target-transition/invalid/cancel/unmount, and grouped multi-selection acceptances while the Desktop ghost/release-continuity acceptance remains continuously required.
 - `test/e2e/plasmon-drag-placement-371.spec.ts` — required; #406 restores the exact #371 placement acceptance with 60/60 clean retry-free evidence and unchanged same-NodeId/geometry/BrowserHealth assertions.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
-- `test/e2e/plasmon-demo-text-language-transition.spec.ts` — retained; its single #415/#434 acceptance is quarantined pending browser-readiness root-cause repair and restoration proof.
+- `test/e2e/plasmon-demo-text-language-transition.spec.ts` — retained; its single demo-profile #415/#434 acceptance is quarantined pending demo browser-readiness restoration.
+- `test/e2e/plasmon-text-language-transition.spec.ts` — required; #505 provides neutral #415 language-transition coverage through self-created FileManager resources.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
 
