@@ -34,12 +34,12 @@ const NATIVE_PRESENTATION_BY_HANDLER: Readonly<Record<string, ResourceIconPresen
 
 const SYSTEM_PRESENTATION_BY_ASSET = new Map<string, ResourceIconPresentation>(
   (Object.entries(SYSTEM_ICON_ASSETS) as Array<[SystemIconName, string]>).map(
-    ([icon, src]) => [src, { kind: "system", icon }],
+    ([icon, src]) => [src, { kind: "system", icon }] as const,
   ),
 );
 const FILE_PRESENTATION_BY_ASSET = new Map<string, ResourceIconPresentation>(
   (Object.entries(FILE_TYPE_ICON_ASSETS) as Array<[FileTypeIconName, string]>).map(
-    ([icon, src]) => [src, { kind: "file-type", icon }],
+    ([icon, src]) => [src, { kind: "file-type", icon }] as const,
   ),
 );
 
