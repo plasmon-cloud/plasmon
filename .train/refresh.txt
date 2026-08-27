@@ -1,1 +1,1 @@
-schedule_train v6.7 2026-08-27T20:07:18Z
+train v6.7 ci-1 2026-08-27T20:24:00Z
