@@ -21,38 +21,41 @@ test("#45 — packaged non-empty Recycle Bin confirms and empties canonical Tras
     const plasmon = page.frameLocator(plasmonSelector);
     await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
 
-    const desktop = plasmon.getByRole("region", { name: "Desktop" });
-    await expect(desktop).toBeVisible({ timeout: 30_000 });
-    const desktopBox = await desktop.boundingBox();
-    if (!desktopBox) throw new Error("Desktop has no browser geometry");
+    // Create the test-owned Trash entry through File Explorer's deterministic
+    // command surface. The Desktop background context-menu hit point is not part
+    // of #45 acceptance and can race desktop layout/readiness in packaged CI.
+    await plasmon.getByRole("button", { name: "Search" }).click();
+    const search = plasmon.getByRole("region", { name: "Search" });
+    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
+    const filesResult = search.locator("[data-search-result]", { hasText: "Files" }).first();
+    await expect(filesResult).toBeVisible();
+    await filesResult.click();
 
-    await desktop.click({
-      button: "right",
-      position: {
-        x: Math.max(12, desktopBox.width - 20),
-        y: Math.max(12, desktopBox.height - 20),
-      },
-    });
-    const createMenu = plasmon.getByRole("menu").last();
-    await createMenu.getByRole("menuitem", { name: "New Text Document" }).click();
-    const rename = plasmon.getByRole("textbox", { name: "Rename New Text Document.txt" });
+    const explorer = plasmon.getByRole("region", { name: "File Explorer" });
+    await expect(explorer).toBeVisible();
+    const files = explorer.getByRole("listbox", { name: "Files" });
+    await expect(files).toBeVisible();
+    const toolbar = files.getByRole("toolbar", { name: "File commands" });
+    await expect(toolbar).toBeVisible();
+
+    await toolbar.getByRole("button", { name: "New Text Document", exact: true }).click();
+    const rename = files.getByRole("textbox", { name: /^Rename New Text Document/ }).last();
     await expect(rename).toBeVisible();
     const itemName = `Recycle Bin Empty ${Date.now()}.txt`;
     await rename.fill(itemName);
     await rename.press("Enter");
 
-    const source = desktop.locator("[data-fm-node-id]", { hasText: itemName }).first();
+    const source = files.locator("[data-fm-node-id]", { hasText: itemName }).first();
     await expect(source).toBeVisible();
-
-    await source.click({ button: "right" });
-    const deleteMenu = plasmon.getByRole("menu").last();
-    await deleteMenu.getByRole("menuitem", { name: "Delete" }).click();
+    await source.click();
+    await expect(source).toHaveAttribute("aria-selected", "true");
+    await toolbar.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(source).toHaveCount(0, { timeout: 20_000 });
 
     await plasmon.getByRole("button", { name: "Search" }).click();
-    const search = plasmon.getByLabel("Search Plasmon");
-    await expect(search).toBeVisible();
-    await search.fill("Recycle Bin");
+    const recycleSearch = plasmon.getByLabel("Search Plasmon");
+    await expect(recycleSearch).toBeVisible();
+    await recycleSearch.fill("Recycle Bin");
     const recycleResult = plasmon.locator("[data-search-result]", { hasText: "Recycle Bin" }).first();
     await expect(recycleResult).toBeVisible({ timeout: 15_000 });
     await recycleResult.click();
