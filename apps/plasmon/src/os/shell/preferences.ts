@@ -2,8 +2,22 @@ import type { FsNode, FsService, JsonValue, NodeId } from "../contracts/index.ts
 
 export const SHELL_PREFERENCES_KEY = "plasmon.shell.preferences.v1";
 
-export const SHELL_THEME_IDS = ["plasmon-dark", "plasmon-midnight"] as const;
+export const SHELL_THEME_IDS = [
+  "plasmon-dark",
+  "plasmon-midnight",
+  "plasmon-ember",
+  "plasmon-glacier",
+  "plasmon-rosewood",
+] as const;
 export type ShellThemeId = (typeof SHELL_THEME_IDS)[number];
+
+export const SHELL_THEME_LABELS = Object.freeze({
+  "plasmon-dark": "Plasmon Dark",
+  "plasmon-midnight": "Midnight",
+  "plasmon-ember": "Ember",
+  "plasmon-glacier": "Glacier",
+  "plasmon-rosewood": "Rosewood",
+} satisfies Readonly<Record<ShellThemeId, string>>);
 
 export const SHELL_WALLPAPERS = ["aurora", "plain"] as const;
 export type ShellWallpaper = (typeof SHELL_WALLPAPERS)[number];
