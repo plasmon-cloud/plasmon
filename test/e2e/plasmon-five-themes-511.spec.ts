@@ -95,13 +95,19 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
 
     // Window creation is only the process boundary. Explorer publishes its
     // title and FileManager tree asynchronously, so bind its canonical Address
-    // control before asserting presentation. `.fm-root` is the active reusable
-    // FileManager root; `.fm-window` was a stale selector and never existed here.
-    const explorer = windows.last();
+    // control before asserting presentation. Capture the concrete window id:
+    // `windows.last()` is a live locator and would otherwise retarget when Text
+    // opens a newer window later in the test.
+    const explorerCandidate = windows.last();
+    const explorerCandidateAddress = explorerCandidate.getByRole("textbox", { name: "Address" });
+    await expect(explorerCandidateAddress).toHaveValue("/", { timeout: 20_000 });
+    await expect(explorerCandidate).toHaveAccessibleName("This Plasmon");
+    const explorerWindowId = await explorerCandidate.getAttribute("data-window-id");
+    expect(explorerWindowId, "Explorer should expose stable Windowing identity").toBeTruthy();
+    const explorer = app.locator(`.plasmon-window-layer [data-window-id="${explorerWindowId}"]`);
     const explorerAddress = explorer.getByRole("textbox", { name: "Address" });
-    await expect(explorerAddress).toHaveValue("/", { timeout: 20_000 });
-    await expect(explorer).toHaveAccessibleName("This Plasmon");
     const explorerTitlebar = explorer.locator(".plasmon-window__titlebar");
+    // `.fm-root` is the active reusable FileManager root; `.fm-window` is stale.
     const fileManager = explorer.locator(".fm-root").first();
     await expect(fileManager).toBeVisible();
 
@@ -125,8 +131,11 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     await themeProbe.dblclick();
     await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
 
-    const textWindow = windows.last();
-    await expect(textWindow).toHaveAccessibleName(`${generatedName} - Monaco Editor`);
+    const textCandidate = windows.last();
+    await expect(textCandidate).toHaveAccessibleName(`${generatedName} - Monaco Editor`);
+    const textWindowId = await textCandidate.getAttribute("data-window-id");
+    expect(textWindowId, "Text should expose stable Windowing identity").toBeTruthy();
+    const textWindow = app.locator(`.plasmon-window-layer [data-window-id="${textWindowId}"]`);
     const monacoSurface = textWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
     // Monaco's root is a layout container and can remain transparent. The
