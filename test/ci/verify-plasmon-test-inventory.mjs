@@ -104,6 +104,7 @@ async function verify(inventory) {
   assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
   assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
+  assert(specialistRunner.includes('--retries=0'), 'Specialist acceptance must execute retry-free with --retries=0');
   assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
   for (const path of browserLanes.specialist) {
