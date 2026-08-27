@@ -153,39 +153,41 @@ test("#509 direct SVG resources preserve vector bytes and MIME in the bounded im
   expect(canLoadImageThumbnail(fileNode("large.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1))).toBe(false);
 });
 
-test("#509 shortcut thumbnail resolution fails closed for missing, cyclic, unsupported, empty, and over-limit targets", async () => {
-  const missing = shortcutNode("missing-shortcut", "node-gone");
-  expect(await resolveResourceThumbnailNode(thumbnailFs([]), missing)).toBeNull();
+test("#509 missing shortcut thumbnail target fails closed", async () => {
+  const shortcut = shortcutNode("missing-shortcut", "node-gone");
+  expect(await resolveResourceThumbnailNode(thumbnailFs([]), shortcut)).toBeNull();
+});
 
+test("#509 cyclic shortcut thumbnail targets fail closed", async () => {
   const cycleA = shortcutNode("cycle-a", "node-cycle-b");
   const cycleB = shortcutNode("cycle-b", cycleA.id);
   expect(await resolveResourceThumbnailNode(thumbnailFs([cycleA, cycleB]), cycleA)).toBeNull();
-
-  const unsupported = fileNode("notes.txt", 32, "text/plain");
-  const unsupportedShortcut = shortcutNode("unsupported-shortcut", unsupported.id);
-  expect(await resolveResourceThumbnailNode(
-    thumbnailFs([unsupported]),
-    unsupportedShortcut,
-  )).toBeNull();
-
-  const empty = fileNode("empty.svg", 0);
-  const emptyShortcut = shortcutNode("empty-shortcut", empty.id);
-  expect(await resolveResourceThumbnailNode(thumbnailFs([empty]), emptyShortcut)).toBeNull();
-
-  const overLimit = fileNode("over-limit.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1);
-  const overLimitShortcut = shortcutNode("over-limit-shortcut", overLimit.id);
-  expect(await resolveResourceThumbnailNode(
-    thumbnailFs([overLimit]),
-    overLimitShortcut,
-  )).toBeNull();
 });
 
-test("#509 unreadable shortcut targets fall back without leaking loader errors", async () => {
-  const unreadable = fileNode("unreadable.svg", 64);
-  const shortcut = shortcutNode("unreadable-shortcut", unreadable.id);
-  const fs = thumbnailFs([unreadable], new Set([unreadable.id]));
+test("#509 unsupported shortcut thumbnail target fails closed", async () => {
+  const target = fileNode("notes.txt", 32, "text/plain");
+  const shortcut = shortcutNode("unsupported-shortcut", target.id);
+  expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
+});
 
-  expect((await resolveResourceThumbnailNode(fs, shortcut))?.id).toBe(unreadable.id);
+test("#509 empty SVG shortcut thumbnail target fails closed", async () => {
+  const target = fileNode("empty.svg", 0);
+  const shortcut = shortcutNode("empty-shortcut", target.id);
+  expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
+});
+
+test("#509 over-limit SVG shortcut thumbnail target fails closed", async () => {
+  const target = fileNode("over-limit.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1);
+  const shortcut = shortcutNode("over-limit-shortcut", target.id);
+  expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
+});
+
+test("#509 unreadable shortcut thumbnail target falls back without leaking loader errors", async () => {
+  const target = fileNode("unreadable.svg", 64);
+  const shortcut = shortcutNode("unreadable-shortcut", target.id);
+  const fs = thumbnailFs([target], new Set([target.id]));
+
+  expect((await resolveResourceThumbnailNode(fs, shortcut))?.id).toBe(target.id);
   expect(await loadResolvedResourceThumbnail(fs, shortcut, unreachableUrlApi)).toBeNull();
 });
 
