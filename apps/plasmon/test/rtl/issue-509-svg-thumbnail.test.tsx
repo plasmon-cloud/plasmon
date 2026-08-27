@@ -15,7 +15,14 @@ async function directory(
   return node;
 }
 
-test("#509 Desktop SVG shortcut renders the target's real thumbnail and keeps the shortcut overlay", async () => {
+function expectSvgThumbnail(option: HTMLElement): void {
+  const thumbnail = option.querySelector<HTMLImageElement>("img.plasmon-media-thumbnail");
+  expect(thumbnail).not.toBeNull();
+  const src = thumbnail?.getAttribute("src") ?? "";
+  expect(src.startsWith("blob:") || src.startsWith("data:image/svg+xml;base64,")).toBe(true);
+}
+
+test("#509 the same SVG thumbnails directly in Pictures and through its Desktop shortcut", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;
@@ -31,7 +38,29 @@ test("#509 Desktop SVG shortcut renders the target's real thumbnail and keeps th
       { name: "Demo Artwork.svg" },
     );
 
-    const view = render(
+    // Canonical r2 baseline from manual acceptance: the real SVG already
+    // thumbnails correctly when viewed directly in Pictures.
+    const picturesView = render(
+      <FileManager
+        directoryId={pictures.id}
+        fs={environment.services.fs}
+        openAuthority={environment.services.filesystem.open}
+        trashAuthority={environment.services.filesystem.trash}
+        clipboard={new FileOperationClipboard()}
+        presentation="grid"
+      />,
+    );
+
+    const directOption = await picturesView.findByRole("option", { name: "Demo Artwork.svg" });
+    expect(directOption.getAttribute("data-fm-node-id")).toBe(target.id);
+    await waitFor(() => expectSvgThumbnail(directOption));
+    expect(directOption.querySelector(".plasmon-shortcut-overlay")).toBeNull();
+    picturesView.unmount();
+
+    // The defect was specifically the Desktop NodeId shortcut falling back to
+    // generic image artwork instead of borrowing the already-working target
+    // thumbnail. The fixed path must preserve shortcut composition as well.
+    const desktopView = render(
       <FileManager
         directoryId={desktop.id}
         fs={environment.services.fs}
@@ -42,19 +71,15 @@ test("#509 Desktop SVG shortcut renders the target's real thumbnail and keeps th
       />,
     );
 
-    const option = await view.findByRole("option", { name: "Demo Artwork.svg" });
-    expect(option.getAttribute("data-fm-node-id")).toBe(shortcut.id);
-    expect(option.getAttribute("data-fm-kind")).toBe("shortcut");
-
+    const shortcutOption = await desktopView.findByRole("option", { name: "Demo Artwork.svg" });
+    expect(shortcutOption.getAttribute("data-fm-node-id")).toBe(shortcut.id);
+    expect(shortcutOption.getAttribute("data-fm-kind")).toBe("shortcut");
     await waitFor(() => {
-      const thumbnail = option.querySelector<HTMLImageElement>("img.plasmon-media-thumbnail");
-      expect(thumbnail).not.toBeNull();
-      const src = thumbnail?.getAttribute("src") ?? "";
-      expect(src.startsWith("blob:") || src.startsWith("data:image/svg+xml;base64,")).toBe(true);
-      expect(option.querySelector(".plasmon-shortcut-overlay")).not.toBeNull();
+      expectSvgThumbnail(shortcutOption);
+      expect(shortcutOption.querySelector(".plasmon-shortcut-overlay")).not.toBeNull();
     });
 
-    view.unmount();
+    desktopView.unmount();
   } finally {
     environment.dispose();
   }
