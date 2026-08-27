@@ -1,13 +1,12 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
-const FIXTURE_NAME = "First Demo Artwork.svg";
+const FIXTURE_NAME = "Demo Artwork.svg";
+const DEMO_PROFILE_TAG = "@demo-profile";
 const GEOMETRY_TOLERANCE_PX = 1;
 
 function geometryMatches(
@@ -62,32 +61,9 @@ async function hasMaximizedManagerGeometry(window: Locator): Promise<boolean> {
   });
 }
 
-test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", async ({ page }) => {
+test("[demo profile] #180 — packaged Photos expands inside Plasmon when browser fullscreen is denied", { tag: [DEMO_PROFILE_TAG, "@issue-180"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const fixtureRoute = `**/app/${APP_ID}/**`;
-  let fixtureRedirected = false;
-  let fixtureRouteInstalled = false;
-  const redirectInitialPlasmonDocument = async (route: Route) => {
-    const requestUrl = new URL(route.request().url());
-    const appRoot = `/app/${APP_ID}/`;
-    const isMainDocument = route.request().resourceType() === "document"
-      && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-    if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-      await route.continue();
-      return;
-    }
-
-    fixtureRedirected = true;
-    requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-    await route.fulfill({
-      status: 307,
-      headers: {
-        location: requestUrl.href,
-        "cache-control": "no-store",
-      },
-    });
-  };
   const health = installPlasmonBrowserHealth(page, {
     firstPartyOrigins: [kernelUrl],
     allow: [
@@ -109,6 +85,18 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
         urlPathPrefix: "/static/plasmon/icons/",
         reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
       },
+      {
+        kind: "console.error",
+        messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+        urlPathPrefix: "/app/gemma/model-worker.js",
+        reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+      },
+      {
+        kind: "requestfailed",
+        message: "net::ERR_BLOCKED_BY_ORB",
+        urlPathPrefix: "/app/hello/static/icon.svg",
+        reason: "Known unrelated optional-app icon URL-resolution diagnostic outside #180 Photos fullscreen behavior",
+      },
     ],
   });
 
@@ -121,36 +109,17 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     );
     expect(principal).toBe(runtime.developerIdentityPrincipal);
 
-    // Reuse the repository-authored first-demo image through the production
-    // demo seed contract. This avoids the unrelated Neutron Files import RPC
-    // while preserving filesystem -> association -> Process/Windowing -> Photos.
-    await page.route(fixtureRoute, redirectInitialPlasmonDocument);
-    fixtureRouteInstalled = true;
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
+    // Reuse the repository-authored demo image through the packaged demo
+    // profile. This avoids the unrelated Neutron Files import RPC while
+    // preserving filesystem -> association -> Process/Windowing -> Photos.
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    expect(fixtureRedirected, "installed Plasmon should boot with the explicit first-demo flag").toBe(true);
 
     const plasmonSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
     await expect(page.locator(plasmonSelector).first()).toBeAttached();
     const plasmon = page.frameLocator(plasmonSelector).first();
     await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-    const activeAppUrl = new URL(await plasmon.locator("html").evaluate(() => window.location.href));
-    expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
-    await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
-    fixtureRouteInstalled = false;
-
     const windowLayer = plasmon.locator(".plasmon-window-layer").first();
     await expect(windowLayer).toBeVisible({ timeout: 30_000 });
 
@@ -159,7 +128,7 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
     await plasmon.getByRole("button", { name: "Search" }).click();
     const search = plasmon.getByLabel("Search Plasmon");
     await expect(search).toBeVisible();
-    await search.fill("First Demo Artwork");
+    await search.fill("Demo Artwork");
     const artworkResult = plasmon.locator("[data-search-result]", { hasText: FIXTURE_NAME }).first();
     await expect(artworkResult).toBeVisible({ timeout: 15_000 });
     await artworkResult.click();
@@ -224,7 +193,6 @@ test("#180 — packaged Photos expands inside Plasmon when browser fullscreen is
 
     health.assertClean();
   } finally {
-    if (fixtureRouteInstalled) await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
     health.dispose();
   }
 });

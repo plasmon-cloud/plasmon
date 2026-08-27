@@ -1,11 +1,9 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
 
 type BrowserPageError = {
   name: string;
@@ -14,8 +12,8 @@ type BrowserPageError = {
 };
 
 test(
-  "packaged Text and Markdown edit save and reopen through real Monaco",
-  { tag: ["@issue-67", "@issue-285"] },
+  "[demo profile] packaged Text and Markdown edit save and reopen through real Monaco",
+  { tag: ["@demo-profile", "@issue-67", "@issue-285"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -40,73 +38,21 @@ test(
     expect(principal).toBe(runtime.developerIdentityPrincipal);
 
     // #285 keeps this acceptance focused on the real Monaco/package boundary.
-    // Use #181's ordinary production filesystem bootstrap instead of coupling
-    // Monaco readiness to unrelated Explorer create/rename setup.
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    let fixtureRedirected = false;
-    const redirectInitialPlasmonDocument = async (route: Route) => {
-      const requestUrl = new URL(route.request().url());
-      const appRoot = `/app/${APP_ID}/`;
-      const isMainDocument = route.request().resourceType() === "document"
-        && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-      if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-        await route.continue();
-        return;
-      }
-
-      fixtureRedirected = true;
-      requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-      await route.fulfill({
-        status: 307,
-        headers: {
-          location: requestUrl.href,
-          "cache-control": "no-store",
-        },
-      });
-    };
-    await page.route(fixtureRoute, redirectInitialPlasmonDocument);
-
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
+    // The demo workflow supplies the repository-authored filesystem resources
+    // through the packaged demo profile.
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    expect(fixtureRedirected, "installed Plasmon should boot with the explicit first-demo flag").toBe(true);
 
     const appFrameSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
     await expect(page.locator(appFrameSelector).first()).toBeAttached();
     const app = page.frameLocator(appFrameSelector).first();
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-    const activeAppUrl = new URL(await app.locator("html").evaluate(() => window.location.href));
-    expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
-    await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
-
     const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-    await rootShortcut.dblclick();
-
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const documents = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await expect(documents).toBeVisible();
-    await documents.dblclick();
-
-    const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
-    const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Guide.md" }).first();
-    await expect(notes).toBeVisible();
-    await expect(guide).toBeVisible();
+    const notes = app.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
+    const guide = app.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
+    await expect(notes).toBeVisible({ timeout: 20_000 });
+    await expect(guide).toBeVisible({ timeout: 20_000 });
 
     const expectNoPageErrors = (label: string): void => {
       expect(pageErrors, label).toEqual([]);
