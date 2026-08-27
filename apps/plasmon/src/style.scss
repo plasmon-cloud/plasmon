@@ -1,6 +1,7 @@
 @use "neutron-design-system/styles.scss";
 @use "./os/desktop/spatial-origin.scss";
 @use "./os/file-manager/theme-surfaces.scss";
+@use "./os/visual/icon-tokens.scss";
 
 @layer nt.tokens, nt.base, nt.layout, nt.components, nt.utilities, app;
 
