@@ -1,0 +1,6 @@
+{
+  "schema": "plasmon-train-target-v1",
+  "target_branch": "release/0.1.0-r2",
+  "milestone": "0.1.0-r2",
+  "ci_label_prefix": "ci:"
+}

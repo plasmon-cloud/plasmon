@@ -1,0 +1,40 @@
+name: Plasmon Train Snapshot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .train/config.json
+      - scripts/plasmon-train-snapshot.py
+      - .github/workflows/plasmon-train-snapshot.yml
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+  checks: read
+  actions: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate snapshot contract
+        run: python3 scripts/plasmon-train-snapshot.py --self-test
+      - name: Build normalized snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/plasmon-train-snapshot.py \
+            --config .train/config.json \
+            --output .train/snapshot.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --generation "$GITHUB_SHA"
+      - name: Upload snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: plasmon-train-snapshot
+          path: .train/snapshot.json
+          if-no-files-found: error
+          retention-days: 7
