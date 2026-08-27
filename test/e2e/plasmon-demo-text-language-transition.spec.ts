@@ -1,28 +1,10 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
-
-async function redirectToFirstDemo(route: Route): Promise<void> {
-  const requestUrl = new URL(route.request().url());
-  const appRoot = `/app/${APP_ID}/`;
-  const isMainDocument = route.request().resourceType() === "document"
-    && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-  if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-    await route.continue();
-    return;
-  }
-  requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-  await route.fulfill({
-    status: 307,
-    headers: { location: requestUrl.href, "cache-control": "no-store" },
-  });
-}
 
 async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
   await expect.poll(
@@ -41,10 +23,18 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
+test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  const health = installPlasmonBrowserHealth(page, {
+    firstPartyOrigins: [kernelUrl],
+    allow: [{
+      kind: "console.error",
+      messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+      urlPathPrefix: "/app/gemma/model-worker.js",
+      reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+    }],
+  });
 
   try {
     await page.goto(kernelUrl);
@@ -54,23 +44,9 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
       runtime.developerIdentitySeed,
     );
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    await page.route(fixtureRoute, redirectToFirstDemo);
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
     await expect(page.locator(appSelector)).toBeVisible();
@@ -83,9 +59,14 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await rootShortcut.dblclick();
     const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    await rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
+    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
+      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
+    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+    await expect(documentsEntry).toBeVisible();
+    await documentsEntry.dblclick();
 
-    const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
+    const documentsExplorer = app.locator(".explorer-app").last();
     await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
 
@@ -130,7 +111,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await filesTask.click();
     await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
 
-    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Notes.txt" }).first();
+    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
 
     const beforeText = await windows.count();
