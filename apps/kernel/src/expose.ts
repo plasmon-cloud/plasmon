@@ -51,6 +51,7 @@ import { parseRepositorySetupUrl } from "neutron-tools/repository";
 import { normalizeUntrustedText } from "neutron-tools/src/schema.js";
 import icblast from "icblast";
 import { getNeutronId } from "./config.ts";
+import { describeInstalledAppMetadata } from "./app_discovery.ts";
 import {
   getRegisteredEndpoint,
   installFrameEndpointHandshake,
@@ -1592,39 +1593,7 @@ function flushPendingTileViews(): void {
 function describeInstalledApp(appId: string): JsonObject {
   const app = useAppsStore.getState().list[appId];
   if (!app) throw new Error(`Unknown app '${appId}'`);
-  return {
-    id: appId,
-    name: safeDiscoveryText(app.name, 80),
-    ...(app.description
-      ? { description: safeDiscoveryText(app.description, 280) }
-      : {}),
-    version: app.version,
-    tiles: app.tiles.map((tile) => ({
-      id: tile.id,
-      title: safeDiscoveryText(tile.title, 80),
-      ...(tile.description
-        ? { description: safeDiscoveryText(tile.description, 280) }
-        : {}),
-    })),
-    background: app.background
-      ? {
-          ...(app.background.description
-            ? {
-                description: safeDiscoveryText(
-                  app.background.description,
-                  280
-                ),
-              }
-            : {}),
-        }
-      : null,
-    tray: app.tray
-      ? {
-          title: safeDiscoveryText(app.tray.title, 80),
-        }
-      : null,
-    untrustedMetadata: true,
-  };
+  return describeInstalledAppMetadata(appId, app);
 }
 
 function safeDiscoveryText(value: string, maximum: number): string {
