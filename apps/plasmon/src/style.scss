@@ -2,6 +2,7 @@
 @use "./os/desktop/spatial-origin.scss";
 @use "./os/file-manager/theme-surfaces.scss";
 @use "./os/visual/icon-tokens.scss";
+@use "./os/shell/wallpapers.scss";
 
 @layer nt.tokens, nt.base, nt.layout, nt.components, nt.utilities, app;
 
