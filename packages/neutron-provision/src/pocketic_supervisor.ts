@@ -325,6 +325,7 @@ export async function servePocketIc(
       attachment,
       lock,
       processHost,
+      processExit: launched.exited,
       sleep,
       healthIntervalMs: positiveDuration(
         options.healthIntervalMs ?? DEFAULT_HEALTH_INTERVAL_MS,
@@ -737,6 +738,8 @@ class PocketIcServeHandleImpl implements PocketIcServeHandle {
   readonly #attachment: PocketIcRuntimeAttachment;
   readonly #lock: PocketIcSupervisorLock;
   readonly #processHost: PocketIcProcessHost;
+  readonly #processExit: Promise<PocketIcProcessExit> | undefined;
+  #observedProcessExit: PocketIcProcessExit | undefined;
   readonly #sleep: (milliseconds: number) => Promise<void>;
   readonly #healthIntervalMs: number;
   readonly #stopTimeoutMs: number;
@@ -748,6 +751,7 @@ class PocketIcServeHandleImpl implements PocketIcServeHandle {
     attachment,
     lock,
     processHost,
+    processExit,
     sleep,
     healthIntervalMs,
     stopTimeoutMs,
@@ -755,6 +759,7 @@ class PocketIcServeHandleImpl implements PocketIcServeHandle {
     attachment: PocketIcRuntimeAttachment;
     lock: PocketIcSupervisorLock;
     processHost: PocketIcProcessHost;
+    processExit?: Promise<PocketIcProcessExit>;
     sleep: (milliseconds: number) => Promise<void>;
     healthIntervalMs: number;
     stopTimeoutMs: number;
@@ -763,6 +768,12 @@ class PocketIcServeHandleImpl implements PocketIcServeHandle {
     this.#attachment = attachment;
     this.#lock = lock;
     this.#processHost = processHost;
+    this.#processExit = processExit;
+    if (processExit !== undefined) {
+      void processExit.then((exit) => {
+        this.#observedProcessExit = exit;
+      });
+    }
     this.#sleep = sleep;
     this.#healthIntervalMs = healthIntervalMs;
     this.#stopTimeoutMs = stopTimeoutMs;
@@ -784,7 +795,16 @@ class PocketIcServeHandleImpl implements PocketIcServeHandle {
       while (!this.#stopRequested) {
         const identity = await this.#processHost.processIdentity(this.descriptor.pid);
         if (identity !== this.descriptor.processIdentity) {
-          throw new Error("The supervised PocketIC process exited or changed identity");
+          // Let an already-settled child-exit observation win over the generic
+          // PID/start-time mismatch so the caller can classify a real exit.
+          await Promise.resolve();
+          const exit = this.#observedProcessExit;
+          const detail = exit === undefined
+            ? ""
+            : ` (child exit code=${String(exit.code)} signal=${String(exit.signal)})`;
+          throw new Error(
+            `The supervised PocketIC process exited or changed identity${detail}`,
+          );
         }
         try {
           await this.#attachment.client.assertServerHealthy();

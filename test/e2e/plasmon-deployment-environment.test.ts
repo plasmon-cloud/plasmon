@@ -62,10 +62,10 @@ describe("Plasmon deployment command semantics", () => {
 
     expect(archivePaths).toEqual(expected);
     expect(archivePaths).toContain("apps/plasmon/plasmon.v0.1.0.neutron");
-    expect(archivePaths).toContain("apps/review/review.v0.1.0.neutron");
+    expect(archivePaths).toContain("apps/review/review.v0.1.2.neutron");
     expect(
       archivePaths.filter(
-        (archivePath) => archivePath === "apps/review/review.v0.1.0.neutron",
+        (archivePath) => archivePath === "apps/review/review.v0.1.2.neutron",
       ),
     ).toHaveLength(1);
     expect(actual.length).toBeGreaterThan(3);
@@ -82,7 +82,7 @@ describe("Plasmon deployment command semantics", () => {
     expect(actual.map((artifact) => artifact.archivePath)).toEqual([
       "apps/kernel/kernel.v0.3.6.neutron",
       "apps/plasmon/plasmon.v0.1.0.neutron",
-      "apps/review/review.v0.1.1.neutron",
+      "apps/review/review.v0.1.2.neutron",
     ]);
   });
 

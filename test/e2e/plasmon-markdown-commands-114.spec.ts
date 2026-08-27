@@ -1,17 +1,16 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
 const BASIC_MARKDOWN_SOURCE = "# Big Heading\n\nNormal paragraph.\n\n- one\n- two";
+const COMPACT_HEADING_SOURCE = "#hello";
 
 test(
-  "#114 packaged Markdown exposes formatter, commands, and basic rendered Preview",
-  { tag: ["@issue-114", "@issue-416"] },
+  "#114 Markdown exposes formatter, commands, and basic rendered Preview",
+  { tag: ["@issue-114", "@issue-500"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -25,24 +24,6 @@ test(
     );
     expect(principal).toBe(runtime.developerIdentityPrincipal);
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    const redirectInitialPlasmonDocument = async (route: Route) => {
-      const requestUrl = new URL(route.request().url());
-      const appRoot = `/app/${APP_ID}/`;
-      const isMainDocument = route.request().resourceType() === "document"
-        && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-      if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-        await route.continue();
-        return;
-      }
-      requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-      await route.fulfill({
-        status: 307,
-        headers: { location: requestUrl.href, "cache-control": "no-store" },
-      });
-    };
-    await page.route(fixtureRoute, redirectInitialPlasmonDocument);
-
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
@@ -51,23 +32,35 @@ test(
     await expect(page.locator(appFrameSelector).first()).toBeAttached();
     const app = page.frameLocator(appFrameSelector).first();
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-    await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
+    // Create the Markdown resource through the ordinary FileManager boundary;
+    // this test owns its resource setup independently.
+    const desktop = app.getByRole("region", { name: "Desktop" });
+    const rootShortcut = desktop.locator("[data-fm-node-id]", { hasText: "Root" }).first();
+    await expect(rootShortcut).toBeVisible({ timeout: 20_000 });
+    await rootShortcut.click();
+    await expect(rootShortcut).toHaveAttribute("aria-selected", "true");
+    await desktop.getByRole("listbox", { name: "Files" }).press("Enter");
+    const explorer = app.locator(".explorer-app").last();
+    await expect(explorer).toBeVisible({ timeout: 20_000 });
+    const address = explorer.getByRole("textbox", { name: "Address" });
+    await expect(address).toHaveValue("/");
+    const documents = explorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
+    await expect(documents).toBeVisible({ timeout: 20_000 });
+    await documents.click();
+    await expect(documents).toHaveAttribute("aria-selected", "true");
+    await explorer.getByRole("listbox", { name: "Files" }).press("Enter");
+    await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
+    const markdownName = `Issue 114 Markdown ${Date.now()}.md`;
+    await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
+    await expect(rename).toBeVisible();
+    await rename.fill(markdownName);
+    await rename.press("Enter");
+    const markdown = explorer.locator("[data-fm-node-id]", { hasText: markdownName }).first();
+    await expect(markdown).toBeVisible({ timeout: 20_000 });
+    await markdown.dblclick();
 
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible();
-    await rootShortcut.dblclick();
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const documents = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await documents.dblclick();
-
-    const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
-    const guide = documentsExplorer.locator("[data-fm-node-id]", { hasText: "First Demo Guide.md" }).first();
-    await expect(guide).toBeVisible();
-    await guide.dblclick();
-
-    const editorWindow = app.getByRole("dialog", { name: "First Demo Guide.md - Monaco Editor" }).last();
+    const editorWindow = app.getByRole("dialog", { name: `${markdownName} - Monaco Editor` }).last();
     await expect(editorWindow).toBeVisible({ timeout: 20_000 });
     await expect(editorWindow.getByLabel("Markdown editor", { exact: true })).toBeVisible();
     const surface = editorWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
@@ -152,6 +145,26 @@ test(
     await editorWindow.getByRole("button", { name: "Split", exact: true }).click();
     await expect(heading).toBeVisible();
     await expect(list).toBeVisible();
+    await expect(surface).toBeVisible();
+
+    // #416 compatibility: the installed Preview accepts a standalone compact
+    // top-level heading, while the editor/persisted source remains literal.
+    await editorWindow.getByRole("button", { name: "Edit", exact: true }).click();
+    await firstLine.click({ position: { x: 8, y: 10 } });
+    await expect(browserInput).toBeFocused();
+    await page.keyboard.press("Control+A");
+    await page.keyboard.insertText(COMPACT_HEADING_SOURCE);
+    await save.click();
+    await expect(editorWindow.getByText("Saved", { exact: true })).toBeVisible();
+
+    await previewButton.click();
+    const compactHeading = preview.getByRole("heading", { name: "hello", exact: true, level: 1 });
+    await expect(compactHeading).toBeVisible();
+    await expect(preview).not.toContainText(COMPACT_HEADING_SOURCE);
+
+    await editorWindow.getByRole("button", { name: "Split", exact: true }).click();
+    await expect(compactHeading).toBeVisible();
+    await expect(firstLine).toContainText(COMPACT_HEADING_SOURCE);
     await expect(surface).toBeVisible();
 
     await editorWindow.getByRole("button", { name: "Edit", exact: true }).click();

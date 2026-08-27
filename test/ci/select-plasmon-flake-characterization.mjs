@@ -11,6 +11,7 @@ import { dirname, extname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   classifyPlasmonTest,
+  optionalCoreBrowserTests,
   repoRoot as defaultRepoRoot,
 } from "./plasmon-test-inventory.mjs";
 
@@ -237,7 +238,20 @@ export async function selectCharacterization({
   );
   for (const test of impactedTests) exactTargets.add(test);
 
-  const files = [...exactTargets].sort();
+  const profileSpecificTargets = [...exactTargets].filter((path) =>
+    optionalCoreBrowserTests.includes(path),
+  );
+  const ordinaryTargets = [...exactTargets].filter((path) =>
+    !optionalCoreBrowserTests.includes(path),
+  );
+  // The packet harness provisions one deployment per characterization. Keep a
+  // mixed changed-test set on the local profile so ordinary tests retain their
+  // strict BrowserHealth boundary; profile-specific tests are covered by the
+  // dedicated demo acceptance lane rather than silently run against local.
+  const deferredProfileTests = ordinaryTargets.length > 0
+    ? profileSpecificTargets.sort()
+    : [];
+  const files = (ordinaryTargets.length > 0 ? ordinaryTargets : profileSpecificTargets).sort();
   const unresolved = [...unresolvedInputs].sort();
   const excluded = [...excludedQuarantinedTests].sort();
 
@@ -260,6 +274,7 @@ export async function selectCharacterization({
       impacted_tests: [...impactedTests].sort(),
       excluded_quarantined_tests: excluded,
       unresolved_inputs: unresolved,
+      deferred_profile_tests: deferredProfileTests,
     };
   }
 
@@ -285,6 +300,7 @@ export async function selectCharacterization({
     impacted_tests: [...impactedTests].sort(),
     excluded_quarantined_tests: excluded,
     unresolved_inputs: unresolved,
+    deferred_profile_tests: deferredProfileTests,
   };
 }
 

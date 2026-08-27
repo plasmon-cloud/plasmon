@@ -19,12 +19,37 @@ fi
 shift
 command=("$@")
 
+deployment_scope=local
+if PROFILE_TEST_FILE="${PROBE_TEST_FILE:-}" PROFILE_TEST_FILES_JSON="${PROBE_TEST_FILES_JSON:-[]}" node --input-type=module -e '
+  import { optionalCoreBrowserTests } from "./test/ci/plasmon-test-inventory.mjs";
+  const selected = [];
+  if (process.env.PROFILE_TEST_FILE) selected.push(process.env.PROFILE_TEST_FILE);
+  selected.push(...JSON.parse(process.env.PROFILE_TEST_FILES_JSON || "[]"));
+  process.exit(selected.length > 0 && selected.every((file) => optionalCoreBrowserTests.includes(file)) ? 0 : 1);
+'; then
+  deployment_scope=demo
+fi
+if [ "$deployment_scope" = demo ]; then
+  export NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json
+else
+  export NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json
+fi
+
 npm ci
-npm run plasmon:local:prepare
+if [ "$deployment_scope" = demo ]; then
+  npm --workspace neutron-design-system run build
+  npm run "plasmon:${deployment_scope}:prepare"
+else
+  npm run plasmon:local:prepare
+fi
 
 pocketic_log="${PLASMON_PACKET_POCKETIC_LOG:-/tmp/plasmon-pocketic.log}"
 : > "$pocketic_log"
-npm run plasmon:local:serve > "$pocketic_log" 2>&1 &
+if [ "$deployment_scope" = demo ]; then
+  npm run "plasmon:${deployment_scope}:serve" > "$pocketic_log" 2>&1 &
+else
+  npm run plasmon:local:serve > "$pocketic_log" 2>&1 &
+fi
 server_pid=$!
 
 cleanup() {
@@ -58,7 +83,11 @@ if [ "$pocketic_ready" -ne 1 ]; then
   exit 1
 fi
 
-npm run plasmon:local:status
+if [ "$deployment_scope" = demo ]; then
+  npm run "plasmon:${deployment_scope}:status"
+else
+  npm run plasmon:local:status
+fi
 
 isolation_json="$(node test/ci/plasmon-playwright-isolation.mjs)"
 isolation_mode="$(printf '%s' "$isolation_json" | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => process.stdout.write(JSON.parse(s).mode));')"
@@ -67,8 +96,14 @@ echo "Prepared Playwright isolation: $isolation_json"
 initial_reset_log="/tmp/plasmon-packet-reset-${start_iteration}.log"
 : > "$initial_reset_log"
 initial_reset_failed=0
-if ! npm run plasmon:local:reinstall 2>&1 | tee "$initial_reset_log"; then
-  initial_reset_failed=1
+if [ "$deployment_scope" = demo ]; then
+  if ! npm run "plasmon:${deployment_scope}:reinstall" 2>&1 | tee "$initial_reset_log"; then
+    initial_reset_failed=1
+  fi
+else
+  if ! npm run plasmon:local:reinstall 2>&1 | tee "$initial_reset_log"; then
+    initial_reset_failed=1
+  fi
 fi
 
 # Everything below this boundary runs against the already prepared package,
@@ -90,8 +125,14 @@ for ((offset = 0; offset < repetitions; offset += 1)); do
     : > "$reset_log"
     reset_failed=0
     echo "::group::Plasmon Playwright repetition ${iteration} persistent-state reset"
-    if ! npm run plasmon:local:reinstall 2>&1 | tee "$reset_log"; then
-      reset_failed=1
+    if [ "$deployment_scope" = demo ]; then
+      if ! npm run "plasmon:${deployment_scope}:reinstall" 2>&1 | tee "$reset_log"; then
+        reset_failed=1
+      fi
+    else
+      if ! npm run plasmon:local:reinstall 2>&1 | tee "$reset_log"; then
+        reset_failed=1
+      fi
     fi
     echo "::endgroup::"
   fi
