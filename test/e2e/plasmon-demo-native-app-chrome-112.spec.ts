@@ -69,7 +69,7 @@ test("[demo profile] #112 — packaged representative apps expose shared chrome 
     await expect(settings).toBeVisible({ timeout: 20_000 });
     const settingsSurface = settings.locator(".plasmon-native-app-surface");
     await expect(settingsSurface).toBeVisible();
-    expect(await settings.locator(".plasmon-native-app-panel").count()).toBeGreaterThanOrEqual(4);
+    await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(4);
     const sharedPalette = await surfacePalette(settingsSurface);
     await testInfo.attach("112-settings-current-theme.png", { body: await settings.screenshot(), contentType: "image/png" });
     await settings.getByRole("button", { name: "Close", exact: true }).click();
