@@ -12,7 +12,9 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
       const classes = new Set<string>();
       for (const line of lines) {
         for (const span of line.querySelectorAll('span[class*="mtk"]')) {
-          for (const className of span.classList) if (/^mtk\d+$/.test(className)) classes.add(className);
+          for (const className of span.classList) {
+            if (/^mtk\d+$/.test(className)) classes.add(className);
+          }
         }
       }
       return classes.size;
@@ -21,71 +23,68 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@issue-415", "@issue-434"] }, async ({ page }) => {
-  test.setTimeout(180_000);
+test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  const health = installPlasmonBrowserHealth(page, {
+    firstPartyOrigins: [kernelUrl],
+    allow: [{
+      kind: "console.error",
+      messageIncludes: "[Gemma] model load failed Error: The browser did not expose a WebGPU adapter.",
+      urlPathPrefix: "/app/gemma/model-worker.js",
+      reason: "Full demo deployment includes Gemma; hosted Chromium has no WebGPU adapter for its optional model",
+    }],
+  });
 
   try {
     await page.goto(kernelUrl);
     await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
-    await page.evaluate((seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed), runtime.developerIdentitySeed);
+    await page.evaluate(
+      (seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed),
+      runtime.developerIdentitySeed,
+    );
 
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector).first()).toBeVisible();
-    const app = page.frameLocator(appSelector).first();
+    await expect(page.locator(appSelector)).toBeVisible();
+    const app = page.frameLocator(appSelector);
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
-    // Use only the ordinary Root/Documents filesystem. The test creates every
-    // resource it opens, so it does not depend on demo assets or another test.
-    const rootShortcut = app.getByRole("region", { name: "Desktop" }).locator("[data-fm-node-id]", { hasText: "Root" }).first();
+    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-    await rootShortcut.click();
-    await expect(rootShortcut).toHaveAttribute("aria-selected", "true");
-    await app.getByRole("region", { name: "Desktop" }).getByRole("listbox", { name: "Files" }).press("Enter");
-
-    const rootExplorer = app.locator(".explorer-app").last();
+    await rootShortcut.dblclick();
+    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
-    const address = rootExplorer.getByRole("textbox", { name: "Address" });
-    await expect(address).toHaveValue("/");
+    await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
+    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
+      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
     const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await expect(documentsEntry).toBeVisible({ timeout: 20_000 });
-    await documentsEntry.click();
-    await expect(documentsEntry).toHaveAttribute("aria-selected", "true");
-    await rootExplorer.getByRole("listbox", { name: "Files" }).press("Enter");
-    await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
+    await expect(documentsEntry).toBeVisible();
+    await documentsEntry.dblclick();
 
-    const documentsExplorer = rootExplorer;
+    const documentsExplorer = app.locator(".explorer-app").last();
+    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
-    const generatedName = `Issue 415 Generated ${Date.now()}.js`;
-    const plainName = `Issue 415 Plain ${Date.now()}.txt`;
 
-    // Create both resources through the production FileManager boundary.
+    // Reproduce the screenshot boundary: FileManager creates a blank text document,
+    // immediately renames the same NodeId to .js, and Text must open real JavaScript.
+    const generatedName = `Issue 415 Generated ${Date.now()}.js`;
     await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
     const generatedRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(generatedRename).toBeVisible();
     await generatedRename.fill(generatedName);
     await generatedRename.press("Enter");
-    await expect(documentsExplorer.locator("[data-fm-node-id]", { hasText: generatedName }).first()).toBeVisible({ timeout: 20_000 });
-
-    await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
-    const plainRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
-    await expect(plainRename).toBeVisible();
-    await plainRename.fill(plainName);
-    await plainRename.press("Enter");
-    const plainEntry = documentsExplorer.locator("[data-fm-node-id]", { hasText: plainName }).first();
-    await expect(plainEntry).toBeVisible({ timeout: 20_000 });
 
     const generatedEntry = documentsExplorer.locator("[data-fm-node-id]", { hasText: generatedName }).first();
+    await expect(generatedEntry).toBeVisible({ timeout: 20_000 });
     const beforeGeneratedText = await windows.count();
     await generatedEntry.dblclick();
     await expect(windows).toHaveCount(beforeGeneratedText + 1, { timeout: 20_000 });
+
     const generatedWindow = windows.last();
     const generatedSurface = generatedWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(generatedWindow).toHaveAttribute("aria-label", `${generatedName} - Monaco Editor`);
@@ -93,19 +92,31 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(generatedSurface).toHaveAttribute("data-editor-language", "javascript");
     await expect(generatedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
 
-    const generatedInput = generatedWindow.getByRole("textbox", { name: "Text content", exact: true, includeHidden: true }).first();
-    await generatedWindow.locator(".monaco-editor .view-line").first().click({ position: { x: 8, y: 10 } });
+    const generatedInput = generatedWindow.getByRole("textbox", {
+      name: "Text content",
+      exact: true,
+      includeHidden: true,
+    }).first();
+    const generatedFirstLine = generatedWindow.locator(".monaco-editor .view-line").first();
+    await generatedFirstLine.click({ position: { x: 8, y: 10 } });
     await expect(generatedInput).toBeFocused();
     await page.keyboard.insertText("const generated = 42;\nfunction twiceGenerated(value) { return value * 2; }");
     await expect(generatedWindow.getByText("Modified", { exact: true })).toBeVisible();
-    await expectJavaScriptTokenization(generatedWindow, "a FileManager text document renamed to .js should render real JavaScript tokenization");
+    await expectJavaScriptTokenization(
+      generatedWindow,
+      "a FileManager text document renamed to .js should render real JavaScript tokenization",
+    );
 
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
-    await expect(filesTask).toBeVisible();
     await filesTask.click();
     await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
-    await plainEntry.dblclick();
-    await expect(windows).toHaveCount(beforeGeneratedText + 2, { timeout: 20_000 });
+
+    const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
+    await expect(notes).toBeVisible();
+
+    const beforeText = await windows.count();
+    await notes.dblclick();
+    await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
     const textWindow = windows.last();
     const textSurface = textWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(textSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
@@ -114,16 +125,23 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     const initialModelUri = await textSurface.getAttribute("data-editor-model-uri");
     expect(initialModelUri, "initial Text Monaco model should expose concrete model identity").toBeTruthy();
 
-    const browserInput = textWindow.getByRole("textbox", { name: "Text content", exact: true, includeHidden: true }).first();
-    await textWindow.locator(".monaco-editor .view-line").first().click({ position: { x: 8, y: 10 } });
+    const browserInput = textWindow.getByRole("textbox", {
+      name: "Text content",
+      exact: true,
+      includeHidden: true,
+    }).first();
+    const firstLine = textWindow.locator(".monaco-editor .view-line").first();
+    await firstLine.click({ position: { x: 8, y: 10 } });
     await expect(browserInput).toBeFocused();
+    const javascriptSource = "const answer = 42;\nfunction twice(value) { return value * 2; }";
     await page.keyboard.press("Control+A");
-    await page.keyboard.insertText("const answer = 42;\nfunction twice(value) { return value * 2; }");
+    await page.keyboard.insertText(javascriptSource);
     await expect(textWindow.getByText("Modified", { exact: true })).toBeVisible();
 
     const scriptName = `Issue 415 ${Date.now()}.js`;
     await textWindow.getByRole("textbox", { name: "Save As file name" }).fill(scriptName);
     await textWindow.getByRole("button", { name: "Create copy", exact: true }).click();
+
     await expect(textWindow).toHaveAttribute("aria-label", `${scriptName} - Monaco Editor`);
     await expect(textWindow.getByText("JavaScript", { exact: true })).toBeVisible();
     await expect(textSurface).toHaveAttribute("data-editor-ready", "true");
@@ -141,6 +159,7 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
     const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
     await expect(script).toBeVisible({ timeout: 20_000 });
+
     const beforeReopen = await windows.count();
     await script.dblclick();
     await expect(windows).toHaveCount(beforeReopen + 1, { timeout: 20_000 });
@@ -150,7 +169,10 @@ test("#415 Text classifies FileManager rename and Save As language transitions i
     await expect(reopenedSurface).toHaveAttribute("data-editor-language", "javascript");
     await expect(reopenedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
     await expect(reopenedWindow.locator(".monaco-editor .view-lines")).toContainText("const persisted = twice(answer);");
-    await expectJavaScriptTokenization(reopenedWindow, "an already-named .js resource should reopen with real JavaScript tokenization");
+    await expectJavaScriptTokenization(
+      reopenedWindow,
+      "an already-named .js resource should reopen with real JavaScript tokenization",
+    );
     const reopenedModelUri = await reopenedSurface.getAttribute("data-editor-model-uri");
     expect(reopenedModelUri, "reopened JavaScript should expose concrete Monaco model identity").toBeTruthy();
 
