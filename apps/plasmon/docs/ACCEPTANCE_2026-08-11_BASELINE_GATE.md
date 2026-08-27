@@ -2,7 +2,7 @@
 
 **Canonical Issue:** #107  
 **Historical gate date:** 2026-08-12  
-**Current refresh date:** 2026-08-25  
+**Current refresh date:** 2026-08-27  
 
 ## Current `release/0.1.0-r2` execution refresh
 
@@ -10,17 +10,29 @@ This section is the current #107 gate. The historical matrix below remains prese
 
 **Product basis before this report-only branch:** `release/0.1.0-r2` at `71f84fd2ad9bf43a4bd37d29e2122e597925ce9d`.
 
-The #107 branch changes only this acceptance report and its documentation-review acknowledgement. Therefore the exact-head package/browser jobs below exercise Product code equivalent to that r2 basis. Product defects remain owned by their canonical Issues rather than being repaired inside this report task.
+The #107 branch changes only this acceptance report. Therefore the package/browser jobs below exercise Product code equivalent to that r2 basis. Product defects remain owned by their canonical Issues rather than being repaired inside this report task.
 
-### Exact-head gate execution
+### Latest complete gate execution before this evidence-only correction
+
+The immediately prior report head `d87f7e37198422a991557f3da7fda4f1135dd95f` completed the current required lanes. This follow-up changes only durable acceptance evidence after the independent #109 human review; it does not alter Product behavior.
 
 | Gate | Run | Result | Current claim |
 | --- | --- | --- | --- |
-| Plasmon Fast CI | `32805252007` | **PRODUCT TESTS PASS / report marker stale** | 676 executable tests passed. The sole failure was this `apps/plasmon/docs` boundary's expected stale review fingerprint after editing the report; the final marker is refreshed separately from the report content. |
-| Plasmon Packaged Smoke CI | `32805252012` | **PASS** | Package/build plus the five required Smoke browser specs passed on the report head. |
-| Plasmon Packaged Browser CI | `32805251999` | **PASS** | The required Specialist browser inventory passed on the report head and uploaded its Playwright report. |
+| Plasmon Fast CI | `32882562813` | **PASS** | The current Plasmon fast/model/RTL suite passed on the prior report head. |
+| Plasmon Packaged Smoke CI | `32882563001` | **PASS** | Package/build plus the required Smoke browser specs passed on the prior report head. |
+| Plasmon Packaged Browser CI / Specialist | `32882562894` | **PASS** | The required Specialist browser inventory passed and uploaded its Playwright report. |
+| Plasmon Browser Persistence CI | `32882562829` | **PASS** | The required packaged persistence boundary passed on the prior report head. |
 
 The current required browser surface is the inventory in `test/ci/plasmon-test-inventory.mjs`: five Smoke specs plus the required Specialist set. `plasmon-golden-path.spec.ts`, `plasmon-monaco-packaged.spec.ts`, the full demo-game/emulator proofs, and other profile-specific files are optional rather than required current-r2 gates. A historical or optional spec is not promoted into current acceptance merely because it remains checked in.
+
+### Canonical Issue evidence updates
+
+GitHub Issues are the canonical acceptance queue, so the external governance updates are recorded here as durable evidence references rather than being reimplemented as network-dependent repository tests:
+
+- #107 comment `5431887067` records the exact prior-head Fast, Smoke, Specialist, and persistence evidence and preserves the remaining stronger-layer gaps without closing #107.
+- #109 comment `5443314492` records the bounded human packaged visual **PASS** on 2026-08-27: the current r2 pin/unpin icons were visually accepted and no emoji/platform-glyph regression was observed. #109 was then closed as completed.
+
+Repository automation continues to cover machine-provable local contracts. It must not make GitHub network availability a prerequisite for the Plasmon fast lane merely to prove that a governance comment exists; the canonical Issue comments themselves are the direct evidence for that acceptance criterion.
 
 ### Current-r2 finding matrix
 
@@ -35,7 +47,7 @@ The current required browser surface is the inventory in `test/ci/plasmon-test-i
 | Create Shortcut discoverability, creation, collision naming, and activation (#44) | **PASS** | required Specialist browser | `plasmon-create-shortcut-44.spec.ts` exercises the real toolbar and item-context command, visible shortcut state/artwork, collision creation, and normal double-click activation in installed Explorer. |
 | Taskbar state derivation and visible wording/accessibility (#72) | **PASS** | Fast + required Specialist browser | `plasmon-taskbar-presentation-72.spec.ts` proves pinned-only/running/active state, accessible wording, native lifecycle projection, installed Element `Running`, and absence of raw yes/no/unknown runtime tokens. |
 | Taskbar cross-authority lifecycle (#81) | **PASS** | composed headless | `apps/plasmon/test/taskbarLifecycle.test.ts` proves canonical Process/Windowing/taskbar lifecycle and external Windowing teardown reconciliation. |
-| Shared Start/taskbar pin affordance (#109) | **AUTOMATED PASS / MANUAL PENDING** | required Specialist browser + human/manual | `plasmon-pin-affordance-109.spec.ts` proves packaged shared pin artwork loads, accessible labels/state are present, pinned/unpinned states are structurally distinct, and both Start and taskbar context consume the canonical affordance. The bounded packaged/manual visual check required by #109 remains open; structural/browser evidence is not promoted to visual acceptance. |
+| Shared Start/taskbar pin affordance (#109) | **PASS** | required Specialist browser + human/manual | `plasmon-pin-affordance-109.spec.ts` proves packaged shared pin artwork loads, accessible labels/state are present, pinned/unpinned states are structurally distinct, and both Start and taskbar context consume the canonical affordance. Human acceptance comment `5443314492` then recorded the bounded current-r2 visual PASS and no observed emoji/platform-glyph regression; #109 is closed. |
 | Folder-drop target semantics | **PASS** | Fast/model | Canonical drop-target/move semantics pass below the browser boundary. |
 | Folder-drop installed pointer lifecycle | **NOT-YET-TESTABLE** | quarantined browser boundary | `plasmon-filemanager-directory-drop.spec.ts` is in the current quarantine inventory; the required gate does not promote it. |
 | Drag feedback/placement contracts that remain in required Specialist | **PASS** | required Specialist browser | Current required Specialist execution includes the non-quarantined drag-feedback/placement browser contracts and passed them. |
@@ -62,8 +74,9 @@ The required current-r2 package/browser lanes are green, but #107 is **not equiv
 3. browser-owned Download remains outside the required current browser inventory;
 4. quarantined directory-drop browser acceptance remains quarantined rather than promoted;
 5. full optional-profile Monaco and game/emulator workflows remain optional-profile evidence, not required slim-r2 acceptance;
-6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence;
-7. #109's shared Start/taskbar pin affordance still needs its bounded packaged/manual visual review despite the automated Specialist assertions passing.
+6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence.
+
+The former #109 blocker is retired by the 2026-08-27 bounded human visual PASS recorded in canonical comment `5443314492`; that acceptance is not inferred from automation.
 
 No new Product implementation defect was established by the required current-r2 Fast/Smoke/Specialist execution. The report therefore records the unresolved acceptance layer rather than creating duplicate Product work.
 
