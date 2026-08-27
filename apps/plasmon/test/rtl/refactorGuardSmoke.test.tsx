@@ -35,9 +35,11 @@ test("assembled React shell projects production authorities without owning paral
     const search = app.getByRole("region", { name: "Search" });
     await app.user.type(within(search).getByRole("textbox", { name: "Search Plasmon" }), "Settings");
 
-    const settingsLabel = await within(search).findByText("Settings", { selector: "strong" });
-    const settingsResult = settingsLabel.closest("button");
-    if (!settingsResult) throw new Error("Settings search result is not activatable");
+    const settingsLabels = await within(search).findAllByText("Settings", { selector: "strong" });
+    const settingsResult = settingsLabels
+      .map((label) => label.closest("button"))
+      .find((button) => button?.textContent?.includes("Plasmon application"));
+    if (!settingsResult) throw new Error("Canonical Settings application search result is not activatable");
     await app.user.click(settingsResult);
 
     await waitFor(() => expect(app.environment.processes()).toHaveLength(1));

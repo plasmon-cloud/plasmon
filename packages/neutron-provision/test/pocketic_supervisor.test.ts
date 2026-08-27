@@ -199,6 +199,32 @@ describe("PocketIC supervisor", () => {
     });
   });
 
+  test("supervisor classifies an owned child exit instead of only reporting PID drift", async () => {
+    await withTempDirectory(async (root) => {
+      const processHost = new FakeProcessHost();
+      const topology = pocketIcTestTopology();
+      const handle = await servePocketIc({
+        profile: "full_protocol_fixtures",
+        lockPath: path.join(root, "supervisor.lock"),
+        ownerSessionPath: path.join(root, "local.ndeploy.session.json"),
+        runtimeDirectory: path.join(root, "runtime"),
+        stateDirectory: path.join(root, "state"),
+        binary: pinnedBinary(),
+        processHost,
+        fetcher: healthyFetcher(topology),
+        healthIntervalMs: 1,
+        stopTimeoutMs: 100,
+      });
+
+      const waiting = handle.wait();
+      processHost.exit({ code: null, signal: "SIGKILL" });
+      await expect(waiting).rejects.toThrow(
+        "The supervised PocketIC process exited or changed identity (child exit code=null signal=SIGKILL)",
+      );
+      await handle.stop();
+    });
+  });
+
   test("strict descriptor validator rejects unknown data, topology/config drift, and bad fixtures", async () => {
     await withTempDirectory(async (root) => {
       const processHost = new FakeProcessHost();
@@ -342,10 +368,12 @@ class FakeProcessHost implements PocketIcProcessHost {
 
   async terminate(pid: number): Promise<void> {
     this.terminated.push(pid);
-    if (pid === FakeProcessHost.SERVER_PID) {
-      this.#serverIdentity = null;
-      this.#resolveExit?.({ code: 0, signal: "SIGTERM" });
-    }
+    if (pid === FakeProcessHost.SERVER_PID) this.exit({ code: 0, signal: "SIGTERM" });
+  }
+
+  exit(exit: PocketIcProcessExit): void {
+    this.#serverIdentity = null;
+    this.#resolveExit?.(exit);
   }
 }
 

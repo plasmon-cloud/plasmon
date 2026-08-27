@@ -2,7 +2,7 @@
   "format": 3,
   "name": "Review",
   "id": "review",
-  "version": 101,
+  "version": 102,
   "update_source": "233tv-xiaaa-aaaay-aacta-cai",
   "description": "Human acceptance reviews with durable logical Atom history",
   "src": "main.mo",
@@ -25,7 +25,7 @@
       "id": "review",
       "title": "Review",
       "path": "index.html",
-      "icon": "static/icon.svg",
+      "icon": "assets/hackathon-native-logo.svg",
       "description": "Load acceptance checks, record human results, refresh reviewer context, and submit evidence"
     }
   ],

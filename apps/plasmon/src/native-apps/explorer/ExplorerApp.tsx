@@ -20,6 +20,7 @@ import type {
   ProcessId,
   OpenTarget,
 } from "../../os/contracts/index.ts";
+import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
   DEFAULT_FILE_MANAGER_PREFERENCES,
   FileManager,
@@ -47,6 +48,7 @@ export interface ExplorerAppProps {
   openAuthority: FileManagerOpenAuthority;
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
+  hiddenVisibility: HiddenVisibilityPreferenceStore;
 }
 
 function labelForPath(path: string): string {
@@ -87,6 +89,7 @@ export function ExplorerApp({
   openAuthority,
   trashAuthority,
   clipboard: providedClipboard,
+  hiddenVisibility,
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const preferenceStore = useMemo(() => new FileManagerPreferenceStore(fs), [fs]);
@@ -101,13 +104,17 @@ export function ExplorerApp({
   const [viewPreferences, setViewPreferences] = useState<FileManagerPreferences>(() => ({
     ...DEFAULT_FILE_MANAGER_PREFERENCES,
   }));
+  const [alwaysShowHiddenFiles, setAlwaysShowHiddenFiles] = useState(
+    () => hiddenVisibility.getSnapshot().alwaysShowHiddenFiles,
+  );
   const [favorites, setFavorites] = useState<FsNode[]>([]);
   const [itemCount, setItemCount] = useState(0);
   const [selectedCount, setSelectedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const effectiveShowHiddenFiles = alwaysShowHiddenFiles || viewPreferences.showHiddenFiles;
   const fileManagerFs = useMemo(
-    () => new FileManagerVisibilityFsService(fs, viewPreferences.showHiddenFiles),
-    [fs, viewPreferences.showHiddenFiles],
+    () => new FileManagerVisibilityFsService(fs, effectiveShowHiddenFiles),
+    [effectiveShowHiddenFiles, fs],
   );
 
   const applyLocation = useCallback((next: ExplorerLocation) => {
@@ -160,6 +167,22 @@ export function ExplorerApp({
       });
     return () => { active = false; };
   }, [preferenceStore]);
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = hiddenVisibility.subscribe((preferences) => {
+      if (active) setAlwaysShowHiddenFiles(preferences.alwaysShowHiddenFiles);
+    });
+    void hiddenVisibility.load()
+      .then((preferences) => { if (active) setAlwaysShowHiddenFiles(preferences.alwaysShowHiddenFiles); })
+      .catch((cause: unknown) => {
+        if (active) setError(`Global hidden-file preference could not be loaded: ${errorMessage(cause)}`);
+      });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [hiddenVisibility]);
 
   useEffect(() => {
     let active = true;
@@ -333,11 +356,13 @@ export function ExplorerApp({
             <label>
               <input
                 type="checkbox"
-                checked={viewPreferences.showHiddenFiles}
+                checked={effectiveShowHiddenFiles}
+                disabled={alwaysShowHiddenFiles}
                 onChange={(event: ReactChangeEvent<HTMLInputElement>) => void setShowHiddenFiles(event.target.checked)}
               />
               Show hidden files
             </label>
+            {alwaysShowHiddenFiles ? <span role="status">Forced on by Settings</span> : null}
           </div>
           {error ? (
             <div className="fm-error-banner" role="alert">

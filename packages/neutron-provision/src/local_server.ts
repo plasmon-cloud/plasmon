@@ -7,6 +7,7 @@ import {
   type LocalEnvironment,
 } from "./local_environment.ts";
 import { resolvePocketIcBinary } from "./pocketic_binary.ts";
+import { diagnosticPocketIcProcessHost } from "./pocketic_process_diagnostics.ts";
 import {
   readLivePocketIcSupervisorOwner,
   servePocketIc,
@@ -103,6 +104,7 @@ export async function startLocalServer(
     runtimeDirectory: paths.runtimeDirectory,
     stateDirectory: path.resolve(options.stateDirectory),
     binary,
+    processHost: diagnosticPocketIcProcessHost,
     ...(previous === undefined ? {} : { previousDescriptor: previous }),
     publishDescriptor: async (descriptor) => {
       await withSessionLock(options.sessionPath, async () => {

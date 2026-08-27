@@ -271,6 +271,7 @@ function assertNoQuarantinedFiles(selection, label) {
 async function verifyCharacterizationSelection() {
   const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
   const second = "test/e2e/plasmon-neutron-icon.spec.ts";
+  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome-112.spec.ts";
 
   const oneChanged = await selectCharacterization({ changedFiles: [first] });
   if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
@@ -289,6 +290,19 @@ async function verifyCharacterizationSelection() {
     throw new Error("multiple changed Playwright specs lost an exact changed-file target");
   }
   assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
+
+  const mixedProfiles = await selectCharacterization({
+    changedFiles: [profileSpecific, first],
+  });
+  if (
+    !mixedProfiles.applicable ||
+    mixedProfiles.files.length !== 1 ||
+    mixedProfiles.files[0] !== first ||
+    !mixedProfiles.deferred_profile_tests.includes(profileSpecific)
+  ) {
+    throw new Error("mixed profile changes must characterize ordinary tests locally and defer profile-specific tests");
+  }
+  assertNoQuarantinedFiles(mixedProfiles, "mixed profile selection");
 
   const quarantineFixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-quarantine-selection-"));
   const quarantinedPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";

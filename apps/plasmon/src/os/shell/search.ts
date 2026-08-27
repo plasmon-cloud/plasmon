@@ -11,6 +11,11 @@ import {
   readResourceArtworkMetadata,
   type NeutronAppMetadata,
 } from "../fs/index.ts";
+import {
+  isNativeAppEligibleForHiddenVisibility,
+  isShortcutTargetEligibleForHiddenVisibility,
+  readHiddenVisibilityPreferences,
+} from "../hiddenVisibility.ts";
 import type { ResourceIconPresentation } from "../visual/primitives.tsx";
 import { resourcePresentationForClassification } from "../visual/resource-presentation.ts";
 import {
@@ -110,6 +115,7 @@ export interface FilesystemSearchOptions {
   signal?: AbortSignal;
   maxNodes?: number;
   maxWarnings?: number;
+  alwaysShowHiddenFiles?: boolean;
 }
 
 export interface ShellSearchOptions extends FilesystemSearchOptions {
@@ -308,6 +314,8 @@ export async function searchFilesystem(
   const maxNodes = Math.max(1, options.maxNodes ?? 5_000);
   const maxWarnings = Math.max(0, options.maxWarnings ?? 8);
   const hasQuery = query.trim().length > 0;
+  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles
+    ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
   checkAbort(options.signal);
 
   const root = await fs.resolvePath("/");
@@ -332,7 +340,7 @@ export async function searchFilesystem(
 
     let children: FsNode[];
     try {
-      children = await fs.list(directory.id, { includeHidden: false, sort: "name" });
+      children = await fs.list(directory.id, { includeHidden: alwaysShowHiddenFiles, sort: "name" });
     } catch (error: unknown) {
       if (warnings.length < maxWarnings) {
         const message = error instanceof Error ? error.message : String(error);
@@ -362,15 +370,17 @@ export async function searchFilesystem(
 
       const shortcut = parseStartShortcut(node);
       if (shortcut && matches(`${searchableNodeText(node)}\n${normalize(startShortcutTargetIdentity(shortcut.target))}`, query)) {
-        appShortcuts.push({
-          kind: "start-shortcut",
-          id: `shortcut:${node.id}`,
-          category: "apps",
-          title: node.name,
-          subtitle: shortcutSubtitle(shortcut.target),
-          node,
-          target: shortcut.target,
-        });
+        if (await isShortcutTargetEligibleForHiddenVisibility(fs, shortcut.target, alwaysShowHiddenFiles)) {
+          appShortcuts.push({
+            kind: "start-shortcut",
+            id: `shortcut:${node.id}`,
+            category: "apps",
+            title: node.name,
+            subtitle: shortcutSubtitle(shortcut.target),
+            node,
+            target: shortcut.target,
+          });
+        }
         continue;
       }
 
@@ -426,8 +436,18 @@ export async function searchShell(
   query: string,
   options: ShellSearchOptions = {},
 ): Promise<SearchBatch> {
-  const apps = searchApplicationEntries(nativeApps, elements, query, options);
-  const filesystem = await searchFilesystem(fs, query, options);
+  const alwaysShowHiddenFiles = options.alwaysShowHiddenFiles
+    ?? (await readHiddenVisibilityPreferences(fs)).alwaysShowHiddenFiles;
+  const eligibleNativeApps: NativeAppDefinition[] = [];
+  for (const app of nativeApps) {
+    if (app.runtimeOnly === true) continue;
+    if (await isNativeAppEligibleForHiddenVisibility(fs, app.handlerId, alwaysShowHiddenFiles)) {
+      eligibleNativeApps.push(app);
+    }
+  }
+  const effectiveOptions: ShellSearchOptions = { ...options, alwaysShowHiddenFiles };
+  const apps = searchApplicationEntries(eligibleNativeApps, elements, query, effectiveOptions);
+  const filesystem = await searchFilesystem(fs, query, effectiveOptions);
   const projections = filesystem.results.filter(
     (result): result is NeutronProjectionSearchResult => result.kind === "neutron-projection",
   );
