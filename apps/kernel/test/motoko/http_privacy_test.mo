@@ -31,7 +31,7 @@ assert (
 );
 assert (Kernel.validatedHttpAssetPath("/a/./b") == null);
 assert (Kernel.validatedHttpAssetPath("/a/../b") == null);
-assert (Kernel.validatedHttpAssetPath("/app/plasmon/System/Program%20Files/MonacoEditor/editor.worker.js") == ?"/app/plasmon/System/Program Files/MonacoEditor/editor.worker.js");
+assert (Kernel.validatedHttpAssetPath("/System/Program%20Files/MonacoEditor/editor.worker.js") == ?"/System/Program Files/MonacoEditor/editor.worker.js");
 assert (Kernel.validatedHttpAssetPath("/a%2fb") == null);
 assert (Kernel.validatedHttpAssetPath("/a%20b%2fc") == null);
 assert (Kernel.validatedHttpAssetPath("/a\\b") == null);
