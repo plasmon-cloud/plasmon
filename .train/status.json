@@ -1,8 +1,8 @@
 {
   "conclusion": null,
-  "generation": "6a8d00f19e166311c39f75c1c893ab38b2b40905",
-  "run_id": "33114355155",
+  "generation": "03ea015666a9c960d04c9ceb6af6281b9ce13277",
+  "run_id": "33116018794",
   "schema": "plasmon-train-bootstrap-status-v1",
   "state": "running",
-  "updated_at": "2026-08-27T20:39:35.733361Z"
+  "updated_at": "2026-08-27T21:00:46.944859Z"
 }
