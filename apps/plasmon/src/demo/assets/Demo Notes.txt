@@ -1,0 +1,14 @@
+Plasmon Demo Notes
+==================
+
+Welcome to the Plasmon demo environment.
+
+Try these desktop workflows:
+
+1. Open this file from the Desktop shortcut and edit it in Text.
+2. Open Demo Guide.md to exercise the Markdown editor.
+3. Open Demo Artwork.svg in Photos.
+4. Use Search to find each resource by name.
+5. Use FileManager to browse Documents and Pictures.
+
+These files are repository-owned demo content installed only by plasmon:demo.

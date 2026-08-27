@@ -18,8 +18,6 @@ export const browserLanes = Object.freeze({
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
     'test/e2e/plasmon-context-menu-176.spec.ts',
     'test/e2e/plasmon-drag-preview-66.spec.ts',
-    'test/e2e/plasmon-review-demo.spec.ts',
-    'test/e2e/plasmon-text-language-transition.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
@@ -32,12 +30,16 @@ export const browserLanes = Object.freeze({
 // than placing unavailable game/full-worker paths in the required smoke lane.
 export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-golden-path.spec.ts',
-  'test/e2e/plasmon-monaco-packaged.spec.ts',
+  'test/e2e/plasmon-demo-review.spec.ts',
+  'test/e2e/plasmon-demo-monaco-packaged.spec.ts',
   'test/e2e/plasmon-monaco-workers-89.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',
   'test/e2e/plasmon-demo-game.spec.ts',
-  'test/e2e/plasmon-first-demo.spec.ts',
-  'test/e2e/plasmon-markdown-commands-114.spec.ts',
+  'test/e2e/plasmon-demo-markdown-commands-114.spec.ts',
+  'test/e2e/plasmon-demo-native-app-chrome-112.spec.ts',
+  'test/e2e/plasmon-demo-photos-expand-180.spec.ts',
+  'test/e2e/plasmon-demo-text-language-transition.spec.ts',
+  'test/e2e/plasmon-demo-text-parity-344.spec.ts',
 ]);
 
 export const nonPlasmonBrowserSpecs = Object.freeze({
