@@ -3,7 +3,8 @@ run-name: Plasmon Train Snapshot ${{ github.sha }}
 
 # Install this exact file on branch automation/train-snapshot in
 # plasmon-cloud/plasmon. The trigger commit is the queued signal; this helper
-# publishes .train/status.json for connector-visible running/terminal state.
+# is trigger-only. GitHub Actions run state and that run's artifact are the
+# publication authority; the workflow never pushes back to the trigger branch.
 
 on:
   workflow_dispatch:
@@ -11,11 +12,10 @@ on:
     branches:
       - automation/train-snapshot
     paths:
-      - .train/refresh.txt
-      - .github/workflows/plasmon-train-snapshot.yml
+      - .train/refresh/**
 
 permissions:
-  contents: write
+  contents: read
   issues: read
   pull-requests: read
   checks: read
@@ -23,13 +23,10 @@ permissions:
 
 concurrency:
   group: plasmon-train-snapshot
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
-  TARGET_BRANCH: release/0.1.0-r2
-  MILESTONE_TITLE: 0.1.0-r2
   SNAPSHOT_PATH: .train/snapshot.json
-  STATUS_PATH: .train/status.json
   ARTIFACT_NAME: plasmon-train-snapshot
 
 jobs:
@@ -38,30 +35,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: automation/train-snapshot
+          ref: ${{ github.sha }}
           fetch-depth: 1
-
-      - name: Publish running status
-        run: |
-          python3 - <<'PY'
-          import datetime as dt, json, os
-          from pathlib import Path
-          path = Path(os.environ["STATUS_PATH"])
-          path.parent.mkdir(parents=True, exist_ok=True)
-          path.write_text(json.dumps({
-              "schema": "plasmon-train-bootstrap-status-v1",
-              "generation": os.environ["GITHUB_SHA"],
-              "run_id": os.environ["GITHUB_RUN_ID"],
-              "state": "running",
-              "conclusion": None,
-              "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
-          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          PY
-          git config user.name "plasmon-train-snapshot"
-          git config user.email "plasmon-train-snapshot@users.noreply.github.com"
-          git add "$STATUS_PATH"
-          git commit -m "Mark Plasmon train snapshot running"
-          git push origin HEAD:automation/train-snapshot
 
       - name: Build normalized train snapshot
         env:
@@ -72,13 +47,19 @@ jobs:
           import datetime as dt
           import json
           import os
-          import re
           import subprocess
           from pathlib import Path
 
           REPO = os.environ["REPO"]
-          TARGET = os.environ["TARGET_BRANCH"]
-          MILESTONE_TITLE = os.environ["MILESTONE_TITLE"]
+          changed = subprocess.check_output(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", os.environ["GITHUB_SHA"]], text=True).splitlines()
+          requests = [x for x in changed if x.startswith(".train/refresh/") and x.endswith(".json")]
+          if len(requests) != 1:
+              raise SystemExit(f"expected exactly one release refresh request, found {requests}")
+          request = json.loads(Path(requests[0]).read_text(encoding="utf-8"))
+          TARGET = str(request.get("target") or "").strip()
+          MILESTONE_TITLE = str(request.get("milestone") or "").strip()
+          if not TARGET or not MILESTONE_TITLE:
+              raise SystemExit("refresh request requires target and milestone")
           OUT = Path(os.environ["SNAPSHOT_PATH"])
           DESIRE = {"High", "Medium", "Low"}
           EFFORT = {"Low", "Medium", "High"}
@@ -135,17 +116,15 @@ jobs:
           raw_prs = gh_pages(f"repos/{REPO}/pulls", {"state": "open", "sort": "created", "direction": "asc"})
           lane_numbers = {int(x["number"]) for x in raw_issues}
 
+          owner, repo_name = REPO.split("/", 1)
+
           def map_pr(pr):
-              body, title = str(pr.get("body") or ""), str(pr.get("title") or "")
-              for source, pattern in [
-                  (body, r"(?im)^\s*Plasmon-Issue\s*:\s*#(\d+)\b"),
-                  (body, r"(?i)\b(?:closes|fixes|resolves)\s+#(\d+)\b"),
-                  (title, r"^#(\d+)\b"),
-              ]:
-                  match = re.search(pattern, source)
-                  if match and int(match.group(1)) in lane_numbers:
-                      return int(match.group(1))
-              return None
+              query = """query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){closingIssuesReferences(first:20){nodes{number milestone{title}}}}}}"""
+              cmd = ["gh", "api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}", "-f", f"name={repo_name}", "-F", f"number={int(pr['number'])}"]
+              payload = json.loads(subprocess.check_output(cmd, text=True))
+              nodes = (((payload.get("data") or {}).get("repository") or {}).get("pullRequest") or {}).get("closingIssuesReferences", {}).get("nodes") or []
+              matches = [int(x["number"]) for x in nodes if x.get("number") is not None and int(x["number"]) in lane_numbers]
+              return matches[0] if len(matches) == 1 else None
 
           pr_to_issue = {int(pr["number"]): issue for pr in raw_prs if (issue := map_pr(pr))}
           issue_to_pr = {issue: pr for pr, issue in pr_to_issue.items()}
@@ -175,7 +154,7 @@ jobs:
               number = int(raw["number"])
               fields, field_error = field_values(number)
               labs = labels(raw)
-              ci_owned = any(x.lower().startswith("ci:") for x in labs) or str(raw.get("title") or "").startswith("[r2 CI]")
+              ci_owned = "lane:ci" in {x.lower() for x in labs}
               deps, states = dependency_map[number], dependency_states[number]
               dependencies_ready = all(str(states.get(str(n), "unknown")).lower() in {"closed", "completed", "merged", "integrated", "superseded", "waived"} for n in deps)
               desire, effort = fields.get("Desire"), fields.get("Effort")
@@ -321,34 +300,3 @@ jobs:
           path: ${{ env.SNAPSHOT_PATH }}
           if-no-files-found: error
           retention-days: 7
-
-      - name: Publish stable snapshot and success status
-        run: |
-          python3 - <<'PY'
-          import datetime as dt, json, os
-          from pathlib import Path
-          path = Path(os.environ["STATUS_PATH"])
-          path.write_text(json.dumps({
-              "schema": "plasmon-train-bootstrap-status-v1", "generation": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"],
-              "state": "completed", "conclusion": "success", "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
-          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          PY
-          git add "$SNAPSHOT_PATH" "$STATUS_PATH"
-          git commit -m "Refresh Plasmon train snapshot"
-          git push origin HEAD:automation/train-snapshot
-
-      - name: Publish failure status
-        if: failure()
-        run: |
-          python3 - <<'PY'
-          import datetime as dt, json, os
-          from pathlib import Path
-          path = Path(os.environ["STATUS_PATH"])
-          path.write_text(json.dumps({
-              "schema": "plasmon-train-bootstrap-status-v1", "generation": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"],
-              "state": "completed", "conclusion": "failure", "updated_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
-          }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          PY
-          git add "$STATUS_PATH"
-          git commit -m "Mark Plasmon train snapshot failed" || true
-          git push origin HEAD:automation/train-snapshot || true
