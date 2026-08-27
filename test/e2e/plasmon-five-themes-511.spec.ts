@@ -1,12 +1,10 @@
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
 
 const THEMES = [
   { id: "plasmon-dark", label: "Plasmon Dark", scheme: "dark" },
@@ -15,22 +13,6 @@ const THEMES = [
   { id: "plasmon-glacier", label: "Glacier", scheme: "light" },
   { id: "plasmon-rosewood", label: "Rosewood", scheme: "dark" },
 ] as const;
-
-async function redirectToFirstDemo(route: Route): Promise<void> {
-  const requestUrl = new URL(route.request().url());
-  const appRoot = `/app/${APP_ID}/`;
-  const isMainDocument = route.request().resourceType() === "document"
-    && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-  if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-    await route.continue();
-    return;
-  }
-  requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-  await route.fulfill({
-    status: 307,
-    headers: { location: requestUrl.href, "cache-control": "no-store" },
-  });
-}
 
 async function resolvedToken(locator: Locator, token: string): Promise<string> {
   return locator.evaluate((element, property) => {
@@ -63,40 +45,37 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
       runtime.developerIdentitySeed,
     );
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    await page.route(fixtureRoute, redirectToFirstDemo);
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
+    // Use the same direct packaged launch boundary as the established Shell and
+    // FileManager acceptance tests. This test creates its own text resource, so
+    // it does not need the first-demo fixture and must not synthesize a 307 for
+    // the app document: that redirect could intermittently leave a blank iframe
+    // under repeated flake-probe launches.
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
     await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
-    // Match the established packaged-Shell acceptance boundary: the Taskbar is
-    // the canonical user-visible signal that the app frame has mounted. Waiting
-    // on an internal aria-busy attribute made this test uniquely vulnerable to
-    // a slow first iframe boot even though the same launch passed on retry.
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 60_000 });
 
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+
+    // Open Explorer through the canonical Search projection, matching the
+    // packaged FileManager gate rather than depending on a seeded Desktop
+    // shortcut. Count Windowing objects before activation so the concrete
+    // Explorer window can be captured without a role-specific implementation
+    // dependency.
+    await taskbar.getByRole("button", { name: "Search", exact: true }).click();
+    const search = app.getByRole("region", { name: "Search" });
+    await expect(search).toBeVisible();
+    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
+    const filesResult = search.locator("[data-search-result]", { hasText: "Files" }).first();
+    await expect(filesResult).toBeVisible({ timeout: 20_000 });
     const beforeExplorer = await windows.count();
-    await rootShortcut.dblclick();
+    await filesResult.click();
     await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
 
     // Window creation is only the process boundary. Explorer publishes its
@@ -150,7 +129,7 @@ test("#511 all five themes reach Shell, Explorer, Windowing, and Monaco in the p
     const monacoCanvas = textWindow.locator(".monaco-editor-background").first();
     await expect(monacoCanvas).toBeVisible();
 
-    await app.getByRole("button", { name: "Start" }).click();
+    await taskbar.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
