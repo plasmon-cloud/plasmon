@@ -48,18 +48,23 @@ test("#190/#96 installed assets and #171 bounded Element icon probing use canoni
   await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
   await expect(plasmon.getByRole("listbox", { name: "Files" }).first()).toBeVisible();
 
-  await expect.poll(() => new Set(iconRequests).size, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
+  // The Files surface is user-visible before every image request/response has
+  // necessarily passed through Playwright's network observers. Wait for each
+  // canonical installed asset to finish loading before snapshotting requests;
+  // otherwise the assertion races folder/recycle-bin on slower packaged boots.
+  for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
+    const path = `${ICON_PREFIX}${name}`;
+    await expect.poll(
+      () => iconResponses.get(path),
+      { timeout: 15_000, message: `${path} should load successfully from the real installed surface` },
+    ).toBe(200);
+  }
 
   let requested = [...new Set(iconRequests)];
   expect(requested.every((path) => path.startsWith(ICON_PREFIX)), `shared icon requests: ${requested.join(", ")}`).toBe(true);
-
   for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
     const path = `${ICON_PREFIX}${name}`;
     expect(requested, `${path} should be requested by the real installed surface`).toContain(path);
-    await expect.poll(
-      () => iconResponses.get(path),
-      { timeout: 15_000, message: `${path} should load successfully` },
-    ).toBe(200);
   }
 
   // #96: exercise the canonical filesystem-backed Start projection rather than
