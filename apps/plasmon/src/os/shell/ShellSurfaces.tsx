@@ -8,6 +8,7 @@ import type { PresentedTaskbarEntry, TrayEntry } from "./model.ts";
 import {
   SHELL_TASKBAR_ALIGNMENTS,
   SHELL_THEME_IDS,
+  SHELL_THEME_LABELS,
   type ShellPreferences,
   type ShellTaskbarAlignment,
   type ShellThemeId,
@@ -121,7 +122,7 @@ export function SettingsSurface({
     <header><span>Plasmon storage</span><h2>Settings</h2></header>
     <h3>Theme</h3>
     <div className="plasmon-shell__grid">
-      {SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={preferences.themeId === themeId} onClick={() => onSelectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}
+      {SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={preferences.themeId === themeId} onClick={() => onSelectTheme(themeId)}>{SHELL_THEME_LABELS[themeId]}</button>)}
     </div>
     <h3>Wallpaper</h3>
     <button type="button" disabled={!preferencesReady} aria-pressed={preferences.wallpaper === "aurora"} onClick={onToggleWallpaper}>Aurora background: {preferences.wallpaper === "aurora" ? "On" : "Off"}</button>
