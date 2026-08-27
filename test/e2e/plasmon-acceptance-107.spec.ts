@@ -68,6 +68,32 @@ async function deleteEntry(toolbar: Locator, entry: Locator): Promise<void> {
   await expect(entry).toHaveCount(0, { timeout: 20_000 });
 }
 
+test("#107 packaged Search dismisses on an outside workspace click without launching a result", async ({ page }) => {
+  const { app, health } = await launchPlasmon(page);
+  try {
+    const windows = app.locator(".plasmon-window-layer [data-window-id]");
+    const initialWindowCount = await windows.count();
+    await app.getByRole("button", { name: "Search" }).click();
+    const panel = app.getByRole("region", { name: "Search" });
+    const input = app.getByRole("textbox", { name: "Search Plasmon" });
+    await expect(panel).toBeVisible();
+    await expect(input).toBeFocused();
+    await input.fill("Recycle Bin");
+    await expect(app.locator("[data-search-result]", { hasText: "Recycle Bin" }).first()).toBeVisible();
+
+    const workspace = app.locator(".plasmon-shell__workspace").first();
+    const bounds = await workspace.boundingBox();
+    if (!bounds) throw new Error("Packaged Shell workspace has no browser geometry");
+    await workspace.click({ position: { x: 4, y: 4 } });
+    await expect(panel).toHaveCount(0);
+    await expect(windows).toHaveCount(initialWindowCount);
+
+    health.assertClean();
+  } finally {
+    health.dispose();
+  }
+});
+
 test("#107 directly activates installed /Apps/Review.neutron and produces a browser-owned FileManager download", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
