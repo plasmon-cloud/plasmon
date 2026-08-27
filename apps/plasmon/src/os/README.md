@@ -7,6 +7,7 @@
 
 - `contracts/**` defines the shared vocabulary between subsystems.
 - `fs/**` is the filesystem semantics/persistence boundary; UI surfaces consume it rather than becoming storage authorities.
+- `hiddenVisibility.ts` owns the filesystem-backed OS-wide hidden-resource visibility preference. Settings is the mutation surface; Search and Start consume only that global value plus canonical filesystem/target hiddenness, while Explorer composes it with the independent FileManager-local preference as `global || local` without overwriting local state. `integration/**` wires the shared authority but does not duplicate its policy.
 - `associations/**` owns generic handler matching and defaults.
 - `process/**` and `windowing/**` own Plasmon-local native app lifecycle/window state.
 - `context-menu-boundary.ts` owns only the reusable browser-event ownership decision for first-party context menus. Specialized Shell/FileManager/application menus retain command authority; editable controls and explicitly foreign/iframe content remain unclaimed.

@@ -1,4 +1,5 @@
 import type { ExternalElement, FsService, NativeAppDefinition } from "../contracts/index.ts";
+import { shouldShowHiddenResources } from "../hiddenVisibility.ts";
 import {
   isElementVisibleByDefault,
   isNativeAppVisibleByDefault,
@@ -11,10 +12,10 @@ import {
 } from "./search.ts";
 
 /**
- * Product Search uses the ordinary filesystem hidden-resource policy. The core
- * search traversal already excludes hidden filesystem nodes; this adapter closes
- * the two projection leaks that traversal alone cannot see: direct application
- * definitions and visible shortcuts whose canonical targets are hidden.
+ * Product Search uses the ordinary filesystem hidden-resource policy while the
+ * global visibility preference is disabled. When the global preference is
+ * enabled, the core search path owns hidden-resource eligibility so direct app,
+ * Element, and shortcut projections widen consistently with filesystem results.
  */
 export async function searchShellVisibleByDefault(
   fs: FsService,
@@ -23,6 +24,10 @@ export async function searchShellVisibleByDefault(
   query: string,
   options: ShellSearchOptions = {},
 ): Promise<SearchBatch> {
+  if (await shouldShowHiddenResources(fs)) {
+    return searchShell(fs, nativeApps, elements, query, options);
+  }
+
   const visibleNativeApps: NativeAppDefinition[] = [];
   for (const app of nativeApps) {
     if (app.runtimeOnly === true) continue;
