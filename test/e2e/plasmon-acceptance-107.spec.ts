@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
@@ -27,7 +27,7 @@ async function launchPlasmon(page: Page) {
   return { app, health };
 }
 
-async function openExplorer(app: ReturnType<Page["frameLocator"]>) {
+async function openExplorer(app: FrameLocator): Promise<Locator> {
   const desktop = app.getByRole("region", { name: "Desktop" });
   const root = desktop.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await expect(root).toBeVisible({ timeout: 30_000 });
@@ -41,14 +41,14 @@ async function openExplorer(app: ReturnType<Page["frameLocator"]>) {
   return explorer;
 }
 
-async function navigateExplorer(explorer: ReturnType<ReturnType<Page["frameLocator"]>["locator"]>, path: string) {
+async function navigateExplorer(explorer: Locator, path: string): Promise<void> {
   const address = explorer.getByRole("textbox", { name: "Address" });
   await address.fill(path);
   await address.press("Enter");
   await expect(address).toHaveValue(path, { timeout: 20_000 });
 }
 
-async function createTextDocument(explorer: ReturnType<ReturnType<Page["frameLocator"]>["locator"]>, name: string) {
+async function createTextDocument(explorer: Locator, name: string) {
   const files = explorer.getByRole("listbox", { name: "Files" });
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
   await toolbar.getByRole("button", { name: "New Text Document", exact: true }).click();
@@ -61,10 +61,7 @@ async function createTextDocument(explorer: ReturnType<ReturnType<Page["frameLoc
   return { files, toolbar, entry };
 }
 
-async function deleteEntry(
-  toolbar: ReturnType<ReturnType<Page["frameLocator"]>["locator"]>,
-  entry: ReturnType<ReturnType<Page["frameLocator"]>["locator"]>,
-) {
+async function deleteEntry(toolbar: Locator, entry: Locator): Promise<void> {
   await entry.click();
   await expect(entry).toHaveAttribute("aria-selected", "true");
   await toolbar.getByRole("button", { name: "Delete", exact: true }).click();
@@ -148,7 +145,7 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     await recycleBin.getByRole("checkbox", { name: `Select ${deleteName}` }).check();
     await recycleBin.getByRole("button", { name: "Delete permanently (1)" }).click();
     const confirmation = recycleBin.getByRole("alertdialog", { name: "Delete permanently?" });
-    await expect(confirmation).toContainText(`Permanently delete 1 item?`);
+    await expect(confirmation).toContainText("Permanently delete 1 item?");
     await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
     await expect(recycleBin.locator("[role='row']", { hasText: deleteName })).toHaveCount(0, { timeout: 20_000 });
     await expect(deleteSource.files.locator("[data-fm-node-id]", { hasText: deleteName })).toHaveCount(0);
