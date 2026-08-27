@@ -1,7 +1,7 @@
 {
   "implementation": {
     "fingerprint_schema": "neutron.kernel.certified-assets-implementation.v2",
-    "fingerprint_sha256": "33fcfd27588ff2ef48a10bac452354abad2d476c645a0f7c0ba266154ddc3826",
+    "fingerprint_sha256": "b6c9807023805e6a8afa6e7d93057c016bfe3568adb9f81617065aebfa6d0817",
     "sources": [
       {
         "bytes": 9582,
@@ -249,9 +249,9 @@
         "sha256": "ef11e0939b4adffa1a94f6b777cf4312c37eed88bcfdfe81c13dbf3c5589a13d"
       },
       {
-        "bytes": 147463,
+        "bytes": 148250,
         "path": "apps/kernel/backend/main.mo",
-        "sha256": "19f6efa006a742386a6356ea6d06b1ad1d466b2e22ed3de3fcd0256375eace28"
+        "sha256": "58ce8d5e07acd2cdc40ee9cff040a2d25890bd453bb6017160475be11df0b522"
       },
       {
         "bytes": 352,
