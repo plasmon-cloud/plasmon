@@ -11,7 +11,7 @@ Ordinary close remains Process-owned; Markdown supplies only the same document d
 
 ## Preview rendering
 
-Preview and Split render standard Markdown through Marked and then sanitize the generated HTML through DOMPurify. Plasmon does not rewrite invalid Markdown syntax into a private dialect at the preview boundary.
+Preview and Split render Markdown through Marked and then sanitize the generated HTML through DOMPurify. Plasmon has one deliberately narrow compatibility rule for a standalone top-level compact heading at column zero: source such as `#hello` is presented to Marked as `# hello` without rewriting the editor or persisted document. That compatibility rule does not apply to fenced code, indented code, `##...`, or inline `#tag` text. Do not broaden it into a private Markdown dialect or bypass Marked/DOMPurify.
 
 ## Editor commands and formatting
 

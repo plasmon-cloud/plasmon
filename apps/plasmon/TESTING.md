@@ -211,7 +211,7 @@ Playwright is not the primary Plasmon development harness. Use it when the accep
 
 The packaged Plasmon specs live under repository-root `test/e2e/` so they reuse the existing Playwright configuration and canonical Neutron provisioning helpers.
 
-`test/e2e/plasmon-review-demo.spec.ts` remains the installed Review boundary proof. It verifies Review exists as an independently installed package, Plasmon exposes `/Apps/Review.neutron`, canonical activation reaches the installed Review iframe/application, representative Review interaction works, and browser errors are surfaced. Projection uniqueness/metadata and canonical open-dispatch policy are already proved below Playwright and should not be broadly duplicated there.
+`test/e2e/plasmon-demo-review.spec.ts` remains the installed Review boundary proof. It verifies Review exists as an independently installed package, Plasmon exposes `/Apps/Review.neutron`, canonical activation reaches the installed Review iframe/application, representative Review interaction works, and browser errors are surfaced. Projection uniqueness/metadata and canonical open-dispatch policy are already proved below Playwright and should not be broadly duplicated there.
 
 Do not grow Playwright into general Desktop/FileManager/Start/Search scripts or screenshot regression unless the acceptance claim itself requires a real browser.
 
