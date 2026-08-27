@@ -47,6 +47,7 @@ jobs:
           import datetime as dt
           import json
           import os
+          import re
           import subprocess
           from pathlib import Path
 
@@ -123,8 +124,11 @@ jobs:
               cmd = ["gh", "api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}", "-f", f"name={repo_name}", "-F", f"number={int(pr['number'])}"]
               payload = json.loads(subprocess.check_output(cmd, text=True))
               nodes = (((payload.get("data") or {}).get("repository") or {}).get("pullRequest") or {}).get("closingIssuesReferences", {}).get("nodes") or []
-              matches = [int(x["number"]) for x in nodes if x.get("number") is not None and int(x["number"]) in lane_numbers]
-              return matches[0] if len(matches) == 1 else None
+              matches = {int(x["number"]) for x in nodes if x.get("number") is not None and int(x["number"]) in lane_numbers}
+              if not matches:
+                  body = str(pr.get("body") or "")
+                  matches = {int(x) for x in re.findall(r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b", body) if int(x) in lane_numbers}
+              return next(iter(matches)) if len(matches) == 1 else None
 
           pr_to_issue = {int(pr["number"]): issue for pr in raw_prs if (issue := map_pr(pr))}
           issue_to_pr = {issue: pr for pr, issue in pr_to_issue.items()}
