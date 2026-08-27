@@ -33,7 +33,7 @@ test(
     const app = page.frameLocator(appFrameSelector).first();
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
     // Create the Markdown resource through the ordinary FileManager boundary;
-    // this test does not depend on demo assets or another feature's fixture.
+    // this test owns its resource setup independently.
     const desktop = app.getByRole("region", { name: "Desktop" });
     const rootShortcut = desktop.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 20_000 });
