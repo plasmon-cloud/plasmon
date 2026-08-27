@@ -49,6 +49,15 @@ async function openRootDirectory(explorer: Locator, name: string): Promise<void>
   await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue(`/${name}`, { timeout: 20_000 });
 }
 
+async function importFiles(explorer: Locator): Promise<ReturnType<Page["waitForEvent"]>> {
+  const files = explorer.getByRole("listbox", { name: "Files" });
+  const toolbar = files.getByRole("toolbar", { name: "File commands" });
+  const page = explorer.page();
+  const chooser = page.waitForEvent("filechooser");
+  await toolbar.getByRole("button", { name: "Import Files…", exact: true }).click();
+  return chooser;
+}
+
 async function createTextDocument(explorer: Locator, name: string) {
   const files = explorer.getByRole("listbox", { name: "Files" });
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
@@ -114,11 +123,10 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
     // The real FileManager navigation boundary is canonical directory activation.
     explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
-    const chooser = page.waitForEvent("filechooser");
-    await explorer.getByRole("button", { name: "Import Files…" }).click();
+    const chooser = await importFiles(explorer);
     const filename = `issue-107-download-${Date.now()}.txt`;
     const expected = Buffer.from("Issue #107 browser download acceptance\n");
-    await (await chooser).setFiles({ name: filename, mimeType: "text/plain", buffer: expected });
+    await chooser.setFiles({ name: filename, mimeType: "text/plain", buffer: expected });
 
     const files = explorer.getByRole("listbox", { name: "Files" });
     const entry = files.locator("[data-fm-node-id]", { hasText: filename }).first();
@@ -155,7 +163,8 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     const deleteSource = await createTextDocument(explorer, deleteName);
     await deleteEntry(deleteSource.toolbar, deleteSource.entry);
 
-    await app.getByRole("button", { name: "Search" }).click();
+    const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+    await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const search = app.getByLabel("Search Plasmon");
     await search.fill("Recycle Bin");
     const result = app.locator("[data-search-result]", { hasText: "Recycle Bin" }).first();
@@ -191,10 +200,9 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
-    const chooser = page.waitForEvent("filechooser");
-    await explorer.getByRole("button", { name: "Import Files…" }).click();
+    const chooser = await importFiles(explorer);
     const filename = `issue-107-unsupported-${Date.now()}.webm`;
-    await (await chooser).setFiles({
+    await chooser.setFiles({
       name: filename,
       mimeType: "video/webm",
       buffer: Buffer.from("not-a-video"),
