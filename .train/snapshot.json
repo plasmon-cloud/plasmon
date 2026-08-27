@@ -1,13 +1,13 @@
 {
-  "captured_at": "2026-08-27T19:54:33.359173Z",
+  "captured_at": "2026-08-27T20:09:43.493402Z",
   "counts": {
-    "invalid_scheduling_metadata": 1,
+    "invalid_scheduling_metadata": 0,
     "issues": 132,
     "open_ci_prs": 2,
-    "open_issues": 17,
+    "open_issues": 16,
     "open_product_prs": 0
   },
-  "generation": "20a710e6e27b874ed99b9d38dfcf079d3c15943f",
+  "generation": "abb00e9c25c1cc94cc436654877b534a996731da",
   "issues": [
     {
       "area": "Repo",
@@ -393,7 +393,6 @@
       "desire": "High",
       "effort": "Low",
       "labels": [
-        "blocked",
         "ci:flaky"
       ],
       "number": 78,
@@ -408,7 +407,7 @@
       "title": "Backfill a headless shortcut lifecycle regression across creation and open surfaces",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:53:14Z",
+      "updated_at": "2026-08-27T19:59:08Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/78"
     },
     {
@@ -3140,7 +3139,9 @@
     },
     {
       "area": "Testing",
-      "assignees": [],
+      "assignees": [
+        "3E4B54"
+      ],
       "blocked_by": [],
       "ci_owned": true,
       "dependencies_ready": true,
@@ -3163,7 +3164,7 @@
       "title": "[r2 CI] Repair and restore first-demo packaged fixture acceptance",
       "type": "Task",
       "unlocks": 0,
-      "updated_at": "2026-08-27T13:44:11Z",
+      "updated_at": "2026-08-27T19:54:22Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/405"
     },
     {
@@ -3322,7 +3323,7 @@
         "type: bug"
       ],
       "number": 416,
-      "open": true,
+      "open": false,
       "open_pr": null,
       "priority": null,
       "product": true,
@@ -3333,7 +3334,7 @@
       "title": "Regression: restore basic Markdown Preview presentation",
       "type": "Bug",
       "unlocks": 0,
-      "updated_at": "2026-08-27T13:44:13Z",
+      "updated_at": "2026-08-27T20:06:44Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/416"
     },
     {
@@ -3482,14 +3483,14 @@
       "url": "https://github.com/plasmon-cloud/plasmon/issues/434"
     },
     {
-      "area": null,
+      "area": "Testing",
       "assignees": [],
       "blocked_by": [],
       "ci_owned": true,
       "dependencies_ready": true,
       "dependency_states": {},
-      "desire": null,
-      "effort": null,
+      "desire": "High",
+      "effort": "Low",
       "labels": [
         "ci:flaky",
         "release-blocker"
@@ -3500,16 +3501,13 @@
       "priority": null,
       "product": false,
       "scheduling_metadata": {
-        "errors": [
-          "missing-desire",
-          "missing-effort"
-        ],
-        "valid": false
+        "errors": [],
+        "valid": true
       },
       "title": "[r2 CI] Flake Probe summary can fail integrity after workflow reruns",
-      "type": null,
+      "type": "Bug",
       "unlocks": 0,
-      "updated_at": "2026-08-25T00:55:39Z",
+      "updated_at": "2026-08-27T20:00:13Z",
       "url": "https://github.com/plasmon-cloud/plasmon/issues/446"
     },
     {
@@ -3814,9 +3812,21 @@
       "changed_test_files": [],
       "checks": [
         {
-          "conclusion": null,
+          "conclusion": "success",
+          "name": "Flake characterization summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98653368134"
+        },
+        {
+          "conclusion": "success",
+          "name": "Flake probe summary",
+          "status": "completed",
+          "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98653368106"
+        },
+        {
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:1-files:71b1fc67c911 iterations 36-40/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509231"
         },
         {
@@ -3838,9 +3848,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509149"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:1-files:71b1fc67c911 iterations 26-30/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509127"
         },
         {
@@ -3862,9 +3872,9 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509111"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:1-files:71b1fc67c911 iterations 46-50/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509109"
         },
         {
@@ -3874,15 +3884,15 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509103"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:1-files:71b1fc67c911 iterations 41-45/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509102"
         },
         {
-          "conclusion": null,
+          "conclusion": "success",
           "name": "Flake characterization characterization:targeted:1-files:71b1fc67c911 iterations 16-20/50",
-          "status": "in_progress",
+          "status": "completed",
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066835/job/98644509095"
         },
         {
@@ -3988,7 +3998,7 @@
           "url": "https://github.com/plasmon-cloud/plasmon/actions/runs/33108066817/job/98643200385"
         }
       ],
-      "ci": "running",
+      "ci": "green",
       "ci_owned": true,
       "conflict": false,
       "draft": false,
