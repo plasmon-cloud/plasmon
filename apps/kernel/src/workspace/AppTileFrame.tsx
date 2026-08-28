@@ -11,6 +11,7 @@ import {
 } from "../reducer/apps.ts";
 import type { TileInstance, WorkspaceId } from "./types.ts";
 import { usesUnprefixedAppFrameOrigin } from "../capabilities/plan.ts";
+import { APP_TILE_FRAME_SANDBOX } from "./app_tile_frame_policy.ts";
 import { nextStartedTileRuntime } from "./tile_frame_lifecycle.ts";
 import {
   assertRuntimeFrameUrl,
@@ -132,7 +133,7 @@ export const AppTileFrame = memo(function AppTileFrame({
           ensureFrameEndpointConnected(iframeRef.current?.contentWindow ?? null);
         }
       }}
-      sandbox="allow-scripts"
+      sandbox={APP_TILE_FRAME_SANDBOX}
       src={src}
       title={tile.title}
       {...({ credentialless: "true" } as Record<string, string>)}
