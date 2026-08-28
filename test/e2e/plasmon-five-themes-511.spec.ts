@@ -31,7 +31,7 @@ async function computed(locator: Locator, property: "backgroundColor" | "color" 
   return locator.evaluate((element, name) => getComputedStyle(element)[name], property);
 }
 
-test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Monaco, and Markdown in the packaged app", async ({ page }) => {
+test("#511 all five themes reach Shell, Desktop, Windowing, and representative native-app chrome", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -45,9 +45,6 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
       runtime.developerIdentitySeed,
     );
 
-    // Use the same direct packaged launch boundary as the established Shell and
-    // FileManager acceptance tests. This test creates its own Markdown resource,
-    // so it does not need a seeded fixture or a synthetic app-document redirect.
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
@@ -59,9 +56,6 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 60_000 });
 
-    // Keep one real Desktop item selected throughout theme switching. The
-    // expanded selected-name plate previously kept fixed dark styling even when
-    // Glacier switched the rest of the system to its light palette.
     const desktopEntry = app.locator(".fm-root--desktop .fm-entry--desktop").first();
     await expect(desktopEntry).toBeVisible({ timeout: 20_000 });
     await desktopEntry.click();
@@ -70,11 +64,22 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
 
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
 
-    // Open Explorer through the canonical Search projection, matching the
-    // packaged FileManager gate rather than depending on a seeded Desktop
-    // shortcut. Count Windowing objects before activation so the concrete
-    // Explorer window can be captured without a role-specific implementation
-    // dependency.
+    const openNativeAppFromSearch = async (name: string): Promise<Locator> => {
+      await taskbar.getByRole("button", { name: "Search", exact: true }).click();
+      const search = app.getByRole("region", { name: "Search" });
+      await expect(search).toBeVisible();
+      await search.getByRole("textbox", { name: "Search Plasmon" }).fill(name);
+      const result = search.locator("[data-search-result]", { hasText: name }).first();
+      await expect(result).toBeVisible({ timeout: 20_000 });
+      const before = await windows.count();
+      await result.click();
+      await expect(windows).toHaveCount(before + 1, { timeout: 20_000 });
+      const candidate = windows.last();
+      const windowId = await candidate.getAttribute("data-window-id");
+      expect(windowId, `${name} should expose stable Windowing identity`).toBeTruthy();
+      return app.locator(`.plasmon-window-layer [data-window-id="${windowId}"]`);
+    };
+
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const search = app.getByRole("region", { name: "Search" });
     await expect(search).toBeVisible();
@@ -85,11 +90,6 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     await filesResult.click();
     await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
 
-    // Window creation is only the process boundary. Explorer publishes its
-    // title and FileManager tree asynchronously, so bind its canonical Address
-    // control before asserting presentation. Capture the concrete window id:
-    // `windows.last()` is a live locator and would otherwise retarget when the
-    // Markdown window opens later in the test.
     const explorerCandidate = windows.last();
     const explorerCandidateAddress = explorerCandidate.getByRole("textbox", { name: "Address" });
     await expect(explorerCandidateAddress).toHaveValue("/", { timeout: 20_000 });
@@ -99,7 +99,6 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     const explorer = app.locator(`.plasmon-window-layer [data-window-id="${explorerWindowId}"]`);
     const explorerAddress = explorer.getByRole("textbox", { name: "Address" });
     const explorerTitlebar = explorer.locator(".plasmon-window__titlebar");
-    // `.fm-root` is the active reusable FileManager root; `.fm-window` is stale.
     const fileManager = explorer.locator(".fm-root").first();
     await expect(fileManager).toBeVisible();
 
@@ -107,9 +106,6 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     await expect(explorerAddress).toHaveValue("/Documents");
     await expect(explorer).toHaveAccessibleName("Documents");
 
-    // One owned Markdown document proves both the shared Monaco canvas and the
-    // app-owned rendered preview. This avoids a fixture dependency while covering
-    // the dark preview leak visible in Glacier during manual review.
     const generatedName = `Issue 511 Theme Probe ${Date.now()}.md`;
     await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
     const generatedRename = explorer.locator('textarea[aria-label^="Rename New Markdown Document"]').last();
@@ -130,14 +126,25 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     const markdownWindow = app.locator(`.plasmon-window-layer [data-window-id="${markdownWindowId}"]`);
     const monacoSurface = markdownWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
     await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-    // Monaco's root is a layout container and can remain transparent. The
-    // internal background node is the rendered editor canvas that receives
-    // the color projected from the active Plasmon Visual palette.
     const monacoCanvas = markdownWindow.locator(".monaco-editor-background").first();
     await expect(monacoCanvas).toBeVisible();
     await markdownWindow.getByRole("button", { name: "Split", exact: true }).click();
     const markdownPreview = markdownWindow.locator(".plasmon-markdown-preview");
     await expect(markdownPreview).toBeVisible();
+
+    const browserWindow = await openNativeAppFromSearch("Browser");
+    const browserSurface = browserWindow.getByRole("region", { name: "Web browser" });
+    await expect(browserSurface).toBeVisible({ timeout: 20_000 });
+    const browserToolbar = browserSurface.locator("form").first();
+    const browserAddress = browserWindow.getByRole("textbox", { name: "Web address" });
+    await expect(browserToolbar).toBeVisible();
+    await expect(browserAddress).toBeVisible();
+
+    const nativeSettingsWindow = await openNativeAppFromSearch("Settings");
+    const nativeSettingsSurface = nativeSettingsWindow.getByRole("region", { name: "Settings" });
+    const nativeSettingsPanel = nativeSettingsSurface.locator(".plasmon-native-app-panel").first();
+    await expect(nativeSettingsSurface).toBeVisible({ timeout: 20_000 });
+    await expect(nativeSettingsPanel).toBeVisible();
 
     await taskbar.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
@@ -153,6 +160,8 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
       desktopLabel: new Set<string>(),
       monaco: new Set<string>(),
       markdown: new Set<string>(),
+      browser: new Set<string>(),
+      nativeSettings: new Set<string>(),
       accent: new Set<string>(),
     };
 
@@ -166,6 +175,7 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
       const titlebar = await resolvedToken(shell, "--plasmon-window-titlebar");
       const windowBackground = await resolvedToken(shell, "--plasmon-window-background");
       const panelElevated = await resolvedToken(shell, "--plasmon-panel-elevated");
+      const controlBackground = await resolvedToken(shell, "--plasmon-control-background");
       const textPrimary = await resolvedToken(shell, "--plasmon-text-primary");
       const accent = await resolvedToken(shell, "--plasmon-accent");
 
@@ -182,8 +192,17 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
       await expect.poll(() => computed(monacoCanvas, "backgroundColor")).toBe(windowBackground);
       await expect.poll(() => computed(markdownPreview, "backgroundColor")).toBe(windowBackground);
       await expect.poll(() => computed(markdownPreview, "color")).toBe(textPrimary);
+      await expect.poll(() => computed(browserSurface, "backgroundColor")).toBe(windowBackground);
+      await expect.poll(() => computed(browserToolbar, "backgroundColor")).toBe(panelElevated);
+      await expect.poll(() => computed(browserAddress, "backgroundColor")).toBe(controlBackground);
+      await expect.poll(() => computed(browserAddress, "color")).toBe(textPrimary);
+      await expect.poll(() => computed(nativeSettingsSurface, "backgroundColor")).toBe(windowBackground);
+      await expect.poll(() => computed(nativeSettingsSurface, "color")).toBe(textPrimary);
+      await expect.poll(() => computed(nativeSettingsPanel, "backgroundColor")).toBe(panelElevated);
       observed.monaco.add(await computed(monacoCanvas, "backgroundColor"));
       observed.markdown.add(await computed(markdownPreview, "backgroundColor"));
+      observed.browser.add(await computed(browserSurface, "backgroundColor"));
+      observed.nativeSettings.add(await computed(nativeSettingsSurface, "backgroundColor"));
 
       const scheme = await computed(shell, "colorScheme");
       expect(scheme).toContain(theme.scheme);
@@ -195,6 +214,8 @@ test("#511 all five themes reach Shell, Desktop state, Explorer, Windowing, Mona
     expect(observed.desktopLabel.size).toBe(THEMES.length);
     expect(observed.monaco.size).toBe(THEMES.length);
     expect(observed.markdown.size).toBe(THEMES.length);
+    expect(observed.browser.size).toBe(THEMES.length);
+    expect(observed.nativeSettings.size).toBe(THEMES.length);
     expect(observed.accent.size).toBe(THEMES.length);
 
     health.assertClean();
