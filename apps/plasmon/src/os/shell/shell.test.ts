@@ -80,8 +80,9 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     version: 1,
     pinnedNative: [],
     pinnedElements: [],
-    themeId: "plasmon-dark",
+    themeId: "plasmon-graphite",
     wallpaper: { mode: "follow-theme" },
+    showBrandWatermark: true,
     taskbarAlignment: "center",
     ...patch,
   };
@@ -149,8 +150,6 @@ test("native taskbar action uses canonical focus id rather than z-order", () => 
   const otherWindow = windowState(other, 9);
   const visibleRunningWindow = windowState(running, 3);
   expect(decideNativeTaskbarAction(entry, [visibleRunningWindow, otherWindow], otherWindow.id)).toBe("focus");
-
-  // Regression: a lower-z window can still be canonically focused.
   expect(decideNativeTaskbarAction(entry, [visibleRunningWindow, otherWindow], visibleRunningWindow.id)).toBe("minimize");
 });
 
