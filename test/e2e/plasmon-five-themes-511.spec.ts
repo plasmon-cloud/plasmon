@@ -7,7 +7,8 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 
 const THEMES = [
-  { id: "plasmon-dark", label: "Plasmon Dark", scheme: "dark" },
+  { id: "plasmon-graphite", label: "Graphite", scheme: "dark" },
+  { id: "plasmon-verdant", label: "Verdant", scheme: "dark" },
   { id: "plasmon-midnight", label: "Midnight", scheme: "dark" },
   { id: "plasmon-ember", label: "Ember", scheme: "dark" },
   { id: "plasmon-glacier", label: "Glacier", scheme: "light" },
@@ -31,7 +32,7 @@ async function computed(locator: Locator, property: "backgroundColor" | "color" 
   return locator.evaluate((element, name) => getComputedStyle(element)[name], property);
 }
 
-test("#511 all five themes reach Shell, Desktop, Windowing, and representative native-app chrome", async ({ page }) => {
+test("#511 all six themes reach Shell, Desktop, Windowing, and representative native-app chrome", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -45,9 +46,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
       runtime.developerIdentitySeed,
     );
 
-    // Use the same direct packaged launch boundary as the established Shell and
-    // FileManager acceptance tests. This test creates its own Markdown resource,
-    // so it does not need a seeded fixture or a synthetic app-document redirect.
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
@@ -59,9 +57,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 60_000 });
 
-    // Keep one real Desktop item selected throughout theme switching. The
-    // expanded selected-name plate previously kept fixed dark styling even when
-    // Glacier switched the rest of the system to its light palette.
     const desktopEntry = app.locator(".fm-root--desktop .fm-entry--desktop").first();
     await expect(desktopEntry).toBeVisible({ timeout: 20_000 });
     await desktopEntry.click();
@@ -86,11 +81,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
       return app.locator(`.plasmon-window-layer [data-window-id="${windowId}"]`);
     };
 
-    // Open Explorer through the canonical Search projection, matching the
-    // packaged FileManager gate rather than depending on a seeded Desktop
-    // shortcut. Count Windowing objects before activation so the concrete
-    // Explorer window can be captured without a role-specific implementation
-    // dependency.
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const search = app.getByRole("region", { name: "Search" });
     await expect(search).toBeVisible();
@@ -101,11 +91,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
     await filesResult.click();
     await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
 
-    // Window creation is only the process boundary. Explorer publishes its
-    // title and FileManager tree asynchronously, so bind its canonical Address
-    // control before asserting presentation. Capture the concrete window id:
-    // `windows.last()` is a live locator and would otherwise retarget when the
-    // Markdown window opens later in the test.
     const explorerCandidate = windows.last();
     const explorerCandidateAddress = explorerCandidate.getByRole("textbox", { name: "Address" });
     await expect(explorerCandidateAddress).toHaveValue("/", { timeout: 20_000 });
@@ -115,7 +100,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
     const explorer = app.locator(`.plasmon-window-layer [data-window-id="${explorerWindowId}"]`);
     const explorerAddress = explorer.getByRole("textbox", { name: "Address" });
     const explorerTitlebar = explorer.locator(".plasmon-window__titlebar");
-    // `.fm-root` is the active reusable FileManager root; `.fm-window` is stale.
     const fileManager = explorer.locator(".fm-root").first();
     await expect(fileManager).toBeVisible();
 
@@ -123,9 +107,6 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
     await expect(explorerAddress).toHaveValue("/Documents");
     await expect(explorer).toHaveAccessibleName("Documents");
 
-    // One owned Markdown document proves both the shared Monaco canvas and the
-    // app-owned rendered preview. This avoids a fixture dependency while covering
-    // the dark preview leak visible in Glacier during manual review.
     const generatedName = `Issue 511 Theme Probe ${Date.now()}.md`;
     await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
     const generatedRename = explorer.locator('textarea[aria-label^="Rename New Markdown Document"]').last();
@@ -146,19 +127,12 @@ test("#511 all five themes reach Shell, Desktop, Windowing, and representative n
     const markdownWindow = app.locator(`.plasmon-window-layer [data-window-id="${markdownWindowId}"]`);
     const monacoSurface = markdownWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
     await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-    // Monaco's root is a layout container and can remain transparent. The
-    // internal background node is the rendered editor canvas that receives
-    // the color projected from the active Plasmon Visual palette.
     const monacoCanvas = markdownWindow.locator(".monaco-editor-background").first();
     await expect(monacoCanvas).toBeVisible();
     await markdownWindow.getByRole("button", { name: "Split", exact: true }).click();
     const markdownPreview = markdownWindow.locator(".plasmon-markdown-preview");
     await expect(markdownPreview).toBeVisible();
 
-    // The light-theme regression was visible in ordinary first-party Browser and
-    // Settings windows, not only in editor/FileManager surfaces. Exercise both
-    // through the real native-app registry so a dark local palette cannot hide
-    // behind otherwise-correct Windowing title bars.
     const browserWindow = await openNativeAppFromSearch("Browser");
     const browserSurface = browserWindow.getByRole("region", { name: "Web browser" });
     await expect(browserSurface).toBeVisible({ timeout: 20_000 });
