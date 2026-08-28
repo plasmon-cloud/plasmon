@@ -23,7 +23,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
+test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@issue-415"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -54,20 +54,36 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
     await expect(taskbar).toBeVisible({ timeout: 30_000 });
 
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
+    const desktop = app.getByRole("region", { name: "Desktop" });
+    const desktopFiles = desktop.getByRole("listbox", { name: "Files" });
+    const rootShortcut = desktop.locator("[data-fm-node-id]", { hasText: "Root" });
+    await expect(rootShortcut).toHaveCount(1);
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-    await rootShortcut.dblclick();
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
+    await rootShortcut.click();
+    await expect(rootShortcut).toHaveAttribute("aria-selected", "true");
+    await desktopFiles.press("Enter");
+    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" });
     await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
-      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await expect(documentsEntry).toBeVisible();
-    await documentsEntry.dblclick();
+    const rootFiles = rootExplorer.getByRole("listbox", { name: "Files" });
+    const documentsOption = rootFiles.getByRole("option", { name: "Documents", exact: true });
+    await expect(documentsOption).toBeVisible();
+    await documentsOption.click({ button: "right" });
+    await expect(documentsOption).toHaveAttribute("aria-selected", "true");
+    const documentsMenu = rootFiles.getByRole("menu");
+    await expect(documentsMenu).toBeVisible();
+    await documentsMenu.getByRole("menuitem", { name: "Open", exact: true }).click();
 
-    const documentsExplorer = app.locator(".explorer-app").last();
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
+    const documentsDialog = app.getByRole("dialog", { name: "Documents" });
+    await expect(documentsDialog).toBeVisible({ timeout: 20_000 });
+    await expect(documentsDialog.getByRole("textbox", { name: "Address" }))
+      .toHaveValue("/Documents", { timeout: 20_000 });
+    const documentsWindowId = await documentsDialog.getAttribute("data-window-id");
+    expect(documentsWindowId, "Documents Explorer should expose its native window identity").toBeTruthy();
+
+    const documentsWindow = app.locator(`[data-window-id=${JSON.stringify(documentsWindowId)}]`);
+    const documentsExplorer = documentsWindow.locator(".explorer-app");
+    await expect(documentsExplorer).toBeVisible();
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
 
     // Reproduce the screenshot boundary: FileManager creates a blank text document,
@@ -109,7 +125,7 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
 
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
 
     const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
@@ -156,7 +172,7 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     await expect(textWindow.getByText("Saved", { exact: true })).toBeVisible();
 
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
     const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
     await expect(script).toBeVisible({ timeout: 20_000 });
 

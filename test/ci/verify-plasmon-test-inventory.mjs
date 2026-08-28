@@ -13,8 +13,7 @@ import {
 
 const args = new Set(process.argv.slice(2));
 const activeQuarantines = Object.freeze({
-  'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] },
-  'test/e2e/plasmon-demo-text-language-transition.spec.ts': { count: 1, issues: ['@issue-415', '@issue-434'] }
+  'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] }
 });
 
 function sameSet(actual, expected) {
