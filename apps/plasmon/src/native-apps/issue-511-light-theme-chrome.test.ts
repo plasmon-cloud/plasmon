@@ -1,8 +1,80 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS } from "./packaging.ts";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+const nativeAppThemeAudit = {
+  Text: {
+    source: "./text/TextEditor.tsx",
+    markers: ["NativeAppContentSurface", "NativeAppToolbar", "NativeAppStatusStrip"],
+  },
+  Markdown: {
+    source: "./markdown/MarkdownEditor.tsx",
+    markers: ["NativeAppContentSurface", "NativeAppToolbar", "NativeAppStatusStrip"],
+  },
+  Photos: {
+    source: "./photos/Photos.tsx",
+    markers: ["NativeAppContentSurface", "NativeAppToolbar", "NativeAppStatusStrip"],
+  },
+  Video: {
+    source: "./video/VideoPlayer.tsx",
+    markers: ["NativeAppContentSurface", "NativeAppStatusStrip"],
+  },
+  Browser: {
+    source: "./browser/Browser.tsx",
+    markers: [
+      "--plasmon-window-background",
+      "--plasmon-panel-elevated",
+      "--plasmon-control-background",
+      "--plasmon-text-primary",
+    ],
+  },
+  Settings: {
+    source: "./settings/Settings.tsx",
+    markers: ["NativeAppContentSurface", "NativeAppPanel", "--plasmon-text-primary"],
+  },
+  Explorer: {
+    source: "../os/file-manager/file-manager.scss",
+    markers: [
+      ".explorer-app {",
+      "background: var(--plasmon-window-background)",
+      "background: var(--plasmon-panel-background)",
+      "background: var(--plasmon-control-background)",
+    ],
+  },
+  Properties: {
+    source: "../os/file-manager/file-manager.scss",
+    markers: [
+      ".native-properties-app {",
+      "background: var(--plasmon-window-background)",
+      "color: var(--plasmon-text-primary)",
+    ],
+  },
+  "Recycle Bin": {
+    source: "./recycle-bin/recycle-bin.scss",
+    markers: [
+      "--plasmon-window-background",
+      "--plasmon-panel-elevated",
+      "--plasmon-control-background",
+      "--plasmon-text-primary",
+    ],
+  },
+} as const;
+
+test("#511 every packaged first-party native app has an explicit theme-chrome contract", () => {
+  const packaged = FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS.map(({ name }) => name).sort();
+  const audited = Object.keys(nativeAppThemeAudit).sort();
+  expect(audited).toEqual(packaged);
+
+  for (const [name, audit] of Object.entries(nativeAppThemeAudit)) {
+    const source = read(audit.source);
+    for (const marker of audit.markers) {
+      expect(source, `${name} should consume theme-aware first-party chrome`).toContain(marker);
+    }
+  }
+});
 
 test("#511 first-party Browser chrome uses the Visual palette while web content stays unmodified", () => {
   const source = read("./browser/Browser.tsx");
