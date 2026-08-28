@@ -65,7 +65,7 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     const shell = plasmon.locator(".plasmon-shell");
     const taskbar = plasmon.getByRole("navigation", { name: "Taskbar" });
 
-    await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-graphite");
+    await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-dark");
     await taskbar.getByRole("button", { name: "Start", exact: true }).click();
     const start = plasmon.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
