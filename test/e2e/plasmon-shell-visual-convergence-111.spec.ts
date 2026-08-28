@@ -30,6 +30,17 @@ async function expectSemanticBackground(surface: Locator, token: string): Promis
   expect(colors.actual).toBe(colors.expected);
 }
 
+async function resolvedBorder(surface: Locator, token: string): Promise<string> {
+  return surface.evaluate((element, variable) => {
+    const probe = document.createElement("span");
+    probe.style.borderColor = `var(${variable})`;
+    element.append(probe);
+    const value = getComputedStyle(probe).borderColor;
+    probe.remove();
+    return value;
+  }, token);
+}
+
 test("#111 — packaged Shell and native content inherit one shared visual theme", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
@@ -85,7 +96,28 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     await expect(nativeSettings).toBeVisible({ timeout: 20_000 });
     await expectSemanticBackground(nativeSettings, "--plasmon-window-background");
 
-    await taskbar.getByRole("button", { name: /Neutron trays/ }).click();
+    const windows = plasmon.locator(".plasmon-window-layer [data-window-id]");
+    await taskbar.getByRole("button", { name: "Search", exact: true }).click();
+    const browserSearch = plasmon.getByRole("region", { name: "Search" });
+    await expect(browserSearch).toBeVisible();
+    await browserSearch.getByRole("textbox", { name: "Search Plasmon" }).fill("Browser");
+    const browserResult = browserSearch.locator("[data-search-result]", { hasText: "Browser" }).first();
+    await expect(browserResult).toBeVisible({ timeout: 20_000 });
+    const windowCountBeforeBrowser = await windows.count();
+    await browserResult.click();
+    await expect(windows).toHaveCount(windowCountBeforeBrowser + 1, { timeout: 20_000 });
+
+    await page.keyboard.down("Alt");
+    await page.keyboard.press("Tab");
+    const altTab = plasmon.locator(".plasmon-alt-tab__switcher");
+    await expect(altTab).toBeVisible();
+    const selectedAltTab = altTab.locator(".plasmon-alt-tab__option.is-selected");
+    await expect(selectedAltTab).toHaveCount(1);
+    await expectSemanticBackground(selectedAltTab, "--plasmon-selection");
+    await expect(selectedAltTab).toHaveCSS("border-color", await resolvedBorder(selectedAltTab, "--plasmon-selection-border"));
+    await page.keyboard.up("Alt");
+
+    await taskbar.getByRole("button", { name: /Neutron trays/ }).click;
     const tray = plasmon.getByRole("region", { name: "Neutron trays" });
     await expect(tray).toBeVisible();
     await expectSemanticBackground(tray, "--plasmon-panel-elevated");
