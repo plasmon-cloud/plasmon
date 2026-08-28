@@ -5,6 +5,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const READY_TIMEOUT_MS = 10_000;
 
 async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
   await expect.poll(
@@ -23,7 +24,11 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@r2-quarantine", "@issue-415", "@issue-434"] }, async ({ page }) => {
+async function expectMonacoReady(surface: Locator): Promise<void> {
+  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: READY_TIMEOUT_MS });
+}
+
+test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@issue-415"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -52,22 +57,37 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     await expect(page.locator(appSelector)).toBeVisible();
     const app = page.frameLocator(appSelector);
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
-    await expect(taskbar).toBeVisible({ timeout: 30_000 });
+    await expect(taskbar).toBeVisible({ timeout: READY_TIMEOUT_MS });
 
-    const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
-    await rootShortcut.dblclick();
-    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-    await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+    const desktop = app.getByRole("region", { name: "Desktop" });
+    const desktopFiles = desktop.getByRole("listbox", { name: "Files" });
+    const rootShortcut = desktop.locator("[data-fm-node-id]", { hasText: "Root" });
+    await expect(rootShortcut).toHaveCount(1);
+    await expect(rootShortcut).toBeVisible();
+    await rootShortcut.click();
+    await expect(rootShortcut).toHaveAttribute("aria-selected", "true");
+    await desktopFiles.press("Enter");
+    const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" });
+    await expect(rootExplorer).toBeVisible();
     await expect(rootExplorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-    await expect(rootExplorer.getByRole("listbox", { name: "Files" })
-      .getByRole("option", { name: "Documents", exact: true })).toBeVisible();
-    const documentsEntry = rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
-    await expect(documentsEntry).toBeVisible();
-    await documentsEntry.dblclick();
+    const rootFiles = rootExplorer.getByRole("listbox", { name: "Files" });
+    const documentsOption = rootFiles.getByRole("option", { name: "Documents", exact: true });
+    await expect(documentsOption).toBeVisible();
+    await documentsOption.click({ button: "right" });
+    await expect(documentsOption).toHaveAttribute("aria-selected", "true");
+    const documentsMenu = rootFiles.getByRole("menu");
+    await expect(documentsMenu).toBeVisible();
+    await documentsMenu.getByRole("menuitem", { name: "Open", exact: true }).click();
 
-    const documentsExplorer = app.locator(".explorer-app").last();
-    await expect(documentsExplorer).toBeVisible({ timeout: 20_000 });
+    const documentsDialog = app.getByRole("dialog", { name: "Documents" });
+    await expect(documentsDialog).toBeVisible();
+    await expect(documentsDialog.getByRole("textbox", { name: "Address" })).toHaveValue("/Documents");
+    const documentsWindowId = await documentsDialog.getAttribute("data-window-id");
+    expect(documentsWindowId, "Documents Explorer should expose its native window identity").toBeTruthy();
+
+    const documentsWindow = app.locator(`[data-window-id=${JSON.stringify(documentsWindowId)}]`);
+    const documentsExplorer = documentsWindow.locator(".explorer-app");
+    await expect(documentsExplorer).toBeVisible();
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
 
     // Reproduce the screenshot boundary: FileManager creates a blank text document,
@@ -80,15 +100,15 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     await generatedRename.press("Enter");
 
     const generatedEntry = documentsExplorer.locator("[data-fm-node-id]", { hasText: generatedName }).first();
-    await expect(generatedEntry).toBeVisible({ timeout: 20_000 });
+    await expect(generatedEntry).toBeVisible();
     const beforeGeneratedText = await windows.count();
     await generatedEntry.dblclick();
-    await expect(windows).toHaveCount(beforeGeneratedText + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeGeneratedText + 1);
 
     const generatedWindow = windows.last();
     const generatedSurface = generatedWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
     await expect(generatedWindow).toHaveAttribute("aria-label", `${generatedName} - Monaco Editor`);
-    await expect(generatedSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expectMonacoReady(generatedSurface);
     await expect(generatedSurface).toHaveAttribute("data-editor-language", "javascript");
     await expect(generatedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
 
@@ -109,17 +129,17 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
 
     const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
 
     const notes = documentsExplorer.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
     await expect(notes).toBeVisible();
 
     const beforeText = await windows.count();
     await notes.dblclick();
-    await expect(windows).toHaveCount(beforeText + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeText + 1);
     const textWindow = windows.last();
     const textSurface = textWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
-    await expect(textSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expectMonacoReady(textSurface);
     await expect(textSurface).toHaveAttribute("data-editor-language", "plaintext");
     await expect(textWindow.getByText("Plain Text", { exact: true })).toBeVisible();
     const initialModelUri = await textSurface.getAttribute("data-editor-model-uri");
@@ -156,16 +176,16 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     await expect(textWindow.getByText("Saved", { exact: true })).toBeVisible();
 
     await filesTask.click();
-    await expect(documentsExplorer).toHaveClass(/plasmon-window--active/);
+    await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
     const script = documentsExplorer.locator("[data-fm-node-id]", { hasText: scriptName }).first();
-    await expect(script).toBeVisible({ timeout: 20_000 });
+    await expect(script).toBeVisible();
 
     const beforeReopen = await windows.count();
     await script.dblclick();
-    await expect(windows).toHaveCount(beforeReopen + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeReopen + 1);
     const reopenedWindow = windows.last();
     const reopenedSurface = reopenedWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
-    await expect(reopenedSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expectMonacoReady(reopenedSurface);
     await expect(reopenedSurface).toHaveAttribute("data-editor-language", "javascript");
     await expect(reopenedWindow.getByText("JavaScript", { exact: true })).toBeVisible();
     await expect(reopenedWindow.locator(".monaco-editor .view-lines")).toContainText("const persisted = twice(answer);");
