@@ -503,7 +503,7 @@
   },
   "runner": {
     "fingerprint_schema": "neutron.kernel.certified-assets-qualification-runner.v2",
-    "source_set_sha256": "e44a1e36c16287b526cb9882fd07727ba5be60926a3fd23b570919e4adab222a",
+    "source_set_sha256": "9497a4ac8a4d23c1f805ed31ad80764347a345a479f77d35401b8a7aa20341da",
     "sources": [
       {
         "bytes": 19806,
@@ -616,9 +616,9 @@
         "sha256": "6960a6572cd610716e1a6efa78a1f5c9f78f48af2ed49684cc630fe7a2ee4017"
       },
       {
-        "bytes": 8468,
+        "bytes": 8504,
         "path": "apps/kernel/test/motoko/run.ts",
-        "sha256": "6004a4de8006d8c652bcfe925f5c454c2649b886650cbba27ba00792418328a8"
+        "sha256": "bf04d47153a28602264d1066973aa01858c2c4a34eaa781cf5e402916585281c"
       },
       {
         "bytes": 567,
