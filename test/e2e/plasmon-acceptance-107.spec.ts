@@ -53,14 +53,23 @@ async function openExplorer(app: FrameLocator): Promise<Locator> {
 }
 
 async function navigateExplorer(explorer: Locator, path: string): Promise<void> {
+  if (path !== "/") throw new Error(`Acceptance helper only supports root navigation, received ${path}`);
   const address = explorer.getByRole("textbox", { name: "Address" });
-  await address.fill(path);
-  await address.press("Enter");
-  await expect(address).toHaveValue(path, { timeout: ACTION_TIMEOUT });
+  await explorer
+    .getByRole("navigation", { name: "Location breadcrumb" })
+    .getByRole("button", { name: "This Plasmon", exact: true })
+    .click();
+  await expect(address).toHaveValue(path, { timeout: SURFACE_TIMEOUT });
 }
 
 async function openRootDirectory(explorer: Locator, name: string): Promise<void> {
-  await navigateExplorer(explorer, `/${name}`);
+  const address = explorer.getByRole("textbox", { name: "Address" });
+  const favorite = explorer
+    .getByRole("complementary", { name: "Favorites" })
+    .getByRole("button", { name, exact: true });
+  await expect(favorite).toBeVisible({ timeout: SURFACE_TIMEOUT });
+  await favorite.click();
+  await expect(address).toHaveValue(`/${name}`, { timeout: SURFACE_TIMEOUT });
 }
 
 async function importFiles(page: Page, explorer: Locator) {
