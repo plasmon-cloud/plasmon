@@ -37,37 +37,11 @@
     --plasmon-wallpaper-secondary: #bd466d;
     --plasmon-wallpaper-line: #ffc0cf;
   }
-  .plasmon-shell--wallpaper-digital-dusk {
-    --plasmon-wallpaper-line: #fff1d7;
-  }
 
   .plasmon-shell__wallpaper::before {
     content: "";
     pointer-events: none;
     position: absolute;
-  }
-
-  // Every built-in wallpaper carries the same restrained Plasmon watermark.
-  // The mark is packaged Plasmon artwork; the wordmark is CSS text so it stays
-  // crisp without adding another raster payload.
-  .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__wallpaper::after {
-    align-items: center;
-    background: url("/static/plasmon/plasmon-mark.svg") left center / 30px 30px no-repeat;
-    bottom: calc(var(--plasmon-taskbar-height) + 24px);
-    color: color-mix(in srgb, var(--plasmon-wallpaper-line) 82%, white);
-    content: "PLASMON";
-    display: flex;
-    font-size: clamp(11px, .8vw, 14px);
-    font-weight: 700;
-    letter-spacing: .3em;
-    min-height: 30px;
-    opacity: .24;
-    padding-left: 40px;
-    pointer-events: none;
-    position: absolute;
-    right: clamp(24px, 4vw, 64px);
-    text-shadow: 0 1px 10px color-mix(in srgb, var(--plasmon-wallpaper-base, #07131a) 70%, transparent);
-    z-index: 2;
   }
 
   .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora--one {
