@@ -44,7 +44,8 @@ const styles: Record<string, CSSProperties> = {
     minWidth: 0,
     minHeight: 0,
     overflow: "auto",
-    background: "#171a1f",
+    background: "var(--plasmon-window-background, Canvas)",
+    color: "var(--plasmon-text-primary, CanvasText)",
   },
 };
 
@@ -54,8 +55,8 @@ export const MARKDOWN_PREVIEW_CSS = `
   min-height: 100%;
   margin: 0;
   padding: 20px 26px 36px;
-  color: #e4e8ee;
-  background: #171a1f;
+  color: var(--plasmon-text-primary, CanvasText);
+  background: var(--plasmon-window-background, Canvas);
   font: 15px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow-wrap: anywhere;
 }
@@ -70,7 +71,7 @@ export const MARKDOWN_PREVIEW_CSS = `
 }
 .plasmon-markdown-preview h1,
 .plasmon-markdown-preview h2 {
-  border-bottom: 1px solid #3c4450;
+  border-bottom: 1px solid var(--plasmon-border-subtle, ButtonBorder);
   padding-bottom: 0.3em;
 }
 .plasmon-markdown-preview h1 { font-size: 2em; }
@@ -86,35 +87,36 @@ export const MARKDOWN_PREVIEW_CSS = `
 .plasmon-markdown-preview ol { list-style: decimal outside; }
 .plasmon-markdown-preview li { display: list-item; }
 .plasmon-markdown-preview li + li { margin-top: 0.2em; }
-.plasmon-markdown-preview a { color: #70b7ff; text-decoration: none; }
-.plasmon-markdown-preview a:hover { text-decoration: underline; }
+.plasmon-markdown-preview a { color: var(--plasmon-accent, LinkText); text-decoration: none; }
+.plasmon-markdown-preview a:hover { color: var(--plasmon-accent-hover, LinkText); text-decoration: underline; }
 .plasmon-markdown-preview blockquote {
   margin-left: 0;
   padding: 0.15em 1em;
-  border-left: 4px solid #596273;
-  color: #b7bfca;
+  border-left: 4px solid var(--plasmon-border-strong, ButtonBorder);
+  color: var(--plasmon-text-secondary, CanvasText);
 }
 .plasmon-markdown-preview pre {
   overflow: auto;
   padding: 14px 16px;
-  border: 1px solid #303743;
+  border: 1px solid var(--plasmon-border-subtle, ButtonBorder);
   border-radius: 6px;
-  background: #0f1216;
-  color: #edf1f6;
+  background: var(--plasmon-panel-elevated, Canvas);
+  color: var(--plasmon-text-primary, CanvasText);
   font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 .plasmon-markdown-preview code:not(pre code) {
   padding: 0.16em 0.35em;
   border-radius: 4px;
-  background: #2a3039;
-  color: #f0d7a4;
+  background: var(--plasmon-control-background, Canvas);
+  color: var(--plasmon-text-primary, CanvasText);
+  box-shadow: inset 0 0 0 1px var(--plasmon-border-subtle, ButtonBorder);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 .plasmon-markdown-preview table { border-collapse: collapse; display: block; overflow-x: auto; }
 .plasmon-markdown-preview th,
-.plasmon-markdown-preview td { border: 1px solid #434b57; padding: 6px 10px; }
-.plasmon-markdown-preview th { background: #252b33; }
-.plasmon-markdown-preview tr:nth-child(even) { background: #1d2127; }
-.plasmon-markdown-preview hr { border: 0; border-top: 1px solid #3c4450; }
+.plasmon-markdown-preview td { border: 1px solid var(--plasmon-border-subtle, ButtonBorder); padding: 6px 10px; }
+.plasmon-markdown-preview th { background: var(--plasmon-panel-elevated, Canvas); }
+.plasmon-markdown-preview tr:nth-child(even) { background: var(--plasmon-control-background, Canvas); }
+.plasmon-markdown-preview hr { border: 0; border-top: 1px solid var(--plasmon-border-subtle, ButtonBorder); }
 .plasmon-markdown-preview img { max-width: 100%; }
 `;
