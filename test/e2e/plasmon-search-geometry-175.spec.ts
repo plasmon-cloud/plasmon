@@ -15,7 +15,7 @@ function expectNear(actual: number, expected: number, label: string): void {
   expect(Math.abs(actual - expected), label).toBeLessThanOrEqual(1);
 }
 
-test("#175 Search keeps stable frame and controls while switching categories", async ({ page }) => {
+test("#175 Search keeps stable frame and controls while switching categories @issue-403", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
 
