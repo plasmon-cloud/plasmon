@@ -1,6 +1,16 @@
 import type { FsNode, FsService } from "../contracts/index.ts";
+import { isHackathonCoreProfile } from "../integration/packageProfile.ts";
 
 export const DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
+export const HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE =
+  "Downloads are unavailable in this hackathon build because its Neutron Kernel does not permit browser downloads. Use a Kernel with installed-app download support.";
+
+export function downloadCompatibilityError(
+  hosted: boolean,
+  hackathonCore: boolean,
+): string | null {
+  return hosted && hackathonCore ? HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE : null;
+}
 
 export interface DownloadAnchorLike {
   href: string;
@@ -14,6 +24,7 @@ export interface DownloadEnvironment {
   revokeObjectURL(url: string): void;
   createAnchor(): DownloadAnchorLike;
   scheduleCleanup(callback: () => void): void;
+  assertAvailable?(): void;
 }
 
 export function browserDownloadEnvironment(): DownloadEnvironment {
@@ -27,6 +38,13 @@ export function browserDownloadEnvironment(): DownloadEnvironment {
       return anchor;
     },
     scheduleCleanup: (callback) => { window.setTimeout(callback, 0); },
+    assertAvailable: () => {
+      const message = downloadCompatibilityError(
+        window.parent !== window,
+        isHackathonCoreProfile,
+      );
+      if (message) throw new Error(message);
+    },
   };
 }
 
@@ -58,6 +76,7 @@ export async function downloadFsNode(
   node: FsNode,
   environment: DownloadEnvironment = browserDownloadEnvironment(),
 ): Promise<void> {
+  environment.assertAvailable?.();
   const blob = await readDownloadBlob(fs, node);
   const url = environment.createObjectURL(blob);
   const anchor = environment.createAnchor();
