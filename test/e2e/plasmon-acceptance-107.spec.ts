@@ -164,12 +164,16 @@ test("#107 directly activates installed /Apps/Review.neutron through FileManager
   const { app, health } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
-    await openRootDirectory(explorer, "Apps");
+    const rootFiles = explorer.getByRole("listbox", { name: "Files" });
+    // Use the visible Apps shortcut so navigation and the asynchronous
+    // directory listing commit through the normal FileManager path together.
+    const appsShortcut = rootFiles.locator("[data-fm-node-id]", { hasText: "Apps" }).first();
+    await expect(appsShortcut).toBeVisible({ timeout: SURFACE_TIMEOUT });
+    await appsShortcut.dblclick();
+    await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Apps", {
+      timeout: SURFACE_TIMEOUT,
+    });
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
-    // Address navigation commits before the asynchronous directory listing is
-    // necessarily refreshed; use the normal FileManager refresh action so the
-    // installed-package projection is the state under test.
-    await appsFiles.getByRole("button", { name: "Refresh", exact: true }).click();
     const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
     await expect(reviewProjection).toBeVisible({ timeout: SURFACE_TIMEOUT });
     await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
