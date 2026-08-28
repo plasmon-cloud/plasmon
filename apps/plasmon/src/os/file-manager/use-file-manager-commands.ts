@@ -285,7 +285,6 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       // Keep this call synchronous when preparation completed before the user
       // click; Chromium otherwise drops transient user activation at the first
       // asynchronous filesystem read.
-      console.log(`[download-debug] command prepared=${preparedDownloadRef.current?.signature === signature} state=${preparedDownload?.signature === signature}`);
       downloadBlob(node, prepared);
       downloadPreparationRef.current = null;
       preparedDownloadRef.current = null;

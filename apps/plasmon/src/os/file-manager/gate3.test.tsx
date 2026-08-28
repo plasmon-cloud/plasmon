@@ -287,7 +287,9 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
 test("prepared downloads click the browser anchor without another async boundary", () => {
   const preparedNode = { ...node("file", "root", "prepared.txt"), size: 5 };
   let clicked = false;
+  let availabilityChecks = 0;
   const environment: DownloadEnvironment = {
+    assertAvailable: () => { availabilityChecks += 1; },
     createObjectURL: () => "blob:prepared",
     revokeObjectURL: () => {},
     createAnchor: () => ({
@@ -300,7 +302,7 @@ test("prepared downloads click the browser anchor without another async boundary
   };
 
   downloadBlob(preparedNode, new Blob(["ready"]), environment);
-  expect(clicked).toBe(true);
+  expect({ clicked, availabilityChecks }).toEqual({ clicked: true, availabilityChecks: 1 });
 });
 
 test("hosted hackathon downloads fail before reading bytes with actionable feedback", async () => {
@@ -327,6 +329,9 @@ test("hosted hackathon downloads fail before reading bytes with actionable feedb
   };
 
   await expect(downloadFsNode(fs, file, environment)).rejects.toThrow(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
+  expect(() => downloadBlob(file, new Blob(["ready"]), environment)).toThrow(
+    HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
+  );
 });
 
 test("shared shortcut nodes render as shortcuts and preserve their own NodeId on rename/move", async () => {
