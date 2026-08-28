@@ -11,7 +11,8 @@ import {
 const iconTokens = readFileSync(new URL("./icon-tokens.scss", import.meta.url), "utf8");
 const primitives = readFileSync(new URL("./primitives.tsx", import.meta.url), "utf8");
 const themeIds = [
-  "plasmon-dark",
+  "plasmon-graphite",
+  "plasmon-verdant",
   "plasmon-midnight",
   "plasmon-ember",
   "plasmon-glacier",
@@ -36,7 +37,7 @@ function tokenValue(block: string, token: string): string {
   return block.match(new RegExp(`${escaped}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
 }
 
-test("#513 all five themes define distinct complete icon palettes", () => {
+test("#513 all six themes define distinct complete icon palettes", () => {
   for (const themeId of themeIds) {
     const block = themeBlock(themeId);
     expect(block).not.toBe("");
@@ -55,6 +56,13 @@ test("#513 active icon palette reaches body-portaled owned artwork such as drag 
       `:root:has(.plasmon-shell[data-plasmon-theme="${themeId}"])`,
     );
   }
+});
+
+test("#513 Graphite keeps grayscale icon structure with a colored accent", () => {
+  const graphite = themeBlock("plasmon-graphite");
+  expect(tokenValue(graphite, "--plasmon-icon-primary")).toBe("#2c3137");
+  expect(tokenValue(graphite, "--plasmon-icon-secondary")).toBe("#747b84");
+  expect(tokenValue(graphite, "--plasmon-icon-accent")).toBe("#62c5e8");
 });
 
 test("#513 canonical Plasmon asset references resolve to owned semantic artwork", () => {
