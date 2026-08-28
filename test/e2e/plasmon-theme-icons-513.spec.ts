@@ -6,7 +6,8 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 const THEMES = [
-  { id: "plasmon-dark", label: "Plasmon Dark" },
+  { id: "plasmon-graphite", label: "Graphite" },
+  { id: "plasmon-verdant", label: "Verdant" },
   { id: "plasmon-midnight", label: "Midnight" },
   { id: "plasmon-ember", label: "Ember" },
   { id: "plasmon-glacier", label: "Glacier" },
@@ -30,13 +31,7 @@ async function computedFill(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).fill);
 }
 
-/**
- * This is deliberately a rendered-color acceptance test, not a token/source or
- * asset-loading test. It catches both #513 failure modes observed in review:
- * fixed-color SVG files rendered through <img>, and a body-portaled drag proxy
- * that falls back to the default icon palette instead of the active Shell theme.
- */
-test("#513 visible, native-window, and dragged owned icons actually recolor across all five themes", async ({ page }) => {
+test("#513 visible, native-window, and dragged owned icons actually recolor across all six themes", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -45,10 +40,7 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
   try {
     await page.goto(kernelUrl);
     await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
-    await page.evaluate(
-      (seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed),
-      runtime.developerIdentitySeed,
-    );
+    await page.evaluate((seed) => window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__!(seed), runtime.developerIdentitySeed);
 
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
@@ -60,8 +52,6 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
     const shell = app.locator(".plasmon-shell");
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
 
-    // Use a real Desktop folder shown to users. It must be inline owned SVG
-    // geometry rather than a fixed-color external image document.
     const desktopFolder = app.locator('[data-plasmon-owned-icon="file-type:folder"]').first();
     await expect(desktopFolder).toBeVisible({ timeout: 30_000 });
     const desktopFolderEntry = desktopFolder.locator("xpath=ancestor::*[@data-fm-node-id][1]");
@@ -70,7 +60,6 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
     await expect(desktopPrimary).toHaveCount(1);
     await expect(app.locator('img[src*="/static/plasmon/icons/folder.svg"]')).toHaveCount(0);
 
-    // Open the real Explorer window so native titlebar identity is covered too.
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
     await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
@@ -111,13 +100,9 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
       const expectedPrimary = await resolvedToken(shell, "--plasmon-icon-primary");
       await expect.poll(() => computedFill(desktopPrimary)).toBe(expectedPrimary);
       await expect.poll(() => computedFill(explorerPrimary)).toBe(expectedPrimary);
-
       observedDesktopFills.add(await computedFill(desktopPrimary));
       observedExplorerFills.add(await computedFill(explorerPrimary));
 
-      // Close Shell settings and start a real FileManager pointer drag. The
-      // production drag proxy is cloned from the entry and portaled to body, so
-      // it is specifically outside the .plasmon-shell theme subtree.
       await page.keyboard.press("Escape");
       await expect(settings).toBeHidden();
       const source = await desktopFolderEntry.boundingBox();
@@ -142,8 +127,6 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
       await expect(preview).toHaveCount(0);
     }
 
-    // Five theme selections must produce five different colors on the actual
-    // resting, native-window, and drag-preview SVG geometry.
     expect(observedDesktopFills.size).toBe(THEMES.length);
     expect(observedExplorerFills.size).toBe(THEMES.length);
     expect(observedDragFills.size).toBe(THEMES.length);
