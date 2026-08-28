@@ -68,6 +68,7 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
     const jpgResponse = await request.get(new URL(JPG_WALLPAPER_ASSET, kernelUrl).toString());
     expect(jpgResponse.ok()).toBe(true);
     expect(jpgResponse.headers()["content-type"] ?? "").toContain("image/jpeg");
+    expect((await jpgResponse.body()).byteLength).toBe(63_590);
 
     await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
@@ -95,8 +96,10 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
       await expect(shell).toHaveAttribute("data-plasmon-theme", themeId);
       await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
       const rendered = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
-      if (kind === "jpg") expect(rendered).toContain("graphite-sand.jpg");
-      else {
+      if (kind === "jpg") {
+        expect(rendered).toContain("graphite-sand.jpg");
+        expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundSize)).toContain("cover");
+      } else {
         expect(rendered).toContain("gradient");
         generatedBackgrounds.add(rendered);
       }
