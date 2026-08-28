@@ -203,6 +203,18 @@ test("#107 directly activates installed /Apps/Review.neutron through FileManager
 
 test("#107 FileManager Download produces browser-owned bytes", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
+  const plasmonFrame = page.frames().find((frame) => frame.url().includes("/app/plasmon/"));
+  if (!plasmonFrame) throw new Error("Packaged Plasmon frame was not found for download instrumentation");
+  page.on("console", (message) => {
+    if (message.text().startsWith("[download-debug]")) console.log(message.text());
+  });
+  await plasmonFrame.evaluate(() => {
+    const originalClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function downloadDebugClick() {
+      console.log(`[download-debug] anchor href=${this.href} download=${this.download}`);
+      return originalClick.call(this);
+    };
+  });
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
