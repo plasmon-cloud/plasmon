@@ -7,17 +7,18 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 
 const THEME_WALLPAPERS = [
-  ["Plasmon Dark", "plasmon-dark", "plasmon-lattice"],
-  ["Midnight", "plasmon-midnight", "midnight-orbit"],
-  ["Ember", "plasmon-ember", "ember-horizon"],
-  ["Glacier", "plasmon-glacier", "glacier-prism"],
-  ["Rosewood", "plasmon-rosewood", "rosewood-bloom"],
+  ["Graphite", "plasmon-graphite", "graphite-sand", "jpg"],
+  ["Verdant", "plasmon-verdant", "plasmon-lattice", "generated"],
+  ["Midnight", "plasmon-midnight", "midnight-orbit", "generated"],
+  ["Ember", "plasmon-ember", "ember-horizon", "generated"],
+  ["Glacier", "plasmon-glacier", "glacier-prism", "generated"],
+  ["Rosewood", "plasmon-rosewood", "rosewood-bloom", "generated"],
 ] as const;
 
-const JPG_WALLPAPER_ID = "digital-dusk";
-const JPG_WALLPAPER_ASSET = "/static/plasmon/wallpapers/digital-dusk.jpg";
+const JPG_WALLPAPER_ID = "graphite-sand";
+const JPG_WALLPAPER_ASSET = "/static/plasmon/wallpapers/graphite-sand.jpg";
 
-test("#512 wallpapers are visible, branded, follow themes, and allow generated or JPG pinning", async ({ page }) => {
+test("#512 six wallpapers are visible, follow themes, pin independently, and share a toggleable SVG watermark", async ({ page, request }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -46,27 +47,27 @@ test("#512 wallpapers are visible, branded, follow themes, and allow generated o
     await expect(wallpaper).toBeVisible();
     await expect(desktop).toBeVisible();
 
-    // Regression guard for the real user-visible failure: the FileManager-owned
-    // desktop canvas sits above Shell wallpaper in DOM stacking order. If it
-    // paints its old semantic desktop background, every selected wallpaper is
-    // completely hidden even though data-plasmon-wallpaper and backgroundImage
-    // on the wallpaper element are correct.
     await expect.poll(async () => desktop.evaluate((element) => {
       const style = getComputedStyle(element);
       return `${style.backgroundColor}|${style.backgroundImage}`;
     })).toBe("rgba(0, 0, 0, 0)|none");
 
-    const watermark = await wallpaper.evaluate((element) => {
+    await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
+    const watermark = await shell.evaluate((element) => {
       const style = getComputedStyle(element, "::after");
       return {
-        content: style.content.replace(/^['\"]|['\"]$/g, ""),
         opacity: Number(style.opacity),
         backgroundImage: style.backgroundImage,
+        right: style.right,
       };
     });
-    expect(watermark.content).toBe("PLASMON");
-    expect(watermark.opacity).toBeGreaterThanOrEqual(0.15);
-    expect(watermark.backgroundImage).toContain("plasmon-mark.svg");
+    expect(watermark.opacity).toBeGreaterThanOrEqual(0.2);
+    expect(watermark.backgroundImage).toContain("plasmon-watermark.svg");
+    expect(watermark.right).not.toBe("auto");
+
+    const jpgResponse = await request.get(new URL(JPG_WALLPAPER_ASSET, kernelUrl).toString());
+    expect(jpgResponse.ok()).toBe(true);
+    expect(jpgResponse.headers()["content-type"] ?? "").toContain("image/jpeg");
 
     await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
@@ -75,40 +76,42 @@ test("#512 wallpapers are visible, branded, follow themes, and allow generated o
     const settings = app.getByRole("region", { name: "Shell settings" });
     await expect(settings).toBeVisible();
 
+    const watermarkToggle = settings.getByRole("button", { name: "Show Plasmon watermark", exact: true });
+    await expect(watermarkToggle).toHaveAttribute("aria-pressed", "true");
+    await watermarkToggle.click();
+    await expect(watermarkToggle).toHaveAttribute("aria-pressed", "false");
+    await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "hidden");
+    expect(await shell.evaluate((element) => getComputedStyle(element, "::after").backgroundImage)).toBe("none");
+    await watermarkToggle.click();
+    await expect(watermarkToggle).toHaveAttribute("aria-pressed", "true");
+    await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
+
     const follow = settings.getByRole("button", { name: "Follow theme", exact: true });
     await expect(follow).toHaveAttribute("aria-pressed", "true");
 
-    const backgrounds = new Set<string>();
-    for (const [themeLabel, themeId, wallpaperId] of THEME_WALLPAPERS) {
+    const generatedBackgrounds = new Set<string>();
+    for (const [themeLabel, themeId, wallpaperId, kind] of THEME_WALLPAPERS) {
       await settings.getByRole("button", { name: themeLabel, exact: true }).click();
       await expect(shell).toHaveAttribute("data-plasmon-theme", themeId);
       await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
       const rendered = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
-      expect(rendered).toContain("gradient");
-      backgrounds.add(rendered);
+      if (kind === "jpg") expect(rendered).toContain("graphite-sand.jpg");
+      else {
+        expect(rendered).toContain("gradient");
+        generatedBackgrounds.add(rendered);
+      }
       expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
         .toBe("rgba(0, 0, 0, 0)");
     }
-    expect(backgrounds.size).toBe(THEME_WALLPAPERS.length);
+    expect(generatedBackgrounds.size).toBe(5);
 
-    // The extra raster choice must be a real packaged JPEG and must use the
-    // same pinned preference path as the generated backgrounds.
-    const pinned = settings.getByRole("button", { name: "Digital Dusk", exact: true });
-    const jpgResponsePromise = page.waitForResponse(
-      (response) => response.url().endsWith(JPG_WALLPAPER_ASSET),
-      { timeout: 30_000 },
-    );
+    const pinned = settings.getByRole("button", { name: "Graphite Sand", exact: true });
     await pinned.click();
-    const jpgResponse = await jpgResponsePromise;
-    expect(jpgResponse.ok()).toBe(true);
-    expect(jpgResponse.headers()["content-type"] ?? "").toContain("image/jpeg");
     await expect(pinned).toHaveAttribute("aria-pressed", "true");
     await expect(follow).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", JPG_WALLPAPER_ID);
     const pinnedBackground = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
-    expect(pinnedBackground).toContain("digital-dusk.jpg");
-    expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
-      .toBe("rgba(0, 0, 0, 0)");
+    expect(pinnedBackground).toContain("graphite-sand.jpg");
 
     await settings.getByRole("button", { name: "Glacier", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-glacier");
@@ -125,8 +128,6 @@ test("#512 wallpapers are visible, branded, follow themes, and allow generated o
     await expect(pinned).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "midnight-orbit");
     expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).not.toBe(pinnedBackground);
-    expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
-      .toBe("rgba(0, 0, 0, 0)");
 
     health.assertClean();
   } finally {
