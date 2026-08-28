@@ -113,14 +113,17 @@ export function SettingsSurface({
   preferencesReady,
   onSelectTheme,
   onSelectWallpaper,
+  onSetBrandWatermark,
   onSelectTaskbarAlignment,
 }: {
   preferences: ShellPreferences;
   preferencesReady: boolean;
   onSelectTheme(themeId: ShellThemeId): void;
   onSelectWallpaper(wallpaper: ShellWallpaperPreference): void;
+  onSetBrandWatermark(visible: boolean): void;
   onSelectTaskbarAlignment(alignment: ShellTaskbarAlignment): void;
 }) {
+  const brandWatermarkVisible = preferences.showBrandWatermark !== false;
   return <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings">
     <header><span>Plasmon storage</span><h2>Settings</h2></header>
     <h3>Theme</h3>
@@ -144,6 +147,15 @@ export function SettingsSurface({
       >{SHELL_WALLPAPER_LABELS[wallpaperId]}</button>)}
     </div>
     <p>Follow theme uses each theme&apos;s corresponding wallpaper. Choosing a wallpaper pins it across later theme changes.</p>
+    <h3>Desktop overlay</h3>
+    <button
+      type="button"
+      disabled={!preferencesReady}
+      aria-label="Show Plasmon watermark"
+      aria-pressed={brandWatermarkVisible}
+      onClick={() => onSetBrandWatermark(!brandWatermarkVisible)}
+    >Plasmon watermark: {brandWatermarkVisible ? "On" : "Off"}</button>
+    <p>The Plasmon SVG watermark is layered over every generated or raster wallpaper and can be hidden independently.</p>
     <h3>Taskbar alignment</h3>
     <div className="plasmon-shell__grid">
       {SHELL_TASKBAR_ALIGNMENTS.map((alignment) => <button key={alignment} type="button" disabled={!preferencesReady} aria-pressed={preferences.taskbarAlignment === alignment} onClick={() => onSelectTaskbarAlignment(alignment)}>{alignment === "center" ? "Center" : "Left"}</button>)}
