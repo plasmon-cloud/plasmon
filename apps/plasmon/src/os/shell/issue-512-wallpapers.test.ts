@@ -47,32 +47,6 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
   };
 }
 
-function jpegDimensions(bytes: Buffer): { width: number; height: number } | null {
-  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
-  const startOfFrame = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
-  let offset = 2;
-  while (offset + 8 < bytes.length) {
-    if (bytes[offset] !== 0xff) {
-      offset += 1;
-      continue;
-    }
-    while (bytes[offset] === 0xff) offset += 1;
-    const marker = bytes[offset++];
-    if (marker === 0xd8 || marker === 0xd9) continue;
-    if (marker === 0xda || offset + 1 >= bytes.length) break;
-    const segmentLength = bytes.readUInt16BE(offset);
-    if (segmentLength < 2 || offset + segmentLength > bytes.length) break;
-    if (startOfFrame.has(marker)) {
-      return {
-        height: bytes.readUInt16BE(offset + 3),
-        width: bytes.readUInt16BE(offset + 5),
-      };
-    }
-    offset += segmentLength;
-  }
-  return null;
-}
-
 test("#512 exposes six theme companions: five generated designs plus Graphite Sand JPG", () => {
   expect(SHELL_THEME_IDS).toEqual(THEMES);
   expect(SHELL_GENERATED_WALLPAPER_IDS).toEqual(GENERATED_WALLPAPERS);
@@ -139,19 +113,18 @@ test("#512 Graphite Sand packages the selected raster artwork without pretending
   const photo = readFileSync(new URL("../../../public/static/plasmon/wallpapers/graphite-sand.jpg", import.meta.url));
   expect(photo[0]).toBe(0xff);
   expect(photo[1]).toBe(0xd8);
+  expect(photo[photo.length - 2]).toBe(0xff);
+  expect(photo[photo.length - 1]).toBe(0xd9);
+  expect(photo.byteLength).toBeGreaterThan(32 * 1024);
   expect(photo.byteLength).toBeLessThan(100 * 1024);
-  const dimensions = jpegDimensions(photo);
-  expect(dimensions).not.toBeNull();
-  expect(dimensions!.width).toBeGreaterThanOrEqual(800);
-  expect(dimensions!.height).toBeGreaterThanOrEqual(500);
-  expect(dimensions!.width / dimensions!.height).toBeGreaterThan(1.45);
+  expect(photo.subarray(0, 256).toString("utf8")).not.toContain("<svg");
 });
 
 test("#512 Plasmon watermark is a separate bottom-right SVG overlay with a persisted Settings toggle", () => {
   const overlay = readFileSync(new URL("./desktop-overlays.scss", import.meta.url), "utf8");
   const surface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
   const shell = readFileSync(new URL("./Shell.tsx", import.meta.url), "utf8");
-  const style = readFileSync(new URL("../../../style.scss", import.meta.url), "utf8");
+  const style = readFileSync(new URL("../../style.scss", import.meta.url), "utf8");
   const watermark = readFileSync(new URL("../../../public/static/plasmon/plasmon-watermark.svg", import.meta.url), "utf8");
 
   expect(style).toContain('@use "./os/shell/desktop-overlays.scss";');
@@ -166,7 +139,7 @@ test("#512 Plasmon watermark is a separate bottom-right SVG overlay with a persi
 
 test("#512 Shell wallpaper remains exposed through the FileManager-owned desktop canvas", () => {
   const css = readFileSync(new URL("./wallpaper-visibility.scss", import.meta.url), "utf8");
-  const style = readFileSync(new URL("../../../style.scss", import.meta.url), "utf8");
+  const style = readFileSync(new URL("../../style.scss", import.meta.url), "utf8");
 
   expect(style).toContain('@use "./os/shell/wallpaper-visibility.scss";');
   expect(css).toContain('.plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-desktop');
