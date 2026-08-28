@@ -218,6 +218,7 @@ test("#107 FileManager Download produces browser-owned bytes", async ({ page }) 
     const menu = app.getByRole("menu").last();
     const downloadItem = menu.getByRole("menuitem", { name: "Download" });
     await expect(downloadItem).toBeVisible();
+    await expect(downloadItem).toBeEnabled({ timeout: SURFACE_TIMEOUT });
     const [download] = await Promise.all([
       page.waitForEvent("download", { timeout: ACTION_TIMEOUT }),
       downloadItem.click(),
