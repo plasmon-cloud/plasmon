@@ -104,19 +104,18 @@ test("#512 five generated designs stay distinct and Graphite Sand is an explicit
   expect(css).toContain("conic-gradient");
   expect(css).toContain("repeating-linear-gradient");
   expect(css).toContain(".plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper");
-  expect(css).toContain('url("/static/plasmon/wallpapers/graphite-sand.jpg")');
+  expect(css).toContain('url("/static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat');
   expect(css).not.toMatch(/\.(?:png|webp|gif)\b/i);
   expect(css.match(/\.jpe?g\b/gi)?.length).toBe(1);
 });
 
-test("#512 Graphite Sand packages the selected raster artwork without pretending it is an SVG", () => {
+test("#512 Graphite Sand packages the exact selected raster artwork without pretending it is an SVG", () => {
   const photo = readFileSync(new URL("../../../public/static/plasmon/wallpapers/graphite-sand.jpg", import.meta.url));
   expect(photo[0]).toBe(0xff);
   expect(photo[1]).toBe(0xd8);
   const eoiIndex = photo.findIndex((byte, index) => byte === 0xff && photo[index + 1] === 0xd9);
   expect(eoiIndex).toBeGreaterThan(1);
-  expect(photo.byteLength).toBeGreaterThan(32 * 1024);
-  expect(photo.byteLength).toBeLessThan(100 * 1024);
+  expect(photo.byteLength).toBe(63_590);
   expect(photo.subarray(0, 256).toString("utf8")).not.toContain("<svg");
 });
 
