@@ -16,7 +16,7 @@ const THEME_WALLPAPERS = [
 ] as const;
 
 const JPG_WALLPAPER_ID = "graphite-sand";
-const JPG_WALLPAPER_ASSET = "/static/plasmon/wallpapers/graphite-sand.jpg";
+const JPG_WALLPAPER_ASSET = "/app/plasmon/static/plasmon/wallpapers/graphite-sand.jpg";
 
 test("#512 six wallpapers are visible, follow themes, pin independently, and share a toggleable SVG watermark", async ({ page, request }) => {
   test.setTimeout(180_000);

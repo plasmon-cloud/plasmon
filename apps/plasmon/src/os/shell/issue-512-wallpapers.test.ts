@@ -104,7 +104,7 @@ test("#512 five generated designs stay distinct and Graphite Sand is an explicit
   expect(css).toContain("conic-gradient");
   expect(css).toContain("repeating-linear-gradient");
   expect(css).toContain(".plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper");
-  expect(css).toContain('url("/static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat');
+  expect(css).toContain('url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat');
   expect(css).not.toMatch(/\.(?:png|webp|gif)\b/i);
   expect(css.match(/\.jpe?g\b/gi)?.length).toBe(1);
 });
@@ -128,7 +128,7 @@ test("#512 Plasmon watermark is a separate bottom-right SVG overlay with a persi
 
   expect(style).toContain('@use "./os/shell/desktop-overlays.scss";');
   expect(overlay).toContain('data-plasmon-brand-watermark="visible"');
-  expect(overlay).toContain('url("/static/plasmon/plasmon-watermark.svg")');
+  expect(overlay).toContain('url("static/plasmon/plasmon-watermark.svg")');
   expect(overlay).toContain("right: 24px;");
   expect(shell).toContain("data-plasmon-brand-watermark");
   expect(surface).toContain('aria-label="Show Plasmon watermark"');

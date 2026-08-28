@@ -8,7 +8,7 @@
   }
 
   .plasmon-shell[data-plasmon-brand-watermark="visible"]::after {
-    background: url("/static/plasmon/plasmon-watermark.svg") center / contain no-repeat;
+    background: url("static/plasmon/plasmon-watermark.svg") center / contain no-repeat;
     bottom: calc(var(--plasmon-taskbar-height) + 20px);
     content: "";
     height: 42px;
