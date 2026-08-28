@@ -1,7 +1,9 @@
-import type {
-  Dispatch,
-  RefObject,
-  SetStateAction,
+import {
+  useRef,
+  useState,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
 } from "react";
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
 import { activateFileManagerNode, type FileManagerOpenAuthority } from "./activation.ts";
@@ -22,7 +24,7 @@ import {
   deleteFilesystemNodes,
   type FileManagerTrashAuthority,
 } from "./delete.ts";
-import { downloadFsNode } from "./download.ts";
+import { downloadBlob, readDownloadBlob } from "./download.ts";
 import { fileManagerErrorMessage } from "./error-message.ts";
 import {
   FileOperationClipboard,
@@ -50,6 +52,10 @@ interface UseFileManagerCommandsOptions {
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
 }
 
+function downloadSignature(node: FsNode): string {
+  return [node.id, node.name, node.mime ?? "", node.size, node.modifiedAt, node.contentHash ?? ""].join("\0");
+}
+
 export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
   const {
     directoryId,
@@ -74,6 +80,36 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     const ids = selection.ids;
     return nodes.filter((node) => ids.has(node.id));
   };
+
+  const downloadPreparationRef = useRef<{
+    signature: string;
+    promise: Promise<Blob>;
+  } | null>(null);
+  const [preparedDownload, setPreparedDownload] = useState<{
+    signature: string;
+    blob: Blob;
+  } | null>(null);
+
+  const prepareDownload = (node: FsNode) => {
+    if (node.kind !== "file") return;
+    const signature = downloadSignature(node);
+    if (downloadPreparationRef.current?.signature === signature) return;
+    setPreparedDownload(null);
+    const promise = readDownloadBlob(fs, node);
+    downloadPreparationRef.current = { signature, promise };
+    void promise.then((blob) => {
+      if (downloadPreparationRef.current?.promise !== promise) return;
+      setPreparedDownload({ signature, blob });
+    }).catch((cause: unknown) => {
+      if (downloadPreparationRef.current?.promise !== promise) return;
+      downloadPreparationRef.current = null;
+      setPreparedDownload(null);
+      setError(fileManagerErrorMessage(cause));
+    });
+  };
+
+  const isDownloadReady = (node: FsNode) =>
+    node.kind === "file" && preparedDownload?.signature === downloadSignature(node);
 
   const openNode = async (node: FsNode) => {
     closeContextMenu();
@@ -233,7 +269,16 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
   const downloadNode = async (node: FsNode) => {
     closeContextMenu();
     try {
-      await downloadFsNode(fs, node);
+      const signature = downloadSignature(node);
+      const prepared = preparedDownload?.signature === signature
+        ? preparedDownload.blob
+        : await readDownloadBlob(fs, node);
+      // Keep this call synchronous when preparation completed before the user
+      // click; Chromium otherwise drops transient user activation at the first
+      // asynchronous filesystem read.
+      downloadBlob(node, prepared);
+      downloadPreparationRef.current = null;
+      setPreparedDownload(null);
       setError(null);
     } catch (cause: unknown) {
       setError(fileManagerErrorMessage(cause));
@@ -255,6 +300,8 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     sendSelectionToDesktop,
     importFiles,
     triggerImport,
+    prepareDownload,
+    isDownloadReady,
     downloadNode,
   };
 }

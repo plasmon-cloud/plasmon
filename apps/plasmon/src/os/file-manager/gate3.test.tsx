@@ -14,7 +14,7 @@ import { FileOperationClipboard } from "./model.ts";
 import { collisionFreeCopyName, normalizedCollisionName, pasteClipboardCollisionAware } from "./clipboard.ts";
 import { createDocument, createGeneratedFolder } from "./create-import.ts";
 import { deleteFilesystemNodes } from "./delete.ts";
-import { downloadFsNode, readDownloadBlob, type DownloadEnvironment } from "./download.ts";
+import { downloadBlob, downloadFsNode, readDownloadBlob, type DownloadEnvironment } from "./download.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { fileEntryClassName } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
@@ -275,6 +275,25 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
     href: "blob:test",
     download: "movie.bin",
   });
+});
+
+test("prepared downloads click the browser anchor without another async boundary", () => {
+  const preparedNode = { ...node("file", "root", "prepared.txt"), size: 5 };
+  let clicked = false;
+  const environment: DownloadEnvironment = {
+    createObjectURL: () => "blob:prepared",
+    revokeObjectURL: () => {},
+    createAnchor: () => ({
+      href: "",
+      download: "",
+      click: () => { clicked = true; },
+      remove: () => {},
+    }),
+    scheduleCleanup: (callback) => callback(),
+  };
+
+  downloadBlob(preparedNode, new Blob(["ready"]), environment);
+  expect(clicked).toBe(true);
 });
 
 test("shared shortcut nodes render as shortcuts and preserve their own NodeId on rename/move", async () => {
