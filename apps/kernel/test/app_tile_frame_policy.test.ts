@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppTileFrameIframe } from "../src/workspace/AppTileFrameIframe.tsx";
@@ -11,6 +12,22 @@ test("installed app tile frames permit downloads without broadening sandbox auth
   expect(tokens.has("allow-same-origin")).toBe(false);
   expect(tokens.has("allow-popups")).toBe(false);
   expect(tokens.has("allow-forms")).toBe(false);
+});
+
+test("iframe and response sandbox policies remain aligned", () => {
+  const backendSource = readFileSync(
+    new URL("../backend/main.mo", import.meta.url),
+    "utf8",
+  );
+  const policyStart = backendSource.indexOf("public func appAssetSandboxHeaders");
+  const policyEnd = backendSource.indexOf("public class Init", policyStart);
+  expect(policyStart).toBeGreaterThanOrEqual(0);
+  expect(policyEnd).toBeGreaterThan(policyStart);
+
+  const policyFunction = backendSource.slice(policyStart, policyEnd);
+  expect(policyFunction).toContain(
+    `("Content-Security-Policy", "sandbox ${APP_TILE_FRAME_SANDBOX}")`,
+  );
 });
 
 test("installed app tile frame renderer applies the canonical sandbox policy", () => {

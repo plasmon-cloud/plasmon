@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type Dispatch,
@@ -93,6 +94,17 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     signature: string;
     blob: Blob;
   } | null>(null);
+
+  const cancelDownloadPreparation = () => {
+    downloadPreparationRef.current = null;
+    preparedDownloadRef.current = null;
+    setPreparedDownload(null);
+  };
+
+  useEffect(() => () => {
+    downloadPreparationRef.current = null;
+    preparedDownloadRef.current = null;
+  }, []);
 
   const prepareDownload = (node: FsNode) => {
     if (node.kind !== "file") return;
@@ -274,7 +286,6 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
   };
 
   const downloadNode = async (node: FsNode) => {
-    closeContextMenu();
     try {
       const signature = downloadSignature(node);
       const prepared = preparedDownloadRef.current?.signature === signature
@@ -289,6 +300,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       downloadPreparationRef.current = null;
       preparedDownloadRef.current = null;
       setPreparedDownload(null);
+      closeContextMenu();
       setError(null);
     } catch (cause: unknown) {
       setError(fileManagerErrorMessage(cause));
@@ -311,6 +323,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     importFiles,
     triggerImport,
     prepareDownload,
+    cancelDownloadPreparation,
     isDownloadReady,
     downloadNode,
   };
