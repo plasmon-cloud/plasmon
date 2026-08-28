@@ -14,6 +14,10 @@ const THEMES = [
   { id: "plasmon-rosewood", label: "Rosewood" },
 ] as const;
 
+// PocketIC and installed-app launch are the only external startup boundary;
+// later assertions synchronize on production DOM readiness or browser events.
+const EXTERNAL_STARTUP_TIMEOUT = 60_000;
+
 async function resolvedToken(locator: Locator, token: string): Promise<string> {
   return locator.evaluate((element, property) => {
     const probe = document.createElement("span");
@@ -47,13 +51,13 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator(appSelector)).toBeVisible({ timeout: EXTERNAL_STARTUP_TIMEOUT });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
-    await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
+    await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: EXTERNAL_STARTUP_TIMEOUT });
 
     const desktopFolder = app.locator('[data-plasmon-owned-icon="file-type:folder"]').first();
-    await expect(desktopFolder).toBeVisible({ timeout: 30_000 });
+    await expect(desktopFolder).toBeVisible();
     const desktopFolderEntry = desktopFolder.locator("xpath=ancestor::*[@data-fm-node-id][1]");
     await expect(desktopFolderEntry).toBeVisible();
     const desktopPrimary = desktopFolder.locator('[fill*="--plasmon-icon-primary"]').first();
@@ -62,12 +66,12 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
 
     const windows = app.locator(".plasmon-window-layer [data-window-id]");
     const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+    await expect(rootShortcut).toBeVisible();
     const beforeExplorer = await windows.count();
     await rootShortcut.dblclick();
-    await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeExplorer + 1);
     const explorerCandidate = windows.last();
-    await expect(explorerCandidate.getByRole("textbox", { name: "Address" })).toHaveValue("/", { timeout: 20_000 });
+    await expect(explorerCandidate.getByRole("textbox", { name: "Address" })).toHaveValue("/");
     const explorerWindowId = await explorerCandidate.getAttribute("data-window-id");
     expect(explorerWindowId).toBeTruthy();
     const explorer = app.locator(`.plasmon-window-layer [data-window-id="${explorerWindowId}"]`);
@@ -75,6 +79,34 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
     await expect(explorerIcon).toBeVisible();
     const explorerPrimary = explorerIcon.locator('[fill*="--plasmon-icon-primary"]').first();
     await expect(explorerPrimary).toHaveCount(1);
+
+    // The installed Review.neutron projection is authored external artwork. It
+    // must remain an image in its resting row and in the drag preview while
+    // owned SVGs below recolor with the active theme.
+    const explorerAddress = explorer.getByRole("textbox", { name: "Address" });
+    await explorer.locator("[data-fm-node-id]", { hasText: "Apps" }).first().dblclick();
+    await expect(explorerAddress).toHaveValue("/Apps");
+    const reviewProjection = explorer.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
+    await expect(reviewProjection).toBeVisible();
+    const reviewImage = reviewProjection.locator("img.plasmon-native-app-icon");
+    await expect(reviewImage).toHaveCount(1);
+    const authoredReviewSrc = await reviewImage.getAttribute("src");
+    expect(authoredReviewSrc).toMatch(/\/app\/review\/assets\/hackathon-native-logo\.svg$/u);
+
+    const reviewBounds = await reviewProjection.boundingBox();
+    if (!reviewBounds) throw new Error("Review.neutron has no browser bounds");
+    const reviewX = reviewBounds.x + reviewBounds.width / 2;
+    const reviewY = reviewBounds.y + reviewBounds.height / 2;
+    await page.mouse.move(reviewX, reviewY);
+    await page.mouse.down();
+    await page.mouse.move(reviewX + 72, reviewY + 44, { steps: 8 });
+    const externalPreview = app.locator('[data-fm-drag-preview]');
+    await expect(externalPreview).toBeVisible();
+    const previewReviewImage = externalPreview.locator("img.plasmon-native-app-icon");
+    await expect(previewReviewImage).toHaveCount(1);
+    await expect(previewReviewImage).toHaveAttribute("src", authoredReviewSrc!);
+    await page.keyboard.press("Escape");
+    await expect(externalPreview).toHaveCount(0);
 
     const openThemeSettings = async (): Promise<Locator> => {
       await app.getByRole("button", { name: "Start", exact: true }).click();
@@ -96,6 +128,7 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
       await choice.click();
       await expect(choice).toHaveAttribute("aria-pressed", "true");
       await expect(shell).toHaveAttribute("data-plasmon-theme", theme.id);
+      await expect(reviewImage).toHaveAttribute("src", authoredReviewSrc!);
 
       const expectedPrimary = await resolvedToken(shell, "--plasmon-icon-primary");
       await expect.poll(() => computedFill(desktopPrimary)).toBe(expectedPrimary);
