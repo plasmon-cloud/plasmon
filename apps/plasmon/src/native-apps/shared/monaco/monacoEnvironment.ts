@@ -3,8 +3,8 @@ import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 export const MONACO_PROGRAM_FILES_RUNTIME_ROOT = "./System/Program Files/MonacoEditor";
 export const MONACO_BROWSER_TRANSPORT_PATH = "./runtime/monaco/worker-sources.js";
 
-export function monacoWorkerFile(label: string): string {
-  if (isSlimMonacoProfile) return "editor.worker.js";
+export function monacoWorkerFile(label: string, slim = isSlimMonacoProfile): string {
+  if (slim) return "editor.worker.js";
   if (label === "json") return "json.worker.js";
   if (label === "css" || label === "scss" || label === "less") return "css.worker.js";
   if (label === "html" || label === "handlebars" || label === "razor") return "html.worker.js";
@@ -12,14 +12,18 @@ export function monacoWorkerFile(label: string): string {
   return "editor.worker.js";
 }
 
-export function monacoWorkerPath(label: string): string {
-  return `${MONACO_PROGRAM_FILES_RUNTIME_ROOT}/${monacoWorkerFile(label)}`;
+export function monacoWorkerPath(label: string, slim = isSlimMonacoProfile): string {
+  return `${MONACO_PROGRAM_FILES_RUNTIME_ROOT}/${monacoWorkerFile(label, slim)}`;
 }
 
 export type MonacoWorkerSources = Readonly<Record<string, string>>;
 
-export function monacoWorkerBootstrapSource(label: string, sources: MonacoWorkerSources | undefined): string {
-  const filename = monacoWorkerFile(label);
+export function monacoWorkerBootstrapSource(
+  label: string,
+  sources: MonacoWorkerSources | undefined,
+  slim = isSlimMonacoProfile,
+): string {
+  const filename = monacoWorkerFile(label, slim);
   const source = sources?.[filename];
   if (!source) throw new Error(`Missing packaged Monaco worker source: ${filename}`);
   return source;
