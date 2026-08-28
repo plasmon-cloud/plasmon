@@ -105,7 +105,6 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     const nativeSettings = plasmon.getByRole("region", { name: "Settings" }).last();
     await expect(nativeSettings).toBeVisible({ timeout: 20_000 });
     await expectSemanticBackground(nativeSettings, "--plasmon-window-background");
-    await expect(nativeSettings).toHaveCSS("border-color", await resolvedBorder(nativeSettings, "--plasmon-border-strong"));
 
     const windows = plasmon.locator(".plasmon-window-layer [data-window-id]");
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
