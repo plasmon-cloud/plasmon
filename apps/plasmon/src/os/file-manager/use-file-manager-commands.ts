@@ -89,17 +89,24 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     signature: string;
     blob: Blob;
   } | null>(null);
+  const preparedDownloadRef = useRef<{
+    signature: string;
+    blob: Blob;
+  } | null>(null);
 
   const prepareDownload = (node: FsNode) => {
     if (node.kind !== "file") return;
     const signature = downloadSignature(node);
     if (downloadPreparationRef.current?.signature === signature) return;
+    preparedDownloadRef.current = null;
     setPreparedDownload(null);
     const promise = readDownloadBlob(fs, node);
     downloadPreparationRef.current = { signature, promise };
     void promise.then((blob) => {
       if (downloadPreparationRef.current?.promise !== promise) return;
-      setPreparedDownload({ signature, blob });
+      const prepared = { signature, blob };
+      preparedDownloadRef.current = prepared;
+      setPreparedDownload(prepared);
     }).catch((cause: unknown) => {
       if (downloadPreparationRef.current?.promise !== promise) return;
       downloadPreparationRef.current = null;
@@ -270,14 +277,17 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     closeContextMenu();
     try {
       const signature = downloadSignature(node);
-      const prepared = preparedDownload?.signature === signature
-        ? preparedDownload.blob
-        : await readDownloadBlob(fs, node);
+      const prepared = preparedDownloadRef.current?.signature === signature
+        ? preparedDownloadRef.current.blob
+        : preparedDownload?.signature === signature
+          ? preparedDownload.blob
+          : await readDownloadBlob(fs, node);
       // Keep this call synchronous when preparation completed before the user
       // click; Chromium otherwise drops transient user activation at the first
       // asynchronous filesystem read.
       downloadBlob(node, prepared);
       downloadPreparationRef.current = null;
+      preparedDownloadRef.current = null;
       setPreparedDownload(null);
       setError(null);
     } catch (cause: unknown) {
