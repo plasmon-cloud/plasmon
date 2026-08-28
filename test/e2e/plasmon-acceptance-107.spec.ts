@@ -208,6 +208,7 @@ test("#107 FileManager Download produces browser-owned bytes", async ({ page }) 
   page.on("console", (message) => {
     if (message.text().startsWith("[download-debug]")) console.log(message.text());
   });
+  console.log(`[download-debug] sandbox=${await page.locator(PLASMON_SELECTOR).getAttribute("sandbox")}`);
   await plasmonFrame.evaluate(() => {
     const originalClick = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function downloadDebugClick() {
