@@ -26,7 +26,7 @@ Quarantine removal is provisional until #279's exact-head proof completes. The r
 
 ## #308 Alt-Tab multi-instance restoration
 
-Issue #308 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — to required Specialist execution. PR #454 removed only the exact `@r2-quarantine` tag and #308 inventory entry while preserving the full Alt-Tab MRU, minimize/restore, Escape-cancel, close, and strict BrowserHealth assertions.
+Issue #308 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — to required serialized Specialist execution. PR #454 removed only the exact `@r2-quarantine` tag and #308 inventory entry while preserving the full Alt-Tab MRU, minimize/restore, Escape-cancel, close, and strict BrowserHealth assertions.
 
 The shared Explorer activation repair selects the unique Desktop Root and uses the real FileManager listbox Enter boundary for both Explorer launches. It does not add sleeps, retries, timeout inflation, forced actions, weakened window-count assertions, direct Process calls, or Product test hooks.
 
