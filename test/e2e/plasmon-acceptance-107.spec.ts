@@ -100,13 +100,10 @@ async function openRecycleBin(app: FrameLocator): Promise<{ recycleBin: Locator;
   await expect(result).toBeVisible();
   await result.click();
   const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
-  await expect(recycleBin).toBeVisible({ timeout: ACTION_TIMEOUT });
-
-  // Capture stable window identity before destructive actions mutate dialog content.
-  // Re-filtering a window by content after a row disappears creates a stale locator.
-  const nativeWindow = nativeWindows(app).filter({ has: recycleBin }).last();
-  await expect(nativeWindow).toBeVisible({ timeout: SURFACE_TIMEOUT });
-  const windowId = await nativeWindow.getAttribute("data-window-id");
+  // The Recycle Bin role dialog is the native-window root, so capture its
+  // stable identity directly before destructive actions mutate its content.
+  await expect(recycleBin).toBeVisible({ timeout: SURFACE_TIMEOUT });
+  const windowId = await recycleBin.getAttribute("data-window-id");
   if (!windowId) throw new Error("Recycle Bin native window has no stable data-window-id");
 
   return { recycleBin, windowId };
@@ -169,6 +166,10 @@ test("#107 directly activates installed /Apps/Review.neutron through FileManager
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Apps");
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
+    // Address navigation commits before the asynchronous directory listing is
+    // necessarily refreshed; use the normal FileManager refresh action so the
+    // installed-package projection is the state under test.
+    await appsFiles.getByRole("button", { name: "Refresh", exact: true }).click();
     const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
     await expect(reviewProjection).toBeVisible({ timeout: SURFACE_TIMEOUT });
     await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
