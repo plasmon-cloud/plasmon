@@ -68,6 +68,14 @@ jobs:
             npm run plasmon:local:status
             npm run plasmon:local:reinstall
             npm run test:e2e:plasmon:specialist
+
+            # Repackage the core hosted profile to exercise the legacy runtime
+            # compatibility boundary after the supported-download acceptance.
+            PLASMON_PACKAGE_PROFILE=core npm run plasmon:local:prepare
+            npm run plasmon:local:reinstall
+            PLASMON_PACKAGE_PROFILE=core npx --no-install playwright test --workers=1 --retries=0 \
+              test/e2e/plasmon-acceptance-107.spec.ts \
+              --grep "core hosted package"
           '
 
       - name: Upload Specialist Playwright report

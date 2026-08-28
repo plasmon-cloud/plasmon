@@ -123,7 +123,8 @@ function packageEnvironmentForDeployment(manifestPath: string, workspace: string
 
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env.PLASMON_PACKAGE_PROFILE;
-  const profile = packageProfileForDeployment(manifestPath, workspace);
+  const requestedProfile = process.env.PLASMON_PACKAGE_PROFILE?.trim();
+  const profile = requestedProfile || packageProfileForDeployment(manifestPath, workspace);
   if (profile) env.PLASMON_PACKAGE_PROFILE = profile;
   return env;
 }

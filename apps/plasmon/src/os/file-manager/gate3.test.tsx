@@ -52,6 +52,7 @@ function node(
 class Gate3Fs implements FsService {
   readonly nodes = new Map<NodeId, FsNode>();
   readonly bytes = new Map<NodeId, Uint8Array>();
+  readCalls = 0;
   readonly calls: Array<{ op: string; id?: NodeId; target?: NodeId; name?: string; recursive?: boolean }> = [];
   private sequence = 0;
 
@@ -104,6 +105,7 @@ class Gate3Fs implements FsService {
   }
 
   async read(id: NodeId, range?: FsReadRange): Promise<Uint8Array> {
+    this.readCalls += 1;
     const value = this.bytes.get(id) ?? new Uint8Array();
     if (!range) return value.slice();
     return value.slice(range.offset, range.offset + range.length);
@@ -303,7 +305,7 @@ test("prepared downloads click the browser anchor without another async boundary
   expect(clicked).toBe(true);
 });
 
-test("hosted core-profile downloads fail before reads in both paths", async () => {
+test("hosted core-profile downloads fail before reads in both prepared and unprepared paths", async () => {
   expect(downloadCompatibilityError(true, true)).toBe(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
   expect(downloadCompatibilityError(false, true)).toBeNull();
   expect(downloadCompatibilityError(true, false)).toBeNull();
@@ -327,6 +329,7 @@ test("hosted core-profile downloads fail before reads in both paths", async () =
   };
 
   await expect(downloadFsNode(fs, file, environment)).rejects.toThrow(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
+  expect(fs.readCalls).toBe(0);
   expect(() => downloadBlob(file, new Blob(["ready"]), environment)).toThrow(
     HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
   );

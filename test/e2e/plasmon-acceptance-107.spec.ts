@@ -236,6 +236,32 @@ test("#107 FileManager Download produces browser-owned bytes", async ({ page }) 
   }
 });
 
+test("#107 core hosted package surfaces the download compatibility error", async ({ page }) => {
+  test.skip(process.env.PLASMON_PACKAGE_PROFILE !== "core", "Only the core hosted compatibility package runs this scenario");
+  const { app, health } = await launchPlasmon(page);
+  try {
+    const explorer = await openExplorer(app);
+    await openRootDirectory(explorer, "Desktop");
+    const filename = `issue-107-legacy-${Date.now()}.txt`;
+    const { entry } = await createTextDocument(explorer, filename);
+    await entry.click({ button: "right" });
+
+    const menu = app.getByRole("menu").last();
+    const downloadItem = menu.getByRole("menuitem", { name: "Download" });
+    await expect(downloadItem).toBeEnabled({ timeout: SURFACE_TIMEOUT });
+    await downloadItem.click();
+
+    const error = app.locator(".fm-error-banner").first();
+    await expect(error).toBeVisible({ timeout: ACTION_TIMEOUT });
+    await expect(error).toContainText("Downloads are unavailable in this hosted Neutron runtime");
+    await expect(error).toContainText("Use a Kernel with installed-app download support");
+    await permanentlyDeleteEntry(app, explorer, entry, filename);
+    health.assertClean();
+  } finally {
+    health.dispose();
+  }
+});
+
 test("#107 visible Recycle Bin lifecycle restores one item and permanently deletes another", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
