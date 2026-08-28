@@ -5,6 +5,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const READY_TIMEOUT_MS = 10_000;
 
 async function expectJavaScriptTokenization(window: Locator, message: string): Promise<void> {
   await expect.poll(
@@ -24,9 +25,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
 }
 
 async function expectMonacoReady(surface: Locator): Promise<void> {
-  // Monaco starts a packaged browser worker/model runtime. Keep this bound only
-  // for that external startup boundary; normal UI readiness uses Playwright defaults.
-  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: READY_TIMEOUT_MS });
 }
 
 test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@issue-415"] }, async ({ page }) => {
@@ -58,8 +57,7 @@ test("[demo profile] #415 Text classifies FileManager rename and Save As languag
     await expect(page.locator(appSelector)).toBeVisible();
     const app = page.frameLocator(appSelector);
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
-    // This is the one packaged-application bootstrap bound before Plasmon is interactive.
-    await expect(taskbar).toBeVisible({ timeout: 30_000 });
+    await expect(taskbar).toBeVisible({ timeout: READY_TIMEOUT_MS });
 
     const desktop = app.getByRole("region", { name: "Desktop" });
     const desktopFiles = desktop.getByRole("listbox", { name: "Files" });
