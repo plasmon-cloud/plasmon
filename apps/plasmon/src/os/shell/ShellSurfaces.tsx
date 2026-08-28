@@ -6,6 +6,7 @@ import { ShellIcon } from "./icon.tsx";
 import { nativeTaskContextProcessId } from "./interactions.ts";
 import type { PresentedTaskbarEntry, TrayEntry } from "./model.ts";
 import {
+  effectiveShellWallpaper,
   SHELL_TASKBAR_ALIGNMENTS,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
@@ -124,6 +125,7 @@ export function SettingsSurface({
   onSelectTaskbarAlignment(alignment: ShellTaskbarAlignment): void;
 }) {
   const brandWatermarkVisible = preferences.showBrandWatermark !== false;
+  const selectedWallpaperId = effectiveShellWallpaper(preferences.themeId, preferences.wallpaper);
   return <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings">
     <header><span>Plasmon storage</span><h2>Settings</h2></header>
     <h3>Theme</h3>
@@ -134,14 +136,14 @@ export function SettingsSurface({
     <div className="plasmon-shell__grid plasmon-shell__wallpaper-grid">
       <button
         type="button"
-        disabled={!preferencesReady}
+        disabled={!preferencesReady || preferences.wallpaper.mode === "follow-theme"}
         aria-pressed={preferences.wallpaper.mode === "follow-theme"}
         onClick={() => onSelectWallpaper({ mode: "follow-theme" })}
       >Follow theme</button>
       {SHELL_WALLPAPER_IDS.map((wallpaperId) => <button
         key={wallpaperId}
         type="button"
-        disabled={!preferencesReady}
+        disabled={!preferencesReady || selectedWallpaperId === wallpaperId}
         aria-pressed={preferences.wallpaper.mode === "pinned" && preferences.wallpaper.id === wallpaperId}
         onClick={() => onSelectWallpaper({ mode: "pinned", id: wallpaperId })}
       >{SHELL_WALLPAPER_LABELS[wallpaperId]}</button>)}

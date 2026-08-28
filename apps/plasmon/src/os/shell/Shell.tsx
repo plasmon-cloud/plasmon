@@ -19,7 +19,7 @@ import type {
   WindowManager,
 } from "../contracts/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
-import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
+import { FILE_TYPE_ICON_ASSETS, PLASMON_VISUAL_ASSET_ROOT, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import {
   activateSearchFilesystemResult,
   activateStartFilesystemNode,
@@ -48,6 +48,7 @@ import {
   effectiveShellWallpaper,
   saveShellPreferencesNonDestructive,
   ShellPreferenceStore,
+  SHELL_WALLPAPER_IDS,
   togglePinned,
   type ShellPreferences,
   type ShellTaskbarAlignment,
@@ -97,6 +98,10 @@ function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const WALLPAPER_ASSET_PATHS = SHELL_WALLPAPER_IDS.map((wallpaperId) =>
+  `${PLASMON_VISUAL_ASSET_ROOT}/wallpapers/${wallpaperId}.${wallpaperId === "graphite-sand" ? "jpg" : "svg"}`,
+);
+
 export function Shell({
   process,
   windows,
@@ -129,6 +134,18 @@ export function Shell({
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const effectiveWallpaperId = effectiveShellWallpaper(effectivePreferences.themeId, effectivePreferences.wallpaper);
   const preferencesReady = preferences !== null;
+
+  useEffect(() => {
+    if (typeof Image === "undefined") return;
+    const preloadedWallpapers = WALLPAPER_ASSET_PATHS.map((src) => {
+      const image = new Image();
+      image.src = src;
+      return image;
+    });
+    return () => {
+      for (const image of preloadedWallpapers) image.src = "";
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;

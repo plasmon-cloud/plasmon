@@ -145,9 +145,16 @@ test("#512 Shell wallpaper remains exposed through the FileManager-owned desktop
 
 test("#512 Settings exposes Follow theme and every canonical wallpaper choice", () => {
   const surface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
+  const shell = readFileSync(new URL("./Shell.tsx", import.meta.url), "utf8");
   expect(surface).toContain(">Follow theme</button>");
   expect(surface).toContain("SHELL_WALLPAPER_IDS.map");
   expect(surface).toContain('preferences.wallpaper.mode === "pinned"');
+  expect(surface).toContain("selectedWallpaperId === wallpaperId");
+  expect(surface).toContain('disabled={!preferencesReady || preferences.wallpaper.mode === "follow-theme"}');
+  expect(readFileSync(new URL("./shell.scss", import.meta.url), "utf8"))
+    .toContain('.plasmon-shell__grid > button[aria-pressed="true"]');
   expect(surface).toContain('onSelectWallpaper({ mode: "follow-theme" })');
   expect(surface).toContain('onSelectWallpaper({ mode: "pinned", id: wallpaperId })');
+  expect(shell).toContain("WALLPAPER_ASSET_PATHS.map");
+  expect(shell).toContain("const image = new Image();");
 });
