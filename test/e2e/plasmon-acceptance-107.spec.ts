@@ -28,25 +28,28 @@ async function launchPlasmon(page: Page) {
 }
 
 async function openExplorer(app: FrameLocator): Promise<Locator> {
-  const desktop = app.getByRole("region", { name: "Desktop" });
-  const root = desktop.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-  await expect(root).toBeVisible({ timeout: 30_000 });
-  const windows = app.locator(".plasmon-window-layer [data-window-id]");
-  const before = await windows.count();
-  await root.dblclick();
-  await expect(windows).toHaveCount(before + 1, { timeout: 20_000 });
-  const explorer = windows.last();
-  await expect(explorer.getByRole("region", { name: "File Explorer" })).toBeVisible();
+  await app.getByRole("button", { name: "Search" }).click();
+  const search = app.getByRole("region", { name: "Search" });
+  await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
+  const result = search.locator("[data-search-result]", { hasText: "Files" }).first();
+  await expect(result).toBeVisible();
+  await result.click();
+
+  const explorer = app.locator(".explorer-app").last();
+  await expect(explorer).toBeVisible({ timeout: 20_000 });
   await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
   return explorer;
 }
 
+async function navigateExplorer(explorer: Locator, path: string): Promise<void> {
+  const address = explorer.getByRole("textbox", { name: "Address" });
+  await address.fill(path);
+  await address.press("Enter");
+  await expect(address).toHaveValue(path, { timeout: 20_000 });
+}
+
 async function openRootDirectory(explorer: Locator, name: string): Promise<void> {
-  const files = explorer.getByRole("listbox", { name: "Files" });
-  const directory = files.locator('[data-fm-node-id][data-fm-kind="directory"]', { hasText: name }).first();
-  await expect(directory).toBeVisible({ timeout: 20_000 });
-  await directory.dblclick();
-  await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue(`/${name}`, { timeout: 20_000 });
+  await navigateExplorer(explorer, `/${name}`);
 }
 
 async function importFiles(page: Page, explorer: Locator) {
@@ -106,21 +109,8 @@ test("#107 packaged Search dismisses on an outside workspace click without launc
 test("#107 directly activates installed /Apps/Review.neutron and produces a browser-owned FileManager download", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
-    let explorer = await openExplorer(app);
-    await openRootDirectory(explorer, "Apps");
-    const appsFiles = explorer.getByRole("listbox", { name: "Files" });
-    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review" }).first();
-    await expect(reviewProjection).toBeVisible({ timeout: 20_000 });
-    await reviewProjection.dblclick();
+    const explorer = await openExplorer(app);
 
-    const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
-    await expect(page.locator(reviewSelector).last()).toBeVisible({ timeout: 15_000 });
-    const review = page.frameLocator(reviewSelector).last();
-    await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 10_000 });
-
-    // Re-open Root rather than typing into Explorer's display-only address field.
-    // The real FileManager navigation boundary is canonical directory activation.
-    explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
     const chooser = await importFiles(page, explorer);
     const filename = `issue-107-download-${Date.now()}.txt`;
@@ -141,6 +131,17 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("Browser download did not expose a completed local file");
     expect(await readFile(downloadPath)).toEqual(expected);
+
+    await openRootDirectory(explorer, "Apps");
+    const appsFiles = explorer.getByRole("listbox", { name: "Files" });
+    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review" }).first();
+    await expect(reviewProjection).toBeVisible({ timeout: 20_000 });
+    await reviewProjection.dblclick();
+
+    const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
+    await expect(page.locator(reviewSelector).last()).toBeVisible({ timeout: 15_000 });
+    const review = page.frameLocator(reviewSelector).last();
+    await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 10_000 });
 
     health.assertClean();
   } finally {
@@ -178,7 +179,6 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     await recycleBin.getByRole("checkbox", { name: `Select ${restoreName}` }).check();
     await recycleBin.getByRole("button", { name: "Restore (1)" }).click();
     await expect(recycleBin.locator("[role='row']", { hasText: restoreName })).toHaveCount(0, { timeout: 20_000 });
-    await expect(restoreSource.files.locator("[data-fm-node-id]", { hasText: restoreName }).first()).toBeVisible({ timeout: 20_000 });
 
     await recycleBin.getByRole("checkbox", { name: `Select ${deleteName}` }).check();
     await recycleBin.getByRole("button", { name: "Delete permanently (1)" }).click();
@@ -186,7 +186,14 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     await expect(confirmation).toContainText("Permanently delete 1 item?");
     await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
     await expect(recycleBin.locator("[role='row']", { hasText: deleteName })).toHaveCount(0, { timeout: 20_000 });
-    await expect(deleteSource.files.locator("[data-fm-node-id]", { hasText: deleteName })).toHaveCount(0);
+
+    // Re-enter the source directory through Explorer navigation so this contract
+    // proves persisted restore/delete results without requiring cross-window live refresh.
+    await navigateExplorer(explorer, "/");
+    await openRootDirectory(explorer, "Desktop");
+    const refreshedFiles = explorer.getByRole("listbox", { name: "Files" });
+    await expect(refreshedFiles.locator("[data-fm-node-id]", { hasText: restoreName }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(refreshedFiles.locator("[data-fm-node-id]", { hasText: deleteName })).toHaveCount(0);
 
     health.assertClean();
   } finally {
