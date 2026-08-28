@@ -63,6 +63,7 @@ export function downloadBlob(
   const anchor = environment.createAnchor();
   anchor.href = url;
   anchor.download = saneDownloadFilename(node.name);
+  console.log(`[download-debug] anchor href=${anchor.href} download=${anchor.download} connected=${anchor.isConnected}`);
   try {
     anchor.click();
   } finally {
