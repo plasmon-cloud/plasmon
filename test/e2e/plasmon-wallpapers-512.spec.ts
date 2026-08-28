@@ -7,14 +7,17 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 
 const THEME_WALLPAPERS = [
-  ["Plasmon Dark", "plasmon-dark", "plasmon-aurora"],
+  ["Plasmon Dark", "plasmon-dark", "plasmon-lattice"],
   ["Midnight", "plasmon-midnight", "midnight-orbit"],
   ["Ember", "plasmon-ember", "ember-horizon"],
   ["Glacier", "plasmon-glacier", "glacier-prism"],
   ["Rosewood", "plasmon-rosewood", "rosewood-bloom"],
 ] as const;
 
-test("#512 wallpapers are visibly exposed behind Desktop, follow themes, and allow pinning", async ({ page }) => {
+const JPG_WALLPAPER_ID = "digital-dusk";
+const JPG_WALLPAPER_ASSET = "/static/plasmon/wallpapers/digital-dusk.jpg";
+
+test("#512 wallpapers are visible, branded, follow themes, and allow generated or JPG pinning", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -53,6 +56,18 @@ test("#512 wallpapers are visibly exposed behind Desktop, follow themes, and all
       return `${style.backgroundColor}|${style.backgroundImage}`;
     })).toBe("rgba(0, 0, 0, 0)|none");
 
+    const watermark = await wallpaper.evaluate((element) => {
+      const style = getComputedStyle(element, "::after");
+      return {
+        content: style.content.replace(/^['\"]|['\"]$/g, ""),
+        opacity: Number(style.opacity),
+        backgroundImage: style.backgroundImage,
+      };
+    });
+    expect(watermark.content).toBe("PLASMON");
+    expect(watermark.opacity).toBeGreaterThanOrEqual(0.15);
+    expect(watermark.backgroundImage).toContain("plasmon-mark.svg");
+
     await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
@@ -76,21 +91,33 @@ test("#512 wallpapers are visibly exposed behind Desktop, follow themes, and all
     }
     expect(backgrounds.size).toBe(THEME_WALLPAPERS.length);
 
-    const pinned = settings.getByRole("button", { name: "Ember Horizon", exact: true });
+    // The extra raster choice must be a real packaged JPEG and must use the
+    // same pinned preference path as the generated backgrounds.
+    const pinned = settings.getByRole("button", { name: "Digital Dusk", exact: true });
+    const jpgResponsePromise = page.waitForResponse(
+      (response) => response.url().endsWith(JPG_WALLPAPER_ASSET),
+      { timeout: 30_000 },
+    );
     await pinned.click();
+    const jpgResponse = await jpgResponsePromise;
+    expect(jpgResponse.ok()).toBe(true);
+    expect(jpgResponse.headers()["content-type"] ?? "").toContain("image/jpeg");
     await expect(pinned).toHaveAttribute("aria-pressed", "true");
     await expect(follow).toHaveAttribute("aria-pressed", "false");
-    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", JPG_WALLPAPER_ID);
     const pinnedBackground = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
+    expect(pinnedBackground).toContain("digital-dusk.jpg");
+    expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .toBe("rgba(0, 0, 0, 0)");
 
     await settings.getByRole("button", { name: "Glacier", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-glacier");
-    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", JPG_WALLPAPER_ID);
     expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).toBe(pinnedBackground);
 
     await settings.getByRole("button", { name: "Midnight", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-midnight");
-    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "ember-horizon");
+    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", JPG_WALLPAPER_ID);
     expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).toBe(pinnedBackground);
 
     await follow.click();
