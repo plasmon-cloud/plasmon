@@ -80,6 +80,43 @@ async function deleteEntry(toolbar: Locator, entry: Locator): Promise<void> {
   await expect(entry).toHaveCount(0, { timeout: 20_000 });
 }
 
+async function openRecycleBin(app: FrameLocator): Promise<Locator> {
+  const taskbar = app.getByRole("navigation", { name: "Taskbar" });
+  await taskbar.getByRole("button", { name: "Search", exact: true }).click();
+  const search = app.getByLabel("Search Plasmon");
+  await search.fill("Recycle Bin");
+  const result = app.locator("[data-search-result]", { hasText: "Recycle Bin" }).first();
+  await expect(result).toBeVisible();
+  await result.click();
+  const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
+  await expect(recycleBin).toBeVisible({ timeout: 10_000 });
+  return recycleBin;
+}
+
+async function closeNativeWindowContaining(app: FrameLocator, content: Locator): Promise<void> {
+  const nativeWindow = app.locator(".plasmon-window-layer [data-window-id]").filter({ has: content }).last();
+  await expect(nativeWindow).toBeVisible();
+  await nativeWindow.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(content).toHaveCount(0, { timeout: 10_000 });
+}
+
+async function permanentlyDeleteEntry(app: FrameLocator, explorer: Locator, entry: Locator, name: string): Promise<void> {
+  const files = explorer.getByRole("listbox", { name: "Files" });
+  const toolbar = files.getByRole("toolbar", { name: "File commands" });
+  await deleteEntry(toolbar, entry);
+
+  const recycleBin = await openRecycleBin(app);
+  const row = recycleBin.locator("[role='row']", { hasText: name }).first();
+  await expect(row).toBeVisible({ timeout: 20_000 });
+  await recycleBin.getByRole("checkbox", { name: `Select ${name}` }).check();
+  await recycleBin.getByRole("button", { name: "Delete permanently (1)" }).click();
+  const confirmation = recycleBin.getByRole("alertdialog", { name: "Delete permanently?" });
+  await expect(confirmation).toContainText("Permanently delete 1 item?");
+  await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
+  await expect(row).toHaveCount(0, { timeout: 20_000 });
+  await closeNativeWindowContaining(app, recycleBin);
+}
+
 test("#107 packaged Search dismisses on an outside workspace click without launching a result", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
@@ -131,15 +168,19 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("Browser download did not expose a completed local file");
     expect(await readFile(downloadPath)).toEqual(expected);
+    await permanentlyDeleteEntry(app, explorer, entry, filename);
 
     await openRootDirectory(explorer, "Apps");
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
-    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review" }).first();
+    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
     await expect(reviewProjection).toBeVisible({ timeout: 20_000 });
-    await reviewProjection.dblclick();
+    await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
 
     const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
-    await expect(page.locator(reviewSelector).last()).toBeVisible({ timeout: 15_000 });
+    const reviewFrames = page.locator(reviewSelector);
+    const beforeReviewFrames = await reviewFrames.count();
+    await reviewProjection.dblclick();
+    await expect(reviewFrames).toHaveCount(beforeReviewFrames + 1, { timeout: 15_000 });
     const review = page.frameLocator(reviewSelector).last();
     await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 10_000 });
 
@@ -163,16 +204,7 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     const deleteSource = await createTextDocument(explorer, deleteName);
     await deleteEntry(deleteSource.toolbar, deleteSource.entry);
 
-    const taskbar = app.getByRole("navigation", { name: "Taskbar" });
-    await taskbar.getByRole("button", { name: "Search", exact: true }).click();
-    const search = app.getByLabel("Search Plasmon");
-    await search.fill("Recycle Bin");
-    const result = app.locator("[data-search-result]", { hasText: "Recycle Bin" }).first();
-    await expect(result).toBeVisible();
-    await result.click();
-
-    const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
-    await expect(recycleBin).toBeVisible({ timeout: 10_000 });
+    const recycleBin = await openRecycleBin(app);
     await expect(recycleBin.locator("[role='row']", { hasText: restoreName }).first()).toBeVisible({ timeout: 20_000 });
     await expect(recycleBin.locator("[role='row']", { hasText: deleteName }).first()).toBeVisible();
 
@@ -186,15 +218,18 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     await expect(confirmation).toContainText("Permanently delete 1 item?");
     await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
     await expect(recycleBin.locator("[role='row']", { hasText: deleteName })).toHaveCount(0, { timeout: 20_000 });
+    await closeNativeWindowContaining(app, recycleBin);
 
     // Re-enter the source directory through Explorer navigation so this contract
     // proves persisted restore/delete results without requiring cross-window live refresh.
     await navigateExplorer(explorer, "/");
     await openRootDirectory(explorer, "Desktop");
     const refreshedFiles = explorer.getByRole("listbox", { name: "Files" });
-    await expect(refreshedFiles.locator("[data-fm-node-id]", { hasText: restoreName }).first()).toBeVisible({ timeout: 20_000 });
+    const restoredEntry = refreshedFiles.locator("[data-fm-node-id]", { hasText: restoreName }).first();
+    await expect(restoredEntry).toBeVisible({ timeout: 20_000 });
     await expect(refreshedFiles.locator("[data-fm-node-id]", { hasText: deleteName })).toHaveCount(0);
 
+    await permanentlyDeleteEntry(app, explorer, restoredEntry, restoreName);
     health.assertClean();
   } finally {
     health.dispose();
@@ -216,15 +251,22 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
 
     const entry = explorer.getByRole("listbox", { name: "Files" }).locator("[data-fm-node-id]", { hasText: filename }).first();
     await expect(entry).toBeVisible({ timeout: 20_000 });
+    const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
+    const beforeVideoWindows = await nativeWindows.count();
     await entry.dblclick();
+    await expect(nativeWindows).toHaveCount(beforeVideoWindows + 1, { timeout: 15_000 });
 
-    const player = app.getByRole("region", { name: "Video player" });
+    const videoWindow = nativeWindows.last();
+    const player = videoWindow.getByRole("region", { name: "Video player" });
     await expect(player).toBeVisible({ timeout: 15_000 });
     const alert = player.getByRole("alert");
     await expect(alert).toBeVisible({ timeout: 15_000 });
     await expect(alert).toContainText(filename);
     await expect(alert).toContainText(/native media codecs|could not decode/i);
 
+    await videoWindow.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(nativeWindows).toHaveCount(beforeVideoWindows, { timeout: 10_000 });
+    await permanentlyDeleteEntry(app, explorer, entry, filename);
     health.assertClean();
   } finally {
     health.dispose();
