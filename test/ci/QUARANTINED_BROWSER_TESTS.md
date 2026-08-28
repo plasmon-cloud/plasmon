@@ -15,7 +15,6 @@ Every active quarantine below has a dedicated repair Issue. Unknown failures, de
 | Required-CI quarantine | Exact spec/test | Known signature | Repair / restoration Issue |
 | --- | --- | --- | --- |
 | js-dos saved-preview blob readiness | `test/e2e/plasmon-demo-game.spec.ts` — `saved js-dos resource publishes a blob-backed preview after save` — tags `@r2-quarantine @issue-124 @issue-304` | flake probe `31917209424`, attempt 1/10: expected thumbnail `src` `/^blob:/`, observed `static/plasmon/artwork/plasmon-demo.svg` | #304 |
-| #415 Text language-transition browser readiness | `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — tags `@r2-quarantine @issue-415 @issue-434` | independent retry-free probes `32520634935` and `32525873804` each passed 9/10; failures occur at different pre-assertion readiness boundaries (Desktop fixture entry vs Plasmon Taskbar) before the Monaco language-transition contract is reached | #434 |
 
 ## #279 left-snap / snap-preview restoration proof
 
@@ -27,7 +26,7 @@ Quarantine removal is provisional until #279's exact-head proof completes. The r
 
 ## #308 Alt-Tab multi-instance restoration
 
-Issue #308 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — to required serialized Specialist execution. PR #454 removed only the exact `@r2-quarantine` tag and #308 inventory entry while preserving the full Alt-Tab MRU, minimize/restore, Escape-cancel, close, and strict BrowserHealth assertions.
+Issue #308 restores `test/e2e/plasmon-golden-path-window-lifetime.spec.ts` — `#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary` — to required Specialist execution. PR #454 removed only the exact `@r2-quarantine` tag and #308 inventory entry while preserving the full Alt-Tab MRU, minimize/restore, Escape-cancel, close, and strict BrowserHealth assertions.
 
 The shared Explorer activation repair selects the unique Desktop Root and uses the real FileManager listbox Enter boundary for both Explorer launches. It does not add sleeps, retries, timeout inflation, forced actions, weakened window-count assertions, direct Process calls, or Product test hooks.
 
@@ -89,7 +88,15 @@ Issue #391 restores `test/e2e/plasmon-monaco-workers-89.spec.ts` to required Spe
 
 The slim policy deterministically maps TypeScript/JavaScript and other Monaco worker labels to `editor.worker.js`; missing packaged source fails closed. Full language-service-worker parity is outside the slim r2 package and is FUTURE/SUPERSEDED for r2: Product parity is owned by #527 (blocked by the #526 profile/size guarantee), while #370 covers only heavyweight/on-demand runtime-delivery architecture. #391 removes only its own `@r2-quarantine`; unrelated quarantines remain unchanged.
 
-The #434 quarantine is limited to the demo-profile #415 Text language-transition acceptance. The demo test remains in the profile-specific inventory with its FileManager rename, Save As, Monaco model identity, language status, tokenization, reopen persistence, round-trip-to-plaintext, and strict BrowserHealth assertions unchanged. PR #418 and unrelated PR #427 independently reproduced readiness failures before the #415 language assertions. Product Issue #415 remains the behavior owner while #434 owns the demo-profile restoration.
+## #434 Text language-transition restoration
+
+Issue #434 restores `test/e2e/plasmon-demo-text-language-transition.spec.ts` — `[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco` — to required demo-profile execution. The acceptance now carries only `@demo-profile @issue-415`; its `@r2-quarantine` and `@issue-434` restoration markers are removed while the FileManager rename, Save As, stable Monaco model identity, plaintext/JavaScript state, visible JavaScript tokenization, save/reopen persistence, JavaScript-to-plaintext round trip, and strict BrowserHealth assertions remain required.
+
+The Product root cause was a stale async `ExplorerNavigationModel.refreshCurrent()` that could begin at `/`, lose a race to a real user navigation to `/Documents`, then finish later and overwrite the newer current history/location with `/`. The repair captures the current history index and NodeId before resolution and discards the refresh result when either changed. A deterministic headless regression gates the old refresh, navigates A to B, releases the stale result, and requires B plus history `[A, B]` to remain authoritative. The packaged acceptance binds `/Documents` through the real dialog address and stable production `data-window-id` rather than a premature live `.last()` Explorer locator.
+
+The integrated repair head `a6882f69641b20b228eaf765057793289be8e031`, which includes merged #573/#574 Start geometry restoration, completed Flake Probe run `33191292246` with 10/10 clean retry-free baseline packets and 50/50 clean targeted characterization iterations. Exact-head Fast `33191292312`, Packaged Browser `33191292195`, Packaged Smoke `33191292234`, Browser Persistence `33191292237`, and Kernel `33191292284` also passed. No sleeps, retries, fallback passes, assertion weakening, Product-only hooks, or broad quarantine were introduced.
+
+Review follow-up commit `3c86d55fcdbe3acebdc374a66f3dbdfce341c366` additionally removes routine 20–30 second Explorer/window waits from the changed browser journey. Explicit long bounds remain only at documented external runtime startup boundaries: initial packaged Plasmon interactivity and Monaco worker/model startup. This tightens timing without weakening the acceptance or changing Product semantics. PR #536 and ledger #295 carry the final post-review exact-head gate disposition before merge.
 
 Issue #505 supplies the neutral companion acceptance in `test/e2e/plasmon-text-language-transition.spec.ts`. It creates both source resources through ordinary packaged FileManager operations and runs as required Specialist coverage without `plasmon:demo`, demo assets, demo filenames, query fixtures, or Gemma allowances.
 
@@ -146,7 +153,7 @@ An iframe which has both allow-scripts and allow-same-origin for its sandbox att
 - `test/e2e/plasmon-drag-feedback-360.spec.ts` — required; #420 restores the open-folder move, target-transition/invalid/cancel/unmount, and grouped multi-selection acceptances while the Desktop ghost/release-continuity acceptance remains continuously required.
 - `test/e2e/plasmon-drag-placement-371.spec.ts` — required; #406 restores the exact #371 placement acceptance with 60/60 clean retry-free evidence and unchanged same-NodeId/geometry/BrowserHealth assertions.
 - `test/e2e/plasmon-diagnostic-selection-86.spec.ts` — required; #330 restores the exact #86 diagnostic-selection acceptance with 60/60 clean first-attempt proof.
-- `test/e2e/plasmon-demo-text-language-transition.spec.ts` — retained; its single demo-profile #415/#434 acceptance is quarantined pending demo browser-readiness restoration.
+- `test/e2e/plasmon-demo-text-language-transition.spec.ts` — required; #434 restores the demo-profile #415 acceptance with stable `/Documents` identity, full language/persistence assertions, retries=0, and no `@r2-quarantine`.
 - `test/e2e/plasmon-text-language-transition.spec.ts` — required; #505 provides neutral #415 language-transition coverage through self-created FileManager resources.
 
 Targeted flake-probe validation may select `saved-preview`, which executes only the `@issue-304` acceptance with retries disabled. The normal required Specialist path continues to exclude `@r2-quarantine` tests.
@@ -171,6 +178,6 @@ For #420 specifically, each of the three exact #360 acceptances must be exercise
 
 For #391 specifically, restoration is represented by the slim r2 acceptance above; its required evidence retains packaged Program Files authority, opaque-origin `blob:` transport, real editor-worker construction/message exchange, and strict worker/page/browser-health assertions. Direct certified HTTP exposure is an R3 compatibility question tracked by #546/#545 and is not an R2 requirement. Full language-service-worker parity remains FUTURE/SUPERSEDED for r2, with Product ownership in #527 (blocked by #526) and #370 limited to architecture.
 
-For #434 specifically, the exact #415 Text language-transition acceptance must be run **unquarantined** with retries=0 and pass a clean 10/10 fresh Flake Probe while retaining FileManager rename and Save As transitions, Monaco model identity, JavaScript/plaintext status and tokenization, reopen persistence, round-trip behavior, and strict BrowserHealth before this quarantine is removed.
+For #434 specifically, restoration was established on exact integrated repair head `a6882f69641b20b228eaf765057793289be8e031` with Flake Probe `33191292246`: 10/10 clean retry-free baseline packets plus 50/50 targeted characterization iterations, while preserving the full #415 FileManager/Text/Monaco/persistence/BrowserHealth contract. The subsequent review cleanup only tightens routine UI readiness bounds; the final PR head must remain retry-free and green before merge, with that disposition recorded in #295.
 
 No new quarantine is implied by a failed run. Preserve the evidence, classify it in #295, create/reuse the dedicated repair Issue, and add an explicit narrow quarantine change only when authorized.
