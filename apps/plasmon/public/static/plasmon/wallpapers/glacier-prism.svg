@@ -1,22 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(35 .5 .5)">
+    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1600" y2="900">
       <stop stop-color="#f4fbfc"/>
       <stop offset=".52" stop-color="#eaf5f8"/>
       <stop offset="1" stop-color="#bfdde6"/>
     </linearGradient>
     <pattern id="ice-lines" width="112" height="112" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
-      <path d="M55 0v112" stroke="#45798b" stroke-opacity=".22" stroke-width="2"/>
+      <path d="M55 0V112" stroke="#45798b" stroke-opacity=".22" stroke-width="2"/>
     </pattern>
-    <linearGradient id="prism" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="prism" gradientUnits="userSpaceOnUse" x1="1092" y1="-117" x2="1712" y2="643">
       <stop stop-color="#1689ad" stop-opacity="0"/>
       <stop offset=".2" stop-color="#1689ad" stop-opacity=".13"/>
       <stop offset=".48" stop-color="#55b9d3" stop-opacity=".1"/>
       <stop offset=".7" stop-color="#1689ad" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1689ad" stop-opacity="0"/>
     </linearGradient>
+    <radialGradient id="aurora-left" gradientUnits="userSpaceOnUse" cx="32" cy="568" r="390">
+      <stop stop-color="#1689ad" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#1689ad" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aurora-right" gradientUnits="userSpaceOnUse" cx="1600" cy="196" r="380">
+      <stop stop-color="#55b9d3" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#55b9d3" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="1600" height="900" fill="url(#base)"/>
+  <!-- The broad fields are the two blurred CSS aurora companions. -->
+  <rect width="1600" height="900" fill="url(#aurora-left)"/>
+  <rect width="1600" height="900" fill="url(#aurora-right)"/>
   <rect width="1600" height="900" fill="url(#ice-lines)"/>
-  <path d="M1180-80 1600 900H760Z" fill="url(#prism)" opacity=".85"/>
+  <!-- CSS pseudo-element: 620px x 760px at (1092,-117), clipped to a
+       triangle and rotated thirteen degrees. -->
+  <polygon points="1402,-117 1712,643 1092,643" fill="url(#prism)" opacity=".85" transform="rotate(13 1402 263)"/>
+  <!-- The two narrow diagonal bands from the CSS first background layer. -->
+  <path d="M310 900 1260 0h12L322 900Z" fill="#1689ad" fill-opacity=".11"/>
+  <path d="M980 900 1600 315v12L994 900Z" fill="#55b9d3" fill-opacity=".1"/>
   <path d="M0 670 980 230 1140 900H0Z" fill="none" stroke="#1689ad" stroke-opacity=".16" stroke-width="2" transform="rotate(31 570 565)"/>
 </svg>

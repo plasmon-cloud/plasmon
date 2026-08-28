@@ -1,35 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(42 .5 .5)">
+    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1600" y2="900">
       <stop stop-color="#190612"/>
       <stop offset=".52" stop-color="#1b0a13"/>
       <stop offset="1" stop-color="#4a1730"/>
     </linearGradient>
-    <radialGradient id="bloom-a" cx="72%" cy="38%" r="24%">
-      <stop stop-color="#f27691" stop-opacity=".25"/>
-      <stop offset=".05" stop-color="#f27691" stop-opacity="0"/>
-      <stop offset=".19" stop-color="#bd466d" stop-opacity=".16"/>
-      <stop offset=".22" stop-color="#bd466d" stop-opacity="0"/>
-      <stop offset="1" stop-color="#bd466d" stop-opacity="0"/>
+    <radialGradient id="bloom-a" gradientUnits="userSpaceOnUse" cx="1152" cy="342" r="304">
+      <stop stop-color="#f27691" stop-opacity=".25" offset="0"/>
+      <stop stop-color="#f27691" stop-opacity="0" offset=".05"/>
+      <stop stop-color="#bd466d" stop-opacity=".16" offset=".19"/>
+      <stop stop-color="#bd466d" stop-opacity="0" offset=".22"/>
+      <stop stop-color="#bd466d" stop-opacity="0" offset="1"/>
     </radialGradient>
-    <radialGradient id="bloom-b" cx="63%" cy="48%" r="28%">
+    <radialGradient id="bloom-b" gradientUnits="userSpaceOnUse" cx="1008" cy="432" r="448">
       <stop stop-color="#bd466d" stop-opacity=".16"/>
-      <stop offset=".08" stop-color="#bd466d" stop-opacity="0"/>
-      <stop offset="1" stop-color="#bd466d" stop-opacity="0"/>
+      <stop stop-color="#bd466d" stop-opacity="0" offset=".08"/>
+      <stop stop-color="#bd466d" stop-opacity="0" offset="1"/>
     </radialGradient>
-    <radialGradient id="petal" cx="50%" cy="0%" r="100%">
+    <radialGradient id="petal" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="180">
       <stop stop-color="#f27691" stop-opacity=".23"/>
       <stop offset="1" stop-color="#f27691" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aurora-left" gradientUnits="userSpaceOnUse" cx="160" cy="604" r="390">
+      <stop stop-color="#f27691" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#f27691" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aurora-right" gradientUnits="userSpaceOnUse" cx="1168" cy="142" r="350">
+      <stop stop-color="#bd466d" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#bd466d" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1600" height="900" fill="url(#base)"/>
   <rect width="1600" height="900" fill="url(#bloom-a)"/>
   <rect width="1600" height="900" fill="url(#bloom-b)"/>
-  <g transform="translate(1260 180) rotate(22)">
-    <ellipse cx="0" cy="-170" rx="180" ry="110" fill="url(#petal)"/>
-    <ellipse cx="170" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(90 170 0)"/>
-    <ellipse cx="0" cy="170" rx="180" ry="110" fill="url(#petal)" transform="rotate(180 0 170)"/>
-    <ellipse cx="-170" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(270 -170 0)"/>
+  <!-- The broad fields are the two blurred CSS aurora companions. -->
+  <rect width="1600" height="900" fill="url(#aurora-left)"/>
+  <rect width="1600" height="900" fill="url(#aurora-right)"/>
+  <!-- CSS radial ring at 82% 22%. -->
+  <circle cx="1312" cy="198" r="112" fill="none" stroke="#f27691" stroke-opacity=".14" stroke-width="2"/>
+  <!-- CSS ::before was a 700px bloom at (1028,-160), rotated 22deg. -->
+  <g transform="translate(1320 240) rotate(22)">
+    <ellipse cx="0" cy="-190" rx="180" ry="110" fill="url(#petal)"/>
+    <ellipse cx="190" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(90 190 0)"/>
+    <ellipse cx="0" cy="190" rx="180" ry="110" fill="url(#petal)" transform="rotate(180 0 190)"/>
+    <ellipse cx="-190" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(270 -190 0)"/>
     <circle r="270" fill="none" stroke="#f27691" stroke-opacity=".17" stroke-width="2"/>
   </g>
 </svg>

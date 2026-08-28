@@ -26,6 +26,14 @@ const WALLPAPER_ASSETS = [
   ["/app/plasmon/static/plasmon/wallpapers/rosewood-bloom.svg", "image/svg+xml"],
 ] as const;
 const WATERMARK_ASSET = "/app/plasmon/static/plasmon/plasmon-watermark.svg";
+const WALLPAPER_PATH_BY_ID: Readonly<Record<string, string>> = Object.freeze({
+  "graphite-sand": JPG_WALLPAPER_ASSET,
+  "plasmon-lattice": "/app/plasmon/static/plasmon/wallpapers/plasmon-lattice.svg",
+  "midnight-orbit": "/app/plasmon/static/plasmon/wallpapers/midnight-orbit.svg",
+  "ember-horizon": "/app/plasmon/static/plasmon/wallpapers/ember-horizon.svg",
+  "glacier-prism": "/app/plasmon/static/plasmon/wallpapers/glacier-prism.svg",
+  "rosewood-bloom": "/app/plasmon/static/plasmon/wallpapers/rosewood-bloom.svg",
+});
 const PACKAGED_ASSET_PATHS = new Set([
   ...WALLPAPER_ASSETS.map(([path]) => path),
   WATERMARK_ASSET,
@@ -72,17 +80,38 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
     })).toBe("rgba(0, 0, 0, 0)|none");
 
     await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
-    const watermark = await shell.evaluate((element) => {
+    const watermark = await shell.evaluate(async (element, assetPath) => {
       const style = getComputedStyle(element, "::after");
+      const image = new Image();
+      image.src = new URL(assetPath, document.baseURI).href;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error(`watermark failed to load: ${image.src}`));
+      });
+      await image.decode();
       return {
         opacity: Number(style.opacity),
         backgroundImage: style.backgroundImage,
+        backgroundSize: style.backgroundSize,
+        content: style.content,
+        height: style.height,
         right: style.right,
+        width: style.width,
+        zIndex: style.zIndex,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
       };
-    });
+    }, WATERMARK_ASSET);
     expect(watermark.opacity).toBeGreaterThanOrEqual(0.2);
     expect(watermark.backgroundImage).toContain("plasmon-watermark.svg");
+    expect(watermark.backgroundSize).toContain("contain");
+    expect(watermark.content).not.toBe("none");
+    expect(Number.parseFloat(watermark.height)).toBeGreaterThan(0);
     expect(watermark.right).not.toBe("auto");
+    expect(Number.parseFloat(watermark.width)).toBeGreaterThan(0);
+    expect(Number(watermark.zIndex)).toBeGreaterThan(0);
+    expect(watermark.naturalWidth).toBeGreaterThan(0);
+    expect(watermark.naturalHeight).toBeGreaterThan(0);
 
     for (const [assetPath, contentType] of WALLPAPER_ASSETS) {
       const response = await request.get(new URL(assetPath, kernelUrl).toString());
@@ -126,6 +155,19 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
       await expect(shell).toHaveAttribute("data-plasmon-theme", themeId);
       await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
       const rendered = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(rendered).not.toBe("none");
+      const decoded = await wallpaper.evaluate(async (element, assetPath) => {
+        const image = new Image();
+        image.src = new URL(assetPath, document.baseURI).href;
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error(`wallpaper failed to load: ${image.src}`));
+        });
+        await image.decode();
+        return { naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
+      }, WALLPAPER_PATH_BY_ID[wallpaperId]);
+      expect(decoded.naturalWidth).toBeGreaterThan(0);
+      expect(decoded.naturalHeight).toBeGreaterThan(0);
       if (kind === "jpg") {
         expect(rendered).toContain("graphite-sand.jpg");
         expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundSize)).toContain("cover");
