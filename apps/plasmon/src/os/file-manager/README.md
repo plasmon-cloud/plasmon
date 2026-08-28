@@ -54,7 +54,7 @@ FileManager is not a filesystem repository and must not grow private application
 
 ### Browser download activation
 
-FileManager prepares a selected file's Blob when its context menu opens. The Download action stays disabled until that preparation completes, then performs the existing object-URL/anchor download synchronously in the user action. This preserves browser transient user activation across the asynchronous `FsService` read without changing filesystem authority, filename/MIME/cleanup behavior, or the Kernel app-frame sandbox contract. A packaged/browser test remains the authority for proving the resulting browser-owned download; deterministic tests cover the helper and preparation seam only.
+FileManager prepares a selected file's Blob when its context menu opens. The Download action stays disabled until that preparation completes, then performs the existing object-URL/anchor download synchronously in the user action. This preserves browser transient user activation across the asynchronous `FsService` read without changing filesystem authority, filename/MIME/cleanup behavior, or the Kernel app-frame sandbox contract. Dismissing the menu or unmounting FileManager invalidates pending preparation, so a late read cannot retain or publish a stale Blob. A packaged/browser test remains the authority for proving the resulting browser-owned download; deterministic tests cover the helper and preparation seam only.
 
 Ordinary Delete delegates to the filesystem core's canonical Trash service. FileManager retains confirmation, selection reconciliation, and visible error presentation, while protection decisions, Trash metadata, stable-identity moves, restore, permanent deletion, and emptying remain filesystem authority concerns.
 

@@ -115,8 +115,12 @@ export function FileManager({
   const operationState = providedOperationState ?? localOperationState;
   const [operation, setOperation] = useState<FileOperationSnapshot>(() => operationState.snapshot());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cancelDownloadPreparationRef = useRef<() => void>(() => {});
 
-  const closeContextMenu = () => setContextMenu(null);
+  const closeContextMenu = () => {
+    cancelDownloadPreparationRef.current();
+    setContextMenu(null);
+  };
 
   const directory = useFileManagerDirectoryState({
     directoryId,
@@ -172,6 +176,7 @@ export function FileManager({
     ...(onOpenDirectory ? { onOpenDirectory } : {}),
     ...(confirmDelete ? { confirmDelete } : {}),
   });
+  cancelDownloadPreparationRef.current = commands.cancelDownloadPreparation;
 
   const pointer = useFileManagerPointerAdapter({
     fs,
@@ -190,7 +195,7 @@ export function FileManager({
   });
 
   const closeOverlays = () => {
-    setContextMenu(null);
+    closeContextMenu();
     setOpenWithNode(null);
     setPropertiesNode(null);
   };
