@@ -58,6 +58,7 @@ export function downloadBlob(
   blob: Blob,
   environment: DownloadEnvironment = browserDownloadEnvironment(),
 ): void {
+  console.log(`[download-debug] downloadBlob name=${node.name} size=${blob.size}`);
   const url = environment.createObjectURL(blob);
   const anchor = environment.createAnchor();
   anchor.href = url;
