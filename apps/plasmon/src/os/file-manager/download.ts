@@ -58,12 +58,10 @@ export function downloadBlob(
   blob: Blob,
   environment: DownloadEnvironment = browserDownloadEnvironment(),
 ): void {
-  console.log(`[download-debug] downloadBlob name=${node.name} size=${blob.size} active=${navigator.userActivation?.isActive ?? "unknown"}`);
   const url = environment.createObjectURL(blob);
   const anchor = environment.createAnchor();
   anchor.href = url;
   anchor.download = saneDownloadFilename(node.name);
-  console.log(`[download-debug] anchor href=${anchor.href} download=${anchor.download} connected=${anchor.isConnected}`);
   try {
     anchor.click();
   } finally {
