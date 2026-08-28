@@ -81,6 +81,16 @@ test("#512 wallpaper artwork stays compact generated CSS with all five distinct 
   expect(css).toContain("conic-gradient");
 });
 
+test("#512 Shell wallpaper remains exposed through the FileManager-owned desktop canvas", () => {
+  const css = readFileSync(new URL("./wallpaper-visibility.scss", import.meta.url), "utf8");
+  const style = readFileSync(new URL("../../../style.scss", import.meta.url), "utf8");
+
+  expect(style).toContain('@use "./os/shell/wallpaper-visibility.scss";');
+  expect(css).toContain('.plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-desktop');
+  expect(css).toContain('.plasmon-shell[class*="plasmon-shell--wallpaper-"] .fm-root--desktop');
+  expect(css).toContain("background: transparent;");
+});
+
 test("#512 Settings exposes Follow theme and every canonical wallpaper choice", () => {
   const surface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
   expect(surface).toContain(">Follow theme</button>");
