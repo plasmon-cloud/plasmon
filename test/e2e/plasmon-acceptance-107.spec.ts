@@ -27,6 +27,10 @@ async function launchPlasmon(page: Page) {
   return { app, health };
 }
 
+function nativeWindows(app: FrameLocator): Locator {
+  return app.locator(".plasmon-window-layer > .plasmon-window[data-window-id]");
+}
+
 async function openExplorer(app: FrameLocator): Promise<Locator> {
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByRole("region", { name: "Search" });
@@ -94,9 +98,9 @@ async function openRecycleBin(app: FrameLocator): Promise<Locator> {
 }
 
 async function closeNativeWindowContaining(app: FrameLocator, content: Locator): Promise<void> {
-  const nativeWindow = app.locator(".plasmon-window-layer [data-window-id]").filter({ has: content }).last();
+  const nativeWindow = nativeWindows(app).filter({ has: content }).last();
   await expect(nativeWindow).toBeVisible();
-  await nativeWindow.getByRole("button", { name: "Close", exact: true }).click();
+  await nativeWindow.locator(":scope > .plasmon-window__titlebar .plasmon-window__control--close").click();
   await expect(content).toHaveCount(0, { timeout: 10_000 });
 }
 
@@ -120,7 +124,7 @@ async function permanentlyDeleteEntry(app: FrameLocator, explorer: Locator, entr
 test("#107 packaged Search dismisses on an outside workspace click without launching a result", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
-    const windows = app.locator(".plasmon-window-layer [data-window-id]");
+    const windows = nativeWindows(app);
     const initialWindowCount = await windows.count();
     await app.getByRole("button", { name: "Search" }).click();
     const panel = app.getByRole("region", { name: "Search" });
@@ -251,12 +255,12 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
 
     const entry = explorer.getByRole("listbox", { name: "Files" }).locator("[data-fm-node-id]", { hasText: filename }).first();
     await expect(entry).toBeVisible({ timeout: 20_000 });
-    const nativeWindows = app.locator(".plasmon-window-layer [data-window-id]");
-    const beforeVideoWindows = await nativeWindows.count();
+    const windows = nativeWindows(app);
+    const beforeVideoWindows = await windows.count();
     await entry.dblclick();
-    await expect(nativeWindows).toHaveCount(beforeVideoWindows + 1, { timeout: 15_000 });
+    await expect(windows).toHaveCount(beforeVideoWindows + 1, { timeout: 15_000 });
 
-    const videoWindow = nativeWindows.last();
+    const videoWindow = windows.last();
     const player = videoWindow.getByRole("region", { name: "Video player" });
     await expect(player).toBeVisible({ timeout: 15_000 });
     const alert = player.getByRole("alert");
@@ -264,8 +268,8 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
     await expect(alert).toContainText(filename);
     await expect(alert).toContainText(/native media codecs|could not decode/i);
 
-    await videoWindow.getByRole("button", { name: "Close", exact: true }).click();
-    await expect(nativeWindows).toHaveCount(beforeVideoWindows, { timeout: 10_000 });
+    await videoWindow.locator(":scope > .plasmon-window__titlebar .plasmon-window__control--close").click();
+    await expect(windows).toHaveCount(beforeVideoWindows, { timeout: 10_000 });
     await permanentlyDeleteEntry(app, explorer, entry, filename);
     health.assertClean();
   } finally {
