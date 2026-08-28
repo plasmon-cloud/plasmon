@@ -406,7 +406,7 @@ let rawCanisterPolicy = Kernel.appAssetOriginPolicy(
 assert (rawCanisterPolicy == #opaque_app);
 assert (
     Kernel.appAssetSandboxHeaders(rawCanisterPolicy) == [
-        ("Content-Security-Policy", "sandbox allow-scripts")
+        ("Content-Security-Policy", "sandbox allow-scripts allow-downloads")
     ]
 );
 assert (

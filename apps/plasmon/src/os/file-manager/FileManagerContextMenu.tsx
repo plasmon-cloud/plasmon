@@ -33,6 +33,7 @@ interface FileManagerContextMenuProps {
   state: FileManagerContextMenuState;
   node: FsNode | null;
   canOpenWith: boolean;
+  canDownload: boolean;
   canCreateShortcut: boolean;
   operationRunning: boolean;
   canPaste: boolean;
@@ -86,7 +87,15 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
             </button>
           ) : null}
           {props.node.kind === "file" ? (
-            <button type="button" role="menuitem" onClick={() => props.onAction("download")}>Download</button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!props.canDownload}
+              title={props.canDownload ? undefined : "Preparing download"}
+              onClick={() => props.onAction("download")}
+            >
+              Download
+            </button>
           ) : null}
           <div className="fm-menu-separator" role="separator" />
           <button type="button" role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
