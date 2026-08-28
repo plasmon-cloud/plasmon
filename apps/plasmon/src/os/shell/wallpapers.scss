@@ -51,9 +51,6 @@
     background: var(--plasmon-wallpaper-secondary);
   }
 
-  // Plasmon Lattice replaces the original generic Aurora preview. The crossed
-  // diagonals echo the Plasmon mark while the broad fields stay quiet behind
-  // desktop labels and icons.
   .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__wallpaper {
     background:
       radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 24%, transparent) 0 9%, transparent 34%),
@@ -191,13 +188,13 @@
     top: -18vh;
   }
 
-  // Digital Dusk is intentionally raster-native rather than a CSS/SVG design:
-  // a compact AI-generated 16:9 JPEG gives the built-in picker one genuinely
-  // high-detail desktop image without replacing the five generated companions.
-  .plasmon-shell--wallpaper-digital-dusk .plasmon-shell__wallpaper {
+  // Graphite Sand is the raster-native companion for the neutral Graphite
+  // theme. The photograph is user-selected artwork; it is not a flattened
+  // vector substitute and remains independent from the SVG brand overlay.
+  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
     background:
-      linear-gradient(115deg, rgba(3, 8, 16, .2), rgba(3, 8, 16, .04) 46%, rgba(3, 8, 16, .22)),
-      url("/static/plasmon/wallpapers/digital-dusk.jpg") center 50% / cover no-repeat;
+      linear-gradient(115deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .02) 46%, rgba(0, 0, 0, .16)),
+      url("/static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
   }
-  .plasmon-shell--wallpaper-digital-dusk .plasmon-shell__aurora { display: none; }
+  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__aurora { display: none; }
 }
