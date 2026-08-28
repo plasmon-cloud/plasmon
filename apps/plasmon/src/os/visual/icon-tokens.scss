@@ -4,23 +4,26 @@
      * Plasmon-owned icon artwork uses this small semantic palette. These are
      * presentation slots, not filesystem/resource semantics; externally
      * authored application icons and user media remain untouched.
+     * Graphite is the default/root fallback.
      */
-    --plasmon-icon-primary: #17373a;
-    --plasmon-icon-secondary: #63c6ca;
-    --plasmon-icon-accent: #84e3b0;
-    --plasmon-icon-outline: #91d9ba;
-    --plasmon-icon-highlight: #d7f7e6;
+    --plasmon-icon-primary: #2c3137;
+    --plasmon-icon-secondary: #747b84;
+    --plasmon-icon-accent: #62c5e8;
+    --plasmon-icon-outline: #a4adb6;
+    --plasmon-icon-highlight: #f3f5f7;
   }
 
-  /*
-   * FileManager drag previews and other first-party overlays may be portaled to
-   * document.body rather than remaining descendants of .plasmon-shell. Project
-   * only the bounded owned-icon palette onto :root while the active Shell theme
-   * is present so cloned/portaled owned SVG geometry keeps the same theme colors.
-   * Authored <img> artwork does not consume these variables and remains intact.
-   */
-  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-dark"]),
-  .plasmon-shell[data-plasmon-theme="plasmon-dark"] {
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-graphite"]),
+  .plasmon-shell[data-plasmon-theme="plasmon-graphite"] {
+    --plasmon-icon-primary: #2c3137;
+    --plasmon-icon-secondary: #747b84;
+    --plasmon-icon-accent: #62c5e8;
+    --plasmon-icon-outline: #a4adb6;
+    --plasmon-icon-highlight: #f3f5f7;
+  }
+
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-verdant"]),
+  .plasmon-shell[data-plasmon-theme="plasmon-verdant"] {
     --plasmon-icon-primary: #17373a;
     --plasmon-icon-secondary: #63c6ca;
     --plasmon-icon-accent: #84e3b0;
