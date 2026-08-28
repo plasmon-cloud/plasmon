@@ -15,6 +15,11 @@ const THEMES = [
   { id: "plasmon-rosewood", label: "Rosewood", scheme: "dark" },
 ] as const;
 
+// PocketIC and the installed app have an external startup boundary; all later
+// assertions synchronize on production DOM readiness or browser events.
+const EXTERNAL_STARTUP_TIMEOUT = 60_000;
+const MONACO_WORKER_TIMEOUT = 30_000;
+
 async function resolvedToken(locator: Locator, token: string): Promise<string> {
   return locator.evaluate((element, property) => {
     const probe = document.createElement("span");
@@ -51,14 +56,14 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator(appSelector)).toBeVisible({ timeout: EXTERNAL_STARTUP_TIMEOUT });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
-    await expect(taskbar).toBeVisible({ timeout: 60_000 });
+    await expect(taskbar).toBeVisible({ timeout: EXTERNAL_STARTUP_TIMEOUT });
 
     const desktopEntry = app.locator(".fm-root--desktop .fm-entry--desktop").first();
-    await expect(desktopEntry).toBeVisible({ timeout: 20_000 });
+    await expect(desktopEntry).toBeVisible();
     await desktopEntry.click();
     const desktopExpandedName = desktopEntry.locator(".fm-entry__expanded-name");
     await expect(desktopExpandedName).toBeVisible();
@@ -71,10 +76,10 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
       await expect(search).toBeVisible();
       await search.getByRole("textbox", { name: "Search Plasmon" }).fill(name);
       const result = search.locator("[data-search-result]", { hasText: name }).first();
-      await expect(result).toBeVisible({ timeout: 20_000 });
+      await expect(result).toBeVisible();
       const before = await windows.count();
       await result.click();
-      await expect(windows).toHaveCount(before + 1, { timeout: 20_000 });
+      await expect(windows).toHaveCount(before + 1);
       const candidate = windows.last();
       const windowId = await candidate.getAttribute("data-window-id");
       expect(windowId, `${name} should expose stable Windowing identity`).toBeTruthy();
@@ -86,14 +91,14 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     await expect(search).toBeVisible();
     await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
     const filesResult = search.locator("[data-search-result]", { hasText: "Files" }).first();
-    await expect(filesResult).toBeVisible({ timeout: 20_000 });
+    await expect(filesResult).toBeVisible();
     const beforeExplorer = await windows.count();
     await filesResult.click();
-    await expect(windows).toHaveCount(beforeExplorer + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeExplorer + 1);
 
     const explorerCandidate = windows.last();
     const explorerCandidateAddress = explorerCandidate.getByRole("textbox", { name: "Address" });
-    await expect(explorerCandidateAddress).toHaveValue("/", { timeout: 20_000 });
+    await expect(explorerCandidateAddress).toHaveValue("/");
     await expect(explorerCandidate).toHaveAccessibleName("This Plasmon");
     const explorerWindowId = await explorerCandidate.getAttribute("data-window-id");
     expect(explorerWindowId, "Explorer should expose stable Windowing identity").toBeTruthy();
@@ -115,10 +120,10 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     await generatedRename.press("Enter");
 
     const themeProbe = explorer.locator("[data-fm-node-id]", { hasText: generatedName }).first();
-    await expect(themeProbe).toBeVisible({ timeout: 20_000 });
+    await expect(themeProbe).toBeVisible();
     const beforeMarkdown = await windows.count();
     await themeProbe.dblclick();
-    await expect(windows).toHaveCount(beforeMarkdown + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(beforeMarkdown + 1);
 
     const markdownCandidate = windows.last();
     await expect(markdownCandidate).toHaveAccessibleName(`${generatedName} - Monaco Editor`);
@@ -126,7 +131,7 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     expect(markdownWindowId, "Markdown should expose stable Windowing identity").toBeTruthy();
     const markdownWindow = app.locator(`.plasmon-window-layer [data-window-id="${markdownWindowId}"]`);
     const monacoSurface = markdownWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
-    await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expect(monacoSurface).toHaveAttribute("data-editor-ready", "true", { timeout: MONACO_WORKER_TIMEOUT });
     const monacoCanvas = markdownWindow.locator(".monaco-editor-background").first();
     await expect(monacoCanvas).toBeVisible();
     await markdownWindow.getByRole("button", { name: "Split", exact: true }).click();
@@ -135,7 +140,7 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
 
     const browserWindow = await openNativeAppFromSearch("Browser");
     const browserSurface = browserWindow.getByRole("region", { name: "Web browser" });
-    await expect(browserSurface).toBeVisible({ timeout: 20_000 });
+    await expect(browserSurface).toBeVisible();
     const browserToolbar = browserSurface.locator("form").first();
     const browserAddress = browserWindow.getByRole("textbox", { name: "Web address" });
     await expect(browserToolbar).toBeVisible();
@@ -144,7 +149,7 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     const nativeSettingsWindow = await openNativeAppFromSearch("Settings");
     const nativeSettingsSurface = nativeSettingsWindow.getByRole("region", { name: "Settings" });
     const nativeSettingsPanel = nativeSettingsSurface.locator(".plasmon-native-app-panel").first();
-    await expect(nativeSettingsSurface).toBeVisible({ timeout: 20_000 });
+    await expect(nativeSettingsSurface).toBeVisible();
     await expect(nativeSettingsPanel).toBeVisible();
 
     await taskbar.getByRole("button", { name: "Start", exact: true }).click();
