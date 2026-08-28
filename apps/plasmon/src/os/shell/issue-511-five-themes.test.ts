@@ -2,13 +2,17 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
+  DEFAULT_SHELL_PREFERENCES,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
   validateShellPreferences,
   type ShellThemeId,
 } from "./preferences.ts";
 
-const visualTokens = readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8");
+const visualTokens = [
+  readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8"),
+  readFileSync(new URL("../integration/theme-graphite.scss", import.meta.url), "utf8"),
+].join("\n");
 const settingsSurface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
 const fileManagerStyles = readFileSync(new URL("../file-manager/file-manager.scss", import.meta.url), "utf8");
 const windowingStyles = readFileSync(new URL("../windowing/windowing.scss", import.meta.url), "utf8");
@@ -53,20 +57,24 @@ function tokenValue(block: string, token: string): string {
   return block.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
 }
 
-test("#511 exposes exactly five stable, individually named Shell themes", () => {
+test("#511 exposes exactly six stable, individually named Shell themes with Graphite as default", () => {
   expect(SHELL_THEME_IDS).toEqual([
-    "plasmon-dark",
+    "plasmon-graphite",
+    "plasmon-verdant",
     "plasmon-midnight",
     "plasmon-ember",
     "plasmon-glacier",
     "plasmon-rosewood",
   ]);
+  expect(SHELL_THEME_LABELS["plasmon-graphite"]).toBe("Graphite");
+  expect(SHELL_THEME_LABELS["plasmon-verdant"]).toBe("Verdant");
+  expect(DEFAULT_SHELL_PREFERENCES.themeId).toBe("plasmon-graphite");
   expect(Object.keys(SHELL_THEME_LABELS)).toEqual([...SHELL_THEME_IDS]);
-  expect(new Set(Object.values(SHELL_THEME_LABELS)).size).toBe(5);
+  expect(new Set(Object.values(SHELL_THEME_LABELS)).size).toBe(6);
   expect(settingsSurface).toContain("SHELL_THEME_LABELS[themeId]");
 });
 
-test("#511 all five theme IDs remain valid filesystem-backed Shell preference values", () => {
+test("#511 all six theme IDs remain valid filesystem-backed Shell preference values", () => {
   for (const themeId of SHELL_THEME_IDS) {
     expect(validateShellPreferences({
       version: 1,
@@ -77,6 +85,15 @@ test("#511 all five theme IDs remain valid filesystem-backed Shell preference va
       taskbarAlignment: "center",
     })?.themeId).toBe(themeId);
   }
+
+  expect(validateShellPreferences({
+    version: 1,
+    pinnedNative: [],
+    pinnedElements: [],
+    themeId: "plasmon-dark",
+    wallpaper: "aurora",
+    taskbarAlignment: "center",
+  })?.themeId).toBe("plasmon-verdant");
 });
 
 test("#511 every theme overrides the complete shared color and elevation palette", () => {
@@ -92,7 +109,15 @@ test("#511 every theme overrides the complete shared color and elevation palette
   }
 });
 
-test("#511 major assembled-surface colors are intentionally distinct across all five themes", () => {
+test("#511 Graphite is grayscale-led with a distinct colored accent", () => {
+  const graphite = themeBlock("plasmon-graphite");
+  expect(tokenValue(graphite, "--plasmon-window-background:")).toBe("#15171a");
+  expect(tokenValue(graphite, "--plasmon-window-titlebar:")).toBe("#24272c");
+  expect(tokenValue(graphite, "--plasmon-text-primary:")).toBe("#f6f7f8");
+  expect(tokenValue(graphite, "--plasmon-accent:")).toBe("#62c5e8");
+});
+
+test("#511 major assembled-surface colors are intentionally distinct across all six themes", () => {
   for (const token of [
     "--plasmon-desktop-background:",
     "--plasmon-window-background:",
@@ -103,7 +128,7 @@ test("#511 major assembled-surface colors are intentionally distinct across all 
   ]) {
     const values = SHELL_THEME_IDS.map((themeId) => tokenValue(themeBlock(themeId), token));
     expect(values.every(Boolean)).toBe(true);
-    expect(new Set(values).size).toBe(5);
+    expect(new Set(values).size).toBe(6);
   }
 });
 
