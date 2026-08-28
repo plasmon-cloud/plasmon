@@ -23,7 +23,6 @@ test("#194 Start projection keeps canonical trail identity and filters only the 
   const view = projectStartSurfaceView({
     trail: [root, accessories],
     items: [calculator, notes],
-    snapshotFolderId: "accessories",
     query: " calc ",
     busy: false,
     error: null,
@@ -38,52 +37,32 @@ test("#194 Start projection keeps canonical trail identity and filters only the 
   expect(view.status).toEqual({ loading: false, empty: false, error: null });
 });
 
-test("#573 Start projection keeps a same-folder snapshot stable during background refresh", () => {
-  const existing = node("existing", "Existing shortcut.url");
+test("#194 Start projection preserves the last filesystem snapshot while loading", () => {
+  const stale = node("stale", "Existing shortcut.url");
   const view = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
-    items: [existing],
-    snapshotFolderId: "start-root",
+    items: [stale],
     query: "",
     busy: true,
     error: null,
   });
 
-  expect(view.visibleItems).toEqual([existing]);
-  expect(view.status).toEqual({ loading: false, empty: false, error: null });
-});
-
-test("#573 Start projection shows initial loading instead of a prior folder snapshot", () => {
-  const prior = node("prior", "Prior shortcut.url");
-  const view = projectStartSurfaceView({
-    trail: [
-      { id: "start-root", name: "Start Menu" },
-      { id: "accessories", name: "Accessories" },
-    ],
-    items: [prior],
-    snapshotFolderId: "start-root",
-    query: "",
-    busy: true,
-    error: null,
-  });
-
-  expect(view.visibleItems).toEqual([]);
+  expect(view.visibleItems).toEqual([stale]);
   expect(view.status).toEqual({ loading: true, empty: false, error: null });
 });
 
-test("#194 Start projection preserves error and empty presentation without re-entering loading", () => {
-  const existing = node("existing", "Existing shortcut.url");
-  const erroredRefresh = projectStartSurfaceView({
+test("#194 Start projection preserves independent error, loading, and empty presentation", () => {
+  const stale = node("stale", "Existing shortcut.url");
+  const erroredLoading = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
-    items: [existing],
-    snapshotFolderId: "start-root",
+    items: [stale],
     query: "",
     busy: true,
     error: "filesystem unavailable",
   });
-  expect(erroredRefresh.visibleItems).toEqual([existing]);
-  expect(erroredRefresh.status).toEqual({
-    loading: false,
+  expect(erroredLoading.visibleItems).toEqual([stale]);
+  expect(erroredLoading.status).toEqual({
+    loading: true,
     empty: false,
     error: "filesystem unavailable",
   });
@@ -91,7 +70,6 @@ test("#194 Start projection preserves error and empty presentation without re-en
   const erroredEmpty = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
     items: [],
-    snapshotFolderId: "start-root",
     query: "",
     busy: false,
     error: "filesystem unavailable",
@@ -104,8 +82,7 @@ test("#194 Start projection preserves error and empty presentation without re-en
 
   const filteredEmpty = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
-    items: [existing],
-    snapshotFolderId: "start-root",
+    items: [stale],
     query: "missing",
     busy: false,
     error: null,
