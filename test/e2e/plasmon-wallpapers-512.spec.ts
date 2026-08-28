@@ -1,12 +1,10 @@
-import { expect, test, type Route } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const FIXTURE_PARAM = "plasmon-fixture";
-const FIXTURE_VALUE = "first-demo";
 
 const THEME_WALLPAPERS = [
   ["Plasmon Dark", "plasmon-dark", "plasmon-aurora"],
@@ -16,23 +14,8 @@ const THEME_WALLPAPERS = [
   ["Rosewood", "plasmon-rosewood", "rosewood-bloom"],
 ] as const;
 
-async function redirectToFirstDemo(route: Route): Promise<void> {
-  const requestUrl = new URL(route.request().url());
-  const appRoot = `/app/${APP_ID}/`;
-  const isMainDocument = route.request().resourceType() === "document"
-    && (requestUrl.pathname === appRoot || requestUrl.pathname === `${appRoot}index.html`);
-  if (!isMainDocument || requestUrl.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE) {
-    await route.continue();
-    return;
-  }
-  requestUrl.searchParams.set(FIXTURE_PARAM, FIXTURE_VALUE);
-  await route.fulfill({
-    status: 307,
-    headers: { location: requestUrl.href, "cache-control": "no-store" },
-  });
-}
-
-test("#512 generated wallpapers follow themes until the user pins one", async ({ page }) => {
+test("#512 wallpapers are visibly exposed behind Desktop, follow themes, and allow pinning", async ({ page }) => {
+  test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -45,32 +28,32 @@ test("#512 generated wallpapers follow themes until the user pins one", async ({
       runtime.developerIdentitySeed,
     );
 
-    const fixtureRoute = `**/app/${APP_ID}/**`;
-    await page.route(fixtureRoute, redirectToFirstDemo);
-    const fixtureNavigation = page.waitForEvent("framenavigated", (candidate) => {
-      try {
-        const url = new URL(candidate.url());
-        return (url.pathname === `/app/${APP_ID}/` || url.pathname === `/app/${APP_ID}/index.html`)
-          && url.searchParams.get(FIXTURE_PARAM) === FIXTURE_VALUE;
-      } catch {
-        return false;
-      }
-    });
-
     await page.locator('[data-tid="launcher-open"]').click();
     await expect(page.locator('[data-tid="launcher"]')).toBeVisible();
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
-    await fixtureNavigation;
-    await page.unroute(fixtureRoute, redirectToFirstDemo);
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible();
+    await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
     const wallpaper = app.locator(".plasmon-shell__wallpaper");
-    await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 30_000 });
+    const desktop = app.locator(".plasmon-desktop");
+    await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
+    await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+    await expect(wallpaper).toBeVisible();
+    await expect(desktop).toBeVisible();
 
-    await app.getByRole("button", { name: "Start" }).click();
+    // Regression guard for the real user-visible failure: the FileManager-owned
+    // desktop canvas sits above Shell wallpaper in DOM stacking order. If it
+    // paints its old semantic desktop background, every selected wallpaper is
+    // completely hidden even though data-plasmon-wallpaper and backgroundImage
+    // on the wallpaper element are correct.
+    await expect.poll(async () => desktop.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return `${style.backgroundColor}|${style.backgroundImage}`;
+    })).toBe("rgba(0, 0, 0, 0)|none");
+
+    await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
@@ -85,7 +68,11 @@ test("#512 generated wallpapers follow themes until the user pins one", async ({
       await settings.getByRole("button", { name: themeLabel, exact: true }).click();
       await expect(shell).toHaveAttribute("data-plasmon-theme", themeId);
       await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
-      backgrounds.add(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage));
+      const rendered = await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage);
+      expect(rendered).toContain("gradient");
+      backgrounds.add(rendered);
+      expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
+        .toBe("rgba(0, 0, 0, 0)");
     }
     expect(backgrounds.size).toBe(THEME_WALLPAPERS.length);
 
@@ -111,6 +98,8 @@ test("#512 generated wallpapers follow themes until the user pins one", async ({
     await expect(pinned).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "midnight-orbit");
     expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage)).not.toBe(pinnedBackground);
+    expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .toBe("rgba(0, 0, 0, 0)");
 
     health.assertClean();
   } finally {
