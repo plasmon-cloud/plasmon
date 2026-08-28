@@ -11,6 +11,7 @@ import type {
   OpenService,
 } from "../contracts/index.ts";
 import { OpenWithServiceModel } from "../associations/index.ts";
+import { classifyResource } from "../fs/index.ts";
 import { ResourceIcon } from "../visual/index.ts";
 import {
   basenameSelectionRange,
@@ -45,7 +46,7 @@ export function friendlyKind(node: FsNode, atom: AtomDescriptor | null = null): 
   if (node.kind === "directory") return "Folder";
   if (node.kind === "shortcut" || node.name.toLowerCase().endsWith(".url")) return "Internet shortcut";
   if (node.kind === "atom") return "Plasmon Atom";
-  return node.mime ?? "File";
+  return classifyResource(node).type.mime ?? "File";
 }
 
 export async function inspectProperties(

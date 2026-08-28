@@ -5,7 +5,7 @@ export interface BuildMetafileLike {
 const REQUIRED_MAIN_INPUT_SUFFIXES = [
   "/src/native-apps/content-apps.ts",
   "/src/native-apps/text/TextEditor.tsx",
-  "/src/native-apps/text/MonacoEditorSurface.tsx",
+  "/src/native-apps/shared/monaco/MonacoEditorHost.tsx",
   "/src/native-apps/markdown/MarkdownEditor.tsx",
   "/src/native-apps/markdown/MarkdownPreview.tsx",
 ] as const;
@@ -40,15 +40,23 @@ const REQUIRED_ENGINE_INPUT_FRAGMENTS = [
   "/node_modules/dompurify/",
 ] as const;
 
-const REQUIRED_OUTPUT_SUFFIXES = [
+const MONACO_PROGRAM_FILES_OUTPUT_ROOT = "/dist/web/System/Program Files/MonacoEditor/";
+const REQUIRED_FRONTEND_OUTPUT_SUFFIXES = [
   "/dist/web/main.js",
   "/dist/web/main.bundle.css",
-  "/dist/web/monaco-workers/editor.worker.js",
-  "/dist/web/monaco-workers/json.worker.js",
-  "/dist/web/monaco-workers/css.worker.js",
-  "/dist/web/monaco-workers/html.worker.js",
-  "/dist/web/monaco-workers/ts.worker.js",
 ] as const;
+const REQUIRED_MONACO_OUTPUT_SUFFIXES = [
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}json.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}css.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}html.worker.js`,
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}ts.worker.js`,
+] as const;
+const REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES = [
+  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
+] as const;
+
+type MonacoProfile = "slim" | "full";
 
 function normalized(value: string): string {
   return `/${value.replaceAll("\\", "/").replace(/^\.?\//u, "")}`;
@@ -58,14 +66,27 @@ function hasSuffix(values: readonly string[], suffix: string): boolean {
   return values.some((value) => normalized(value).endsWith(suffix));
 }
 
-export function assertMatureNativeAppBundle(metafile: BuildMetafileLike): void {
+export interface NativeAppPackageProfile {
+  requireEditors?: boolean;
+  monacoProfile?: MonacoProfile;
+}
+
+export function assertMatureNativeAppBundle(
+  metafile: BuildMetafileLike,
+  profile: NativeAppPackageProfile = {},
+): void {
+  const requireEditors = profile.requireEditors ?? true;
+  const monacoProfile = profile.monacoProfile ?? "full";
   const outputs = Object.entries(metafile.outputs);
   const outputPaths = outputs.map(([path]) => path);
   const main = outputs.find(([path]) => normalized(path).endsWith("/dist/web/main.js"));
   if (!main) throw new Error("Native app package build did not emit dist/web/main.js");
 
   const mainInputs = Object.keys(main[1].inputs ?? {});
-  for (const suffix of REQUIRED_MAIN_INPUT_SUFFIXES) {
+  const requiredMainInputs = requireEditors
+    ? REQUIRED_MAIN_INPUT_SUFFIXES
+    : [REQUIRED_MAIN_INPUT_SUFFIXES[0]];
+  for (const suffix of requiredMainInputs) {
     if (!hasSuffix(mainInputs, suffix)) {
       throw new Error(`Native app package main bundle is missing ${suffix}`);
     }
@@ -75,7 +96,10 @@ export function assertMatureNativeAppBundle(metafile: BuildMetafileLike): void {
   // currently land in main.js while dynamic imports may move to split chunks in
   // a future build without changing the package-level inclusion contract.
   const allInputs = outputs.flatMap(([, output]) => Object.keys(output.inputs ?? {}));
-  for (const app of FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS) {
+  const requiredApps = requireEditors
+    ? FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS
+    : FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS.filter(({ name }) => name !== "Text" && name !== "Markdown");
+  for (const app of requiredApps) {
     if (!hasSuffix(allInputs, app.suffix)) {
       throw new Error(`Native app package build is missing first-party ${app.name} loader input ${app.suffix}`);
     }
@@ -84,20 +108,30 @@ export function assertMatureNativeAppBundle(metafile: BuildMetafileLike): void {
   const css = outputs.find(([path]) => normalized(path).endsWith("/dist/web/main.bundle.css"));
   if (!css) throw new Error("Native app package build did not emit dist/web/main.bundle.css");
   const cssInputs = Object.keys(css[1].inputs ?? {});
-  if (!cssInputs.some((path) => normalized(path).includes("/node_modules/monaco-editor/"))) {
+  if (requireEditors && !cssInputs.some((path) => normalized(path).includes("/node_modules/monaco-editor/"))) {
     throw new Error("Native app package stylesheet is missing Monaco editor CSS");
   }
 
-  for (const fragment of REQUIRED_ENGINE_INPUT_FRAGMENTS) {
+  const requiredEngineInputs = requireEditors ? REQUIRED_ENGINE_INPUT_FRAGMENTS : [];
+  for (const fragment of requiredEngineInputs) {
     if (!allInputs.some((path) => normalized(path).includes(fragment))) {
       throw new Error(`Native app package build is missing mature engine input ${fragment}`);
     }
   }
 
-  for (const suffix of REQUIRED_OUTPUT_SUFFIXES) {
+  const requiredOutputs = !requireEditors
+    ? REQUIRED_FRONTEND_OUTPUT_SUFFIXES
+    : monacoProfile === "slim"
+      ? [...REQUIRED_FRONTEND_OUTPUT_SUFFIXES, ...REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES]
+      : [...REQUIRED_FRONTEND_OUTPUT_SUFFIXES, ...REQUIRED_MONACO_OUTPUT_SUFFIXES];
+  for (const suffix of requiredOutputs) {
     if (!hasSuffix(outputPaths, suffix)) {
       throw new Error(`Native app package build is missing required output ${suffix}`);
     }
+  }
+
+  if (outputPaths.some((path) => normalized(path).includes("/dist/web/monaco-workers/"))) {
+    throw new Error("Native app package build still emits the legacy top-level Monaco worker path");
   }
 }
 

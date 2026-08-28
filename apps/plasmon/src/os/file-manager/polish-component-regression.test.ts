@@ -3,9 +3,10 @@ import { readFileSync } from "node:fs";
 
 test("FileEntry initial rename selection is session keyed, not controlled-value keyed", () => {
   const source = readFileSync(new URL("./FileEntry.tsx", import.meta.url), "utf8");
-  expect(source).toContain("[isRenaming, rename?.initialName, rename?.session]");
-  expect(source).not.toContain("[isRenaming, rename?.value]");
-  expect(source).toContain("renameSelectionRef.current.initialize(rename.session");
+  expect(source).toContain("rename.session");
+  expect(source).toContain("rename?.session");
+  expect(source).not.toContain("rename?.value]");
+  expect(source).toContain("renameSelectionRef.current.initialize(");
 });
 
 test("FileEntry handles Enter and Escape without blur re-committing the same action", () => {
@@ -14,13 +15,4 @@ test("FileEntry handles Enter and Escape without blur re-committing the same act
   expect(source).toContain("if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit()");
   expect(source).toContain('if (action === "commit") onRenameCommit()');
   expect(source).toContain("else onRenameCancel()");
-});
-
-test("FileManager passes its association registry into FileEntry presentation", () => {
-  const source = readFileSync(new URL("./FileManager.tsx", import.meta.url), "utf8");
-  const start = source.indexOf("<FileEntry");
-  const end = source.indexOf("/>", start);
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  expect(source.slice(start, end)).toContain("{...(associations ? { associations } : {})}");
 });

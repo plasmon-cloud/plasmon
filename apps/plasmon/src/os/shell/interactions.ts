@@ -1,3 +1,24 @@
+export {
+  closeNativeTaskContextProcess,
+  nativeTaskContextProcessId,
+  placeShellContextMenu,
+  placeTaskbarContextMenu,
+  shellContextMenuHeight,
+  taskbarContextMenuHeight,
+  taskbarPinAction,
+} from "./taskbar.ts";
+export type {
+  ShellContextAnchor,
+  ShellContextMenuPosition,
+  ShellContextMenuSize,
+  ShellContextViewport,
+  TaskbarContextAnchor,
+  TaskbarContextMenuPosition,
+  TaskbarContextMenuSize,
+  TaskbarContextViewport,
+  TaskbarPinAction,
+} from "./taskbar.ts";
+
 export interface ShellDismissHit {
   insideFlyout: boolean;
   insideToggle: boolean;
@@ -20,22 +41,10 @@ export interface ShellContextMenuHit {
   elementTask: boolean;
 }
 
-/** Specialized task menus outrank the generic Shell fallback. */
+/** Shared first-party context ownership remains Shell policy; task-specific placement/actions live in taskbar.ts. */
 export function resolveShellContextMenuPolicy(hit: ShellContextMenuHit): ShellContextMenuPolicy {
   if (!hit.shellOwned) return "none";
   if (hit.nativeTask) return "native-task";
   if (hit.elementTask) return "element-task";
   return "generic";
-}
-
-export interface TaskbarPinAction {
-  pinned: boolean;
-  nextPinned: boolean;
-  label: "Pin to taskbar" | "Unpin from taskbar";
-}
-
-export function taskbarPinAction(pinned: boolean): TaskbarPinAction {
-  return pinned
-    ? { pinned: true, nextPinned: false, label: "Unpin from taskbar" }
-    : { pinned: false, nextPinned: true, label: "Pin to taskbar" };
 }

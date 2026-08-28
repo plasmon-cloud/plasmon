@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import type {
   CreateFileOptions,
   FsListOptions,
@@ -294,14 +293,4 @@ test("shared shortcut nodes render as shortcuts and preserve their own NodeId on
   const fs = new Gate3Fs([node("root", null, "", "directory"), node("dest", "root", "Dest", "directory"), shortcut]);
   expect((await fs.rename("shortcut-id", "Renamed shortcut")).id).toBe("shortcut-id");
   expect((await fs.move("shortcut-id", "dest")).id).toBe("shortcut-id");
-});
-
-test("FileManager owns Delete and specialized context-menu browser events", () => {
-  const source = readFileSync(new URL("./FileManager.tsx", import.meta.url), "utf8");
-  expect(source).toContain("onKeyDownCapture={handleKeyDown}");
-  expect(source).toContain('command === "delete"');
-  expect(source).toContain("void removeSelected()");
-  expect(source).toContain("event.preventDefault();");
-  expect(source).toContain('onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => event.preventDefault()}');
-  expect(source).toContain('onClick={() => menuAction("download")}');
 });

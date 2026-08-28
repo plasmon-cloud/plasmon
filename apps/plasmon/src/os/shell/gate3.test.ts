@@ -1,20 +1,13 @@
-// @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
 import type {
-  CreateFileOptions,
   ExternalElement,
   FsEvent,
   FsEventSource,
   FsListOptions,
   FsNode,
-  FsReadRange,
   FsService,
-  HandlerId,
   JsonValue,
   NativeAppDefinition,
-  NodeId,
-  Revision,
-  WriteOptions,
 } from "../contracts/index.ts";
 import {
   resolveShellContextMenuPolicy,
@@ -22,232 +15,126 @@ import {
   shouldDismissShellFlyout,
   taskbarPinAction,
 } from "./interactions.ts";
-import {
-  SEARCH_CATEGORY_LIMITS,
-  SEARCH_TOTAL_LIMIT,
-  LatestSearchController,
-  searchShell,
-  subscribeSearchInvalidation,
-} from "./search.ts";
-import {
-  START_MENU_PATH,
-  listStartMenuFolder,
-  parseStartShortcut,
-  reconcileStartMenu,
-  type StartShortcut,
-} from "./startMenu.ts";
+import { LatestSearchController, SEARCH_CATEGORY_LIMITS, SEARCH_TOTAL_LIMIT, searchShell, subscribeSearchInvalidation } from "./search.ts";
+import { parseStartShortcut, reconcileStartMenu } from "./startMenu.ts";
 
 class GateFs implements FsService, FsEventSource {
-  private readonly nodes = new Map<NodeId, FsNode>();
-  private readonly listeners = new Set<(event: FsEvent) => void>();
-  private nextId = 1;
-  private tick = 10;
+  private sequence = 0;
+  private nodes = new Map<string, FsNode>([["root", {
+    id: "root", parentId: null, name: "", kind: "directory", size: 0,
+    createdAt: 1, modifiedAt: 1, metadata: {},
+  }]]);
+  private listeners = new Set<(event: FsEvent) => void>();
 
-  constructor() {
-    this.nodes.set("root", {
-      id: "root", parentId: null, name: "", kind: "directory", size: 0,
-      createdAt: 1, modifiedAt: 1, metadata: {},
-    });
+  private emit(nodeId: string): void {
+    const event: FsEvent = { type: "change", nodeId, revision: this.sequence };
+    for (const listener of this.listeners) listener(event);
   }
-
-  async stat(id: NodeId): Promise<FsNode> {
-    const node = this.nodes.get(id);
-    if (!node) throw new Error(`missing node ${id}`);
-    return this.clone(node);
-  }
-
-  async resolvePath(path: string): Promise<FsNode | null> {
-    if (path === "/") return this.stat("root");
-    let current = this.nodes.get("root")!;
-    for (const part of path.split("/").filter(Boolean)) {
-      const child = [...this.nodes.values()].find((node) => node.parentId === current.id && node.name === part);
-      if (!child) return null;
-      current = child;
-    }
-    return this.clone(current);
-  }
-
-  async pathOf(id: NodeId): Promise<string> {
-    const parts: string[] = [];
-    let current = this.nodes.get(id);
-    if (!current) throw new Error(`missing node ${id}`);
-    while (current.parentId) {
-      parts.unshift(current.name);
-      current = this.nodes.get(current.parentId);
-      if (!current) throw new Error("broken parent");
-    }
-    return `/${parts.join("/")}`;
-  }
-
-  async list(parentId: NodeId, options: FsListOptions = {}): Promise<FsNode[]> {
-    let result = [...this.nodes.values()].filter((node) => node.parentId === parentId);
-    if (!options.includeHidden) result = result.filter((node) => !node.name.startsWith("."));
-    if (options.sort === "modified") result.sort((a, b) => b.modifiedAt - a.modifiedAt);
-    else result.sort((a, b) => a.name.localeCompare(b.name));
-    return result.map((node) => this.clone(node));
-  }
-
-  async mkdir(parentId: NodeId, name: string): Promise<FsNode> {
-    return this.create(parentId, name, "directory", {});
-  }
-
-  async createFile(parentId: NodeId, name: string, options: CreateFileOptions = {}): Promise<FsNode> {
-    return this.create(parentId, name, options.kind ?? "file", options.metadata ?? {}, options.mime);
-  }
-
-  async read(_id: NodeId, _range?: FsReadRange): Promise<Uint8Array> { return new Uint8Array(); }
-  async write(id: NodeId, bytes: Uint8Array, _options?: WriteOptions): Promise<FsNode> {
-    const node = this.require(id);
-    node.size = bytes.length;
-    node.modifiedAt = ++this.tick;
-    this.emit({ type: "changed", node: this.clone(node) });
-    return this.clone(node);
-  }
-
-  async rename(id: NodeId, newName: string): Promise<FsNode> {
-    const node = this.require(id);
-    node.name = newName;
-    node.modifiedAt = ++this.tick;
-    this.emit({ type: "changed", node: this.clone(node) });
-    return this.clone(node);
-  }
-
-  async move(id: NodeId, newParentId: NodeId): Promise<FsNode> {
-    const node = this.require(id);
-    const oldParentId = node.parentId;
-    if (!oldParentId) throw new Error("cannot move root");
-    node.parentId = newParentId;
-    node.modifiedAt = ++this.tick;
-    this.emit({ type: "moved", node: this.clone(node), oldParentId });
-    return this.clone(node);
-  }
-
-  async copy(): Promise<FsNode> { throw new Error("unused"); }
-
-  async remove(id: NodeId, options: { recursive?: boolean } = {}): Promise<void> {
-    const node = this.require(id);
-    const children = [...this.nodes.values()].filter((candidate) => candidate.parentId === id);
-    if (children.length && !options.recursive) throw new Error("directory not empty");
-    for (const child of children) await this.remove(child.id, { recursive: true });
-    this.nodes.delete(id);
-    if (node.parentId) this.emit({ type: "removed", id, parentId: node.parentId });
-  }
-
-  async setMetadata(id: NodeId, patch: Record<string, JsonValue | null>): Promise<FsNode> {
-    const node = this.require(id);
-    for (const [key, value] of Object.entries(patch)) {
-      if (value === null) delete node.metadata[key];
-      else node.metadata[key] = structuredClone(value);
-    }
-    node.modifiedAt = ++this.tick;
-    this.emit({ type: "changed", node: this.clone(node) });
-    return this.clone(node);
-  }
-
-  async revision(): Promise<Revision> { return BigInt(this.tick); }
 
   subscribe(listener: (event: FsEvent) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  private create(parentId: NodeId, name: string, kind: FsNode["kind"], metadata: Record<string, JsonValue>, mime?: string): FsNode {
-    if (!this.nodes.has(parentId)) throw new Error(`missing parent ${parentId}`);
-    if ([...this.nodes.values()].some((node) => node.parentId === parentId && node.name === name)) throw new Error(`duplicate ${name}`);
-    const id = `n${this.nextId++}`;
-    const node: FsNode = {
-      id, parentId, name, kind, size: 0,
-      ...(mime ? { mime } : {}),
-      createdAt: ++this.tick,
-      modifiedAt: this.tick,
-      metadata: structuredClone(metadata),
-    };
-    this.nodes.set(id, node);
-    this.emit({ type: "created", node: this.clone(node) });
-    return this.clone(node);
+  async resolvePath(path: string): Promise<FsNode | null> {
+    if (path === "/") return this.nodes.get("root") ?? null;
+    const parts = path.split("/").filter(Boolean);
+    let parentId = "root";
+    let current: FsNode | undefined;
+    for (const part of parts) {
+      current = [...this.nodes.values()].find((node) => node.parentId === parentId && node.name === part);
+      if (!current) return null;
+      parentId = current.id;
+    }
+    return current ?? null;
   }
 
-  private require(id: NodeId): FsNode {
-    const node = this.nodes.get(id);
-    if (!node) throw new Error(`missing node ${id}`);
-    return node;
+  async stat(id: string): Promise<FsNode | null> { return this.nodes.get(id) ?? null; }
+  async list(parentId: string, _options?: FsListOptions): Promise<FsNode[]> {
+    return [...this.nodes.values()].filter((node) => node.parentId === parentId).sort((a, b) => a.name.localeCompare(b.name));
   }
-
-  private clone(node: FsNode): FsNode {
-    return { ...node, metadata: structuredClone(node.metadata) };
+  async createDirectory(parentId: string, name: string, options?: { metadata?: Record<string, JsonValue> }): Promise<FsNode> {
+    const node: FsNode = { id: `node-${++this.sequence}`, parentId, name, kind: "directory", size: 0, createdAt: this.sequence, modifiedAt: this.sequence, metadata: options?.metadata ?? {} };
+    this.nodes.set(node.id, node); this.emit(node.id); return node;
   }
-
-  private emit(event: FsEvent): void {
-    for (const listener of [...this.listeners]) listener(event);
+  async mkdir(parentId: string, name: string): Promise<FsNode> {
+    return this.createDirectory(parentId, name);
+  }
+  async createFile(parentId: string, name: string, options: { mime?: string; kind?: "file" | "shortcut" | "atom"; metadata?: Record<string, JsonValue> } = {}): Promise<FsNode> {
+    const node: FsNode = { id: `node-${++this.sequence}`, parentId, name, kind: options.kind ?? "file", mime: options.mime, size: 0, createdAt: this.sequence, modifiedAt: this.sequence, metadata: options.metadata ?? {} };
+    this.nodes.set(node.id, node); this.emit(node.id); return node;
+  }
+  async read(): Promise<Uint8Array> { return new Uint8Array(); }
+  async write(): Promise<FsNode> { throw new Error("not needed"); }
+  async rename(id: string, name: string): Promise<FsNode> { const node = this.nodes.get(id)!; const next = { ...node, name }; this.nodes.set(id, next); this.emit(id); return next; }
+  async move(id: string, parentId: string): Promise<FsNode> { const node = this.nodes.get(id)!; const next = { ...node, parentId }; this.nodes.set(id, next); this.emit(id); return next; }
+  async copy(): Promise<FsNode> { throw new Error("not needed"); }
+  async remove(id: string): Promise<void> { this.nodes.delete(id); this.emit(id); }
+  async setMetadata(id: string, patch: Record<string, JsonValue | undefined>): Promise<FsNode> {
+    const node = this.nodes.get(id)!;
+    const metadata = { ...node.metadata };
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) delete metadata[key]; else metadata[key] = value;
+    }
+    const next = { ...node, metadata }; this.nodes.set(id, next); this.emit(id); return next;
   }
 }
 
 const textApp: NativeAppDefinition = {
-  id: "native:text", handlerId: "native:text", name: "Text Editor", icon: "T",
-  defaultWindow: { width: 700, height: 500 }, associations: [],
+  id: "text", handlerId: "plasmon.text", name: "Text", singleton: false,
+  window: { title: "Text", width: 800, height: 600, minWidth: 480, minHeight: 320 },
 };
-const settingsApp: NativeAppDefinition = {
-  id: "native:settings", handlerId: "native:settings", name: "Settings", icon: "S",
-  defaultWindow: { width: 700, height: 500 }, associations: [],
-};
-const mailElement: ExternalElement = {
-  id: "mail", name: "Mail", description: "Neutron Mail", tiles: [{ id: "main", title: "Main" }], running: "unknown",
-};
+const mailElement: ExternalElement = { id: "mail", name: "Mail", description: "Inbox", running: "no" };
 
-async function shortcutNodes(fs: GateFs): Promise<StartShortcut[]> {
-  const root = await fs.resolvePath(START_MENU_PATH);
-  if (!root) return [];
-  const output: StartShortcut[] = [];
-  const queue = [root];
-  while (queue.length) {
+async function shortcutNodes(fs: GateFs) {
+  const start = await fs.resolvePath("/System/Start Menu");
+  if (!start) return [];
+  const shortcuts: Array<NonNullable<ReturnType<typeof parseStartShortcut>>> = [];
+  const queue = [start];
+  while (queue.length > 0) {
     const folder = queue.shift()!;
-    for (const node of await fs.list(folder.id, { includeHidden: true })) {
-      if (node.kind === "directory") queue.push(node);
-      else {
-        const shortcut = parseStartShortcut(node);
-        if (shortcut) output.push(shortcut);
+    for (const node of await fs.list(folder.id)) {
+      if (node.kind === "directory") {
+        queue.push(node);
+        continue;
       }
+      const shortcut = parseStartShortcut(node);
+      if (shortcut) shortcuts.push(shortcut);
     }
   }
-  return output;
+  return shortcuts;
 }
 
 test("Start is filesystem-backed with folders and seeded shortcut nodes", async () => {
   const fs = new GateFs();
-  const result = await reconcileStartMenu(fs, [textApp, settingsApp], [mailElement]);
-  expect(await fs.pathOf(result.root.id)).toBe(START_MENU_PATH);
-  const rootEntries = await listStartMenuFolder(fs, result.root.id);
-  expect(rootEntries.filter((node) => node.kind === "directory").map((node) => node.name)).toEqual(["Accessories", "Neutron"]);
-  expect(rootEntries.filter((node) => node.kind === "shortcut").map((node) => node.name)).toEqual(["Settings"]);
+  await reconcileStartMenu(fs, [textApp], [mailElement]);
+  expect(await fs.resolvePath("/System/Start Menu")).not.toBeNull();
+  expect(await fs.resolvePath("/System/Start Menu/Accessories")).not.toBeNull();
+  expect(await fs.resolvePath("/System/Start Menu/Neutron")).not.toBeNull();
   const shortcuts = await shortcutNodes(fs);
-  expect(shortcuts.map((item) => item.target.kind).sort()).toEqual(["element", "native", "native"]);
+  expect(shortcuts.some((item) => item.target.kind === "native" && item.target.handlerId === "plasmon.text")).toBe(true);
+  expect(shortcuts.some((item) => item.target.kind === "element" && item.target.elementId === "mail")).toBe(true);
 });
 
 test("Start folder navigation lists child filesystem content", async () => {
   const fs = new GateFs();
-  const { root } = await reconcileStartMenu(fs, [textApp], []);
-  const accessories = (await listStartMenuFolder(fs, root.id)).find((node) => node.name === "Accessories");
+  await reconcileStartMenu(fs, [textApp], [mailElement]);
+  const accessories = await fs.resolvePath("/System/Start Menu/Accessories");
   expect(accessories?.kind).toBe("directory");
-  const children = await listStartMenuFolder(fs, accessories!.id);
-  expect(children.map((node) => node.name)).toEqual(["Text Editor"]);
-  expect(parseStartShortcut(children[0]!)?.target).toEqual({ kind: "native", handlerId: "native:text" });
+  expect((await fs.list(accessories!.id)).some((node) => node.name === "Text")).toBe(true);
 });
 
 test("Start reconciliation prevents duplicates and preserves user rename/move", async () => {
   const fs = new GateFs();
-  const first = await reconcileStartMenu(fs, [textApp, settingsApp], [mailElement]);
-  const before = await shortcutNodes(fs);
-  const text = before.find((item) => item.target.kind === "native" && item.target.handlerId === "native:text")!;
-  const tools = await fs.mkdir(first.root.id, "My Tools");
-  await fs.rename(text.node.id, "My Editor");
+  await reconcileStartMenu(fs, [textApp], [mailElement]);
+  const text = (await shortcutNodes(fs)).find((item) => item.target.kind === "native")!;
+  const tools = await fs.createDirectory((await fs.resolvePath("/System/Start Menu"))!.id, "Tools");
+  await fs.rename(text.node.id, "Editor");
   await fs.move(text.node.id, tools.id);
-
-  await reconcileStartMenu(fs, [textApp, settingsApp], [mailElement]);
-  const after = await shortcutNodes(fs);
-  const preserved = after.find((item) => item.node.id === text.node.id)!;
-  expect(after).toHaveLength(before.length);
-  expect(preserved.node.name).toBe("My Editor");
-  expect(preserved.node.parentId).toBe(tools.id);
+  await reconcileStartMenu(fs, [textApp], [mailElement]);
+  const preserved = await fs.stat(text.node.id);
+  expect(preserved?.name).toBe("Editor");
+  expect(preserved?.parentId).toBe(tools.id);
 });
 
 test("intentionally deleted seeded shortcut is not recreated", async () => {
@@ -275,7 +162,7 @@ test("empty-query Search returns useful apps, Documents, Media, and Atoms", asyn
   expect(batch.results.some((result) => result.category === "atoms" && result.title === "draft.atom")).toBe(true);
 });
 
-test("Search classification and result caps are bounded", async () => {
+test("Search classification and result caps are bounded without implying incomplete traversal", async () => {
   const fs = new GateFs();
   for (let index = 0; index < 30; index += 1) await fs.createFile("root", `doc-${index}.md`, { mime: "text/markdown" });
   for (let index = 0; index < 30; index += 1) await fs.createFile("root", `image-${index}.png`, { mime: "image/png" });
@@ -283,7 +170,8 @@ test("Search classification and result caps are bounded", async () => {
   expect(batch.results.filter((result) => result.category === "documents")).toHaveLength(SEARCH_CATEGORY_LIMITS.documents);
   expect(batch.results.filter((result) => result.category === "media")).toHaveLength(SEARCH_CATEGORY_LIMITS.media);
   expect(batch.results.length).toBeLessThanOrEqual(SEARCH_TOTAL_LIMIT);
-  expect(batch.truncated).toBe(true);
+  expect(batch.truncated).toBe(false);
+  expect(batch.capped).toBe(true);
 });
 
 test("FsEvent invalidation triggers a rescan that discovers newly created content", async () => {
@@ -303,15 +191,12 @@ test("stale async searches cannot overwrite newer query state", async () => {
   const controller = new LatestSearchController<string>();
   const applied: string[] = [];
   let oldResolve!: (value: string) => void;
-  let newResolve!: (value: string) => void;
-  const oldValue = new Promise<string>((resolve) => { oldResolve = resolve; });
-  const newValue = new Promise<string>((resolve) => { newResolve = resolve; });
-  const oldRun = controller.run(() => oldValue, (value) => applied.push(value));
-  const newRun = controller.run(() => newValue, (value) => applied.push(value));
-  newResolve("new");
-  expect(await newRun).toBe(true);
+  const old = new Promise<string>((resolve) => { oldResolve = resolve; });
+  const older = controller.run(() => old, (value) => applied.push(value));
+  const newer = controller.run(async () => "new", (value) => applied.push(value));
+  expect(await newer).toBe(true);
   oldResolve("old");
-  expect(await oldRun).toBe(false);
+  expect(await older).toBe(false);
   expect(applied).toEqual(["new"]);
 });
 

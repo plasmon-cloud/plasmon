@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type FrameLocator, type Locator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
@@ -7,7 +7,22 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 const NES_FIXTURE = resolve("apps/plasmon/dist/web/Games/Test ROMs/PlasmonTest.nes");
 
-test("packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets", async ({ page }) => {
+type EmulatorHarness = {
+  app: FrameLocator;
+  dialog: Locator;
+  runtimeRoot: Locator;
+  host: Locator;
+  emulator: FrameLocator;
+  runtimeRequests: string[];
+  runtimeHttpErrors: string[];
+  failedRuntimeRequests: string[];
+  externalRuntimeRequests: string[];
+  pageErrors: string[];
+  consoleErrors: string[];
+  runtimeState: () => Promise<string>;
+};
+
+const openEmulatorFixture = async (page: Page): Promise<EmulatorHarness> => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const runtimeRequests: string[] = [];
@@ -163,38 +178,124 @@ test("packaged Plasmon imports a legal NES fixture and initializes EmulatorJS fr
     throw new Error(`EmulatorJS loader should initialize from packaged assets\nRuntime state: ${state}\n${cause}`);
   }
 
+  return {
+    app,
+    dialog,
+    runtimeRoot,
+    host,
+    emulator,
+    runtimeRequests,
+    runtimeHttpErrors,
+    failedRuntimeRequests,
+    externalRuntimeRequests,
+    pageErrors,
+    consoleErrors,
+    runtimeState,
+  };
+};
+
+const waitForEmulatorGameStart = async (harness: EmulatorHarness): Promise<void> => {
   try {
-    await expect.poll(
-      async () => {
-        if (await host.count() > 0 && await host.first().getAttribute("data-emulatorjs-ready") === "true") {
-          return "ready";
+    await harness.runtimeRoot.evaluate((element) => {
+      const readState = () => ({
+        phase: element.getAttribute("data-emulatorjs-phase"),
+        error: element.getAttribute("data-emulatorjs-error"),
+      });
+      const settle = (state: ReturnType<typeof readState>) => {
+        if (state.phase === "game-started") return "ready" as const;
+        if (state.phase === "error" || state.error) {
+          throw new Error(state.error ?? "EmulatorJS runtime entered the error state");
         }
-        return await runtimeState();
-      },
-      { timeout: 90_000, message: "EmulatorJS core and NES fixture should start" },
-    ).toBe("ready");
+        return null;
+      };
+
+      const current = settle(readState());
+      if (current === "ready") return;
+
+      return new Promise<void>((resolve, reject) => {
+        const observer = new MutationObserver(() => {
+          try {
+            if (settle(readState()) !== "ready") return;
+            observer.disconnect();
+            resolve();
+          } catch (error) {
+            observer.disconnect();
+            reject(error);
+          }
+        });
+        observer.observe(element, {
+          attributes: true,
+          attributeFilter: ["data-emulatorjs-phase", "data-emulatorjs-error"],
+        });
+      });
+    });
   } catch (error) {
-    const state = await runtimeState();
+    const state = await harness.runtimeState();
     const cause = error instanceof Error ? error.message : String(error);
     throw new Error(`EmulatorJS core and NES fixture should start\nRuntime state: ${state}\n${cause}`);
   }
+};
 
-  await expect(emulator.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+const closeEmulator = async (harness: EmulatorHarness): Promise<void> => {
+  await harness.dialog.getByRole("button", { name: "Close" }).click();
+  await expect(harness.dialog).toBeHidden({ timeout: 5_000 });
+  await expect(harness.app.locator('iframe[title="NES game"]')).toHaveCount(0);
+  expect(harness.pageErrors).toEqual([]);
+  expect(harness.consoleErrors).toEqual([]);
+};
 
-  expect(runtimeRequests.some((path) => path.endsWith("/data/loader.js"))).toBe(true);
-  expect(runtimeRequests.some((path) => path.endsWith("/data/emulator.min.js"))).toBe(true);
-  expect(runtimeRequests.some((path) => path.endsWith("/data/emulator.min.css"))).toBe(true);
-  expect(runtimeRequests.some((path) => /\/data\/cores\/fceumm(?:-legacy)?-wasm\.data$/u.test(path))).toBe(true);
-  expect(externalRuntimeRequests).toEqual([]);
-  expect(runtimeHttpErrors).toEqual([]);
-  expect(failedRuntimeRequests).toEqual([]);
-  expect(pageErrors).toEqual([]);
+test("packaged Plasmon loads EmulatorJS from local assets without external runtime requests", async ({ page }) => {
+  test.setTimeout(90_000);
+  const harness = await openEmulatorFixture(page);
 
-  await dialog.getByRole("button", { name: "Close" }).click();
-  await expect(dialog).toBeHidden({ timeout: 5_000 });
-  await expect(app.locator('iframe[title="NES game"]')).toHaveCount(0);
-  expect(pageErrors).toEqual([]);
+  expect(harness.runtimeRequests.some((path) => path.endsWith("/data/loader.js"))).toBe(true);
+  expect(harness.runtimeRequests.some((path) => path.endsWith("/data/emulator.min.js"))).toBe(true);
+  expect(harness.runtimeRequests.some((path) => path.endsWith("/data/emulator.min.css"))).toBe(true);
+  expect(harness.externalRuntimeRequests).toEqual([]);
+  expect(harness.runtimeHttpErrors).toEqual([]);
+  expect(harness.failedRuntimeRequests).toEqual([]);
+  expect(harness.pageErrors).toEqual([]);
+  expect(harness.consoleErrors).toEqual([]);
+
+  await closeEmulator(harness);
 });
+
+// #245 restores this acceptance to required Specialist execution. Runtime
+// readiness follows the production game-started phase, which is emitted only
+// after the packaged child reports the real EmulatorJS EJS_onGameStart event.
+test(
+  "packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets",
+  { tag: ["@issue-245"] },
+  async ({ page }) => {
+    // Keep the existing overall safety bound. Readiness itself is event-driven
+    // so a renderer-blocking cold core start cannot lose a just-arrived start
+    // event at an independent Node-side polling deadline.
+    test.setTimeout(240_000);
+    const harness = await openEmulatorFixture(page);
+
+    await waitForEmulatorGameStart(harness);
+    await expect(harness.runtimeRoot).toHaveAttribute("data-emulatorjs-phase", "game-started");
+    await expect(harness.host.first()).toHaveAttribute("data-emulatorjs-ready", "true");
+
+    const canvas = harness.emulator.locator("canvas").first();
+    await expect(canvas).toBeVisible({ timeout: 30_000 });
+    const canvasBounds = await canvas.boundingBox();
+    expect(canvasBounds?.width ?? 0).toBeGreaterThan(0);
+    expect(canvasBounds?.height ?? 0).toBeGreaterThan(0);
+
+    expect(harness.runtimeRequests.some((path) => path.endsWith("/data/loader.js"))).toBe(true);
+    expect(harness.runtimeRequests.some((path) => path.endsWith("/data/emulator.min.js"))).toBe(true);
+    expect(harness.runtimeRequests.some((path) => path.endsWith("/data/emulator.min.css"))).toBe(true);
+    expect(harness.runtimeRequests.some((path) => /\/data\/cores\/fceumm(?:-legacy)?-wasm\.data$/u.test(path))).toBe(true);
+    expect(harness.externalRuntimeRequests).toEqual([]);
+    expect(harness.runtimeHttpErrors).toEqual([]);
+    expect(harness.failedRuntimeRequests).toEqual([]);
+    expect(harness.pageErrors).toEqual([]);
+    expect(harness.consoleErrors).toEqual([]);
+
+    await closeEmulator(harness);
+  },
+);
 
 declare global {
   interface Window {

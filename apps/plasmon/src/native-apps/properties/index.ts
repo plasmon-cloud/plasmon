@@ -6,6 +6,7 @@ import type {
   OpenService,
 } from "../../os/contracts/index.ts";
 import type { NativeAppComponent, NativeAppLoader } from "../../os/process/index.ts";
+import { SYSTEM_ICON_ASSETS } from "../../os/visual/assets.ts";
 
 export type { PropertiesAppProps } from "./PropertiesApp.tsx";
 
@@ -13,7 +14,7 @@ export const propertiesAppDefinition: NativeAppDefinition = {
   id: "native:properties",
   handlerId: "native:properties",
   name: "Properties",
-  icon: "system:properties",
+  icon: SYSTEM_ICON_ASSETS.properties,
   singleton: false,
   defaultWindow: { width: 610, height: 590, minWidth: 480, minHeight: 400 },
   associations: [],

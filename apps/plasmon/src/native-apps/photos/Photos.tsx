@@ -1,21 +1,35 @@
 import Panzoom from "@panzoom/panzoom";
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppStateSurface,
+  NativeAppStatusStrip,
+  NativeAppToolbar,
+} from "../../os/visual/index.ts";
 import { exitFullscreenSafely, requestFullscreenSafely } from "./fullscreen.ts";
 import { adjacentImageNode, createImageObjectUrlLease, inferImageMime } from "./media.ts";
+import {
+  enterWorkspaceExpand,
+  exitWorkspaceExpand,
+  type WorkspaceExpandSession,
+  type WorkspaceWindowControl,
+} from "./workspaceExpand.ts";
 
 export interface PhotosProps {
   processId: ProcessId;
   target: OpenTarget;
   fs: FsService;
   process: ProcessController;
+  nativeWindow?: WorkspaceWindowControl;
 }
 
 type PhotoSource = { url: string; title: string; mime: string };
 type PanzoomInstance = ReturnType<typeof Panzoom>;
 type PanzoomChangeEvent = Event & { detail?: { scale?: number } };
 
-export default function Photos({ processId, target, fs, process }: PhotosProps) {
+export default function Photos({ processId, target, fs, process, nativeWindow }: PhotosProps) {
   const [source, setSource] = useState<PhotoSource | null>(null);
   const [loading, setLoading] = useState(Boolean(target.nodeId));
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +43,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const panzoomRef = useRef<PanzoomInstance | null>(null);
+  const workspaceExpandRef = useRef<WorkspaceExpandSession | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,7 +53,6 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
     setScale(1);
     setError(null);
     setDisplayNotice(null);
-    setExpanded(false);
 
     if (!target.nodeId) {
       setLoading(false);
@@ -114,6 +128,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
       const isFullscreen = document.fullscreenElement === rootRef.current;
       setFullscreen(isFullscreen);
       if (isFullscreen) {
+        workspaceExpandRef.current = null;
         setExpanded(false);
         setDisplayNotice(null);
       }
@@ -149,6 +164,8 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
     }
 
     if (expanded) {
+      exitWorkspaceExpand(nativeWindow, workspaceExpandRef.current);
+      workspaceExpandRef.current = null;
       setExpanded(false);
       setDisplayNotice(null);
       return;
@@ -156,6 +173,7 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
 
     const result = await requestFullscreenSafely(root, document);
     if (result.mode === "expanded") {
+      workspaceExpandRef.current = enterWorkspaceExpand(nativeWindow);
       setExpanded(true);
       setDisplayNotice(result.message);
     }
@@ -211,45 +229,45 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
         : "Fullscreen";
 
   return (
-    <section
+    <NativeAppContentSurface
       ref={rootRef}
       style={styles.root}
       aria-label="Photos"
+      data-photos-display-mode={fullscreen ? "fullscreen" : expanded ? "expanded" : "normal"}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
       {!expanded ? (
-        <nav style={styles.toolbar} aria-label="Photo controls">
-          <button type="button" style={buttonStyle(controlsDisabled)} disabled={controlsDisabled} onClick={zoomOut}>Zoom out</button>
+        <NativeAppToolbar as="nav" aria-label="Photo controls">
+          <NativeAppButton type="button" disabled={controlsDisabled} onClick={zoomOut}>Zoom out</NativeAppButton>
           <span style={styles.scale}>{Math.round(scale * 100)}%</span>
-          <button type="button" style={buttonStyle(controlsDisabled || scale >= 8)} disabled={controlsDisabled || scale >= 8} onClick={zoomIn}>Zoom in</button>
-          <button type="button" style={buttonStyle(controlsDisabled)} disabled={controlsDisabled} onClick={fit}>Fit</button>
-          <button type="button" style={buttonStyle(controlsDisabled)} disabled={controlsDisabled} onClick={actualSize}>Actual size</button>
+          <NativeAppButton type="button" disabled={controlsDisabled || scale >= 8} onClick={zoomIn}>Zoom in</NativeAppButton>
+          <NativeAppButton type="button" disabled={controlsDisabled} onClick={fit}>Fit</NativeAppButton>
+          <NativeAppButton type="button" disabled={controlsDisabled} onClick={actualSize}>Actual size</NativeAppButton>
           <span style={styles.spacer} />
-          <button
+          <NativeAppButton
             type="button"
-            style={buttonStyle(controlsDisabled)}
             disabled={controlsDisabled}
             onClick={() => { void toggleDisplayMode(); }}
           >
             {displayModeLabel}
-          </button>
-        </nav>
+          </NativeAppButton>
+        </NativeAppToolbar>
       ) : (
-        <button
+        <NativeAppButton
           type="button"
           style={styles.expandedExit}
           onClick={() => { void toggleDisplayMode(); }}
         >
           Exit expanded
-        </button>
+        </NativeAppButton>
       )}
 
       {displayNotice && <div style={styles.notice} role="status">{displayNotice}</div>}
 
       <div ref={viewportRef} style={styles.viewport}>
-        {loading && <div style={styles.message} role="status">Loading image bytes…</div>}
-        {!loading && !target.nodeId && <div style={styles.message} role="status">Choose an image to open.</div>}
+        {loading && <NativeAppStateSurface role="status">Loading image bytes…</NativeAppStateSurface>}
+        {!loading && !target.nodeId && <NativeAppStateSurface role="status">Choose an image to open.</NativeAppStateSurface>}
         {source && (
           <img
             key={source.url}
@@ -269,43 +287,70 @@ export default function Photos({ processId, target, fs, process }: PhotosProps) 
             }}
           />
         )}
-        {error && <div style={styles.error} role="alert">{error}</div>}
+        {error && <NativeAppStateSurface tone="error" role="alert">{error}</NativeAppStateSurface>}
       </div>
 
       {!expanded && (
-        <footer style={styles.status}>
+        <NativeAppStatusStrip style={styles.status}>
           <span>{source?.mime ?? "Image"}</span>
           <span>←/→ next image · +/- zoom · 0 fit · 1 actual · F fullscreen/expand</span>
-        </footer>
+        </NativeAppStatusStrip>
       )}
-    </section>
+    </NativeAppContentSurface>
   );
 }
 
-function buttonStyle(disabled: boolean): CSSProperties {
-  return {
-    minHeight: 30,
-    padding: "5px 10px",
-    border: "1px solid #4a515d",
-    borderRadius: 4,
-    background: disabled ? "#24282e" : "#343a43",
-    color: disabled ? "#7f8791" : "#f1f3f6",
-    font: "600 12px/1.2 system-ui, sans-serif",
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: 1,
-  };
-}
-
 const styles: Record<string, CSSProperties> = {
-  root: { position: "relative", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: "#141619", color: "#eef1f5", outline: "none" },
-  expandedExit: { position: "absolute", top: 10, right: 10, zIndex: 4, minHeight: 30, padding: "5px 10px", border: "1px solid #4a515d", borderRadius: 4, background: "#343a43", color: "#f1f3f6", font: "600 12px/1.2 system-ui, sans-serif", cursor: "pointer" },
-  toolbar: { display: "flex", alignItems: "center", gap: 8, padding: 8, background: "#202329", borderBottom: "1px solid #373c45" },
-  scale: { minWidth: 48, color: "#bbc2cc", textAlign: "center", font: "12px/1 system-ui, sans-serif" },
+  root: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    outline: "none",
+  },
+  expandedExit: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 4,
+  },
+  scale: {
+    minWidth: 48,
+    color: "var(--plasmon-text-secondary)",
+    textAlign: "center",
+    fontSize: "var(--plasmon-font-size-small)",
+    lineHeight: 1,
+  },
   spacer: { flex: 1 },
-  notice: { padding: "6px 10px", background: "#272d35", color: "#d4d9e0", borderBottom: "1px solid #3b434e", font: "12px/1.35 system-ui, sans-serif" },
-  viewport: { position: "relative", flex: 1, minWidth: 0, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", touchAction: "none", background: "#111315" },
-  image: { maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", userSelect: "none", transformOrigin: "50% 50%" },
-  message: { display: "grid", placeItems: "center", width: "100%", height: "100%", padding: 24, boxSizing: "border-box", color: "#aab1bb" },
-  error: { display: "grid", placeItems: "center", width: "100%", height: "100%", padding: 28, boxSizing: "border-box", color: "#ffd4d8", textAlign: "center" },
-  status: { display: "flex", justifyContent: "space-between", gap: 14, padding: "5px 10px", borderTop: "1px solid #373c45", background: "#1b1e23", color: "#aab1bb", font: "12px/1.3 system-ui, sans-serif" },
+  notice: {
+    padding: "6px 10px",
+    background: "var(--plasmon-panel-elevated)",
+    color: "var(--plasmon-text-secondary)",
+    borderBottom: "1px solid var(--plasmon-border-subtle)",
+    fontSize: "var(--plasmon-font-size-small)",
+    lineHeight: 1.35,
+  },
+  viewport: {
+    position: "relative",
+    flex: 1,
+    minWidth: 0,
+    minHeight: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    touchAction: "none",
+    background: "#111315",
+  },
+  image: {
+    maxWidth: "100%",
+    maxHeight: "100%",
+    width: "auto",
+    height: "auto",
+    objectFit: "contain",
+    userSelect: "none",
+    transformOrigin: "50% 50%",
+  },
+  status: {
+    justifyContent: "space-between",
+  },
 };

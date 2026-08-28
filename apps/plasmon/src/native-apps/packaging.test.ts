@@ -14,7 +14,7 @@ function goodMetafile(): BuildMetafileLike {
           "src/index.tsx": {},
           "src/native-apps/content-apps.ts": {},
           "src/native-apps/text/TextEditor.tsx": {},
-          "src/native-apps/text/MonacoEditorSurface.tsx": {},
+          "src/native-apps/shared/monaco/MonacoEditorHost.tsx": {},
           "src/native-apps/markdown/MarkdownEditor.tsx": {},
           "src/native-apps/markdown/MarkdownPreview.tsx": {},
           "node_modules/monaco-editor/esm/vs/editor/editor.main.js": {},
@@ -36,11 +36,11 @@ function goodMetafile(): BuildMetafileLike {
         },
       },
       "dist/web/main.bundle.css": { inputs: { "node_modules/monaco-editor/esm/vs/editor/editor.all.css": {} } },
-      "dist/web/monaco-workers/editor.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/json.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/css.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/html.worker.js": { inputs: {} },
-      "dist/web/monaco-workers/ts.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/editor.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/json.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/css.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/html.worker.js": { inputs: {} },
+      "dist/web/System/Program Files/MonacoEditor/ts.worker.js": { inputs: {} },
     },
   };
 }
@@ -55,8 +55,8 @@ function deleteInput(metafile: BuildMetafileLike, suffix: string): void {
 test("package guard requires mature Text/Markdown engines and Monaco workers", () => {
   expect(() => assertMatureNativeAppBundle(goodMetafile())).not.toThrow();
   const broken = goodMetafile();
-  delete broken.outputs["dist/web/main.js"]!.inputs!["src/native-apps/text/MonacoEditorSurface.tsx"];
-  expect(() => assertMatureNativeAppBundle(broken)).toThrow("MonacoEditorSurface");
+  delete broken.outputs["dist/web/main.js"]!.inputs!["src/native-apps/shared/monaco/MonacoEditorHost.tsx"];
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow("MonacoEditorHost");
 });
 
 test("package guard requires every launchable first-party native app somewhere in the build graph", () => {
@@ -83,10 +83,31 @@ test("package guard rejects a stylesheet without Monaco engine CSS", () => {
   expect(() => assertMatureNativeAppBundle(broken)).toThrow("Monaco editor CSS");
 });
 
-test("package guard rejects missing Monaco worker output", () => {
+test("package guard accepts the slim Monaco worker profile", () => {
+  const slim = goodMetafile();
+  for (const worker of ["json", "css", "html", "ts"]) {
+    delete slim.outputs[`dist/web/System/Program Files/MonacoEditor/${worker}.worker.js`];
+  }
+  expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).not.toThrow();
+
+  delete slim.outputs["dist/web/System/Program Files/MonacoEditor/editor.worker.js"];
+  expect(() => assertMatureNativeAppBundle(slim, { monacoProfile: "slim" })).toThrow(
+    "/dist/web/System/Program Files/MonacoEditor/editor.worker.js",
+  );
+});
+
+test("#89 package guard requires canonical Monaco Program Files worker outputs", () => {
   const broken = goodMetafile();
-  delete broken.outputs["dist/web/monaco-workers/ts.worker.js"];
-  expect(() => assertMatureNativeAppBundle(broken)).toThrow("ts.worker.js");
+  delete broken.outputs["dist/web/System/Program Files/MonacoEditor/ts.worker.js"];
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow(
+    "/dist/web/System/Program Files/MonacoEditor/ts.worker.js",
+  );
+});
+
+test("#89 package guard rejects the retired top-level Monaco worker path", () => {
+  const broken = goodMetafile();
+  broken.outputs["dist/web/monaco-workers/editor.worker.js"] = { inputs: {} };
+  expect(() => assertMatureNativeAppBundle(broken)).toThrow("legacy top-level Monaco worker path");
 });
 
 test("entry asset fingerprint replaces stale query values deterministically", () => {

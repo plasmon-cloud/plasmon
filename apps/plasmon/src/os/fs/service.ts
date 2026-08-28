@@ -21,7 +21,7 @@ import {
 } from "./repository.ts";
 
 const ROOT_ID = "00000000-0000-4000-8000-000000000001";
-const DEFAULT_DIRECTORIES = ["Desktop", "Documents", "Downloads", "Videos", "Pictures", "Shared", "System"] as const;
+const DEFAULT_DIRECTORIES = ["Desktop", "Documents", "Videos", "Pictures", "Shared", "System"] as const;
 
 export interface PersistentFsServiceOptions {
   now?: () => number;

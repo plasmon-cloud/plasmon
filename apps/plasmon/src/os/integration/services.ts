@@ -31,7 +31,12 @@ import {
 } from "../fs/index.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
-import { NativeWindowManager } from "../windowing/index.ts";
+import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
+import {
+  FsServiceWindowPlacementStore,
+  NativeWindowManager,
+  NativeWindowPlacementController,
+} from "../windowing/index.ts";
 import {
   contentAppDefinitions,
   contentAssociationRules,
@@ -67,6 +72,7 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
+import { isGameRuntimeProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -74,12 +80,14 @@ export interface PlasmonServices {
   filesystem: FilesystemCoreServices;
   process: ProcessController;
   windows: WindowManager;
+  windowPlacement: NativeWindowPlacementController;
   neutron: NeutronBridge;
   authorization: ResourceAuthorizationService;
   nativeApps: NativeApplicationRegistry;
   associations: AssociationRegistry;
   openService: OpenService;
   fileClipboard: FileOperationClipboard;
+  startMenu: StartMenuReconciliationController;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -166,16 +174,18 @@ function registerWave2Applications(
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  // EmulatorJS and js-dos are normal association/runtime handlers. Their
-  // process-host definitions exist only because OpenService routes local React
-  // hosts through NativeProcessController; they do not create runtime .sys apps.
-  associations.registerHandler(emulatorJsHandler);
-  for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
-  nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+  // Game/emulator payloads and handlers are intentionally omitted from every
+  // shipped package profile, so opening a game cannot create missing-runtime
+  // requests. The source/runtime tests exercise those handlers directly.
+  if (isGameRuntimeProfile) {
+    associations.registerHandler(emulatorJsHandler);
+    for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
+    nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
 
-  associations.registerHandler(jsDosHandler);
-  for (const rule of jsDosAssociationRules) associations.registerRule(rule);
-  nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+    associations.registerHandler(jsDosHandler);
+    for (const rule of jsDosAssociationRules) associations.registerRule(rule);
+    nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+  }
 
   const contentLoaders = createContentAppLoaders();
   for (const definition of contentAppDefinitions) {
@@ -210,8 +220,8 @@ function registerWave2Applications(
  * Wave 2 composition root. In Neutron, filesystem calls are routed to the
  * persistent Plasmon background surface through FsRpcClient; standalone
  * preview selects a browser-local repository with safe fallback. Association
- * user defaults persist through that same raw FsService rather than foreground
- * browser storage.
+ * user defaults and native-window placement persist through that same raw
+ * FsService rather than foreground browser storage.
  *
  * Tests may inject only true external/runtime boundaries (for example an
  * in-memory persistence repository, a mock Neutron bridge, or deterministic window
@@ -223,6 +233,10 @@ function registerWave2Applications(
  * itself still mutates only through FsService primitives, so persistence remains
  * owned by the existing hosted/background boundary.
  *
+ * Runtime controllers are assembled here but started by the outer application
+ * bootstrap before React renders. This keeps service construction deterministic
+ * for headless callers while keeping production reconciliation below React.
+ *
  * Authenticated Neutron application surfaces remain Kernel-owned sibling
  * tiles. Plasmon only discovers and opens them through NeutronBridge.
  */
@@ -233,10 +247,19 @@ export function createPlasmonServices(
     ? new PersistentFsService(options.filesystemRepository)
     : createFilesystemService();
   const windows = options.windows ?? new NativeWindowManager();
+  const windowPlacement = new NativeWindowPlacementController(
+    windows,
+    new FsServiceWindowPlacementStore(rawFs),
+    {
+      onPersistenceError: (error) => console.warn("Plasmon window placement persistence failed:", error),
+    },
+  );
   const neutron = options.neutron ?? createNeutronBridge();
   const nativeApps = new NativeApplicationRegistry();
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
-  const process = new NativeProcessController(nativeApps, windows);
+  const process = new NativeProcessController(nativeApps, windows, undefined, {
+    onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
+  });
   const openService = new IntegratedOpenService({ nativeApps, associations, process, neutron });
   const fileClipboard = new FileOperationClipboard();
   let filesystem: FilesystemCoreServices | null = null;
@@ -282,6 +305,7 @@ export function createPlasmonServices(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
   );
+  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
 
   return {
     fs,
@@ -289,11 +313,13 @@ export function createPlasmonServices(
     filesystem,
     process,
     windows,
+    windowPlacement,
     neutron,
     authorization: createAuthorizationService(),
     nativeApps,
     associations,
     openService,
     fileClipboard,
+    startMenu,
   };
 }

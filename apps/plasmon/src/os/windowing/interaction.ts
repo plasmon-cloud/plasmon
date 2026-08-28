@@ -1,6 +1,8 @@
 import type { WindowGeometry } from "../contracts/window.ts";
 import {
   constrainGeometry,
+  reachablePositionBounds,
+  type GeometryConstraints,
   type HorizontalSnapSide,
   type WindowViewport,
 } from "./geometry.ts";
@@ -14,6 +16,11 @@ export interface HorizontalEdgeBounds {
   right: number;
 }
 
+export interface PointerPosition {
+  x: number;
+  y: number;
+}
+
 const resizeCursors: Record<ResizeDirection, string> = {
   n: "ns-resize",
   ne: "nesw-resize",
@@ -24,6 +31,10 @@ const resizeCursors: Record<ResizeDirection, string> = {
   w: "ew-resize",
   nw: "nwse-resize",
 };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function resizeCursor(direction: ResizeDirection): string {
   return resizeCursors[direction];
@@ -40,6 +51,58 @@ export function horizontalSnapSideAtPointer(
   if (clientX <= left + safeThreshold) return "left";
   if (clientX >= right - safeThreshold) return "right";
   return null;
+}
+
+/**
+ * Keeps fitting floating windows fully inside the usable viewport. Oversized
+ * widths may pan through the same reachable-titlebar range accepted by the
+ * manager so right-side window controls can still be brought on-screen.
+ */
+export function boundedDragGeometry(
+  start: WindowGeometry,
+  deltaX: number,
+  deltaY: number,
+  viewport: WindowViewport,
+  constraints: Partial<GeometryConstraints> = {},
+): WindowGeometry {
+  const maxX = viewport.x + Math.max(0, viewport.width - start.width);
+  const maxY = viewport.y + Math.max(0, viewport.height - start.height);
+  const reachable = reachablePositionBounds(start, viewport, constraints);
+  const x = start.width <= viewport.width
+    ? clamp(start.x + deltaX, viewport.x, maxX)
+    : clamp(start.x + deltaX, reachable.minX, reachable.maxX);
+  const y = start.height <= viewport.height
+    ? clamp(start.y + deltaY, viewport.y, maxY)
+    : viewport.y;
+  return { ...start, x, y };
+}
+
+/**
+ * Repositions restored floating geometry under the pointer when a snapped
+ * titlebar drag begins. The grab offset from the snapped titlebar is preserved
+ * where the restored rectangle and viewport permit it, then bounded by the
+ * same active-drag contract used for subsequent pointer movement.
+ */
+export function anchoredRestoreGeometryForPointer(
+  snapped: WindowGeometry,
+  restore: WindowGeometry,
+  pointer: PointerPosition,
+  viewport: WindowViewport,
+  constraints: Partial<GeometryConstraints> = {},
+): WindowGeometry {
+  const grabX = clamp(pointer.x - snapped.x, 0, Math.max(0, restore.width));
+  const grabY = clamp(pointer.y - snapped.y, 0, Math.max(0, restore.height));
+  return boundedDragGeometry(
+    {
+      ...restore,
+      x: pointer.x - grabX,
+      y: pointer.y - grabY,
+    },
+    0,
+    0,
+    viewport,
+    constraints,
+  );
 }
 
 export function resizeGeometry(

@@ -6,10 +6,22 @@ import {
   type KeyboardEvent,
 } from "react";
 import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppStateSurface,
+  NativeAppStatusStrip,
+  NativeAppToolbar,
+} from "../../os/visual/index.ts";
+import {
+  MonacoEditorHost,
+  type MonacoCursorState,
+  type MonacoEditorCommandApi,
+} from "../shared/monaco/MonacoEditorHost.tsx";
+import { editorLanguageForResource } from "../shared/monaco/editorModel.ts";
 import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
-import { controlButtonStyle, controlInputStyle, editorChrome, editorErrorStyle, editorStatusStyle } from "./editorChrome.ts";
-import { editorLanguageForName } from "./editorModel.ts";
-import { MonacoEditorSurface, monacoEngineStatus, type MonacoCursorState } from "./MonacoEditorSurface.tsx";
+import { controlInputStyle, editorErrorStyle } from "./editorChrome.ts";
+import { editorLanguageDisplayName, textEditorWindowTitle } from "./editorPresentation.ts";
 import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
@@ -25,12 +37,16 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
+  const [commandApi, setCommandApi] = useState<MonacoEditorCommandApi | null>(null);
+  const [minimap, setMinimap] = useState(true);
+  const [wordWrap, setWordWrap] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
   const readOnly = target.readOnly === true;
+  const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
 
   useEffect(() => {
-    process.setTitle(processId, snapshot.name || "Text Editor");
+    process.setTitle(processId, textEditorWindowTitle(snapshot.name));
   }, [process, processId, snapshot.name]);
 
   const save = () => {
@@ -57,20 +73,28 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
     }
   };
 
+  const runEditorCommand = (command: "find" | "replace" | "goToLine") => {
+    commandApi?.run(command);
+  };
+
   if (!target.nodeId) {
-    return <div style={styles.message} role="status">Choose a text file to open.</div>;
+    return (
+      <NativeAppContentSurface style={styles.root} aria-label="Text editor">
+        <NativeAppStateSurface role="status">Choose a text file to open.</NativeAppStateSurface>
+      </NativeAppContentSurface>
+    );
   }
 
   const saveDisabled = readOnly || !snapshot.dirty || snapshot.status === "saving";
   const saveAsDisabled = !saveAsName.trim();
   const loadingDocument = snapshot.status === "idle" || snapshot.status === "loading";
+  const editorCommandsDisabled = !monacoReady || commandApi === null;
 
   return (
-    <section style={styles.root} aria-label="Text editor" onKeyDownCapture={captureSave}>
-      <style>{`.plasmon-native-input::placeholder { color: #858e9b; opacity: 1; }`}</style>
-      <div style={styles.toolbar} role="toolbar" aria-label="Text file controls">
-        <span style={styles.engineBadge} role="status">{monacoEngineStatus(monacoReady)}</span>
-        <button type="button" style={controlButtonStyle(saveDisabled)} onClick={save} disabled={saveDisabled}>Save</button>
+    <NativeAppContentSurface style={styles.root} aria-label="Text editor" onKeyDownCapture={captureSave}>
+      <style>{`.plasmon-native-input::placeholder { color: var(--plasmon-text-disabled); opacity: 1; }`}</style>
+      <NativeAppToolbar style={styles.toolbar} role="toolbar" aria-label="Text file controls">
+        <NativeAppButton type="button" onClick={save} disabled={saveDisabled}>Save</NativeAppButton>
         <label style={styles.saveAsLabel}>
           <span style={styles.label}>Save as</span>
           <input
@@ -82,38 +106,54 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
             style={controlInputStyle}
           />
         </label>
-        <button type="button" style={controlButtonStyle(saveAsDisabled)} onClick={() => { void saveAs(); }} disabled={saveAsDisabled}>Create copy</button>
+        <NativeAppButton
+          type="button"
+          onClick={() => { void saveAs(); }}
+          disabled={saveAsDisabled}
+        >
+          Create copy
+        </NativeAppButton>
+        <span style={styles.toolbarDivider} aria-hidden="true" />
+        <NativeAppButton type="button" onClick={() => runEditorCommand("find")} disabled={editorCommandsDisabled}>Find</NativeAppButton>
+        <NativeAppButton type="button" onClick={() => runEditorCommand("replace")} disabled={editorCommandsDisabled}>Replace</NativeAppButton>
+        <NativeAppButton type="button" onClick={() => runEditorCommand("goToLine")} disabled={editorCommandsDisabled}>Go to line</NativeAppButton>
+        <NativeAppButton type="button" aria-pressed={wordWrap} onClick={() => setWordWrap((current) => !current)}>Word wrap</NativeAppButton>
+        <NativeAppButton type="button" aria-pressed={minimap} onClick={() => setMinimap((current) => !current)}>Minimap</NativeAppButton>
         {readOnly && <span style={styles.readOnly}>Read only</span>}
         {snapshot.status === "conflict" && (
           <>
-            <button type="button" style={controlButtonStyle(false)} onClick={() => { void sessionRef.current?.reload(); }}>Reload newer file</button>
-            <button
+            <NativeAppButton type="button" onClick={() => { void sessionRef.current?.reload(); }}>
+              Reload newer file
+            </NativeAppButton>
+            <NativeAppButton
               type="button"
-              style={controlButtonStyle(readOnly)}
               onClick={() => { if (!readOnly) void sessionRef.current?.forceSave(); }}
               disabled={readOnly}
             >
               Overwrite newer file
-            </button>
+            </NativeAppButton>
           </>
         )}
-      </div>
+      </NativeAppToolbar>
 
       {loadingDocument ? (
-        <div style={styles.message} role="status">Loading text…</div>
+        <NativeAppStateSurface role="status">Loading text…</NativeAppStateSurface>
       ) : snapshot.status === "error" && !snapshot.text ? (
-        <div style={styles.fatalError} role="alert">{snapshot.error}</div>
+        <NativeAppStateSurface tone="error" role="alert">{snapshot.error}</NativeAppStateSurface>
       ) : (
         <div style={styles.editorPane}>
-          <MonacoEditorSurface
-            modelKey={`${processId}:${snapshot.nodeId ?? target.nodeId}`}
+          <MonacoEditorHost
+            modelKey={`text:${processId}`}
             value={snapshot.text}
-            language={editorLanguageForName(snapshot.name)}
+            language={language}
             readOnly={readOnly}
+            minimap={minimap}
+            wordWrap={wordWrap}
             ariaLabel="Text content"
             onChange={(value) => sessionRef.current?.edit(value)}
             onCursorChange={setCursor}
             onReadyChange={setMonacoReady}
+            onCommandApiChange={setCommandApi}
           />
         </div>
       )}
@@ -121,11 +161,12 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
       {((snapshot.error && snapshot.text) || saveAsError) && (
         <div style={editorErrorStyle} role="alert">{saveAsError ?? snapshot.error}</div>
       )}
-      <footer style={editorStatusStyle}>
+      <NativeAppStatusStrip style={styles.status}>
+        <span>{editorLanguageDisplayName(language)}</span>
         <span>UTF-8</span>
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
-      </footer>
+      </NativeAppStatusStrip>
       {closeProtection.snapshot.pending && (
         <DocumentClosePrompt
           documentName={snapshot.name}
@@ -137,18 +178,46 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
           onCancel={() => { closeProtection.cancelClose(); }}
         />
       )}
-    </section>
+    </NativeAppContentSurface>
   );
 }
 
 const styles: Record<string, CSSProperties> = {
-  root: { position: "relative", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: editorChrome.background, color: editorChrome.text },
-  toolbar: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, padding: 8, borderBottom: `1px solid ${editorChrome.border}`, background: editorChrome.panel, fontSize: 13 },
-  engineBadge: { padding: "4px 7px", border: `1px solid ${editorChrome.border}`, borderRadius: 4, background: "#171b21", color: "#b8d8ff", font: "600 11px/1.2 system-ui, sans-serif" },
-  saveAsLabel: { display: "flex", alignItems: "center", gap: 7 },
-  label: { color: editorChrome.muted, fontWeight: 600 },
-  readOnly: { marginLeft: "auto", color: "#d6bd75", font: "600 12px/1.2 system-ui, sans-serif" },
-  editorPane: { flex: 1, minWidth: 0, minHeight: 0 },
-  message: { flex: 1, display: "grid", placeItems: "center", padding: 24, background: editorChrome.background, color: editorChrome.muted },
-  fatalError: { ...editorErrorStyle, flex: 1, display: "grid", placeItems: "center", textAlign: "center" },
+  root: {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+  },
+  toolbar: {
+    flexWrap: "wrap",
+  },
+  toolbarDivider: {
+    alignSelf: "stretch",
+    width: 1,
+    minHeight: 24,
+    background: "var(--plasmon-border-subtle)",
+  },
+  saveAsLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+  },
+  label: {
+    color: "var(--plasmon-text-secondary)",
+    fontWeight: 600,
+  },
+  readOnly: {
+    marginLeft: "auto",
+    color: "var(--plasmon-warning)",
+    font: "600 var(--plasmon-font-size-small)/1.2 var(--plasmon-font-ui)",
+  },
+  editorPane: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 0,
+  },
+  status: {
+    justifyContent: "flex-end",
+    gap: 18,
+  },
 };

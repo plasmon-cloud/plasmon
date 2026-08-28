@@ -1,9 +1,7 @@
 import {
   memo,
-  useEffect,
   useLayoutEffect,
   useRef,
-  useState,
   type CSSProperties,
   type ChangeEvent as ReactChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -11,24 +9,29 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { AssociationRegistry, FsNode, FsService } from "../contracts/index.ts";
-import { ResourceIcon, type IconContext, type ResourceIconPresentation } from "../visual/index.ts";
+import { ResourceIcon, type IconContext } from "../visual/index.ts";
+import { fileVisualKind } from "./file-icons.ts";
 import {
-  fallbackFileResourcePresentation,
-  fileVisualKind,
-  resolveFileResourcePresentation,
-  type FileResourcePresentation,
-} from "./file-icons.ts";
+  deriveFileEntryRenderState,
+  type FileEntryPosition,
+  type FileEntryPresentation,
+} from "./file-entry-state.ts";
 import {
   RenameSelectionController,
   renameKeyAction,
   type InlineRenameState,
 } from "./rename.ts";
+import {
+  boundedInlineRenameWidth,
+  inlineRenamePresentation,
+  inlineRenameStyleVariables,
+} from "./rename-presentation.ts";
 import { shortcutTypeLabel } from "./shortcut.ts";
-import { canLoadImageThumbnail, loadImageThumbnail, type LoadedImageThumbnail } from "./thumbnail.ts";
+import { useFileEntryResolvedPresentation } from "./use-file-entry-presentation.ts";
 import "./polish.scss";
 
-export type FileEntryPresentation = "desktop" | "grid" | "list" | "details";
-export interface FileEntryPosition { x: number; y: number }
+export type { FileEntryPosition, FileEntryPresentation } from "./file-entry-state.ts";
+export { fileEntryClassName } from "./file-entry-state.ts";
 
 export interface FileEntryProps {
   fs: FsService;
@@ -76,14 +79,9 @@ function iconContext(presentation: FileEntryPresentation): IconContext {
   return "file-list";
 }
 
-export function fileEntryClassName(
-  presentation: FileEntryPresentation,
-  selected: boolean,
-  focused: boolean,
-  renaming: boolean,
-  dropTarget: boolean,
-): string {
-  return `fm-entry fm-entry--${presentation}${selected ? " is-selected" : ""}${focused ? " is-focused" : ""}${renaming ? " is-renaming" : ""}${dropTarget ? " is-drop-target" : ""}`;
+function cssPixels(value: string): number {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export const FileEntry = memo(function FileEntry({
@@ -107,99 +105,83 @@ export const FileEntry = memo(function FileEntry({
   onRenameCommit,
   onRenameCancel,
 }: FileEntryProps) {
-  const isRenaming = rename?.nodeId === node.id;
-  const style: CSSProperties | undefined = presentation === "desktop" && position
-    ? ({
-        left: position.x,
-        top: position.y,
-        "--fm-desktop-entry-x": `${position.x}px`,
-      } as CSSProperties)
-    : undefined;
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const entryRef = useRef<HTMLDivElement | null>(null);
   const renameSelectionRef = useRef(new RenameSelectionController());
   const suppressBlurCommitRef = useRef(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [resourcePresentation, setResourcePresentation] = useState<FileResourcePresentation>(
-    () => fallbackFileResourcePresentation(node, associations),
-  );
+  const renderState = deriveFileEntryRenderState({
+    nodeId: node.id,
+    selected,
+    focused,
+    dropTarget,
+    presentation,
+    position,
+    renameNodeId: rename?.nodeId ?? null,
+  });
+  const resolvedPresentation = useFileEntryResolvedPresentation(fs, node, associations, entryRef);
+  const renameValue = rename?.value;
+  const renamePresentation = inlineRenamePresentation(presentation);
+  const entryStyle = renderState.isRenaming
+    ? {
+        ...(renderState.style ?? {}),
+        ...inlineRenameStyleVariables(renamePresentation),
+      }
+    : renderState.style;
 
   useLayoutEffect(() => {
-    if (!isRenaming || !rename || !inputRef.current) {
+    if (!renderState.isRenaming || !rename || !inputRef.current) {
       renameSelectionRef.current.reset();
       suppressBlurCommitRef.current = false;
       return;
     }
     suppressBlurCommitRef.current = false;
-    renameSelectionRef.current.initialize(rename.session,
+    renameSelectionRef.current.initialize(
+      rename.session,
       inputRef.current,
       rename.initialName,
       node.kind === "directory",
     );
-  }, [isRenaming, rename?.initialName, rename?.session]);
+  }, [renderState.isRenaming, rename?.initialName, rename?.session, node.kind]);
 
-  useEffect(() => {
-    let active = true;
-    const fallback = fallbackFileResourcePresentation(node, associations);
-    setResourcePresentation(fallback);
-    void resolveFileResourcePresentation(fs, node, associations)
-      .then((resolved) => {
-        if (active) setResourcePresentation(resolved);
-      })
-      .catch(() => {
-        if (active) setResourcePresentation(fallback);
-      });
-    return () => { active = false; };
-  }, [associations, fs, node]);
-
-  useEffect(() => {
-    let active = true;
-    let observer: IntersectionObserver | null = null;
-    let loaded: LoadedImageThumbnail | null = null;
-    setThumbnailUrl(null);
-    if (!canLoadImageThumbnail(node)) return undefined;
-
-    const load = () => {
-      void loadImageThumbnail(fs, node)
-        .then((thumbnail) => {
-          if (!thumbnail) return;
-          if (!active) {
-            thumbnail.revoke();
-            return;
-          }
-          loaded?.revoke();
-          loaded = thumbnail;
-          setThumbnailUrl(thumbnail.url);
-        })
-        .catch(() => {
-          if (active) setThumbnailUrl(null);
-        });
-    };
-
-    const element = entryRef.current;
-    if (typeof IntersectionObserver === "undefined" || !element) {
-      load();
-    } else {
-      observer = new IntersectionObserver((entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer?.disconnect();
-        observer = null;
-        load();
-      }, { rootMargin: "96px" });
-      observer.observe(element);
+  useLayoutEffect(() => {
+    const editor = inputRef.current;
+    if (!editor || !renderState.isRenaming) return;
+    if (!renamePresentation.autoGrow) {
+      editor.style.width = "";
+      editor.style.height = "";
+      return;
     }
 
-    return () => {
-      active = false;
-      observer?.disconnect();
-      loaded?.revoke();
-    };
-  }, [fs, node.contentHash, node.id, node.mime, node.modifiedAt, node.name, node.size]);
+    const style = getComputedStyle(editor);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (context) {
+      context.font = style.font;
+      const textWidth = Math.max(
+        ...editor.value.split(/\r?\n/).map((line) => context.measureText(line || " ").width),
+      );
+      const horizontalChrome = cssPixels(style.paddingLeft)
+        + cssPixels(style.paddingRight)
+        + cssPixels(style.borderLeftWidth)
+        + cssPixels(style.borderRightWidth);
+      const minimum = renamePresentation.minWidthPx ?? 0;
+      const gridInset = renamePresentation.gridInlineInsetPx ?? 0;
+      const entryWidth = entryRef.current?.getBoundingClientRect().width ?? minimum;
+      const maximum = renamePresentation.desktopMaxWidthPx
+        ?? Math.max(minimum, entryWidth - (gridInset * 2));
+      editor.style.width = `${boundedInlineRenameWidth(textWidth, horizontalChrome, minimum, maximum)}px`;
+    }
 
-  const visualKind = fileVisualKind(node);
-  const iconPresentation: ResourceIconPresentation = thumbnailUrl
-    ? { kind: "thumbnail", src: thumbnailUrl, mediaKind: "image" }
-    : resourcePresentation.presentation;
+    editor.style.height = "0px";
+    editor.style.height = `${editor.scrollHeight}px`;
+  }, [
+    renamePresentation.autoGrow,
+    renamePresentation.desktopMaxWidthPx,
+    renamePresentation.gridInlineInsetPx,
+    renamePresentation.minWidthPx,
+    renderState.isRenaming,
+    renameValue,
+  ]);
 
   return (
     <div
@@ -207,8 +189,8 @@ export const FileEntry = memo(function FileEntry({
         entryRef.current = element;
         setRef(element);
       }}
-      className={fileEntryClassName(presentation, selected, focused, isRenaming, dropTarget)}
-      style={style}
+      className={renderState.className}
+      style={entryStyle as CSSProperties | undefined}
       role="option"
       tabIndex={-1}
       aria-selected={selected}
@@ -221,32 +203,34 @@ export const FileEntry = memo(function FileEntry({
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <span className={`fm-entry__icon fm-entry__icon--${visualKind}`} aria-hidden="true">
+      <span className={`fm-entry__icon fm-entry__icon--${resolvedPresentation.visualKind}`} aria-hidden="true">
         <ResourceIcon
           context={iconContext(presentation)}
-          presentation={iconPresentation}
-          shortcut={!thumbnailUrl && resourcePresentation.shortcut}
+          presentation={resolvedPresentation.iconPresentation}
+          shortcut={resolvedPresentation.shortcut}
         />
       </span>
       <span className="fm-entry__selection-mark" aria-hidden="true">{selected ? "✓" : ""}</span>
-      <span className="fm-entry__name" title={!selected && !isRenaming ? node.name : undefined}>
-        {isRenaming && rename ? (
+      <span className="fm-entry__name" title={renderState.showCollapsedNameTitle ? node.name : undefined}>
+        {renderState.isRenaming && rename ? (
           <>
-            <input
+            <textarea
               ref={inputRef}
+              rows={renamePresentation.rows}
+              wrap={renamePresentation.wrap}
               value={rename.value}
               aria-label={`Rename ${node.name}`}
               disabled={rename.busy}
-              onPointerDown={(event: ReactPointerEvent<HTMLInputElement>) => event.stopPropagation()}
+              onPointerDown={(event: ReactPointerEvent<HTMLTextAreaElement>) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
-              onChange={(event: ReactChangeEvent<HTMLInputElement>) => {
+              onChange={(event: ReactChangeEvent<HTMLTextAreaElement>) => {
                 suppressBlurCommitRef.current = false;
                 onRenameChange(event.target.value);
               }}
               onBlur={() => {
                 if (!rename.busy && !suppressBlurCommitRef.current) onRenameCommit();
               }}
-              onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+              onKeyDown={(event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
                 const action = renameKeyAction(event.key);
                 if (!action) return;
                 event.preventDefault();
@@ -260,7 +244,7 @@ export const FileEntry = memo(function FileEntry({
           </>
         ) : node.name}
       </span>
-      {presentation === "desktop" && (selected || focused) && !isRenaming ? (
+      {renderState.showExpandedName ? (
         <span className="fm-entry__expanded-name" aria-hidden="true">{node.name}</span>
       ) : null}
       {presentation === "details" ? (

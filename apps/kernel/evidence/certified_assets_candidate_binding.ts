@@ -77,6 +77,7 @@ export const CERTIFIED_ASSETS_QUALIFICATION_RUNNER_DEPENDENCIES = [
   "flake.nix",
   "flake.lock",
   "apps/kernel/mops.toml",
+  "apps/kernel/mops.lock",
   "apps/kernel/test/motoko/run.ts",
   "apps/kernel/test/motoko/authenticated_forest_test.mo",
   "apps/kernel/test/motoko/certified_assets_allocator_test.mo",

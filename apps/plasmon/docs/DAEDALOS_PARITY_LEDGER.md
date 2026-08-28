@@ -1,8 +1,11 @@
 # daedalOS parity and acceptance ledger
 
 Status: canonical acceptance index  
-Plasmon snapshot: `8ba35fbb265c6b86d483bd125165da03be7fc82c` (`version-0.1.0-os`, 2026-08-12)  
+Historical Plasmon evidence snapshot: `8ba35fbb265c6b86d483bd125165da03be7fc82c` (`version-0.1.0-os`, 2026-08-12)  
+Current Plasmon integration target at metadata refresh: `release/0.1.0-r2` @ `34e5daea6b59e66a7980a892df90a61729ffd7c5` (2026-08-14)  
 daedalOS reference snapshot: `DustinBrett/daedalOS@0df82d75e6114727ad035f6fce93842a96682355`
+
+The current-r2 line records integration identity only. The evidence rows below remain grounded in the historical snapshot and subsequent evidence explicitly named in the ledger; this metadata refresh does not silently upgrade implementation, packaged/browser, or human/manual acceptance states.
 
 This ledger records **evidence**, not roadmap priority. daedalOS is Plasmon's primary feature-completeness reference; Windows and macOS remain interaction/usability references. Matching a useful capability does not require copying daedalOS architecture or presentation.
 
@@ -89,7 +92,7 @@ The detailed daedalOS runtime/source audit is maintained in [`GAMES_DAEDALOS_ARC
 
 | Capability / reference | Plasmon intent / current disposition | Implemented | Headless | Packaged/browser | Human/manual | Evidence / remaining Issue |
 | --- | --- | --- | --- | --- | --- | --- |
-| Association-driven `.jsdos` launch | Treat games as ordinary filesystem resources resolved through associations, not a game-title launcher. | Yes | Yes | Yes | Unverified | `src/native-apps/jsdos/**`; `test/e2e/plasmon-games-proof.spec.ts`; reusable explicit fixture path [#121](https://github.com/plasmon-cloud/plasmon/issues/121) |
+| Association-driven `.jsdos` launch | Treat games as ordinary filesystem resources resolved through associations, not a game-title launcher. | Yes | Yes | Yes | Unverified | `src/native-apps/jsdos/**`; packaged/browser proof in `test/e2e/plasmon-demo-game.spec.ts`; automated Specialist coverage only, human/manual remains `Unverified`; reusable explicit fixture path [#121](https://github.com/plasmon-cloud/plasmon/issues/121) |
 | js-dos progress survives close/reopen | Persist authoritative progress through Plasmon filesystem state tied to stable game identity. | No | No | No | Unverified | [#64](https://github.com/plasmon-cloud/plasmon/issues/64) |
 | EmulatorJS ROM runtime | Add a second association-driven runtime only; no `.sys` facade or game-title dispatch. | No | No | No | Unverified | [#48](https://github.com/plasmon-cloud/plasmon/issues/48); open PR work does not count until integrated |
 | Game artwork thumbnails | Use shared resource presentation with stable metadata and deterministic fallback. | No | No | No | Unverified | [#123](https://github.com/plasmon-cloud/plasmon/issues/123); direct reference audit [#122](https://github.com/plasmon-cloud/plasmon/issues/122) |
