@@ -6,7 +6,6 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const PLASMON_SELECTOR = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 const ACTION_TIMEOUT = 5_000;
-const SURFACE_TIMEOUT = 20_000;
 
 async function launchPlasmon(page: Page) {
   const runtime = resolveLocalNeutronRuntime();
@@ -59,7 +58,7 @@ async function navigateExplorer(explorer: Locator, path: string): Promise<void> 
     .getByRole("navigation", { name: "Location breadcrumb" })
     .getByRole("button", { name: "This Plasmon", exact: true })
     .click();
-  await expect(address).toHaveValue(path, { timeout: SURFACE_TIMEOUT });
+  await expect(address).toHaveValue(path, { timeout: ACTION_TIMEOUT });
 }
 
 async function openRootDirectory(explorer: Locator, name: string): Promise<void> {
@@ -67,9 +66,9 @@ async function openRootDirectory(explorer: Locator, name: string): Promise<void>
   const favorite = explorer
     .getByRole("complementary", { name: "Favorites" })
     .getByRole("button", { name, exact: true });
-  await expect(favorite).toBeVisible({ timeout: SURFACE_TIMEOUT });
+  await expect(favorite).toBeVisible({ timeout: ACTION_TIMEOUT });
   await favorite.click();
-  await expect(address).toHaveValue(`/${name}`, { timeout: SURFACE_TIMEOUT });
+  await expect(address).toHaveValue(`/${name}`, { timeout: ACTION_TIMEOUT });
 }
 
 async function importFiles(page: Page, explorer: Locator) {
@@ -111,7 +110,7 @@ async function openRecycleBin(app: FrameLocator): Promise<{ recycleBin: Locator;
   const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
   // The Recycle Bin role dialog is the native-window root, so capture its
   // stable identity directly before destructive actions mutate its content.
-  await expect(recycleBin).toBeVisible({ timeout: SURFACE_TIMEOUT });
+  await expect(recycleBin).toBeVisible({ timeout: ACTION_TIMEOUT });
   const windowId = await recycleBin.getAttribute("data-window-id");
   if (!windowId) throw new Error("Recycle Bin native window has no stable data-window-id");
 
@@ -177,14 +176,14 @@ test("#107 directly activates installed /Apps/Review.neutron through FileManager
     // Use the visible Apps shortcut so navigation and the asynchronous
     // directory listing commit through the normal FileManager path together.
     const appsShortcut = rootFiles.locator("[data-fm-node-id]", { hasText: "Apps" }).first();
-    await expect(appsShortcut).toBeVisible({ timeout: SURFACE_TIMEOUT });
+    await expect(appsShortcut).toBeVisible({ timeout: ACTION_TIMEOUT });
     await appsShortcut.dblclick();
     await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/Apps", {
-      timeout: SURFACE_TIMEOUT,
+      timeout: ACTION_TIMEOUT,
     });
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
     const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
-    await expect(reviewProjection).toBeVisible({ timeout: SURFACE_TIMEOUT });
+    await expect(reviewProjection).toBeVisible({ timeout: ACTION_TIMEOUT });
     await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
 
     const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
