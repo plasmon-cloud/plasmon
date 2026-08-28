@@ -3,7 +3,8 @@ import type { FsNode, FsService, JsonValue, NodeId } from "../contracts/index.ts
 export const SHELL_PREFERENCES_KEY = "plasmon.shell.preferences.v1";
 
 export const SHELL_THEME_IDS = [
-  "plasmon-dark",
+  "plasmon-graphite",
+  "plasmon-verdant",
   "plasmon-midnight",
   "plasmon-ember",
   "plasmon-glacier",
@@ -12,7 +13,8 @@ export const SHELL_THEME_IDS = [
 export type ShellThemeId = (typeof SHELL_THEME_IDS)[number];
 
 export const SHELL_THEME_LABELS = Object.freeze({
-  "plasmon-dark": "Plasmon Dark",
+  "plasmon-graphite": "Graphite",
+  "plasmon-verdant": "Verdant",
   "plasmon-midnight": "Midnight",
   "plasmon-ember": "Ember",
   "plasmon-glacier": "Glacier",
@@ -38,7 +40,7 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   version: 1,
   pinnedNative: [],
   pinnedElements: [],
-  themeId: "plasmon-dark",
+  themeId: "plasmon-graphite",
   wallpaper: "aurora",
   taskbarAlignment: "center",
 });
@@ -76,6 +78,13 @@ function isTheme(value: unknown): value is ShellThemeId {
   return typeof value === "string" && (SHELL_THEME_IDS as readonly string[]).includes(value);
 }
 
+function normalizeTheme(value: unknown): ShellThemeId | null {
+  // Preview builds exposed the green/teal palette as plasmon-dark. Preserve
+  // that user choice while giving the identity its final descriptive name.
+  if (value === "plasmon-dark") return "plasmon-verdant";
+  return isTheme(value) ? value : null;
+}
+
 function isWallpaper(value: unknown): value is ShellWallpaper {
   return typeof value === "string" && (SHELL_WALLPAPERS as readonly string[]).includes(value);
 }
@@ -88,11 +97,12 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
   if (!isRecord(value) || value.version !== 1) return null;
   const pinnedNative = stringList(value.pinnedNative);
   const pinnedElements = stringList(value.pinnedElements);
+  const themeId = normalizeTheme(value.themeId);
   const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
   if (
     !pinnedNative
     || !pinnedElements
-    || !isTheme(value.themeId)
+    || !themeId
     || !isWallpaper(value.wallpaper)
     || !isTaskbarAlignment(taskbarAlignment)
   ) {
@@ -102,7 +112,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     version: 1,
     pinnedNative,
     pinnedElements,
-    themeId: value.themeId,
+    themeId,
     wallpaper: value.wallpaper,
     taskbarAlignment,
   };
