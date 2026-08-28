@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(35 .5 .5)">
+      <stop stop-color="#071821"/>
+      <stop offset=".52" stop-color="#0b2834"/>
+      <stop offset="1" stop-color="#071821"/>
+    </linearGradient>
+    <radialGradient id="glow-a" cx="18%" cy="20%" r="34%">
+      <stop stop-color="#65ddb0" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#65ddb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-b" cx="82%" cy="74%" r="36%">
+      <stop stop-color="#3aa9c8" stop-opacity=".17"/>
+      <stop offset="1" stop-color="#3aa9c8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="lattice" width="106" height="106" patternUnits="userSpaceOnUse" patternTransform="rotate(4) scale(1.08)">
+      <path d="M-26 26 26-26M0 106 106 0M80 132 132 80" stroke="#65ddb0" stroke-opacity=".12" stroke-width="2"/>
+      <path d="M-26 80 80-26M26 132 132 26" stroke="#3aa9c8" stroke-opacity=".1" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#base)"/>
+  <rect width="1600" height="900" fill="url(#glow-a)"/>
+  <rect width="1600" height="900" fill="url(#glow-b)"/>
+  <rect x="-260" y="-170" width="2120" height="1240" fill="url(#lattice)" opacity=".7"/>
+</svg>

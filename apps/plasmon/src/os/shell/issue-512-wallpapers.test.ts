@@ -94,19 +94,16 @@ test("#512 legacy, preview, and corrupt appearance state migrates without erasin
     .toEqual({ mode: "pinned", id: "glacier-prism" });
 });
 
-test("#512 five generated designs stay distinct and Graphite Sand is an explicit raster companion", () => {
+test("#512 uses packaged image artwork for all six wallpapers with uniform cover rendering", () => {
   const css = readFileSync(new URL("./wallpapers.scss", import.meta.url), "utf8");
   for (const wallpaperId of GENERATED_WALLPAPERS) {
     expect(css).toContain(`.plasmon-shell--wallpaper-${wallpaperId} .plasmon-shell__wallpaper`);
+    expect(css).toContain(`url("static/plasmon/wallpapers/${wallpaperId}.svg") center / cover no-repeat`);
   }
-  expect(css).toContain("radial-gradient");
-  expect(css).toContain("linear-gradient");
-  expect(css).toContain("conic-gradient");
-  expect(css).toContain("repeating-linear-gradient");
   expect(css).toContain(".plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper");
   expect(css).toContain('url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat');
-  expect(css).not.toMatch(/\.(?:png|webp|gif)\b/i);
-  expect(css.match(/\.jpe?g\b/gi)?.length).toBe(1);
+  expect(css).not.toMatch(/gradient|\.(?:png|webp|gif)\b/i);
+  expect(css.match(/\.(?:svg|jpe?g)\b/gi)?.length).toBe(6);
 });
 
 test("#512 Graphite Sand packages the exact selected raster artwork without pretending it is an SVG", () => {

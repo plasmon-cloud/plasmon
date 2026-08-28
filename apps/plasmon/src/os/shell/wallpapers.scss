@@ -1,200 +1,32 @@
 @layer plasmon-shell {
-  // Wallpaper identity is intentionally independent from the active system
-  // theme. Each generated composition owns a small local palette so a pinned
-  // Ember wallpaper remains Ember even after switching the UI to Glacier.
-  .plasmon-shell--wallpaper-plasmon-lattice {
-    --plasmon-wallpaper-base: #071821;
-    --plasmon-wallpaper-deep: #0b2834;
-    --plasmon-wallpaper-primary: #65ddb0;
-    --plasmon-wallpaper-secondary: #3aa9c8;
-    --plasmon-wallpaper-line: #a0f2ce;
-  }
-  .plasmon-shell--wallpaper-midnight-orbit {
-    --plasmon-wallpaper-base: #090817;
-    --plasmon-wallpaper-deep: #1e1438;
-    --plasmon-wallpaper-primary: #aa91ff;
-    --plasmon-wallpaper-secondary: #7864e8;
-    --plasmon-wallpaper-line: #d3c8ff;
-  }
-  .plasmon-shell--wallpaper-ember-horizon {
-    --plasmon-wallpaper-base: #120e0b;
-    --plasmon-wallpaper-deep: #44200d;
-    --plasmon-wallpaper-primary: #f5a33b;
-    --plasmon-wallpaper-secondary: #d75c27;
-    --plasmon-wallpaper-line: #ffd28a;
-  }
-  .plasmon-shell--wallpaper-glacier-prism {
-    --plasmon-wallpaper-base: #eaf5f8;
-    --plasmon-wallpaper-deep: #bfdde6;
-    --plasmon-wallpaper-primary: #1689ad;
-    --plasmon-wallpaper-secondary: #55b9d3;
-    --plasmon-wallpaper-line: #45798b;
-  }
-  .plasmon-shell--wallpaper-rosewood-bloom {
-    --plasmon-wallpaper-base: #1b0a13;
-    --plasmon-wallpaper-deep: #4a1730;
-    --plasmon-wallpaper-primary: #f27691;
-    --plasmon-wallpaper-secondary: #bd466d;
-    --plasmon-wallpaper-line: #ffc0cf;
-  }
-
-  .plasmon-shell__wallpaper::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-  }
-
-  .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora--one {
-    background: var(--plasmon-wallpaper-primary);
-  }
-  .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora--two {
-    background: var(--plasmon-wallpaper-secondary);
+  // Every wallpaper is a packaged image. Graphite uses the supplied JPG;
+  // the other theme companions are authored SVG artwork. The watermark is a
+  // separate Shell overlay so it can be toggled without changing the artwork.
+  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
   }
 
   .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__wallpaper {
-    background:
-      radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 24%, transparent) 0 9%, transparent 34%),
-      radial-gradient(circle at 82% 74%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 17%, transparent) 0 8%, transparent 36%),
-      linear-gradient(145deg, var(--plasmon-wallpaper-base) 0%, var(--plasmon-wallpaper-deep) 52%, var(--plasmon-wallpaper-base) 100%);
-  }
-  .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__wallpaper::before {
-    background:
-      repeating-linear-gradient(45deg, transparent 0 52px, color-mix(in srgb, var(--plasmon-wallpaper-primary) 12%, transparent) 53px, transparent 54px 106px),
-      repeating-linear-gradient(-45deg, transparent 0 52px, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 10%, transparent) 53px, transparent 54px 106px);
-    inset: -18%;
-    opacity: .7;
-    transform: rotate(4deg) scale(1.08);
-  }
-  .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__aurora--one {
-    filter: blur(68px);
-    opacity: .13;
-    transform: rotate(-9deg) scaleX(1.08);
-  }
-  .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__aurora--two {
-    filter: blur(72px);
-    opacity: .1;
-    transform: rotate(14deg) scaleY(.86);
+    background: url("static/plasmon/wallpapers/plasmon-lattice.svg") center / cover no-repeat;
   }
 
   .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__wallpaper {
-    background:
-      radial-gradient(circle, color-mix(in srgb, var(--plasmon-wallpaper-line) 58%, white) 0 1px, transparent 1.5px) 0 0 / 79px 79px,
-      radial-gradient(circle at 73% 37%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 30%, transparent) 0 5%, transparent 6% 14%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 15%, transparent) 15% 16%, transparent 17% 31%),
-      radial-gradient(circle at 73% 37%, transparent 0 37%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 11%, transparent) 38% 39%, transparent 40%),
-      linear-gradient(158deg, color-mix(in srgb, var(--plasmon-wallpaper-base) 84%, #04030b) 0%, var(--plasmon-wallpaper-base) 54%, var(--plasmon-wallpaper-deep) 100%);
-  }
-  .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__wallpaper::before {
-    border: 1px solid color-mix(in srgb, var(--plasmon-wallpaper-primary) 24%, transparent);
-    border-radius: 50%;
-    height: min(76vw, 980px);
-    right: -18vw;
-    top: -28vw;
-    transform: rotate(-19deg) scaleY(.42);
-    width: min(76vw, 980px);
-  }
-  .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__aurora--one {
-    height: 26vw;
-    left: 58vw;
-    opacity: .14;
-    top: 9vh;
-    width: 26vw;
-  }
-  .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__aurora--two {
-    bottom: -22vw;
-    height: 42vw;
-    opacity: .11;
-    right: 38vw;
-    top: auto;
-    width: 42vw;
+    background: url("static/plasmon/wallpapers/midnight-orbit.svg") center / cover no-repeat;
   }
 
   .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__wallpaper {
-    background:
-      linear-gradient(180deg, transparent 0 56%, color-mix(in srgb, var(--plasmon-wallpaper-line) 54%, transparent) 57% 57.2%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 14%, transparent) 57.3% 58%, transparent 59%),
-      radial-gradient(ellipse at 50% 72%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 35%, transparent) 0 4%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 19%, transparent) 18%, transparent 47%),
-      linear-gradient(180deg, color-mix(in srgb, var(--plasmon-wallpaper-base) 86%, #080705) 0%, var(--plasmon-wallpaper-base) 55%, var(--plasmon-wallpaper-deep) 100%);
+    background: url("static/plasmon/wallpapers/ember-horizon.svg") center / cover no-repeat;
   }
-  .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__wallpaper::before {
-    background: repeating-linear-gradient(90deg, transparent 0 42px, color-mix(in srgb, var(--plasmon-wallpaper-primary) 10%, transparent) 43px, transparent 44px 86px);
-    bottom: 0;
-    height: 43%;
-    left: 0;
-    opacity: .5;
-    right: 0;
-    transform: perspective(360px) rotateX(62deg) scaleX(1.4);
-    transform-origin: bottom center;
-  }
-  .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__aurora--one {
-    bottom: -25vw;
-    filter: blur(58px);
-    height: 34vw;
-    left: 18vw;
-    opacity: .19;
-    top: auto;
-    width: 64vw;
-  }
-  .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__aurora--two { display: none; }
 
   .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__wallpaper {
-    background:
-      linear-gradient(126deg, transparent 0 28%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 11%, transparent) 28.2% 28.8%, transparent 29% 61%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 10%, transparent) 61.2% 62%, transparent 62.2%),
-      repeating-linear-gradient(150deg, transparent 0 54px, color-mix(in srgb, var(--plasmon-wallpaper-line) 22%, transparent) 55px, transparent 56px 112px),
-      linear-gradient(145deg, color-mix(in srgb, var(--plasmon-wallpaper-base) 88%, white) 0%, var(--plasmon-wallpaper-base) 52%, var(--plasmon-wallpaper-deep) 100%);
+    background: url("static/plasmon/wallpapers/glacier-prism.svg") center / cover no-repeat;
   }
-  .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__wallpaper::before {
-    background: conic-gradient(from 214deg at 50% 50%, transparent 0 18%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 13%, transparent) 18.5% 29%, transparent 29.5% 48%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 10%, transparent) 48.5% 62%, transparent 62.5%);
-    clip-path: polygon(50% 0, 100% 100%, 0 100%);
-    height: min(62vw, 760px);
-    opacity: .85;
-    right: -7vw;
-    top: -13vw;
-    transform: rotate(13deg);
-    width: min(48vw, 620px);
-  }
-  .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__aurora { filter: blur(64px); opacity: .1; }
-  .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__aurora--one { left: -20vw; top: 24vh; }
-  .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__aurora--two { right: -18vw; top: -12vh; }
 
   .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__wallpaper {
-    background:
-      radial-gradient(circle at 82% 22%, transparent 0 17%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 14%, transparent) 17.4% 17.7%, transparent 18%),
-      radial-gradient(ellipse at 72% 38%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 25%, transparent) 0 5%, transparent 6% 19%),
-      radial-gradient(ellipse at 63% 48%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 16%, transparent) 0 7%, transparent 8% 22%),
-      linear-gradient(138deg, color-mix(in srgb, var(--plasmon-wallpaper-base) 78%, #190612) 0%, var(--plasmon-wallpaper-base) 52%, var(--plasmon-wallpaper-deep) 100%);
-  }
-  .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__wallpaper::before {
-    background:
-      radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--plasmon-wallpaper-primary) 23%, transparent) 0 18%, transparent 19%),
-      radial-gradient(ellipse at 100% 50%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 18%, transparent) 0 18%, transparent 19%),
-      radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--plasmon-wallpaper-primary) 20%, transparent) 0 18%, transparent 19%),
-      radial-gradient(ellipse at 0 50%, color-mix(in srgb, var(--plasmon-wallpaper-secondary) 16%, transparent) 0 18%, transparent 19%);
-    height: min(54vw, 700px);
-    opacity: .92;
-    right: -8vw;
-    top: -10vw;
-    transform: rotate(22deg);
-    width: min(54vw, 700px);
-  }
-  .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__aurora--one {
-    filter: blur(72px);
-    left: -12vw;
-    opacity: .13;
-    top: 28vh;
-  }
-  .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__aurora--two {
-    filter: blur(66px);
-    opacity: .15;
-    right: 8vw;
-    top: -18vh;
+    background: url("static/plasmon/wallpapers/rosewood-bloom.svg") center / cover no-repeat;
   }
 
-  // Graphite Sand is the raster-native companion for the neutral Graphite
-  // theme. The photograph is user-selected artwork; it is not a flattened
-  // vector substitute and remains independent from the SVG brand overlay.
-  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
-    background:
-      linear-gradient(115deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .02) 46%, rgba(0, 0, 0, .16)),
-      url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
+  .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora {
+    display: none;
   }
-  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__aurora { display: none; }
 }

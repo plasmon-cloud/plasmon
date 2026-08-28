@@ -17,12 +17,31 @@ const THEME_WALLPAPERS = [
 
 const JPG_WALLPAPER_ID = "graphite-sand";
 const JPG_WALLPAPER_ASSET = "/app/plasmon/static/plasmon/wallpapers/graphite-sand.jpg";
+const WALLPAPER_ASSETS = [
+  [JPG_WALLPAPER_ASSET, "image/jpeg"],
+  ["/app/plasmon/static/plasmon/wallpapers/plasmon-lattice.svg", "image/svg+xml"],
+  ["/app/plasmon/static/plasmon/wallpapers/midnight-orbit.svg", "image/svg+xml"],
+  ["/app/plasmon/static/plasmon/wallpapers/ember-horizon.svg", "image/svg+xml"],
+  ["/app/plasmon/static/plasmon/wallpapers/glacier-prism.svg", "image/svg+xml"],
+  ["/app/plasmon/static/plasmon/wallpapers/rosewood-bloom.svg", "image/svg+xml"],
+] as const;
+const WATERMARK_ASSET = "/app/plasmon/static/plasmon/plasmon-watermark.svg";
+const PACKAGED_ASSET_PATHS = new Set([
+  ...WALLPAPER_ASSETS.map(([path]) => path),
+  WATERMARK_ASSET,
+]);
 
 test("#512 six wallpapers are visible, follow themes, pin independently, and share a toggleable SVG watermark", async ({ page, request }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
+  const loadedPackagedAssets = new Set<string>();
+  const onResponse = (response: { url(): string; ok(): boolean }): void => {
+    const path = new URL(response.url()).pathname;
+    if (response.ok() && PACKAGED_ASSET_PATHS.has(path)) loadedPackagedAssets.add(path);
+  };
+  page.on("response", onResponse);
 
   try {
     await page.goto(kernelUrl);
@@ -65,10 +84,21 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
     expect(watermark.backgroundImage).toContain("plasmon-watermark.svg");
     expect(watermark.right).not.toBe("auto");
 
-    const jpgResponse = await request.get(new URL(JPG_WALLPAPER_ASSET, kernelUrl).toString());
-    expect(jpgResponse.ok()).toBe(true);
-    expect(jpgResponse.headers()["content-type"] ?? "").toContain("image/jpeg");
-    expect((await jpgResponse.body()).byteLength).toBe(63_590);
+    for (const [assetPath, contentType] of WALLPAPER_ASSETS) {
+      const response = await request.get(new URL(assetPath, kernelUrl).toString());
+      expect(response.ok()).toBe(true);
+      expect(response.headers()["content-type"] ?? "").toContain(contentType);
+      const body = await response.body();
+      if (assetPath === JPG_WALLPAPER_ASSET) {
+        expect(body.byteLength).toBe(63_590);
+      } else {
+        expect(body.toString("utf8")).toContain("<svg");
+      }
+    }
+    const watermarkResponse = await request.get(new URL(WATERMARK_ASSET, kernelUrl).toString());
+    expect(watermarkResponse.ok()).toBe(true);
+    expect(watermarkResponse.headers()["content-type"] ?? "").toContain("image/svg+xml");
+    expect((await watermarkResponse.body()).toString("utf8")).toContain("<svg");
 
     await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
@@ -100,13 +130,15 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
         expect(rendered).toContain("graphite-sand.jpg");
         expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundSize)).toContain("cover");
       } else {
-        expect(rendered).toContain("gradient");
+        expect(rendered).toContain(`${wallpaperId}.svg`);
+        expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundSize)).toContain("cover");
         generatedBackgrounds.add(rendered);
       }
       expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
         .toBe("rgba(0, 0, 0, 0)");
     }
     expect(generatedBackgrounds.size).toBe(5);
+    await expect.poll(() => [...PACKAGED_ASSET_PATHS].every((path) => loadedPackagedAssets.has(path))).toBe(true);
 
     const pinned = settings.getByRole("button", { name: "Graphite Sand", exact: true });
     await pinned.click();
@@ -134,6 +166,7 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
 
     health.assertClean();
   } finally {
+    page.off("response", onResponse);
     health.dispose();
   }
 });
