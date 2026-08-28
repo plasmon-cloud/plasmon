@@ -2,15 +2,37 @@
 
 **Canonical Issue:** #107  
 **Historical gate date:** 2026-08-12  
-**Current refresh date:** 2026-08-27  
+**Current refresh date:** 2026-08-28
 
 ## Current `release/0.1.0-r2` execution refresh
 
 This section is the current #107 gate. The historical matrix below remains preserved as dated provenance for the 2026-08-12 `version-0.1.0-os` pass; it is not silently promoted into current-r2 acceptance.
 
-**Product basis before this report-only branch:** `release/0.1.0-r2` at `71f84fd2ad9bf43a4bd37d29e2122e597925ce9d`.
+**Integrated Product basis:** `release/0.1.0-r2` at `5fff50fb11eb96fdf8954246cda01300979a1562`, including merged #571.
 
-The #107 branch changes only this acceptance report. Therefore the package/browser jobs below exercise Product code equivalent to that r2 basis. Product defects remain owned by their canonical Issues rather than being repaired inside this report task.
+The current #107 branch contains the acceptance-only Specialist journey and this durable evidence refresh. Product behavior is supplied by the integrated release; Product defects remain owned by their canonical Issues rather than being repaired inside this acceptance PR.
+
+## Post-#571 integrated #544 execution
+
+**Exact acceptance head:** `e95666afaab3dee8e665c4e5cdf4fe591ec6a195`
+**Specialist run:** `33201404662`, job `98951483186` — **41 passed, 2 skipped**
+**Flake Probe:** `33201404690` — **10/10 baseline and 50/50 characterization passed**
+**Fast CI:** `33201404682` — **PASS**
+**Kernel CI:** `33201404700` — **PASS**
+**Packaged Smoke:** `33201404681` — **PASS**
+**Packaged Browser Persistence:** `33201404736` — **PASS**
+
+The five #107 journeys passed in the exact-head Specialist execution:
+
+| Journey | Result | Evidence |
+| --- | --- | --- |
+| Search dismisses on outside workspace click without launching a result | **PASS** | Packaged Specialist test at `plasmon-acceptance-107.spec.ts:146` |
+| Exact installed `/Apps/Review.neutron` projection activates through FileManager | **PASS** | Packaged Specialist test at `plasmon-acceptance-107.spec.ts:172` |
+| FileManager Download emits a browser-owned download with exact filename, completion, and bytes | **PASS** | Packaged Specialist test at `plasmon-acceptance-107.spec.ts:204` |
+| Recycle Bin restores one item and permanently deletes another through the visible UI | **PASS** | Packaged Specialist test at `plasmon-acceptance-107.spec.ts:238` |
+| Installed invalid Video presents actionable native-codec failure state with clean BrowserHealth | **PASS** | Packaged Specialist test at `plasmon-acceptance-107.spec.ts:284` |
+
+These results close the corresponding packaged/browser gaps for #107. They do not promote optional-profile, quarantined, or human/manual evidence into acceptance; those boundaries remain separately identified below.
 
 ### Latest complete gate execution before this evidence-only correction
 
@@ -29,6 +51,7 @@ The current required browser surface is the inventory in `test/ci/plasmon-test-i
 
 GitHub Issues are the canonical acceptance queue, so the external governance updates are recorded here as durable evidence references rather than being reimplemented as network-dependent repository tests:
 
+- #107 comment `5456668243` records the exact post-#571 #544 Fast, Kernel, Smoke, Specialist, persistence, and flake evidence, including all five acceptance journeys and their byte/browser results.
 - #107 comment `5431887067` records the exact prior-head Fast, Smoke, Specialist, and persistence evidence and preserves the remaining stronger-layer gaps without closing #107.
 - #109 comment `5443314492` records the bounded human packaged visual **PASS** on 2026-08-27: the current r2 pin/unpin icons were visually accepted and no emoji/platform-glyph regression was observed. #109 was then closed as completed.
 
@@ -43,7 +66,7 @@ Repository automation continues to cover machine-provable local contracts. It mu
 | Start/Search filesystem and native-app opening | **PASS** | Fast + required packaged Smoke | Canonical Start/Search/open-dispatch tests pass; required Smoke uses installed Search to open native Settings through the real Process/Windowing path. |
 | Runtime-only hosts excluded from normal Start inventory | **PASS** | Fast/model | `runtimeOnlyInventory.test.ts` proves runtime-only process hosts are not normal user-launchable Start applications while preserving upgrade/customization behavior. The old #88 FAIL below is historical only. |
 | Neutron Search classification/de-duplication/presentation | **PASS** | Fast + required Specialist inventory | Current Search projection tests pass, and required Specialist includes current Neutron/search presentation browser gates. The old #90 FAIL below is historical only. |
-| `.neutron` filesystem-projection activation through an installed Element | **NOT-YET-TESTABLE** | exact installed projection boundary | The current required gate does not establish that a canonical `/Apps/*.neutron` filesystem projection itself was activated end-to-end. Do not infer this from direct Search/Element presentation. |
+| `.neutron` filesystem-projection activation through an installed Element | **PASS** | required packaged Specialist browser | The exact-head #107 journey activates the canonical `/Apps/Review.neutron` projection through FileManager and observes the newly created installed Review surface. |
 | Create Shortcut discoverability, creation, collision naming, and activation (#44) | **PASS** | required Specialist browser | `plasmon-create-shortcut-44.spec.ts` exercises the real toolbar and item-context command, visible shortcut state/artwork, collision creation, and normal double-click activation in installed Explorer. |
 | Taskbar state derivation and visible wording/accessibility (#72) | **PASS** | Fast + required Specialist browser | `plasmon-taskbar-presentation-72.spec.ts` proves pinned-only/running/active state, accessible wording, native lifecycle projection, installed Element `Running`, and absence of raw yes/no/unknown runtime tokens. |
 | Taskbar cross-authority lifecycle (#81) | **PASS** | composed headless | `apps/plasmon/test/taskbarLifecycle.test.ts` proves canonical Process/Windowing/taskbar lifecycle and external Windowing teardown reconciliation. |
@@ -51,14 +74,15 @@ Repository automation continues to cover machine-provable local contracts. It mu
 | Folder-drop target semantics | **PASS** | Fast/model | Canonical drop-target/move semantics pass below the browser boundary. |
 | Folder-drop installed pointer lifecycle | **NOT-YET-TESTABLE** | quarantined browser boundary | `plasmon-filemanager-directory-drop.spec.ts` is in the current quarantine inventory; the required gate does not promote it. |
 | Drag feedback/placement contracts that remain in required Specialist | **PASS** | required Specialist browser | Current required Specialist execution includes the non-quarantined drag-feedback/placement browser contracts and passed them. |
-| Delete -> Recycle Bin -> restore / permanent delete / empty | **NOT-YET-TESTABLE** | lower-layer PASS; required packaged lifecycle absent | `trashLifecycle.test.ts` and Recycle Bin model tests pass the canonical authority semantics. The **current required Smoke/Specialist inventories contain no Recycle Bin journey**. The old optional `plasmon-golden-path.spec.ts` still launches an empty Recycle Bin, but that optional source is not current required execution and never covered the full lifecycle. |
-| FileManager Download | **NOT-YET-TESTABLE** | deterministic helper PASS; browser boundary absent | Current lower-layer byte/name/MIME/object-URL behavior is covered, but the required installed browser inventory does not establish the browser-owned download result. |
+| Delete -> Recycle Bin -> restore / permanent delete / empty | **PASS** | required packaged Specialist browser | The exact-head #107 journey performs visible restore and permanent-delete flows, verifies source re-entry, and cleans up through the normal UI; the existing #45 Specialist acceptance continues to own Delete -> Trash -> Empty. |
+| FileManager Download | **PASS** | required packaged Specialist browser | The exact-head #107 journey observes the real Playwright download event, exact filename, successful completion, completed path, and byte-for-byte payload. |
 | Selected filename/inline rename browser geometry | **PASS** | required Smoke/Specialist browser | Required current browser coverage includes tile-bounded rename geometry and non-quarantined inline-rename presentation contracts. This does not manufacture a separate human aesthetic judgment. |
 | Start surface current packaged contracts | **PASS** | required Specialist browser | The required Specialist inventory includes the current Start-surface browser gate and passed it. Broad subjective visual review is still distinct from those assertions. |
-| Start/Search click-away as a broad manual interaction claim | **NOT-YET-TESTABLE** | manual/interaction | No broader human interaction claim is inferred beyond the exact required browser assertions. |
+| Start/Search click-away as a broad manual interaction claim | **NOT-YET-TESTABLE** | manual/interaction | The exact packaged #107 outside-workspace dismissal is **PASS**, but no broader human interaction claim is inferred beyond that bounded browser assertion. |
 | Text/Markdown deterministic editor behavior | **PASS** | Fast + required Specialist slices | Current deterministic document/editor tests pass, and required Specialist includes non-optional Text/Markdown browser slices such as language/parity/command contracts. |
 | Full optional-profile Text/Markdown Monaco open/edit/save/reopen | **NOT-YET-TESTABLE** | optional profile-specific browser gate | `plasmon-monaco-packaged.spec.ts` remains optional/profile-specific. Required Smoke proves the installed native Settings/Monaco-ready boundary, not the complete optional-profile editor workflow. |
-| Photos fullscreen fallback and Video unsupported-codec presentation | **NOT-YET-TESTABLE** | deterministic PASS; required browser boundary absent | Focused models pass, but the optional/profile-specific browser sources are not promoted into this required current-r2 gate. |
+| Photos fullscreen fallback | **NOT-YET-TESTABLE** | deterministic PASS; required browser boundary absent | Focused models pass, but Photos fullscreen behavior remains outside the exact #107 journey and is not promoted from lower-layer evidence. |
+| Video unsupported-codec presentation | **PASS** | required packaged Specialist browser | The exact-head #107 journey imports an invalid video, observes the actionable native-codec failure UI, and completes with BrowserHealth clean. |
 | `/System/Program Files` structural/package boundary | **PASS** | Fast + package/build | Current filesystem/package guards pass and required Smoke successfully packages/boots the supported current profile. |
 | Program Files subjective visible presentation | **NOT-YET-TESTABLE** | human/manual | Structural package evidence does not prove subjective Explorer/runtime presentation quality. |
 | Old boot-time Doom seed expectation | **SUPERSEDED** | accepted product contract | #29 intentionally retired unconditional demo-game boot seeding; restoring it would regress the accepted architecture. |
@@ -67,14 +91,12 @@ Repository automation continues to cover machine-provable local contracts. It mu
 
 ### Current blockers retained by the gate
 
-The required current-r2 package/browser lanes are green, but #107 is **not equivalent to “every historical acceptance row is closed.”** The remaining evidence gaps are explicit:
+The required current-r2 package/browser lanes are green, and the five targeted #107 packaged journeys now pass after #571 integration. #107 is still **not equivalent to “every historical acceptance row is closed.”** The remaining evidence gaps are explicit:
 
-1. the complete visible Trash lifecycle is absent from required current packaged coverage;
-2. direct installed activation of a canonical `/Apps/*.neutron` filesystem projection is not established here;
-3. browser-owned Download remains outside the required current browser inventory;
-4. quarantined directory-drop browser acceptance remains quarantined rather than promoted;
-5. full optional-profile Monaco and game/emulator workflows remain optional-profile evidence, not required slim-r2 acceptance;
-6. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence.
+1. quarantined directory-drop browser acceptance remains quarantined rather than promoted;
+2. full optional-profile Monaco and game/emulator workflows remain optional-profile evidence, not required slim-r2 acceptance;
+3. Photos fullscreen fallback remains outside the required packaged journey;
+4. bounded human-only visual judgments such as #28 and Program Files subjective presentation remain human evidence.
 
 The former #109 blocker is retired by the 2026-08-27 bounded human visual PASS recorded in canonical comment `5443314492`; that acceptance is not inferred from automation.
 
