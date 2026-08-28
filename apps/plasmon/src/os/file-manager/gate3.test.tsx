@@ -283,7 +283,7 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
   });
 });
 
-test("hosted hackathon downloads fail before reading bytes with actionable feedback", async () => {
+test("hosted core-profile downloads fail before reading bytes with actionable feedback", async () => {
   expect(downloadCompatibilityError(true, true)).toBe(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
   expect(downloadCompatibilityError(false, true)).toBeNull();
   expect(downloadCompatibilityError(true, false)).toBeNull();

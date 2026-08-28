@@ -1,15 +1,15 @@
 import type { FsNode, FsService } from "../contracts/index.ts";
-import { isHackathonCoreProfile } from "../integration/packageProfile.ts";
+import { isCoreProfile } from "../integration/packageProfile.ts";
 
 export const DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
 export const HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE =
-  "Downloads are unavailable in this hackathon build because its Neutron Kernel does not permit browser downloads. Use a Kernel with installed-app download support.";
+  "Downloads are unavailable in this hosted Neutron runtime because its Kernel does not permit browser downloads. Use a Kernel with installed-app download support.";
 
 export function downloadCompatibilityError(
   hosted: boolean,
-  hackathonCore: boolean,
+  coreProfile: boolean,
 ): string | null {
-  return hosted && hackathonCore ? HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE : null;
+  return hosted && coreProfile ? HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE : null;
 }
 
 export interface DownloadAnchorLike {
@@ -41,7 +41,7 @@ export function browserDownloadEnvironment(): DownloadEnvironment {
     assertAvailable: () => {
       const message = downloadCompatibilityError(
         window.parent !== window,
-        isHackathonCoreProfile,
+        isCoreProfile,
       );
       if (message) throw new Error(message);
     },

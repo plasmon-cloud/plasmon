@@ -18,7 +18,7 @@ const devMode = args[0] === "dev";
 // profile is retained for the complete local comparison build.
 const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
 const isEditorProfile = packageProfile === "slim" || packageProfile === "full" || packageProfile === "demo";
-const isHackathonCoreProfile = !isEditorProfile;
+const isCoreProfile = !isEditorProfile;
 const isSlimMonacoProfile = packageProfile === "slim" || packageProfile === "demo";
 const isDemoProfile = packageProfile === "demo";
 
@@ -79,7 +79,7 @@ const config: BuildOptions = {
   entryPoints: [
     { in: "./src/index.tsx", out: "main" },
     { in: "./src/os/fs/background.ts", out: "service" },
-    ...(isHackathonCoreProfile
+    ...(isCoreProfile
       ? []
       : isSlimMonacoProfile
         ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
@@ -89,7 +89,7 @@ const config: BuildOptions = {
   bundle: true,
   minify: !devMode,
   sourcemap: devMode ? "inline" : false,
-  external: isHackathonCoreProfile
+  external: isCoreProfile
     ? ["monaco-editor", "monaco-editor/*", "./text/*", "./markdown/*"]
     : [],
   format: "esm",
@@ -98,7 +98,7 @@ const config: BuildOptions = {
   outExtension: { ".css": ".bundle.css" },
   platform: "browser",
   define: {
-    __PLASMON_HACKATHON_CORE__: JSON.stringify(isHackathonCoreProfile),
+    __PLASMON_CORE_PROFILE__: JSON.stringify(isCoreProfile),
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
@@ -128,7 +128,7 @@ const config: BuildOptions = {
             monacoProfile: isEditorProfile ? (isSlimMonacoProfile ? "slim" : "full") : undefined,
           });
           await mergeApplicationStyles();
-          if (isHackathonCoreProfile) {
+          if (isCoreProfile) {
             const html = await readFile(outputIndex, "utf8");
             await writeFile(outputIndex, html.replace(/\s*<script src="\.\/runtime\/monaco\/worker-sources\.js"><\/script>/u, ""));
           }
@@ -141,7 +141,7 @@ const config: BuildOptions = {
 };
 
 await rm("./dist/web", { recursive: true, force: true });
-if (isHackathonCoreProfile) {
+if (isCoreProfile) {
   await Promise.all([
     rm("./public/runtime/monaco", { recursive: true, force: true }),
     rm("./public/System/Program Files/MonacoEditor", { recursive: true, force: true }),
