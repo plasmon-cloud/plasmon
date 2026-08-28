@@ -1,33 +1,384 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  preserveAspectRatio="xMidYMid slice"
+  viewBox="0 0 1600 900"
+>
   <defs>
-    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="800" y1="0" x2="800" y2="900">
-      <stop stop-color="#100c0a"/>
-      <stop offset=".55" stop-color="#120e0b"/>
-      <stop offset="1" stop-color="#44200d"/>
+    <linearGradient
+      id="a"
+      x1="800"
+      x2="800"
+      y1="0"
+      y2="900"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#0a0908"
+      />
+      <stop
+        offset=".46"
+        stop-color="#0e0c0a"
+      />
+      <stop
+        offset=".58"
+        stop-color="#120e0a"
+      />
+      <stop
+        offset=".72"
+        stop-color="#211309"
+      />
+      <stop
+        offset="1"
+        stop-color="#3a210f"
+      />
     </linearGradient>
-    <radialGradient id="sun" gradientUnits="userSpaceOnUse" cx="800" cy="648" rx="752" ry="423">
-      <stop stop-color="#f5a33b" stop-opacity=".35"/>
-      <stop offset=".18" stop-color="#d75c27" stop-opacity=".19"/>
-      <stop offset="1" stop-color="#d75c27" stop-opacity="0"/>
+    <linearGradient
+      id="k"
+      x1="0"
+      x2="1600"
+      y1="0"
+      y2="0"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#907536"
+        stop-opacity=".58"
+      />
+      <stop
+        offset=".18"
+        stop-color="#b78f42"
+        stop-opacity=".82"
+      />
+      <stop
+        offset=".5"
+        stop-color="#e7bc65"
+      />
+      <stop
+        offset=".82"
+        stop-color="#b78f42"
+        stop-opacity=".82"
+      />
+      <stop
+        offset="1"
+        stop-color="#907536"
+        stop-opacity=".58"
+      />
+    </linearGradient>
+    <linearGradient
+      id="h"
+      x1="0"
+      x2="1600"
+      y1="0"
+      y2="0"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#b66e29"
+        stop-opacity=".08"
+      />
+      <stop
+        offset=".5"
+        stop-color="#ffc66a"
+        stop-opacity=".38"
+      />
+      <stop
+        offset="1"
+        stop-color="#b66e29"
+        stop-opacity=".08"
+      />
+    </linearGradient>
+    <linearGradient
+      id="f"
+      x1="800"
+      x2="800"
+      y1="544"
+      y2="900"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#e9a14b"
+        stop-opacity="0"
+      />
+      <stop
+        offset=".32"
+        stop-color="#dc7b2c"
+        stop-opacity=".025"
+      />
+      <stop
+        offset="1"
+        stop-color="#dc7b2c"
+        stop-opacity=".075"
+      />
+    </linearGradient>
+    <linearGradient
+      id="g"
+      x1="0"
+      x2="1600"
+      y1="0"
+      y2="0"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#d47629"
+        stop-opacity="0"
+      />
+      <stop
+        offset=".22"
+        stop-color="#d47629"
+        stop-opacity=".018"
+      />
+      <stop
+        offset=".5"
+        stop-color="#e18a31"
+        stop-opacity=".042"
+      />
+      <stop
+        offset=".78"
+        stop-color="#d47629"
+        stop-opacity=".018"
+      />
+      <stop
+        offset="1"
+        stop-color="#d47629"
+        stop-opacity="0"
+      />
+    </linearGradient>
+    <linearGradient
+      id="l"
+      x1="800"
+      x2="800"
+      y1="900"
+      y2="544"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#120b07"
+        stop-opacity=".14"
+      />
+      <stop
+        offset=".48"
+        stop-color="#130b07"
+        stop-opacity=".02"
+      />
+      <stop
+        offset="1"
+        stop-opacity=".18"
+      />
+    </linearGradient>
+    <radialGradient
+      id="b"
+      cx="800"
+      cy="540"
+      r="570"
+      gradientTransform="matrix(1 0 0 .58 0 225)"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#bd6725"
+        stop-opacity=".2"
+      />
+      <stop
+        offset=".2"
+        stop-color="#8f471d"
+        stop-opacity=".105"
+      />
+      <stop
+        offset=".48"
+        stop-color="#522611"
+        stop-opacity=".045"
+      />
+      <stop
+        offset="1"
+        stop-opacity="0"
+      />
     </radialGradient>
-    <linearGradient id="horizon" gradientUnits="userSpaceOnUse" x1="192" y1="0" x2="1408" y2="0">
-      <stop stop-color="#ffd28a" stop-opacity="0"/>
-      <stop offset=".5" stop-color="#ffd28a" stop-opacity=".85"/>
-      <stop offset="1" stop-color="#ffd28a" stop-opacity="0"/>
-    </linearGradient>
-    <pattern id="ground-lines" width="120.4" height="380" patternUnits="userSpaceOnUse">
-      <path d="M0 0V380" stroke="#f5a33b" stroke-opacity=".1" stroke-width="2"/>
-    </pattern>
+    <radialGradient
+      id="c"
+      cx="800"
+      cy="735"
+      r="690"
+      gradientTransform="matrix(1 0 0 .69 0 250)"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#d98a2d"
+        stop-opacity=".45"
+      />
+      <stop
+        offset=".16"
+        stop-color="#b45e20"
+        stop-opacity=".32"
+      />
+      <stop
+        offset=".39"
+        stop-color="#7a3817"
+        stop-opacity=".2"
+      />
+      <stop
+        offset=".68"
+        stop-color="#4a2210"
+        stop-opacity=".105"
+      />
+      <stop
+        offset="1"
+        stop-color="#1a1009"
+        stop-opacity="0"
+      />
+    </radialGradient>
+    <radialGradient
+      id="d"
+      cx="800"
+      cy="570"
+      r="335"
+      gradientTransform="matrix(1 0 0 .45 0 170)"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#efaa4d"
+        stop-opacity=".16"
+      />
+      <stop
+        offset=".45"
+        stop-color="#c86d27"
+        stop-opacity=".07"
+      />
+      <stop
+        offset="1"
+        stop-opacity="0"
+      />
+    </radialGradient>
+    <radialGradient
+      id="m"
+      cx="800"
+      cy="530"
+      r="980"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset=".48"
+        stop-opacity="0"
+      />
+      <stop
+        offset=".79"
+        stop-opacity=".17"
+      />
+      <stop
+        offset="1"
+        stop-opacity=".48"
+      />
+    </radialGradient>
+    <filter
+      id="j"
+      width="120%"
+      height="700%"
+      x="-10%"
+      y="-300%"
+    >
+      <feGaussianBlur
+        stdDeviation="7"
+      />
+    </filter>
+    <filter
+      id="i"
+      width="120%"
+      height="1100%"
+      x="-10%"
+      y="-500%"
+    >
+      <feGaussianBlur
+        stdDeviation="16"
+      />
+    </filter>
+    <clipPath
+      id="e"
+    >
+      <path
+        d="M0 544h1600v356H0z"
+      />
+    </clipPath>
   </defs>
-  <rect width="1600" height="900" fill="url(#base)"/>
-  <rect width="1600" height="900" fill="url(#sun)"/>
-  <!-- The transformed CSS grid is represented with converging rays and
-       compressed horizontal intervals instead of a CSS pseudo-element. -->
-  <rect y="520" width="1600" height="380" fill="url(#ground-lines)" opacity=".5"/>
-  <g fill="none" stroke="#f5a33b" stroke-opacity=".1" stroke-width="2" opacity=".5">
-    <path d="M800 520  -4 900M800 520 116 900M800 520 236 900M800 520 357 900M800 520 477 900M800 520 598 900M800 520 718 900M800 520 839 900M800 520 959 900M800 520 1080 900M800 520 1200 900M800 520 1321 900M800 520 1441 900M800 520 1562 900M800 520 1682 900"/>
-    <path d="M0 525H1600M0 535H1600M0 550H1600M0 570H1600M0 597H1600M0 633H1600M0 680H1600M0 740H1600M0 820H1600"/>
+  <path
+    fill="url(#a)"
+    d="M0 0h1600v900H0z"
+  />
+  <path
+    fill="url(#b)"
+    d="M0 0h1600v900H0z"
+  />
+  <path
+    fill="url(#c)"
+    d="M0 544h1600v356H0z"
+  />
+  <path
+    fill="url(#d)"
+    d="M0 544h1600v356H0z"
+  />
+  <g
+    fill="none"
+    stroke="url(#f)"
+    clip-path="url(#e)"
+  >
+    <path
+      d="M800 544 40 900M800 544 160 900M800 544 280 900M800 544 400 900M800 544 520 900M800 544 630 900M800 544l-80 356M800 544l-25 356M800 544l25 356M800 544l80 356M800 544l170 356M800 544l280 356M800 544l400 356M800 544l520 356M800 544l640 356M800 544l760 356"
+    />
   </g>
-  <rect x="192" y="513" width="1216" height="2" fill="url(#horizon)"/>
-  <rect x="192" y="516" width="1216" height="8" fill="#f5a33b" fill-opacity=".14"/>
+  <g
+    fill="none"
+    stroke="url(#g)"
+  >
+    <path
+      d="M0 562h1600M0 585h1600M0 616h1600M0 656h1600M0 706h1600M0 766h1600M0 838h1600"
+    />
+  </g>
+  <rect
+    width="1640"
+    height="15"
+    x="-20"
+    y="537"
+    fill="url(#h)"
+    filter="url(#i)"
+    opacity=".3"
+    rx="7.5"
+  />
+  <rect
+    width="1620"
+    height="8"
+    x="-10"
+    y="540"
+    fill="url(#h)"
+    filter="url(#j)"
+    opacity=".48"
+    rx="4"
+  />
+  <path
+    fill="url(#k)"
+    d="M0 543.2h1600v2.4H0z"
+    opacity=".96"
+  />
+  <ellipse
+    cx="800"
+    cy="544.2"
+    fill="#ffd986"
+    filter="url(#j)"
+    opacity=".16"
+    rx="48"
+    ry="1.15"
+  />
+  <path
+    fill="url(#l)"
+    d="M0 544h1600v356H0z"
+  />
+  <path
+    fill="url(#m)"
+    d="M0 0h1600v900H0z"
+  />
 </svg>

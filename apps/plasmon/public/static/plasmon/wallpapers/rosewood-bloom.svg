@@ -1,49 +1,470 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  preserveAspectRatio="xMidYMid slice"
+  viewBox="0 0 1600 900"
+>
   <defs>
-    <linearGradient id="base" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1600" y2="900">
-      <stop stop-color="#190612"/>
-      <stop offset=".52" stop-color="#1b0a13"/>
-      <stop offset="1" stop-color="#4a1730"/>
+    <linearGradient
+      id="a"
+      x1="0"
+      x2="1600"
+      y1="0"
+      y2="900"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#11080f"
+      />
+      <stop
+        offset=".44"
+        stop-color="#1a0c16"
+      />
+      <stop
+        offset=".74"
+        stop-color="#2a1020"
+      />
+      <stop
+        offset="1"
+        stop-color="#45172f"
+      />
     </linearGradient>
-    <radialGradient id="bloom-a" gradientUnits="userSpaceOnUse" cx="1152" cy="342" r="304">
-      <stop stop-color="#f27691" stop-opacity=".25" offset="0"/>
-      <stop stop-color="#f27691" stop-opacity="0" offset=".05"/>
-      <stop stop-color="#bd466d" stop-opacity=".16" offset=".19"/>
-      <stop stop-color="#bd466d" stop-opacity="0" offset=".22"/>
-      <stop stop-color="#bd466d" stop-opacity="0" offset="1"/>
+    <linearGradient
+      id="g"
+      x1="1080"
+      x2="1365"
+      y1="80"
+      y2="330"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#bf5a7f"
+        stop-opacity=".3"
+      />
+      <stop
+        offset=".55"
+        stop-color="#9b3c62"
+        stop-opacity=".23"
+      />
+      <stop
+        offset="1"
+        stop-color="#6d2344"
+        stop-opacity=".08"
+      />
+    </linearGradient>
+    <linearGradient
+      id="h"
+      x1="1290"
+      x2="1530"
+      y1="120"
+      y2="355"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#b64e75"
+        stop-opacity=".28"
+      />
+      <stop
+        offset=".56"
+        stop-color="#94365c"
+        stop-opacity=".2"
+      />
+      <stop
+        offset="1"
+        stop-color="#682140"
+        stop-opacity=".07"
+      />
+    </linearGradient>
+    <linearGradient
+      id="i"
+      x1="1240"
+      x2="1515"
+      y1="390"
+      y2="650"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#bc547a"
+        stop-opacity=".31"
+      />
+      <stop
+        offset=".58"
+        stop-color="#97385e"
+        stop-opacity=".22"
+      />
+      <stop
+        offset="1"
+        stop-color="#6a2241"
+        stop-opacity=".08"
+      />
+    </linearGradient>
+    <linearGradient
+      id="j"
+      x1="990"
+      x2="1290"
+      y1="320"
+      y2="490"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#ad466e"
+        stop-opacity=".24"
+      />
+      <stop
+        offset="1"
+        stop-color="#6c2241"
+        stop-opacity=".06"
+      />
+    </linearGradient>
+    <linearGradient
+      id="m"
+      x1="1170"
+      x2="1350"
+      y1="350"
+      y2="760"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#c55d83"
+        stop-opacity=".17"
+      />
+      <stop
+        offset=".55"
+        stop-color="#96385d"
+        stop-opacity=".08"
+      />
+      <stop
+        offset="1"
+        stop-color="#5c2039"
+        stop-opacity="0"
+      />
+    </linearGradient>
+    <radialGradient
+      id="b"
+      cx="105"
+      cy="745"
+      r="690"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#a33b61"
+        stop-opacity=".24"
+      />
+      <stop
+        offset=".42"
+        stop-color="#752545"
+        stop-opacity=".1"
+      />
+      <stop
+        offset="1"
+        stop-color="#2a0d1c"
+        stop-opacity="0"
+      />
     </radialGradient>
-    <radialGradient id="bloom-b" gradientUnits="userSpaceOnUse" cx="1008" cy="432" r="448">
-      <stop stop-color="#bd466d" stop-opacity=".16"/>
-      <stop stop-color="#bd466d" stop-opacity="0" offset=".08"/>
-      <stop stop-color="#bd466d" stop-opacity="0" offset="1"/>
+    <radialGradient
+      id="c"
+      cx="1290"
+      cy="310"
+      r="560"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#963557"
+        stop-opacity=".2"
+      />
+      <stop
+        offset=".44"
+        stop-color="#6d2240"
+        stop-opacity=".09"
+      />
+      <stop
+        offset="1"
+        stop-color="#351021"
+        stop-opacity="0"
+      />
     </radialGradient>
-    <radialGradient id="petal" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="180">
-      <stop stop-color="#f27691" stop-opacity=".23"/>
-      <stop offset="1" stop-color="#f27691" stop-opacity="0"/>
+    <radialGradient
+      id="d"
+      cx="1545"
+      cy="780"
+      r="500"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop
+        offset="0"
+        stop-color="#8c3152"
+        stop-opacity=".16"
+      />
+      <stop
+        offset="1"
+        stop-color="#381126"
+        stop-opacity="0"
+      />
     </radialGradient>
-    <radialGradient id="aurora-left" gradientUnits="userSpaceOnUse" cx="160" cy="604" r="390">
-      <stop stop-color="#f27691" stop-opacity=".13"/>
-      <stop offset="1" stop-color="#f27691" stop-opacity="0"/>
+    <radialGradient
+      id="l"
+      cx=".5"
+      cy=".5"
+      r=".66"
+    >
+      <stop
+        offset="0"
+        stop-color="#cb6187"
+        stop-opacity=".4"
+      />
+      <stop
+        offset=".44"
+        stop-color="#9d3c62"
+        stop-opacity=".22"
+      />
+      <stop
+        offset="1"
+        stop-color="#6b2141"
+        stop-opacity="0"
+      />
     </radialGradient>
-    <radialGradient id="aurora-right" gradientUnits="userSpaceOnUse" cx="1168" cy="142" r="350">
-      <stop stop-color="#bd466d" stop-opacity=".15"/>
-      <stop offset="1" stop-color="#bd466d" stop-opacity="0"/>
+    <radialGradient
+      id="n"
+      cx=".49"
+      cy=".46"
+      r=".82"
+    >
+      <stop
+        offset=".46"
+        stop-opacity="0"
+      />
+      <stop
+        offset="1"
+        stop-color="#050207"
+        stop-opacity=".3"
+      />
     </radialGradient>
+    <filter
+      id="f"
+      width="180%"
+      height="260%"
+      x="-40%"
+      y="-80%"
+    >
+      <feGaussianBlur
+        stdDeviation="10"
+      />
+    </filter>
+    <filter
+      id="k"
+      width="180%"
+      height="280%"
+      x="-40%"
+      y="-90%"
+    >
+      <feGaussianBlur
+        stdDeviation="18"
+      />
+    </filter>
+    <filter
+      id="e"
+      width="220%"
+      height="220%"
+      x="-60%"
+      y="-60%"
+    >
+      <feGaussianBlur
+        stdDeviation="68"
+      />
+    </filter>
   </defs>
-  <rect width="1600" height="900" fill="url(#base)"/>
-  <rect width="1600" height="900" fill="url(#bloom-a)"/>
-  <rect width="1600" height="900" fill="url(#bloom-b)"/>
-  <!-- The broad fields are the two blurred CSS aurora companions. -->
-  <rect width="1600" height="900" fill="url(#aurora-left)"/>
-  <rect width="1600" height="900" fill="url(#aurora-right)"/>
-  <!-- CSS radial ring at 82% 22%. -->
-  <circle cx="1312" cy="198" r="112" fill="none" stroke="#f27691" stroke-opacity=".14" stroke-width="2"/>
-  <!-- CSS ::before was a 700px bloom at (1028,-160), rotated 22deg. -->
-  <g transform="translate(1320 240) rotate(22)">
-    <ellipse cx="0" cy="-190" rx="180" ry="110" fill="url(#petal)"/>
-    <ellipse cx="190" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(90 190 0)"/>
-    <ellipse cx="0" cy="190" rx="180" ry="110" fill="url(#petal)" transform="rotate(180 0 190)"/>
-    <ellipse cx="-190" cy="0" rx="180" ry="110" fill="url(#petal)" transform="rotate(270 -190 0)"/>
-    <circle r="270" fill="none" stroke="#f27691" stroke-opacity=".17" stroke-width="2"/>
+  <path
+    fill="url(#a)"
+    d="M0 0h1600v900H0z"
+  />
+  <path
+    fill="url(#b)"
+    d="M0 0h1600v900H0z"
+  />
+  <path
+    fill="url(#c)"
+    d="M0 0h1600v900H0z"
+  />
+  <path
+    fill="url(#d)"
+    d="M0 0h1600v900H0z"
+  />
+  <ellipse
+    cx="1295"
+    cy="315"
+    fill="#7d2949"
+    filter="url(#e)"
+    opacity=".05"
+    rx="375"
+    ry="315"
+  />
+  <ellipse
+    cx="1448"
+    cy="608"
+    fill="#80304e"
+    filter="url(#e)"
+    opacity=".04"
+    rx="255"
+    ry="225"
+  />
+  <circle
+    cx="1310"
+    cy="286"
+    r="272"
+    fill="none"
+    stroke="#bd567c"
+    stroke-opacity=".285"
+    stroke-width="3"
+  />
+  <path
+    fill="none"
+    stroke="#da7397"
+    stroke-linecap="round"
+    stroke-opacity=".075"
+    stroke-width="8"
+    d="M1087 128a272 272 0 0 1 423-12"
+    filter="url(#f)"
+  />
+  <path
+    fill="none"
+    stroke="#a94168"
+    stroke-linecap="round"
+    stroke-opacity=".075"
+    stroke-width="3"
+    d="M1095 397a272 272 0 0 0 370 114"
+  />
+  <path
+    fill="url(#g)"
+    d="M1258 292c-69-24-140-63-177-119-32-48-18-99 26-123 46-25 107-5 145 42 39 48 41 128 6 200"
+  />
+  <path
+    fill="url(#h)"
+    d="M1287 286c13-64 47-129 98-167 48-36 105-30 133 9 28 40 12 93-30 124-49 36-120 45-201 34"
+    opacity=".92"
+  />
+  <path
+    fill="url(#i)"
+    d="M1292 334c59 37 120 89 147 148 26 57 8 115-37 137-48 22-97-9-119-63-22-55-15-144 9-222"
+    opacity=".9"
+  />
+  <path
+    fill="url(#j)"
+    d="M1267 326c-61 32-136 62-198 56-54-5-83-38-71-75 12-39 57-58 110-47 61 12 119 39 159 66"
+    opacity=".8"
+  />
+  <path
+    fill="#9e3b60"
+    d="M1518 307c48-34 104-25 131 19 25 41 8 95-37 129-39 30-84 9-102-30-17-37-14-88 8-118"
+    opacity=".16"
+  />
+  <g
+    fill="url(#l)"
+    filter="url(#k)"
+  >
+    <ellipse
+      cx="1282"
+      cy="329"
+      opacity=".54"
+      rx="88"
+      ry="29"
+    />
+    <ellipse
+      cx="1122"
+      cy="455"
+      opacity=".58"
+      rx="111"
+      ry="33"
+    />
+    <ellipse
+      cx="1386"
+      cy="474"
+      opacity=".43"
+      rx="83"
+      ry="25"
+    />
   </g>
+  <g
+    filter="url(#f)"
+  >
+    <ellipse
+      cx="1280"
+      cy="327"
+      fill="#d46a90"
+      opacity=".055"
+      rx="55"
+      ry="14"
+    />
+    <ellipse
+      cx="1120"
+      cy="453"
+      fill="#ca5c82"
+      opacity=".05"
+      rx="70"
+      ry="17"
+    />
+  </g>
+  <path
+    fill="none"
+    stroke="url(#m)"
+    stroke-linecap="round"
+    stroke-width="2.2"
+    d="M1275 358c-38 89-42 162-15 229 20 49 17 118-20 203"
+  />
+  <path
+    fill="#9f3d62"
+    d="M1248 553c-50-13-92-2-120 31 44 7 85-4 120-29Z"
+    opacity=".13"
+  />
+  <circle
+    cx="1612"
+    cy="-66"
+    r="196"
+    fill="none"
+    stroke="#923254"
+    stroke-opacity=".12"
+    stroke-width="7"
+  />
+  <circle
+    cx="1708"
+    cy="430"
+    r="188"
+    fill="none"
+    stroke="#a13b60"
+    stroke-opacity=".075"
+    stroke-width="3"
+  />
+  <path
+    fill="none"
+    stroke="#a94168"
+    stroke-opacity=".09"
+    stroke-width="2.4"
+    d="M1485 87a190 190 0 0 1 113 158"
+  />
+  <circle
+    cx="1498"
+    cy="21"
+    r="47"
+    fill="#922e54"
+    filter="url(#f)"
+    opacity=".085"
+  />
+  <circle
+    cx="1378"
+    cy="146"
+    r="21"
+    fill="#b34c72"
+    filter="url(#f)"
+    opacity=".03"
+  />
+  <path
+    fill="url(#n)"
+    d="M0 0h1600v900H0z"
+  />
 </svg>
