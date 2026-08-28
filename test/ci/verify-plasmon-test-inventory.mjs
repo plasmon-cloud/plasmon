@@ -119,6 +119,11 @@ async function verify(inventory) {
     }
   }
 
+  const taskbarContext402 = await readFile(resolve(repoRoot, 'test/e2e/plasmon-taskbar-context-menu-402.spec.ts'), 'utf8');
+  assert(taskbarContext402.includes('test.describe.configure({ retries: 0 })'), '#402 taskbar geometry acceptance must remain retry-free');
+  assert(taskbarContext402.includes('installPlasmonBrowserHealth'), '#402 taskbar geometry acceptance must install strict BrowserHealth');
+  assert(taskbarContext402.includes('health.assertClean()'), '#402 taskbar geometry acceptance must assert strict BrowserHealth');
+
   const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
   assert(
     demoGame.includes('{ tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] }'),
