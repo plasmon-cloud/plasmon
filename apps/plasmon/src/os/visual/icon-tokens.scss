@@ -12,6 +12,14 @@
     --plasmon-icon-highlight: #d7f7e6;
   }
 
+  /*
+   * FileManager drag previews and other first-party overlays may be portaled to
+   * document.body rather than remaining descendants of .plasmon-shell. Project
+   * only the bounded owned-icon palette onto :root while the active Shell theme
+   * is present so cloned/portaled owned SVG geometry keeps the same theme colors.
+   * Authored <img> artwork does not consume these variables and remains intact.
+   */
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-dark"]),
   .plasmon-shell[data-plasmon-theme="plasmon-dark"] {
     --plasmon-icon-primary: #17373a;
     --plasmon-icon-secondary: #63c6ca;
@@ -20,6 +28,7 @@
     --plasmon-icon-highlight: #d7f7e6;
   }
 
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-midnight"]),
   .plasmon-shell[data-plasmon-theme="plasmon-midnight"] {
     --plasmon-icon-primary: #30264f;
     --plasmon-icon-secondary: #8070d8;
@@ -28,6 +37,7 @@
     --plasmon-icon-highlight: #eeeaff;
   }
 
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-ember"]),
   .plasmon-shell[data-plasmon-theme="plasmon-ember"] {
     --plasmon-icon-primary: #49301c;
     --plasmon-icon-secondary: #d57b34;
@@ -36,6 +46,7 @@
     --plasmon-icon-highlight: #ffe2b6;
   }
 
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-glacier"]),
   .plasmon-shell[data-plasmon-theme="plasmon-glacier"] {
     --plasmon-icon-primary: #c7e0e9;
     --plasmon-icon-secondary: #4ca0bb;
@@ -44,6 +55,7 @@
     --plasmon-icon-highlight: #ffffff;
   }
 
+  :root:has(.plasmon-shell[data-plasmon-theme="plasmon-rosewood"]),
   .plasmon-shell[data-plasmon-theme="plasmon-rosewood"] {
     --plasmon-icon-primary: #542238;
     --plasmon-icon-secondary: #c45e7d;
