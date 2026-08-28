@@ -5,6 +5,7 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const PLASMON_SELECTOR = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
+const ACTION_TIMEOUT = 5_000;
 
 async function launchPlasmon(page: Page) {
   const runtime = resolveLocalNeutronRuntime();
@@ -31,6 +32,11 @@ function nativeWindows(app: FrameLocator): Locator {
   return app.locator(".plasmon-window-layer > .plasmon-window[data-window-id]");
 }
 
+function nativeWindowById(app: FrameLocator, windowId: string): Locator {
+  const escapedWindowId = windowId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return app.locator(`.plasmon-window-layer > .plasmon-window[data-window-id="${escapedWindowId}"]`);
+}
+
 async function openExplorer(app: FrameLocator): Promise<Locator> {
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByRole("region", { name: "Search" });
@@ -40,7 +46,7 @@ async function openExplorer(app: FrameLocator): Promise<Locator> {
   await result.click();
 
   const explorer = app.locator(".explorer-app").last();
-  await expect(explorer).toBeVisible({ timeout: 20_000 });
+  await expect(explorer).toBeVisible({ timeout: ACTION_TIMEOUT });
   await expect(explorer.getByRole("textbox", { name: "Address" })).toHaveValue("/");
   return explorer;
 }
@@ -49,7 +55,7 @@ async function navigateExplorer(explorer: Locator, path: string): Promise<void> 
   const address = explorer.getByRole("textbox", { name: "Address" });
   await address.fill(path);
   await address.press("Enter");
-  await expect(address).toHaveValue(path, { timeout: 20_000 });
+  await expect(address).toHaveValue(path, { timeout: ACTION_TIMEOUT });
 }
 
 async function openRootDirectory(explorer: Locator, name: string): Promise<void> {
@@ -59,7 +65,7 @@ async function openRootDirectory(explorer: Locator, name: string): Promise<void>
 async function importFiles(page: Page, explorer: Locator) {
   const files = explorer.getByRole("listbox", { name: "Files" });
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
-  const chooser = page.waitForEvent("filechooser");
+  const chooser = page.waitForEvent("filechooser", { timeout: ACTION_TIMEOUT });
   await toolbar.getByRole("button", { name: "Import Files…", exact: true }).click();
   return chooser;
 }
@@ -81,10 +87,10 @@ async function deleteEntry(toolbar: Locator, entry: Locator): Promise<void> {
   await entry.click();
   await expect(entry).toHaveAttribute("aria-selected", "true");
   await toolbar.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(entry).toHaveCount(0, { timeout: 20_000 });
+  await expect(entry).toHaveCount(0, { timeout: ACTION_TIMEOUT });
 }
 
-async function openRecycleBin(app: FrameLocator): Promise<Locator> {
+async function openRecycleBin(app: FrameLocator): Promise<{ recycleBin: Locator; windowId: string }> {
   const taskbar = app.getByRole("navigation", { name: "Taskbar" });
   await taskbar.getByRole("button", { name: "Search", exact: true }).click();
   const search = app.getByLabel("Search Plasmon");
@@ -93,15 +99,24 @@ async function openRecycleBin(app: FrameLocator): Promise<Locator> {
   await expect(result).toBeVisible();
   await result.click();
   const recycleBin = app.getByRole("dialog", { name: "Recycle Bin" });
-  await expect(recycleBin).toBeVisible({ timeout: 10_000 });
-  return recycleBin;
+  await expect(recycleBin).toBeVisible({ timeout: ACTION_TIMEOUT });
+
+  // Capture stable window identity before destructive actions mutate dialog content.
+  // Re-filtering a window by content after a row disappears creates a stale locator.
+  const nativeWindow = nativeWindows(app).filter({ has: recycleBin }).last();
+  await expect(nativeWindow).toBeVisible({ timeout: ACTION_TIMEOUT });
+  const windowId = await nativeWindow.getAttribute("data-window-id");
+  if (!windowId) throw new Error("Recycle Bin native window has no stable data-window-id");
+
+  return { recycleBin, windowId };
 }
 
-async function closeNativeWindowContaining(app: FrameLocator, content: Locator): Promise<void> {
-  const nativeWindow = nativeWindows(app).filter({ has: content }).last();
-  await expect(nativeWindow).toBeVisible();
+async function closeNativeWindowById(app: FrameLocator, windowId: string, content: Locator): Promise<void> {
+  const nativeWindow = nativeWindowById(app, windowId);
+  await expect(nativeWindow).toBeVisible({ timeout: ACTION_TIMEOUT });
   await nativeWindow.locator(":scope > .plasmon-window__titlebar .plasmon-window__control--close").click();
-  await expect(content).toHaveCount(0, { timeout: 10_000 });
+  await expect(nativeWindow).toHaveCount(0, { timeout: ACTION_TIMEOUT });
+  await expect(content).toHaveCount(0, { timeout: ACTION_TIMEOUT });
 }
 
 async function permanentlyDeleteEntry(app: FrameLocator, explorer: Locator, entry: Locator, name: string): Promise<void> {
@@ -109,16 +124,16 @@ async function permanentlyDeleteEntry(app: FrameLocator, explorer: Locator, entr
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
   await deleteEntry(toolbar, entry);
 
-  const recycleBin = await openRecycleBin(app);
+  const { recycleBin, windowId } = await openRecycleBin(app);
   const row = recycleBin.locator("[role='row']", { hasText: name }).first();
-  await expect(row).toBeVisible({ timeout: 20_000 });
+  await expect(row).toBeVisible({ timeout: ACTION_TIMEOUT });
   await recycleBin.getByRole("checkbox", { name: `Select ${name}` }).check();
   await recycleBin.getByRole("button", { name: "Delete permanently (1)" }).click();
   const confirmation = recycleBin.getByRole("alertdialog", { name: "Delete permanently?" });
   await expect(confirmation).toContainText("Permanently delete 1 item?");
   await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
-  await expect(row).toHaveCount(0, { timeout: 20_000 });
-  await closeNativeWindowContaining(app, recycleBin);
+  await expect(row).toHaveCount(0, { timeout: ACTION_TIMEOUT });
+  await closeNativeWindowById(app, windowId, recycleBin);
 }
 
 test("#107 packaged Search dismisses on an outside workspace click without launching a result", async ({ page }) => {
@@ -147,11 +162,34 @@ test("#107 packaged Search dismisses on an outside workspace click without launc
   }
 });
 
-test("#107 directly activates installed /Apps/Review.neutron and produces a browser-owned FileManager download", async ({ page }) => {
+test("#107 directly activates installed /Apps/Review.neutron through FileManager", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
+    await openRootDirectory(explorer, "Apps");
+    const appsFiles = explorer.getByRole("listbox", { name: "Files" });
+    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
+    await expect(reviewProjection).toBeVisible({ timeout: ACTION_TIMEOUT });
+    await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
 
+    const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
+    const reviewFrames = page.locator(reviewSelector);
+    const beforeReviewFrames = await reviewFrames.count();
+    await reviewProjection.dblclick();
+    await expect(reviewFrames).toHaveCount(beforeReviewFrames + 1, { timeout: ACTION_TIMEOUT });
+    const review = page.frameLocator(reviewSelector).last();
+    await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: ACTION_TIMEOUT });
+
+    health.assertClean();
+  } finally {
+    health.dispose();
+  }
+});
+
+test("#107 FileManager Download produces browser-owned bytes", async ({ page }) => {
+  const { app, health } = await launchPlasmon(page);
+  try {
+    const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
     const chooser = await importFiles(page, explorer);
     const filename = `issue-107-download-${Date.now()}.txt`;
@@ -160,33 +198,21 @@ test("#107 directly activates installed /Apps/Review.neutron and produces a brow
 
     const files = explorer.getByRole("listbox", { name: "Files" });
     const entry = files.locator("[data-fm-node-id]", { hasText: filename }).first();
-    await expect(entry).toBeVisible({ timeout: 20_000 });
+    await expect(entry).toBeVisible({ timeout: ACTION_TIMEOUT });
     await entry.click({ button: "right" });
     const menu = app.getByRole("menu").last();
-    await expect(menu.getByRole("menuitem", { name: "Download" })).toBeVisible();
-    const downloadPromise = page.waitForEvent("download");
-    await menu.getByRole("menuitem", { name: "Download" }).click();
-    const download = await downloadPromise;
+    const downloadItem = menu.getByRole("menuitem", { name: "Download" });
+    await expect(downloadItem).toBeVisible();
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: ACTION_TIMEOUT }),
+      downloadItem.click(),
+    ]);
     expect(download.suggestedFilename()).toBe(filename);
     expect(await download.failure()).toBeNull();
     const downloadPath = await download.path();
     if (!downloadPath) throw new Error("Browser download did not expose a completed local file");
     expect(await readFile(downloadPath)).toEqual(expected);
     await permanentlyDeleteEntry(app, explorer, entry, filename);
-
-    await openRootDirectory(explorer, "Apps");
-    const appsFiles = explorer.getByRole("listbox", { name: "Files" });
-    const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
-    await expect(reviewProjection).toBeVisible({ timeout: 20_000 });
-    await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
-
-    const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
-    const reviewFrames = page.locator(reviewSelector);
-    const beforeReviewFrames = await reviewFrames.count();
-    await reviewProjection.dblclick();
-    await expect(reviewFrames).toHaveCount(beforeReviewFrames + 1, { timeout: 15_000 });
-    const review = page.frameLocator(reviewSelector).last();
-    await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: 10_000 });
 
     health.assertClean();
   } finally {
@@ -208,21 +234,21 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     const deleteSource = await createTextDocument(explorer, deleteName);
     await deleteEntry(deleteSource.toolbar, deleteSource.entry);
 
-    const recycleBin = await openRecycleBin(app);
-    await expect(recycleBin.locator("[role='row']", { hasText: restoreName }).first()).toBeVisible({ timeout: 20_000 });
+    const { recycleBin, windowId } = await openRecycleBin(app);
+    await expect(recycleBin.locator("[role='row']", { hasText: restoreName }).first()).toBeVisible({ timeout: ACTION_TIMEOUT });
     await expect(recycleBin.locator("[role='row']", { hasText: deleteName }).first()).toBeVisible();
 
     await recycleBin.getByRole("checkbox", { name: `Select ${restoreName}` }).check();
     await recycleBin.getByRole("button", { name: "Restore (1)" }).click();
-    await expect(recycleBin.locator("[role='row']", { hasText: restoreName })).toHaveCount(0, { timeout: 20_000 });
+    await expect(recycleBin.locator("[role='row']", { hasText: restoreName })).toHaveCount(0, { timeout: ACTION_TIMEOUT });
 
     await recycleBin.getByRole("checkbox", { name: `Select ${deleteName}` }).check();
     await recycleBin.getByRole("button", { name: "Delete permanently (1)" }).click();
     const confirmation = recycleBin.getByRole("alertdialog", { name: "Delete permanently?" });
     await expect(confirmation).toContainText("Permanently delete 1 item?");
     await confirmation.getByRole("button", { name: "Confirm permanent delete" }).click();
-    await expect(recycleBin.locator("[role='row']", { hasText: deleteName })).toHaveCount(0, { timeout: 20_000 });
-    await closeNativeWindowContaining(app, recycleBin);
+    await expect(recycleBin.locator("[role='row']", { hasText: deleteName })).toHaveCount(0, { timeout: ACTION_TIMEOUT });
+    await closeNativeWindowById(app, windowId, recycleBin);
 
     // Re-enter the source directory through Explorer navigation so this contract
     // proves persisted restore/delete results without requiring cross-window live refresh.
@@ -230,7 +256,7 @@ test("#107 visible Recycle Bin lifecycle restores one item and permanently delet
     await openRootDirectory(explorer, "Desktop");
     const refreshedFiles = explorer.getByRole("listbox", { name: "Files" });
     const restoredEntry = refreshedFiles.locator("[data-fm-node-id]", { hasText: restoreName }).first();
-    await expect(restoredEntry).toBeVisible({ timeout: 20_000 });
+    await expect(restoredEntry).toBeVisible({ timeout: ACTION_TIMEOUT });
     await expect(refreshedFiles.locator("[data-fm-node-id]", { hasText: deleteName })).toHaveCount(0);
 
     await permanentlyDeleteEntry(app, explorer, restoredEntry, restoreName);
@@ -254,22 +280,22 @@ test("#107 installed Video surfaces actionable native-codec failure for an inval
     });
 
     const entry = explorer.getByRole("listbox", { name: "Files" }).locator("[data-fm-node-id]", { hasText: filename }).first();
-    await expect(entry).toBeVisible({ timeout: 20_000 });
+    await expect(entry).toBeVisible({ timeout: ACTION_TIMEOUT });
     const windows = nativeWindows(app);
     const beforeVideoWindows = await windows.count();
     await entry.dblclick();
-    await expect(windows).toHaveCount(beforeVideoWindows + 1, { timeout: 15_000 });
+    await expect(windows).toHaveCount(beforeVideoWindows + 1, { timeout: ACTION_TIMEOUT });
 
     const videoWindow = windows.last();
     const player = videoWindow.getByRole("region", { name: "Video player" });
-    await expect(player).toBeVisible({ timeout: 15_000 });
+    await expect(player).toBeVisible({ timeout: ACTION_TIMEOUT });
     const alert = player.getByRole("alert");
-    await expect(alert).toBeVisible({ timeout: 15_000 });
+    await expect(alert).toBeVisible({ timeout: ACTION_TIMEOUT });
     await expect(alert).toContainText(filename);
     await expect(alert).toContainText(/native media codecs|could not decode/i);
 
     await videoWindow.locator(":scope > .plasmon-window__titlebar .plasmon-window__control--close").click();
-    await expect(windows).toHaveCount(beforeVideoWindows, { timeout: 10_000 });
+    await expect(windows).toHaveCount(beforeVideoWindows, { timeout: ACTION_TIMEOUT });
     await permanentlyDeleteEntry(app, explorer, entry, filename);
     health.assertClean();
   } finally {
