@@ -484,6 +484,7 @@ export function Shell({
     className={`plasmon-shell plasmon-shell--wallpaper-${effectiveWallpaperId}`}
     data-plasmon-theme={effectivePreferences.themeId}
     data-plasmon-wallpaper={effectiveWallpaperId}
+    data-plasmon-brand-watermark={effectivePreferences.showBrandWatermark === false ? "hidden" : "visible"}
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
@@ -547,6 +548,7 @@ export function Shell({
       preferencesReady={preferencesReady}
       onSelectTheme={selectTheme}
       onSelectWallpaper={(wallpaper) => persistPreferences({ ...effectivePreferences, wallpaper })}
+      onSetBrandWatermark={(showBrandWatermark) => persistPreferences({ ...effectivePreferences, showBrandWatermark })}
       onSelectTaskbarAlignment={selectTaskbarAlignment}
     /> : null}
 
