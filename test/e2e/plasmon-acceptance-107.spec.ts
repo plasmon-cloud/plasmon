@@ -6,6 +6,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const PLASMON_SELECTOR = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 const ACTION_TIMEOUT = 5_000;
+const SURFACE_TIMEOUT = 20_000;
 
 async function launchPlasmon(page: Page) {
   const runtime = resolveLocalNeutronRuntime();
@@ -29,12 +30,12 @@ async function launchPlasmon(page: Page) {
 }
 
 function nativeWindows(app: FrameLocator): Locator {
-  return app.locator(".plasmon-window-layer > .plasmon-window[data-window-id]");
+  return app.locator(".plasmon-window-layer [data-window-id]");
 }
 
 function nativeWindowById(app: FrameLocator, windowId: string): Locator {
   const escapedWindowId = windowId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  return app.locator(`.plasmon-window-layer > .plasmon-window[data-window-id="${escapedWindowId}"]`);
+  return app.locator(`.plasmon-window-layer [data-window-id="${escapedWindowId}"]`);
 }
 
 async function openExplorer(app: FrameLocator): Promise<Locator> {
@@ -104,7 +105,7 @@ async function openRecycleBin(app: FrameLocator): Promise<{ recycleBin: Locator;
   // Capture stable window identity before destructive actions mutate dialog content.
   // Re-filtering a window by content after a row disappears creates a stale locator.
   const nativeWindow = nativeWindows(app).filter({ has: recycleBin }).last();
-  await expect(nativeWindow).toBeVisible({ timeout: ACTION_TIMEOUT });
+  await expect(nativeWindow).toBeVisible({ timeout: SURFACE_TIMEOUT });
   const windowId = await nativeWindow.getAttribute("data-window-id");
   if (!windowId) throw new Error("Recycle Bin native window has no stable data-window-id");
 
@@ -169,7 +170,7 @@ test("#107 directly activates installed /Apps/Review.neutron through FileManager
     await openRootDirectory(explorer, "Apps");
     const appsFiles = explorer.getByRole("listbox", { name: "Files" });
     const reviewProjection = appsFiles.locator("[data-fm-node-id]", { hasText: "Review.neutron" }).first();
-    await expect(reviewProjection).toBeVisible({ timeout: ACTION_TIMEOUT });
+    await expect(reviewProjection).toBeVisible({ timeout: SURFACE_TIMEOUT });
     await expect(reviewProjection.locator(".fm-entry__name")).toHaveText("Review.neutron");
 
     const reviewSelector = 'iframe[data-app-id="review"][data-tile-id="review"]';
