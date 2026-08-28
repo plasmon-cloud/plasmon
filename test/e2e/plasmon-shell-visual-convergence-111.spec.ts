@@ -69,10 +69,16 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     await taskbar.getByRole("button", { name: "Start", exact: true }).click();
     const start = plasmon.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
+    const firstStartItem = start.locator("[data-start-item]").first();
+    await expect(firstStartItem).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(firstStartItem).toBeFocused();
+    await expect(firstStartItem).toHaveCSS("outline-color", await resolvedBorder(shell, "--plasmon-focus-ring"));
     await start.getByRole("button", { name: "Settings", exact: true }).click();
 
     const settingsFlyout = plasmon.getByRole("region", { name: "Shell settings" });
     await expect(settingsFlyout).toBeVisible();
+    await expect(settingsFlyout).toHaveCSS("border-color", await resolvedBorder(settingsFlyout, "--plasmon-border-strong"));
     await settingsFlyout.getByRole("button", { name: "Midnight", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-midnight");
 
@@ -83,6 +89,11 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     const search = plasmon.getByRole("region", { name: "Search" });
     await expect(search).toBeVisible();
     await expectSemanticBackground(search, "--plasmon-panel-elevated");
+    await expect(search).toHaveCSS("border-color", await resolvedBorder(search, "--plasmon-border-strong"));
+    const searchAllTab = search.getByRole("tab", { name: "All", exact: true });
+    await expect(searchAllTab).toHaveAttribute("aria-selected", "true");
+    await expectSemanticBackground(searchAllTab, "--plasmon-selection");
+    await expect(searchAllTab).toHaveCSS("border-bottom-color", await resolvedBorder(searchAllTab, "--plasmon-selection-border"));
 
     const searchInput = search.getByRole("textbox", { name: "Search Plasmon" });
     await searchInput.fill("Settings");
@@ -95,17 +106,27 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     const nativeSettings = plasmon.getByRole("region", { name: "Settings" }).last();
     await expect(nativeSettings).toBeVisible({ timeout: 20_000 });
     await expectSemanticBackground(nativeSettings, "--plasmon-window-background");
+    await expect(nativeSettings).toHaveCSS("border-color", await resolvedBorder(nativeSettings, "--plasmon-border-strong"));
 
     const windows = plasmon.locator(".plasmon-window-layer [data-window-id]");
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const browserSearch = plasmon.getByRole("region", { name: "Search" });
     await expect(browserSearch).toBeVisible();
     await browserSearch.getByRole("textbox", { name: "Search Plasmon" }).fill("Browser");
+    const browserAppsTab = browserSearch.getByRole("tab", { name: "Apps", exact: true });
+    await browserAppsTab.click();
+    await expect(browserAppsTab).toHaveAttribute("aria-selected", "true");
+    await expectSemanticBackground(browserAppsTab, "--plasmon-selection");
+    await expect(browserAppsTab).toHaveCSS("border-bottom-color", await resolvedBorder(browserAppsTab, "--plasmon-selection-border"));
     const browserResult = browserSearch.locator("[data-search-result]", { hasText: "Browser" }).first();
     await expect(browserResult).toBeVisible({ timeout: 20_000 });
     const windowCountBeforeBrowser = await windows.count();
     await browserResult.click();
     await expect(windows).toHaveCount(windowCountBeforeBrowser + 1, { timeout: 20_000 });
+    const focusedTask = taskbar.locator(".plasmon-shell__task-button.is-focused").last();
+    await expect(focusedTask).toBeVisible();
+    await expectSemanticBackground(focusedTask, "--plasmon-selection");
+    await expect(focusedTask).toHaveCSS("border-color", await resolvedBorder(focusedTask, "--plasmon-selection-border"));
 
     await page.keyboard.down("Alt");
     await page.keyboard.press("Tab");
@@ -117,21 +138,24 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     await expect(selectedAltTab).toHaveCSS("border-color", await resolvedBorder(selectedAltTab, "--plasmon-selection-border"));
     await page.keyboard.up("Alt");
 
-    await taskbar.getByRole("button", { name: /Neutron trays/ }).click;
+    await taskbar.getByRole("button", { name: /Neutron trays/ }).click();
     const tray = plasmon.getByRole("region", { name: "Neutron trays" });
     await expect(tray).toBeVisible();
     await expectSemanticBackground(tray, "--plasmon-panel-elevated");
+    await expect(tray).toHaveCSS("border-color", await resolvedBorder(tray, "--plasmon-border-strong"));
 
     await taskbar.getByRole("button", { name: /Clock and calendar/ }).click();
     const calendar = plasmon.getByRole("region", { name: "Clock and calendar" });
     await expect(calendar).toBeVisible();
     await expectSemanticBackground(calendar, "--plasmon-panel-elevated");
+    await expect(calendar).toHaveCSS("border-color", await resolvedBorder(calendar, "--plasmon-border-strong"));
 
     const startButton = taskbar.getByRole("button", { name: "Start", exact: true });
     await startButton.click({ button: "right" });
     const contextMenu = plasmon.getByRole("menu", { name: "Shell context menu" });
     await expect(contextMenu).toBeVisible();
     await expectSemanticBackground(contextMenu, "--plasmon-panel-elevated");
+    await expect(contextMenu).toHaveCSS("border-color", await resolvedBorder(contextMenu, "--plasmon-border-strong"));
 
     health.assertClean();
   } finally {
