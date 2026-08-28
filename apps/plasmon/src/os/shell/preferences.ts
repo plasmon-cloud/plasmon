@@ -143,6 +143,12 @@ function requireFilesystemRoot(root: FsNode | null): FsNode {
   return root;
 }
 
+/**
+ * Hosted-safe Shell preference persistence. The foreground never owns browser
+ * persistence directly: durable state is stored as namespaced metadata on the
+ * filesystem root through FsService, whose hosted implementation is backed by
+ * the persistent Plasmon background surface.
+ */
 export class ShellPreferenceStore {
   private rootId: NodeId | null = null;
   private writeChain: Promise<void> = Promise.resolve();
@@ -159,11 +165,16 @@ export class ShellPreferenceStore {
   save(preferences: ShellPreferences): Promise<void> {
     const checked = validateShellPreferences(preferences);
     if (!checked) return Promise.reject(new Error("Shell preferences are invalid"));
+
     const write = async (): Promise<void> => {
       const rootId = await this.resolveRootId();
-      await this.fs.setMetadata(rootId, { [SHELL_PREFERENCES_KEY]: preferenceMetadataValue(checked) });
+      await this.fs.setMetadata(rootId, {
+        [SHELL_PREFERENCES_KEY]: preferenceMetadataValue(checked),
+      });
     };
+
     const operation = this.writeChain.then(write);
+    // A failed write must not poison later preference saves.
     this.writeChain = operation.catch(() => undefined);
     return operation;
   }
@@ -182,6 +193,7 @@ export interface ShellPreferenceSaveOutcome {
   error: unknown | null;
 }
 
+/** Keeps the selected in-memory preference state even when persistence fails. */
 export async function saveShellPreferencesNonDestructive(
   store: ShellPreferenceStore,
   preferences: ShellPreferences,
