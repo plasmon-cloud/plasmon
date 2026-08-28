@@ -14,14 +14,7 @@ import { FileOperationClipboard } from "./model.ts";
 import { collisionFreeCopyName, normalizedCollisionName, pasteClipboardCollisionAware } from "./clipboard.ts";
 import { createDocument, createGeneratedFolder } from "./create-import.ts";
 import { deleteFilesystemNodes } from "./delete.ts";
-import {
-  downloadBlob,
-  downloadCompatibilityError,
-  downloadFsNode,
-  HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
-  readDownloadBlob,
-  type DownloadEnvironment,
-} from "./download.ts";
+import { downloadBlob, downloadFsNode, readDownloadBlob, type DownloadEnvironment } from "./download.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { fileEntryClassName } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
@@ -287,9 +280,7 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
 test("prepared downloads click the browser anchor without another async boundary", () => {
   const preparedNode = { ...node("file", "root", "prepared.txt"), size: 5 };
   let clicked = false;
-  let availabilityChecks = 0;
   const environment: DownloadEnvironment = {
-    assertAvailable: () => { availabilityChecks += 1; },
     createObjectURL: () => "blob:prepared",
     revokeObjectURL: () => {},
     createAnchor: () => ({
@@ -302,36 +293,7 @@ test("prepared downloads click the browser anchor without another async boundary
   };
 
   downloadBlob(preparedNode, new Blob(["ready"]), environment);
-  expect({ clicked, availabilityChecks }).toEqual({ clicked: true, availabilityChecks: 1 });
-});
-
-test("hosted hackathon downloads fail before reading bytes with actionable feedback", async () => {
-  expect(downloadCompatibilityError(true, true)).toBe(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
-  expect(downloadCompatibilityError(false, true)).toBeNull();
-  expect(downloadCompatibilityError(true, false)).toBeNull();
-
-  const file = node("file", "root", "movie.bin");
-  const fs = new Gate3Fs([node("root", null, "", "directory"), file]);
-  const environment: DownloadEnvironment = {
-    assertAvailable: () => {
-      const message = downloadCompatibilityError(true, true);
-      if (message) throw new Error(message);
-    },
-    createObjectURL: () => "blob:unused",
-    revokeObjectURL: () => undefined,
-    createAnchor: () => ({
-      href: "",
-      download: "",
-      click: () => undefined,
-      remove: () => undefined,
-    }),
-    scheduleCleanup: () => undefined,
-  };
-
-  await expect(downloadFsNode(fs, file, environment)).rejects.toThrow(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
-  expect(() => downloadBlob(file, new Blob(["ready"]), environment)).toThrow(
-    HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
-  );
+  expect(clicked).toBe(true);
 });
 
 test("shared shortcut nodes render as shortcuts and preserve their own NodeId on rename/move", async () => {
