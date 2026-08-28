@@ -24,17 +24,21 @@ export interface StartSurfaceViewState {
 export interface StartSurfaceViewInput {
   trail: readonly StartTrailItem[];
   items: readonly FsNode[];
+  snapshotFolderId: NodeId | null;
   query: string;
   busy: boolean;
   error: string | null;
 }
 
 export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurfaceViewState {
+  const currentFolder = input.trail.at(-1) ?? null;
+  const hasCurrentSnapshot = currentFolder !== null && input.snapshotFolderId === currentFolder.id;
+  const currentItems = hasCurrentSnapshot ? input.items : [];
   const needle = input.query.trim().toLocaleLowerCase();
   const visibleItems = needle
-    ? input.items.filter((node) => node.name.toLocaleLowerCase().includes(needle))
-    : [...input.items];
-  const currentFolder = input.trail.at(-1) ?? null;
+    ? currentItems.filter((node) => node.name.toLocaleLowerCase().includes(needle))
+    : [...currentItems];
+  const loading = input.busy && !hasCurrentSnapshot;
 
   return {
     folderId: currentFolder?.id ?? null,
@@ -44,8 +48,8 @@ export function projectStartSurfaceView(input: StartSurfaceViewInput): StartSurf
     query: input.query,
     visibleItems,
     status: {
-      loading: input.busy,
-      empty: !input.busy && visibleItems.length === 0,
+      loading,
+      empty: hasCurrentSnapshot && !loading && visibleItems.length === 0,
       error: input.error,
     },
   };

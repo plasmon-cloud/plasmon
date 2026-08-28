@@ -21,6 +21,11 @@ export interface StartSurfaceControllerProps {
   onSettings: () => void;
 }
 
+interface FolderListingSnapshot {
+  folderId: FsNode["id"] | null;
+  items: FsNode[];
+}
+
 function rootTrail(node: FsNode): StartTrailItem[] {
   return [{ id: node.id, name: node.name || "Start Menu" }];
 }
@@ -53,7 +58,7 @@ export function StartSurfaceController({
   const [controllerRevision, setControllerRevision] = useState(initial.revision);
   const [hiddenVisibilityRevision, setHiddenVisibilityRevision] = useState(0);
   const [trail, setTrail] = useState<StartTrailItem[]>(() => initial.root ? rootTrail(initial.root) : []);
-  const [items, setItems] = useState<FsNode[]>([]);
+  const [listing, setListing] = useState<FolderListingSnapshot>({ folderId: null, items: [] });
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [listingError, setListingError] = useState<string | null>(null);
@@ -90,7 +95,7 @@ export function StartSurfaceController({
     void listVisibleStartMenuFolder(fs, currentFolder.id)
       .then((nodes) => {
         if (!mounted) return;
-        setItems(nodes);
+        setListing({ folderId: currentFolder.id, items: nodes });
         setListingError(null);
       })
       .catch((cause: unknown) => {
@@ -102,13 +107,16 @@ export function StartSurfaceController({
     return () => { mounted = false; };
   }, [active, currentFolder?.id, fs, fsRevision, controllerRevision, hiddenVisibilityRevision]);
 
+  const hasCurrentSnapshot = currentFolder !== null && listing.folderId === currentFolder.id;
+  const effectiveError = listingError ?? reconciliationSnapshot.error;
   const view = useMemo(() => projectStartSurfaceView({
     trail,
-    items,
+    items: listing.items,
+    snapshotFolderId: listing.folderId,
     query,
-    busy: busy || (!reconciliationSnapshot.root && !reconciliationSnapshot.error),
-    error: listingError ?? reconciliationSnapshot.error,
-  }), [busy, items, listingError, query, reconciliationSnapshot.error, reconciliationSnapshot.root, trail]);
+    busy: busy || (!hasCurrentSnapshot && !effectiveError),
+    error: effectiveError,
+  }), [busy, effectiveError, hasCurrentSnapshot, listing, query, trail]);
 
   if (!active) return null;
 
