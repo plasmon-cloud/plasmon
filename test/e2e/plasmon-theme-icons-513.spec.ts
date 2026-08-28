@@ -32,11 +32,11 @@ async function computedFill(locator: Locator): Promise<string> {
 
 /**
  * This is deliberately a rendered-color acceptance test, not a token/source or
- * asset-loading test. It catches the #513 failure mode where the palette exists
- * but fixed-color SVG files are still rendered through <img> and never inherit
- * the active Shell theme.
+ * asset-loading test. It catches both #513 failure modes observed in review:
+ * fixed-color SVG files rendered through <img>, and a body-portaled drag proxy
+ * that falls back to the default icon palette instead of the active Shell theme.
  */
-test("#513 visible Desktop and native-window icons actually recolor across all five themes", async ({ page }) => {
+test("#513 visible, native-window, and dragged owned icons actually recolor across all five themes", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -60,10 +60,12 @@ test("#513 visible Desktop and native-window icons actually recolor across all f
     const shell = app.locator(".plasmon-shell");
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
 
-    // Use the real Desktop folder shown to users. It must be an inline owned SVG,
-    // not a fixed-color external image document.
+    // Use a real Desktop folder shown to users. It must be inline owned SVG
+    // geometry rather than a fixed-color external image document.
     const desktopFolder = app.locator('[data-plasmon-owned-icon="file-type:folder"]').first();
     await expect(desktopFolder).toBeVisible({ timeout: 30_000 });
+    const desktopFolderEntry = desktopFolder.locator("xpath=ancestor::*[@data-fm-node-id][1]");
+    await expect(desktopFolderEntry).toBeVisible();
     const desktopPrimary = desktopFolder.locator('[fill*="--plasmon-icon-primary"]').first();
     await expect(desktopPrimary).toHaveCount(1);
     await expect(app.locator('img[src*="/static/plasmon/icons/folder.svg"]')).toHaveCount(0);
@@ -85,17 +87,22 @@ test("#513 visible Desktop and native-window icons actually recolor across all f
     const explorerPrimary = explorerIcon.locator('[fill*="--plasmon-icon-primary"]').first();
     await expect(explorerPrimary).toHaveCount(1);
 
-    await app.getByRole("button", { name: "Start", exact: true }).click();
-    const start = app.getByRole("region", { name: "Start menu" });
-    await expect(start).toBeVisible();
-    await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Shell settings" });
-    await expect(settings).toBeVisible();
+    const openThemeSettings = async (): Promise<Locator> => {
+      await app.getByRole("button", { name: "Start", exact: true }).click();
+      const start = app.getByRole("region", { name: "Start menu" });
+      await expect(start).toBeVisible();
+      await start.getByRole("button", { name: "Settings", exact: true }).click();
+      const settings = app.getByRole("region", { name: "Shell settings" });
+      await expect(settings).toBeVisible();
+      return settings;
+    };
 
     const observedDesktopFills = new Set<string>();
     const observedExplorerFills = new Set<string>();
+    const observedDragFills = new Set<string>();
 
     for (const theme of THEMES) {
+      const settings = await openThemeSettings();
       const choice = settings.getByRole("button", { name: theme.label, exact: true });
       await choice.click();
       await expect(choice).toHaveAttribute("aria-pressed", "true");
@@ -107,12 +114,39 @@ test("#513 visible Desktop and native-window icons actually recolor across all f
 
       observedDesktopFills.add(await computedFill(desktopPrimary));
       observedExplorerFills.add(await computedFill(explorerPrimary));
+
+      // Close Shell settings and start a real FileManager pointer drag. The
+      // production drag proxy is cloned from the entry and portaled to body, so
+      // it is specifically outside the .plasmon-shell theme subtree.
+      await page.keyboard.press("Escape");
+      await expect(settings).toBeHidden();
+      const source = await desktopFolderEntry.boundingBox();
+      if (!source) throw new Error("Desktop folder has no browser bounds");
+      const sourceX = source.x + source.width / 2;
+      const sourceY = source.y + source.height / 2;
+      await page.mouse.move(sourceX, sourceY);
+      await page.mouse.down();
+      await page.mouse.move(sourceX + 72, sourceY + 44, { steps: 8 });
+
+      const preview = app.locator('[data-fm-drag-preview]');
+      await expect(preview).toBeVisible();
+      const previewFolder = preview.locator('[data-plasmon-owned-icon="file-type:folder"]').first();
+      await expect(previewFolder).toBeVisible();
+      await expect(preview.locator('img[src*="/static/plasmon/icons/folder.svg"]')).toHaveCount(0);
+      const previewPrimary = previewFolder.locator('[fill*="--plasmon-icon-primary"]').first();
+      await expect(previewPrimary).toHaveCount(1);
+      await expect.poll(() => computedFill(previewPrimary)).toBe(expectedPrimary);
+      observedDragFills.add(await computedFill(previewPrimary));
+
+      await page.keyboard.press("Escape");
+      await expect(preview).toHaveCount(0);
     }
 
-    // This is the critical regression assertion: five theme selections must
-    // produce five different colors on the actual rendered icon geometry.
+    // Five theme selections must produce five different colors on the actual
+    // resting, native-window, and drag-preview SVG geometry.
     expect(observedDesktopFills.size).toBe(THEMES.length);
     expect(observedExplorerFills.size).toBe(THEMES.length);
+    expect(observedDragFills.size).toBe(THEMES.length);
 
     health.assertClean();
   } finally {
