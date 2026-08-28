@@ -1,0 +1,11 @@
+@layer plasmon-shell {
+  .plasmon-shell__start-status {
+    align-content: start;
+    display: grid;
+    min-height: 2.5rem;
+  }
+
+  .plasmon-shell__start-status > p {
+    margin: 0;
+  }
+}

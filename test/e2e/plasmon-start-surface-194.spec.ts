@@ -13,11 +13,12 @@ async function finishAnimations(target: Locator): Promise<void> {
 
 /**
  * #194 already has deterministic Start reconciliation/state coverage and bounded
- * RTL interaction coverage. This packaged browser acceptance proves only the
- * remaining browser-owned contract: stable Start panel geometry, real focus,
- * keyboard dismissal/opening, and pointer click-away dismissal.
+ * RTL interaction coverage. #573 restores the same stable re-open geometry
+ * contract during filesystem-backed Start revalidation. This packaged browser
+ * acceptance proves stable panel geometry, real focus, keyboard
+ * dismissal/opening, and pointer click-away dismissal.
  */
-test("#194 — packaged Start preserves panel geometry, focus, and dismissal", async ({ page }) => {
+test("#194 #573 — packaged Start preserves panel geometry, focus, and dismissal", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
