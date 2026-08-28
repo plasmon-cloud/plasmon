@@ -71,13 +71,11 @@ export async function readDownloadBlob(
   return new Blob(parts, { type: node.mime || "application/octet-stream" });
 }
 
-export async function downloadFsNode(
-  fs: FsService,
+function downloadBlobUnsafe(
   node: FsNode,
-  environment: DownloadEnvironment = browserDownloadEnvironment(),
-): Promise<void> {
-  environment.assertAvailable?.();
-  const blob = await readDownloadBlob(fs, node);
+  blob: Blob,
+  environment: DownloadEnvironment,
+): void {
   const url = environment.createObjectURL(blob);
   const anchor = environment.createAnchor();
   anchor.href = url;
@@ -88,4 +86,23 @@ export async function downloadFsNode(
     anchor.remove();
     environment.scheduleCleanup(() => environment.revokeObjectURL(url));
   }
+}
+
+export function downloadBlob(
+  node: FsNode,
+  blob: Blob,
+  environment: DownloadEnvironment = browserDownloadEnvironment(),
+): void {
+  environment.assertAvailable?.();
+  downloadBlobUnsafe(node, blob, environment);
+}
+
+export async function downloadFsNode(
+  fs: FsService,
+  node: FsNode,
+  environment: DownloadEnvironment = browserDownloadEnvironment(),
+): Promise<void> {
+  environment.assertAvailable?.();
+  const blob = await readDownloadBlob(fs, node);
+  downloadBlobUnsafe(node, blob, environment);
 }

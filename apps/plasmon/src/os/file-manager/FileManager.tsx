@@ -316,6 +316,7 @@ export function FileManager({
     if (!selection.ids.has(node.id)) {
       setSelection(selectNode(emptySelection(), renderState.orderedIds, node.id));
     }
+    if (node.kind === "file") commands.prepareDownload(node);
     setContextMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
   };
 
@@ -339,6 +340,10 @@ export function FileManager({
         const id = element?.dataset.fmNodeId ?? null;
         if (id && !selection.ids.has(id)) {
           setSelection(selectNode(emptySelection(), renderState.orderedIds, id));
+        }
+        if (id) {
+          const node = directory.nodes.find((candidate) => candidate.id === id);
+          if (node?.kind === "file") commands.prepareDownload(node);
         }
         setContextMenu({ x: event.clientX, y: event.clientY, nodeId: id });
       }}
@@ -430,6 +435,7 @@ export function FileManager({
           state={contextMenu}
           node={contextNode}
           canOpenWith={canOpenWith}
+          canDownload={contextNode?.kind === "file" && commands.isDownloadReady(contextNode)}
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}

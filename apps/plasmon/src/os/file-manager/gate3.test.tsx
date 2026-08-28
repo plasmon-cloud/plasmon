@@ -15,6 +15,7 @@ import { collisionFreeCopyName, normalizedCollisionName, pasteClipboardCollision
 import { createDocument, createGeneratedFolder } from "./create-import.ts";
 import { deleteFilesystemNodes } from "./delete.ts";
 import {
+  downloadBlob,
   downloadCompatibilityError,
   downloadFsNode,
   HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
@@ -283,7 +284,26 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
   });
 });
 
-test("hosted core-profile downloads fail before reading bytes with actionable feedback", async () => {
+test("prepared downloads click the browser anchor without another async boundary", () => {
+  const preparedNode = { ...node("file", "root", "prepared.txt"), size: 5 };
+  let clicked = false;
+  const environment: DownloadEnvironment = {
+    createObjectURL: () => "blob:prepared",
+    revokeObjectURL: () => {},
+    createAnchor: () => ({
+      href: "",
+      download: "",
+      click: () => { clicked = true; },
+      remove: () => {},
+    }),
+    scheduleCleanup: (callback) => callback(),
+  };
+
+  downloadBlob(preparedNode, new Blob(["ready"]), environment);
+  expect(clicked).toBe(true);
+});
+
+test("hosted core-profile downloads fail before reads in both paths", async () => {
   expect(downloadCompatibilityError(true, true)).toBe(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
   expect(downloadCompatibilityError(false, true)).toBeNull();
   expect(downloadCompatibilityError(true, false)).toBeNull();
@@ -307,6 +327,9 @@ test("hosted core-profile downloads fail before reading bytes with actionable fe
   };
 
   await expect(downloadFsNode(fs, file, environment)).rejects.toThrow(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
+  expect(() => downloadBlob(file, new Blob(["ready"]), environment)).toThrow(
+    HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
+  );
 });
 
 test("shared shortcut nodes render as shortcuts and preserve their own NodeId on rename/move", async () => {
