@@ -1,6 +1,16 @@
 import type { FsNode, FsService } from "../contracts/index.ts";
+import { isCoreProfile } from "../integration/packageProfile.ts";
 
 export const DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
+export const HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE =
+  "Downloads are unavailable in this hosted Neutron runtime because its Kernel does not permit browser downloads. Use a Kernel with installed-app download support.";
+
+export function downloadCompatibilityError(
+  hosted: boolean,
+  coreProfile: boolean,
+): string | null {
+  return hosted && coreProfile ? HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE : null;
+}
 
 export interface DownloadAnchorLike {
   href: string;
@@ -14,6 +24,7 @@ export interface DownloadEnvironment {
   revokeObjectURL(url: string): void;
   createAnchor(): DownloadAnchorLike;
   scheduleCleanup(callback: () => void): void;
+  assertAvailable?(): void;
 }
 
 export function browserDownloadEnvironment(): DownloadEnvironment {
@@ -27,6 +38,13 @@ export function browserDownloadEnvironment(): DownloadEnvironment {
       return anchor;
     },
     scheduleCleanup: (callback) => { window.setTimeout(callback, 0); },
+    assertAvailable: () => {
+      const message = downloadCompatibilityError(
+        window.parent !== window,
+        isCoreProfile,
+      );
+      if (message) throw new Error(message);
+    },
   };
 }
 
@@ -53,10 +71,10 @@ export async function readDownloadBlob(
   return new Blob(parts, { type: node.mime || "application/octet-stream" });
 }
 
-export function downloadBlob(
+function downloadBlobUnsafe(
   node: FsNode,
   blob: Blob,
-  environment: DownloadEnvironment = browserDownloadEnvironment(),
+  environment: DownloadEnvironment,
 ): void {
   const url = environment.createObjectURL(blob);
   const anchor = environment.createAnchor();
@@ -70,11 +88,21 @@ export function downloadBlob(
   }
 }
 
+export function downloadBlob(
+  node: FsNode,
+  blob: Blob,
+  environment: DownloadEnvironment = browserDownloadEnvironment(),
+): void {
+  environment.assertAvailable?.();
+  downloadBlobUnsafe(node, blob, environment);
+}
+
 export async function downloadFsNode(
   fs: FsService,
   node: FsNode,
   environment: DownloadEnvironment = browserDownloadEnvironment(),
 ): Promise<void> {
+  environment.assertAvailable?.();
   const blob = await readDownloadBlob(fs, node);
-  downloadBlob(node, blob, environment);
+  downloadBlobUnsafe(node, blob, environment);
 }
