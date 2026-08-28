@@ -1,10 +1,17 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const PROGRAM_FILES_WORKER_FILE = new URL(
+  "../../apps/plasmon/public/System/Program Files/MonacoEditor/editor.worker.js",
+  import.meta.url,
+);
+const BROWSER_WORKER_PATH = `/app/${APP_ID}/runtime/monaco/editor.worker.js`;
 const BROWSER_TRANSPORT_PATH = `/app/${APP_ID}/runtime/monaco/worker-sources.js`;
 
 type WorkerProbeRecord = {
@@ -29,15 +36,15 @@ test.afterEach(async ({ browserName }, testInfo) => {
   if (testInfo.retry < testInfo.project.retries) return;
   const failure = testInfo.error?.message ?? `status=${testInfo.status}`;
   console.log(
-    `::error title=#89 ${browserName} Monaco worker acceptance::${workflowCommandValue(failure)}`,
+    `::error title=#391 ${browserName} slim Monaco worker acceptance::${workflowCommandValue(failure)}`,
   );
 });
 
-test("#89 packaged Monaco workers use Program Files authority through the opaque-origin transport", { tag: ["@r2-quarantine", "@issue-89", "@issue-391"] }, async ({
+test("#391 slim packaged Monaco executes the installed editor-worker through the opaque-origin transport", { tag: ["@issue-89", "@issue-391"] }, async ({
   page,
   request,
   browserName,
-}, testInfo) => {
+}) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const pageErrors: string[] = [];
@@ -104,12 +111,36 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
     if (pathname === BROWSER_TRANSPORT_PATH) browserTransportLoaded = true;
   });
 
-  const transport = await request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href);
+  // Program Files is the logical package authority. Read that packaged
+  // authority from the build output because Kernel deliberately rejects
+  // percent-encoded path characters at its HTTP boundary. The URL-safe mirror
+  // is the HTTP-accessible package transport, and every opaque browser
+  // transport must remain byte-identical to that authority.
+  const programFilesBytes = await readFile(PROGRAM_FILES_WORKER_FILE);
+  const [mirror, transport, missingMirrorTypescript, retired] = await Promise.all([
+    request.get(new URL(BROWSER_WORKER_PATH, kernelUrl).href),
+    request.get(new URL(BROWSER_TRANSPORT_PATH, kernelUrl).href),
+    request.get(new URL(`/app/${APP_ID}/runtime/monaco/ts.worker.js`, kernelUrl).href),
+    request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href),
+  ]);
+  expect(mirror.ok(), "slim Monaco URL-safe editor-worker mirror must remain installed").toBe(true);
   expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
-  const httpMirror = await request.get(new URL(`/app/${APP_ID}/runtime/monaco/editor.worker.js`, kernelUrl).href);
-  expect(httpMirror.ok(), "the URL-safe Monaco serving mirror must remain installed").toBe(true);
-  const retired = await request.get(new URL(`/app/${APP_ID}/monaco-workers/editor.worker.js`, kernelUrl).href);
+  expect(missingMirrorTypescript.ok(), "slim r2 must not expose a shadow ts.worker.js mirror").toBe(false);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
+
+  const mirrorBytes = await mirror.body();
+  expect(programFilesBytes.length, "packaged Program Files editor worker must contain runtime bytes").toBeGreaterThan(100);
+  expect(mirrorBytes, "URL-safe editor worker must be byte-identical to packaged Program Files authority").toEqual(programFilesBytes);
+  const transportScope: Record<string, unknown> = {};
+  runInNewContext(await transport.text(), transportScope);
+  const transported = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string> | undefined;
+  expect(Object.keys(transported ?? {}), "slim opaque transport must preload only the shipped editor worker").toEqual([
+    "editor.worker.js",
+  ]);
+  expect(
+    Buffer.from(transported?.["editor.worker.js"] ?? "", "utf8"),
+    "opaque transport bytes must be byte-identical to the packaged Program Files editor worker",
+  ).toEqual(mirrorBytes);
 
   await page.goto(kernelUrl);
   await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
@@ -136,84 +167,83 @@ test("#89 packaged Monaco workers use Program Files authority through the opaque
   const explorer = nativeWindows.last();
   await expect(explorer.getByLabel("File Explorer", { exact: true })).toBeVisible();
 
-  // FileManager's New Text Document command intentionally persists text/plain,
-  // and canonical resource classification gives persisted MIME precedence over
-  // a later filename change. Import a real TypeScript resource instead so this
-  // acceptance actually exercises Monaco's TypeScript worker without weakening
-  // the filesystem MIME authority or any worker assertion below.
-  const probeName = `Monaco Worker Probe ${testInfo.retry}.ts`;
+  const probeName = `Monaco Slim Worker Probe ${Date.now()}.js`;
   const chooserPromise = page.waitForEvent("filechooser");
   await explorer.getByRole("button", { name: "Import Files…", exact: true }).click();
   const chooser = await chooserPromise;
   await chooser.setFiles({
     name: probeName,
-    mimeType: "text/typescript",
-    buffer: Buffer.from("", "utf8"),
+    mimeType: "text/javascript",
+    buffer: Buffer.from(
+      "const answer = 42;\nfunction twice(value) { return value * 2; }\nconst result = twice(answer);",
+      "utf8",
+    ),
   });
 
   const entry = explorer.locator("[data-fm-node-id]", { hasText: probeName }).first();
   await expect(entry).toBeVisible();
   const beforeEditor = await nativeWindows.count();
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
-  await entry.dblclick();
-  await expect(nativeWindows).toHaveCount(beforeEditor + 1, { timeout: 20_000 });
+  try {
+    await entry.dblclick();
+    await expect(nativeWindows).toHaveCount(beforeEditor + 1, { timeout: 20_000 });
 
-  const editor = nativeWindows.last();
-  await expect(editor.getByLabel("Text editor", { exact: true })).toBeVisible();
-  const surface = editor.locator('[data-editor-engine="monaco"]').first();
-  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-  const input = editor.getByRole("textbox", {
-    name: "Text content",
-    exact: true,
-    includeHidden: true,
-  }).first();
-  const firstLine = editor.locator(".monaco-editor .view-line").first();
-  await expect(firstLine).toBeVisible();
-  await firstLine.click({ position: { x: 8, y: 10 } });
-  await expect(input).toBeFocused();
-  await page.keyboard.insertText("const plasmonWorkerProbe = 1;\nplasmonWorkerProbe.");
-  await page.keyboard.press("Control+Space");
+    const editor = nativeWindows.last();
+    await expect(editor.getByLabel("Text editor", { exact: true })).toBeVisible();
+    const surface = editor.locator('[data-editor-engine="monaco"]').first();
+    await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+    await expect(surface).toHaveAttribute("data-editor-language", "javascript");
+    await expect(editor.getByText("JavaScript", { exact: true })).toBeVisible();
 
-  const readWorkers = () => app.locator("html").evaluate(() => (
-    (window as Window & { __PLASMON_MONACO_WORKER_PROBE__?: WorkerProbeRecord[] })
-      .__PLASMON_MONACO_WORKER_PROBE__ ?? []
-  ));
+    await expect.poll(
+      async () => editor.locator(".monaco-editor .view-line").evaluateAll((lines) => {
+        const classes = new Set<string>();
+        for (const line of lines) {
+          for (const span of line.querySelectorAll('span[class*="mtk"]')) {
+            for (const className of span.classList) {
+              if (/^mtk\d+$/.test(className)) classes.add(className);
+            }
+          }
+        }
+        return classes.size;
+      }),
+      { message: "slim Text/Monaco must retain visible JavaScript syntax tokenization" },
+    ).toBeGreaterThan(1);
 
-  await expect.poll(async () => {
-    const records = await readWorkers();
-    return ["plasmon-monaco-editorWorkerService", "plasmon-monaco-typescript"]
-      .every((name) => records.some((record) => record.name === name));
-  }, {
-    message: `${browserName} must construct the editor and TypeScript Monaco workers`,
-    timeout: 20_000,
-  }).toBe(true);
+    const readWorkers = () => app.locator("html").evaluate(() => (
+      (window as Window & { __PLASMON_MONACO_WORKER_PROBE__?: WorkerProbeRecord[] })
+        .__PLASMON_MONACO_WORKER_PROBE__ ?? []
+    ));
 
-  await expect.poll(async () => {
-    const records = (await readWorkers()).filter((record) =>
-      record.name === "plasmon-monaco-editorWorkerService"
-      || record.name === "plasmon-monaco-typescript",
-    );
-    return records.length >= 2
-      && records.every((record) => record.outbound > 0 && record.inbound > 0 && record.errors === 0);
-  }, {
-    message: `${browserName} Monaco workers must exchange messages without worker errors`,
-    timeout: 20_000,
-  }).toBe(true);
+    await expect.poll(async () => {
+      const records = await readWorkers();
+      return records.some((record) =>
+        record.name === "plasmon-monaco-editorWorkerService"
+        && record.outbound > 0
+        && record.inbound > 0
+        && record.errors === 0
+      );
+    }, {
+      message: `${browserName} must exercise the real slim editor worker through Monaco`,
+      timeout: 20_000,
+    }).toBe(true);
 
-  const workers = (await readWorkers()).filter((record) => record.name.startsWith("plasmon-monaco-"));
-  expect(workers.length).toBeGreaterThanOrEqual(2);
-  for (const worker of workers) {
-    expect(worker.type, `${worker.name} must use the opaque-sandbox classic Worker compatibility path`).toBe("classic");
-    expect(worker.origin, `${worker.name} must be constructed inside Neutron's opaque sandbox`).toBe("null");
-    expect(worker.url, `${worker.name} must use the opaque-origin transport adapter`).toMatch(/^blob:/u);
-    expect(worker.errors, `${worker.name} must not emit Worker errors`).toBe(0);
+    const workers = (await readWorkers()).filter((record) => record.name.startsWith("plasmon-monaco-"));
+    expect(workers.length).toBeGreaterThanOrEqual(1);
+    for (const worker of workers) {
+      expect(worker.type, `${worker.name} must use the opaque-sandbox classic Worker compatibility path`).toBe("classic");
+      expect(worker.origin, `${worker.name} must be constructed inside Neutron's opaque sandbox`).toBe("null");
+      expect(worker.url, `${worker.name} must use the opaque-origin transport adapter`).toMatch(/^blob:/u);
+      expect(worker.errors, `${worker.name} must not emit Worker errors`).toBe(0);
+    }
+
+    expect(browserTransportLoaded, `${browserName} must preload the installed opaque-origin worker transport`).toBe(true);
+    expect(workerWarnings, `${browserName} must not fall back from the real slim Monaco worker`).toEqual([]);
+    expect(pageErrors, `${browserName} slim Monaco worker acceptance must not emit page errors`).toEqual([]);
+    health.assertClean();
+  } finally {
+    health.dispose();
   }
-
-  expect(browserTransportLoaded, `${browserName} must preload the installed opaque-origin worker transport`).toBe(true);
-  expect(workerWarnings, `${browserName} must not fall back from real Monaco workers`).toEqual([]);
-  expect(pageErrors, `${browserName} worker acceptance must not emit page errors`).toEqual([]);
-  health.assertClean();
-  health.dispose();
 });
 
 declare global {
