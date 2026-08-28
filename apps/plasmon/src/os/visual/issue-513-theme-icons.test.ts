@@ -49,6 +49,14 @@ test("#513 all five themes define distinct complete icon palettes", () => {
   }
 });
 
+test("#513 active icon palette reaches body-portaled owned artwork such as drag previews", () => {
+  for (const themeId of themeIds) {
+    expect(iconTokens).toContain(
+      `:root:has(.plasmon-shell[data-plasmon-theme="${themeId}"])`,
+    );
+  }
+});
+
 test("#513 canonical Plasmon asset references resolve to owned semantic artwork", () => {
   expect(plasmonOwnedAssetPresentation(FILE_TYPE_ICON_ASSETS.folder)).toEqual({
     kind: "file-type",
