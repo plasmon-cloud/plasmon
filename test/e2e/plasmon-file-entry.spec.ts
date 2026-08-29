@@ -4,42 +4,37 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 /**
- * Adopted from Luna TDD-A's #191 browser RED gate as production regression
- * coverage. It consumes #187's browser-health ledger and canonical packaged
- * Plasmon environment; it does not create a component harness.
- *
- * #361 tightens the remaining rename presentation gap: the active editor may
- * grow from its content width, but its horizontal cap is the owning Desktop
- * FileEntry rather than a wider overlay. Keep this smoke focused on #191's
- * durable contract: rename remains local, tile-bounded, and unable to change
- * Desktop collision/placement geometry.
+ * Packaged regression coverage for Desktop FileEntry rename geometry.
+ * The active editor may grow from its content width, but its horizontal cap is
+ * the owning Desktop FileEntry rather than a wider overlay. Keep this smoke
+ * focused on the durable contract: rename remains local, tile-bounded, and
+ * unable to change Desktop collision/placement geometry.
  */
-test("#191/#361 — Desktop rename editor stays inside its FileEntry tile", async ({ page }) => {
+test("Desktop rename editor stays inside its FileEntry tile", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
     firstPartyOrigins: [kernelUrl],
-    // Reuse the exact current packaged-baseline exceptions already owned by
-    // the shared #187 smoke. These are independently tracked and do not relax
-    // any #191 geometry assertion.
+    // Reuse the current packaged-baseline exceptions already owned by the
+    // shared browser-health smoke without relaxing any rename geometry assertion.
     allow: [
       {
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #191; the gate still exercises the real packaged FileEntry",
+        reason: "Kernel-owned installed-app iframe warning is outside this FileEntry gate; the gate still exercises the real packaged FileEntry",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190; installed Plasmon assets live under /app/plasmon/static/plasmon/icons/",
+        reason: "Tracked product URL-resolution defect: installed Plasmon assets live under /app/plasmon/static/plasmon/icons/",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Same tracked product URL-resolution defect #190; aborted icon requests are a consequence of the wrong Kernel-root path",
+        reason: "Aborted icon requests are a consequence of the tracked wrong Kernel-root asset path",
       },
     ],
   });
