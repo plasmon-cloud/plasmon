@@ -38,8 +38,7 @@ test("the same SVG thumbnails directly in Pictures and through its Desktop short
       { name: "Demo Artwork.svg" },
     );
 
-    // Canonical r2 baseline from manual acceptance: the real SVG already
-    // thumbnails correctly when viewed directly in Pictures.
+    // The real SVG already thumbnails correctly when viewed directly in Pictures.
     const picturesView = render(
       <FileManager
         directoryId={pictures.id}

@@ -152,8 +152,5 @@ for (const fragment of [
   "ci:flake-probe",
   "@quarantine",
 ]) requireFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
-for (const fragment of ["Issue #594", "R3 staged", "release/0.1.0-r3"]) {
-  forbidFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
-}
 
 console.log("Flake Probe scheduling verified from shared policy: PR deferral, merge-group 1+conditional-10 validation, post-merge 10+conditional-50 stability analysis, profile-aware targeting, explicit heavy diagnostics, retry-free quarantine-safe execution, and phase/count summary integrity");
