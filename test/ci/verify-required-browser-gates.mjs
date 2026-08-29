@@ -230,7 +230,7 @@ for (const path of requiredReleasePushWorkflows) {
   assertUnfilteredReleasePush(path);
 }
 
-for (const ref of ["release/0.1.0-r2r3", "release/0.1.0-r4", "release/demo"]) {
+for (const ref of ["release/candidate", "release/demo", "release/future"]) {
   if (plasmonBranchRole(ref) !== "release") throw new Error(`Release-role policy rejected ${ref}`);
 }
 for (const ref of ["main", "feature/example", "", "release/", "release/bad/name", "release/name with spaces"]) {
