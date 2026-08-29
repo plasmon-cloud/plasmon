@@ -233,7 +233,7 @@ for (const path of requiredReleasePushWorkflows) {
 for (const ref of ["release/0.1.0-r2r3", "release/0.1.0-r4", "release/demo"]) {
   if (plasmonBranchRole(ref) !== "release") throw new Error(`Release-role policy rejected ${ref}`);
 }
-for (const ref of ["main", "feature/example", "", "release/"]) {
+for (const ref of ["main", "feature/example", "", "release/", "release/bad/name", "release/name with spaces"]) {
   if (plasmonBranchRole(ref) !== "unknown") throw new Error(`Release-role policy must fail closed for ${ref || "(empty)"}`);
 }
 
