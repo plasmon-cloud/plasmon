@@ -3,6 +3,7 @@ import { extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
+const guardPath = "test/ci/verify-active-provenance.mjs";
 
 const activeInputs = Object.freeze([
   "apps/plasmon/src",
@@ -86,9 +87,19 @@ function isCommentLike(path, line) {
 }
 
 function allowedLine(path, line) {
-  // This is current executable debt metadata, not a durable public selector.
-  return path === "test/ci/plasmon-quarantine.json"
-    && /"repairIssue"\s*:\s*\d+/u.test(line);
+  // Current executable debt ownership stays machine-readable while selectors stay semantic.
+  if (path === "test/ci/plasmon-quarantine.json" && /"repairIssue"\s*:\s*\d+/u.test(line)) {
+    return true;
+  }
+  // This test deliberately verifies migration from retired work-item-named docs into docs/history.
+  if (
+    path === "apps/plasmon/test/documentationBoundaries.test.ts"
+    && line.includes("apps/plasmon/docs/refactor/issue-")
+    && line.includes("apps/plasmon/docs/history/refactor-issue-")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function lineFailures(path, line) {
@@ -107,7 +118,7 @@ function lineFailures(path, line) {
 export function scanActiveProvenance() {
   const failures = [];
   const files = [...new Set(activeInputs.flatMap(walkInput))]
-    .filter((path) => !isHistorical(path))
+    .filter((path) => path !== guardPath && !isHistorical(path))
     .sort((a, b) => a.localeCompare(b));
 
   for (const path of files) {
@@ -134,7 +145,7 @@ function selfTest() {
   const camelCaseTest = `startMenuReconciliation${"999"}.test.ts`;
   const issueTag = `@issue-${"999"}`;
   const releaseTag = `@r${"9"}-quarantine`;
-  const releaseBranch = `release/0.1.0-r${"9"}`;
+  const releaseBranch = ["release", "0.1.0-r9"].join("/");
   const testTitle = `test("#${"999"} behavior", () => {})`;
   const artifact = `issue-${"999"}-graphite.png`;
 
@@ -174,6 +185,12 @@ function selfTest() {
   }
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
     throw new Error("guard self-test lost the bounded quarantine repair-owner allowance");
+  }
+  if (!allowedLine(
+    "apps/plasmon/test/documentationBoundaries.test.ts",
+    '["apps/plasmon/docs/refactor/issue-191-red-packet.md", "apps/plasmon/docs/history/refactor-issue-191-red-packet.md"],',
+  )) {
+    throw new Error("guard self-test lost the bounded historical-document migration allowance");
   }
   if (!isHistorical("apps/plasmon/test/LUNA_POST_REFACTOR_RECONCILIATION.md")) {
     throw new Error("guard self-test lost the explicit historical reconciliation boundary");
