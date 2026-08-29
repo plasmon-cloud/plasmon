@@ -22,7 +22,7 @@ The required ownership model is:
 
 - `Fast Bun tests` — automatically discovers ordinary production `*.test.*` / `*.spec.*` files under `apps/plasmon/src/**` and `apps/plasmon/test/**`, excluding the separately owned RTL/package classes, then runs the complete `apps/plasmon/test/rtl/**` Happy DOM/user-event lane;
 - `Packaged refactor smoke` — performs real package/provision preparation, runs `apps/plasmon/test/package.test.ts` against the produced package output, proves #226 fail-on-flaky behavior, then runs the complete Smoke Playwright group;
-- `Packaged Playwright specialist acceptance` — performs real package/provision preparation and runs the complete Specialist spec inventory with `--workers=1 --grep-invert @r2-quarantine`; only repository-authorized active quarantine debt may carry `@r2-quarantine`;
+- `Packaged Playwright specialist acceptance` — performs real package/provision preparation and runs the complete Specialist spec inventory with `--workers=1 --grep-invert @quarantine`; only repository-authorized active quarantine debt may carry `@quarantine`;
 - `Packaged browser persistence` — performs real package/provision preparation and runs the retained-profile persistence spec;
 - `kernel` — remains a required repository context and is not weakened by the Plasmon inventory work.
 
@@ -38,7 +38,7 @@ Explicit non-production boundaries are narrow:
 
 Do not add an exclusion merely to make CI green. If an otherwise eligible Plasmon test cannot run in hosted CI, document the unavailable capability and its ownership explicitly before excluding it. A real product failure must remain visible and be routed to the owning product lane; CI/harness failures belong to Testing/Integration and must not be hidden by weakening assertions.
 
-The executable quarantine ledger is `test/ci/QUARANTINED_BROWSER_TESTS.md`. It must match the actual `@r2-quarantine` tags and Specialist filtering exactly.
+The executable quarantine ledger is `test/ci/QUARANTINED_BROWSER_TESTS.md`. It must match the actual `@quarantine` tags and Specialist filtering exactly.
 
 ## r2 packaged browser required-status contract
 
@@ -64,7 +64,7 @@ The `ci:flake-probe` label is a separate explicit request for a fresh targeted 5
 
 A labeled probe may use `Flake-Probe-Target: test/e2e/<file>.spec.ts` with optional `Flake-Probe-Grep: <title-or-tag>`, or a documented bounded named target. Without a directive, the label selector may reuse #409 only when exactly one Playwright file is resolved. Ambiguous or unresolved selection fails closed instead of launching a broad `all` or `specialist` 50-run sweep.
 
-Quarantine is absolute across automatic, manual/direct, and labeled probes. Every direct Playwright invocation uses `--grep-invert @r2-quarantine`; a label never turns quarantine into an opt-in execution lane.
+Quarantine is absolute across automatic, manual/direct, and labeled probes. Every direct Playwright invocation uses `--grep-invert @quarantine`; a label never turns quarantine into an opt-in execution lane.
 
 Flake Probe terminology is intentionally distinct from GitHub Actions and test-runner terminology:
 
