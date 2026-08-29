@@ -122,7 +122,7 @@ test("#93 — packaged FileManager thumbnails contain portrait, landscape, and s
     await expect(brokenEntry).toBeVisible({ timeout: 30_000 });
     await brokenEntry.scrollIntoViewIfNeeded();
     await expect(brokenEntry).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
-    await expect(brokenEntry.locator(".fm-entry__icon--image img.plasmon-icon-art:not(.plasmon-media-thumbnail)"))
+    await expect(brokenEntry.locator('.fm-entry__icon--image [data-plasmon-owned-icon="file-type:image"]'))
       .toBeVisible({ timeout: 20_000 });
     await expect(brokenEntry.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
     health.assertClean();

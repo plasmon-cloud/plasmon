@@ -73,10 +73,7 @@ async function expectResolvedDirectoryShortcut(shortcut: Locator) {
   // authoritative target NodeId. Waiting for the folder art proves the visible
   // shortcut has completed that resolution before another filesystem command is
   // issued, instead of overlapping the presentation fs.stat with the next write.
-  await expect(shortcut.locator(".plasmon-icon-art")).toHaveAttribute(
-    "src",
-    /(?:^|\/)folder\.svg$/,
-  );
+  await expect(shortcut.locator('[data-plasmon-owned-icon="file-type:folder"]')).toBeVisible();
   await expect(shortcut.locator(".plasmon-shortcut-overlay")).toBeVisible();
 }
 
