@@ -1,4 +1,4 @@
-import type { OsApi } from "./os-api/types.ts";
+import type { OsApi } from "../os/api/index.ts";
 import type { CmdParser } from "./cmd/types.ts";
 import { SimpleCmdParser } from "./cmd/simple.ts";
 import { transpileCmdToRun } from "./cmd/transpile.ts";

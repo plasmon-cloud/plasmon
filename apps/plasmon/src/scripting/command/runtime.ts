@@ -1,4 +1,4 @@
-import type { OsApi } from "../os-api/types.ts";
+import type { OsApi } from "../../os/api/index.ts";
 
 export interface CommandResult {
   exitCode: number;
@@ -129,6 +129,7 @@ export class CommandSession {
         const path = this.path(argv[0] ?? "/");
         try {
           const target = await this.os.fs.stat(path);
+          if (!target) return result(1, "", `cd: no such directory: ${path}\n`);
           if (target.kind !== "directory") return result(1, "", `cd: not a directory: ${path}\n`);
           this.cwdPath = target.path;
           return result(0);

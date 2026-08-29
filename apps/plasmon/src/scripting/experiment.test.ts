@@ -6,6 +6,7 @@ import { SimpleCmdParser } from "./cmd/simple.ts";
 import { transpileCmdToRun } from "./cmd/transpile.ts";
 import { CommandSession } from "./command/runtime.ts";
 import { RUN_CONTEXT_DECLARATIONS } from "./os-api/declarations.ts";
+import { ScriptingService } from "./service.ts";
 
 test(".cmd parser lowers quotes, pipelines, and redirection to readable .run TypeScript", async () => {
   const parser = new SimpleCmdParser();
@@ -32,7 +33,7 @@ test("production OsApi and command session provide deterministic filesystem/open
     await env.ready;
     const output: string[] = [];
     const errors: string[] = [];
-    const command = new CommandSession(env.services.os, {
+    const command = new CommandSession(env.os, {
       stdout: { write: (text) => output.push(text) },
       stderr: { write: (text) => errors.push(text) },
     });
@@ -41,7 +42,7 @@ test("production OsApi and command session provide deterministic filesystem/open
       command.commands.echo(["Hello Plasmon"]),
     ]).writeTo("/Documents/hello.txt");
     expect(redirected.exitCode).toBe(0);
-    expect(await env.services.os.fs.readText("/Documents/hello.txt")).toBe("Hello Plasmon\n");
+    expect(await env.os.fs.readText("/Documents/hello.txt")).toBe("Hello Plasmon\n");
 
     const piped = await command.shell.pipeline([
       command.commands.cat(["/Documents/hello.txt"]),
@@ -51,7 +52,7 @@ test("production OsApi and command session provide deterministic filesystem/open
     expect(output.at(-1)).toBe("Hello Plasmon\n");
     expect(errors).toEqual([]);
 
-    const opened = await env.services.os.open("/Documents/hello.txt");
+    const opened = await env.os.open("/Documents/hello.txt");
     expect(opened.resource.path).toBe("/Documents/hello.txt");
     expect(opened.processId).toBeDefined();
     expect(env.services.nativeApps.get("native:terminal")?.name).toBe("Terminal");
@@ -64,11 +65,12 @@ test("transpileCmdFile creates a sibling .run without overwriting existing outpu
   const env = createHeadlessPlasmonEnvironment();
   try {
     await env.ready;
-    await env.services.os.fs.writeText("/Documents/demo.cmd", "echo Hello");
-    const destination = await env.services.scripting.transpileCmdFile("/Documents/demo.cmd");
+    await env.os.fs.writeText("/Documents/demo.cmd", "echo Hello");
+    const scripting = new ScriptingService({ os: env.os });
+    const destination = await scripting.transpileCmdFile("/Documents/demo.cmd");
     expect(destination).toBe("/Documents/demo.run");
-    expect(await env.services.os.fs.readText(destination)).toContain('commands.echo(["Hello"])');
-    await expect(env.services.scripting.transpileCmdFile("/Documents/demo.cmd")).rejects.toThrow(
+    expect(await env.os.fs.readText(destination)).toContain('commands.echo(["Hello"])');
+    await expect(scripting.transpileCmdFile("/Documents/demo.cmd")).rejects.toThrow(
       "Refusing to overwrite existing /Documents/demo.run",
     );
   } finally {

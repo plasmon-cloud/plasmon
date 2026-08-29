@@ -1,4 +1,4 @@
-import type { OsApi } from "../os-api/types.ts";
+import type { OsApi } from "../../os/api/index.ts";
 import type {
   CommandFactory,
   CommandSession,

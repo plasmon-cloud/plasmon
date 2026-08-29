@@ -74,8 +74,7 @@ import {
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
 import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
-import { createExperimentalPlasmonOsApi } from "./experimentalOsApi.ts";
-import type { OsApi } from "../../scripting/os-api/types.ts";
+import { createPlasmonOsApi } from "../api/adapter.ts";
 import { ScriptingService } from "../../scripting/service.ts";
 import {
   createTerminalNativeLoader,
@@ -97,8 +96,6 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
-  os: OsApi;
-  scripting: ScriptingService;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -317,8 +314,27 @@ export function createPlasmonServices(
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
-  const os = createExperimentalPlasmonOsApi({ fs, filesystem, process, windows });
-  const scripting = new ScriptingService({ os });
+  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
+  const services: PlasmonServices = {
+    fs,
+    fsEvents: fs,
+    filesystem,
+    process,
+    windows,
+    windowPlacement,
+    neutron,
+    authorization: createAuthorizationService(),
+    nativeApps,
+    associations,
+    openService,
+    fileClipboard,
+    startMenu,
+    hiddenVisibility,
+  };
+
+  // Scripting consumes the same production OsApi contract exposed as env.os in
+  // headless/RTL composition. RunContext and command behavior stay above OsApi.
+  const scripting = new ScriptingService({ os: createPlasmonOsApi({ services }) });
   nativeApps.setLoader(
     explorerAppDefinition.id,
     createExplorerNativeLoader({
@@ -339,24 +355,6 @@ export function createPlasmonServices(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
   );
-  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
 
-  return {
-    fs,
-    fsEvents: fs,
-    filesystem,
-    process,
-    windows,
-    windowPlacement,
-    neutron,
-    authorization: createAuthorizationService(),
-    nativeApps,
-    associations,
-    openService,
-    fileClipboard,
-    startMenu,
-    hiddenVisibility,
-    os,
-    scripting,
-  };
+  return services;
 }

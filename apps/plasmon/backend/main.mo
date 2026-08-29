@@ -380,31 +380,37 @@ module {
 
 public type hello_world_Input = (name : Text);
 public type hello_world_Output = Text;
+
 public type sharing_schema_version_Input = ();
 public type sharing_schema_version_Output = Nat;
+
 public type sharing_has_chunk_Input = (hash : Blob);
 public type sharing_has_chunk_Output = Bool;
+
 public type sharing_put_chunk_Input = (hash : Blob, bytes : Blob);
 public type sharing_put_chunk_Output = SharingPutChunkResult;
+
 public type sharing_get_chunk_Input = (hash : Blob);
 public type sharing_get_chunk_Output = ?Blob;
+
 public type sharing_describe_Input = (namespace : Text, resourceId : Text);
 public type sharing_describe_Output = ?SharingResourceSummary;
+
 public type sharing_get_revision_Input = (namespace : Text, resourceId : Text, revision : ?Nat);
 public type sharing_get_revision_Output = ?SharingRevision;
+
 public type sharing_read_resource_chunk_Input = (namespace : Text, resourceId : Text, revision : Nat, chunkIndex : Nat);
 public type sharing_read_resource_chunk_Output = ?Blob;
-public type sharing_commit_revision_Input = (
-    namespace : Text,
-    resourceId : Text,
-    resourceType : Text,
-    expectedRevision : ?Nat,
-    byteLength : Nat,
-    contentRootHash : Blob,
-    chunks : [SharingChunkRef],
-    snapshot : SharingSnapshot,
-    createdAt : Nat64,
-);
+
+public type sharing_commit_revision_Input = (namespace : Text,
+            resourceId : Text,
+            resourceType : Text,
+            expectedRevision : ?Nat,
+            byteLength : Nat,
+            contentRootHash : Blob,
+            chunks : [SharingChunkRef],
+            snapshot : SharingSnapshot,
+            createdAt : Nat64,);
 public type sharing_commit_revision_Output = SharingCommitResult;
 
 /*---NEUTRON GENERATED END---*/

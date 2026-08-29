@@ -1,7 +1,7 @@
 /**
- * Temporary Monaco declarations for the experiment. The canonical OsApi source
- * introduced by the production testing API should become the generator/source
- * of truth once it lands so these declarations cannot drift.
+ * Monaco projection of the canonical production OsApi plus scripting-only
+ * RunContext/command types. Keep this projection synchronized with src/os/api
+ * until declaration generation is introduced.
  */
 export const RUN_CONTEXT_DECLARATIONS = `
 interface RunOsResource {
@@ -22,24 +22,31 @@ interface RunOsProcess {
   id: string;
   appId: string;
   handlerId: string;
+  title: string;
   state: "starting" | "running" | "closing";
   windowId?: string;
 }
 interface RunOsWindow {
   id: string;
   processId: string;
-  title?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   minimized: boolean;
   maximized: boolean;
 }
 interface RunOsApi {
   readonly fs: {
-    stat(path: string): Promise<RunOsResource>;
+    stat(path: string): Promise<RunOsResource | null>;
     exists(path: string): Promise<boolean>;
     readText(path: string): Promise<string>;
     writeText(path: string, text: string): Promise<RunOsResource>;
     createDirectory(path: string): Promise<RunOsResource>;
-    list(path?: string): Promise<readonly RunOsResource[]>;
+    list(path: string): Promise<readonly RunOsResource[]>;
+    copy(sourcePath: string, destinationPath: string): Promise<RunOsResource>;
+    move(sourcePath: string, destinationPath: string): Promise<RunOsResource>;
+    remove(path: string): Promise<void>;
   };
   readonly processes: { list(): readonly RunOsProcess[] };
   readonly windows: { list(): readonly RunOsWindow[] };

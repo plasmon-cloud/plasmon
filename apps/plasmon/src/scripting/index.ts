@@ -1,4 +1,3 @@
-export * from "./os-api/types.ts";
 export * from "./os-api/declarations.ts";
 export * from "./cmd/types.ts";
 export * from "./cmd/simple.ts";
