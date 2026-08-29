@@ -53,6 +53,10 @@ jobs:
           path.write_text(text.replace(old, new))
           PY
 
+      - name: Apply pending dogfood polish
+        if: ${{ hashFiles('tools/experiment_cmd_polish.py') != '' }}
+        run: python3 tools/experiment_cmd_polish.py
+
       - name: Install dependencies
         run: npm ci
 
@@ -84,4 +88,15 @@ jobs:
           git rm tools/experiment_cmd_finish.py
           git add -A
           git commit -m 'Experiment: adopt canonical OsApi and v1 commands'
+          git push origin HEAD:experiment/cmd
+
+      - name: Commit verified dogfood polish
+        if: ${{ hashFiles('tools/experiment_cmd_polish.py') != '' }}
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm tools/experiment_cmd_polish.py
+          git add -A
+          git commit -m 'Experiment: polish terminal and script workflows'
           git push origin HEAD:experiment/cmd
