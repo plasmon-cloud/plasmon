@@ -1,12 +1,13 @@
 name: Plasmon Flake Probe
 
 on:
-  # The workflow must exist for every relevant PR event because
-  # "Flake probe summary" is a required check. A cheap detector preserves
-  # the old optimization by skipping the expensive baseline matrix when none
-  # of the probe trigger paths changed. Characterization has its own selector.
+  push:
+    branches:
+      - 'release/**'
   pull_request:
     types: [opened, synchronize, reopened]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
     inputs:
       ref:
@@ -18,24 +19,13 @@ on:
         required: true
         default: '10'
         type: choice
-        options:
-          - '10'
-          - '50'
+        options: ['10', '50']
       target:
         description: Test boundary to probe
         required: true
         default: specialist
         type: choice
-        options:
-          - all
-          - specialist
-          - exact
-          - right-snap
-          - left-snap
-          - window-lifetime
-          - monaco
-          - emulatorjs
-          - saved-preview
+        options: [all, specialist, exact, right-snap, left-snap, window-lifetime, monaco, emulatorjs, saved-preview]
       test_file:
         description: Exact test/e2e Playwright file when target=exact
         required: false
@@ -48,17 +38,20 @@ on:
 permissions:
   contents: read
 
+# PR-head runs are disposable review-readiness checks. Merge-group and release
+# integration runs are immutable evidence and must not cancel one another.
 concurrency:
-  group: plasmon-flake-probe-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: plasmon-flake-probe-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.event.after || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   applicability:
-    name: Determine flake probe applicability and configuration
+    name: Determine flake probe configuration
     runs-on: ubuntu-latest
     outputs:
-      applicable: ${{ steps.detect.outputs.applicable }}
-      reason: ${{ steps.detect.outputs.reason }}
+      applicable: ${{ steps.configure.outputs.applicable }}
+      phase: ${{ steps.configure.outputs.phase }}
+      reason: ${{ steps.configure.outputs.reason }}
       primary_mode: ${{ steps.configure.outputs.primary_mode }}
       iteration_count: ${{ steps.configure.outputs.iteration_count }}
       target: ${{ steps.configure.outputs.target }}
@@ -66,196 +59,72 @@ jobs:
       test_grep: ${{ steps.configure.outputs.test_grep }}
       scope: ${{ steps.configure.outputs.scope }}
       scope_key: ${{ steps.configure.outputs.scope_key }}
-      characterization_applicable: ${{ steps.characterize.outputs.applicable }}
-      characterization_reason: ${{ steps.characterize.outputs.reason }}
-      characterization_target: ${{ steps.characterize.outputs.target }}
-      characterization_iteration_count: ${{ steps.characterize.outputs.iteration_count }}
-      characterization_files_json: ${{ steps.characterize.outputs.files_json }}
-      characterization_scope: ${{ steps.characterize.outputs.scope }}
-      characterization_scope_key: ${{ steps.characterize.outputs.scope_key }}
+      characterization_applicable: ${{ steps.configure.outputs.characterization_applicable }}
+      characterization_reason: ${{ steps.configure.outputs.characterization_reason }}
+      characterization_target: ${{ steps.configure.outputs.characterization_target }}
+      characterization_iteration_count: ${{ steps.configure.outputs.characterization_iteration_count }}
+      characterization_files_json: ${{ steps.configure.outputs.characterization_files_json }}
+      characterization_scope: ${{ steps.configure.outputs.characterization_scope }}
+      characterization_scope_key: ${{ steps.configure.outputs.characterization_scope_key }}
+      characterization_profile: ${{ steps.configure.outputs.characterization_profile }}
       probe_matrix: ${{ steps.matrix.outputs.matrix }}
+
     steps:
       - name: Checkout exact probe ref
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || inputs.ref || github.sha }}
 
-      - name: Detect changed probe inputs
-        id: detect
+      - name: Record changed files for this phase
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          MERGE_GROUP_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_AFTER_SHA: ${{ github.event.after }}
         run: |
           set -euo pipefail
           mkdir -p flake-probe-applicability
           : > flake-probe-applicability/changed-files.txt
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "applicable=true" >> "$GITHUB_OUTPUT"
-            echo "reason=manual-dispatch" >> "$GITHUB_OUTPUT"
+          case "$EVENT_NAME" in
+            pull_request) base_sha="$PR_BASE_SHA"; head_sha="$PR_HEAD_SHA" ;;
+            merge_group) base_sha="$MERGE_GROUP_BASE_SHA"; head_sha="$MERGE_GROUP_HEAD_SHA" ;;
+            push) base_sha="$PUSH_BEFORE_SHA"; head_sha="$PUSH_AFTER_SHA" ;;
+            workflow_dispatch) base_sha=""; head_sha="" ;;
+            *) echo "Unsupported Flake Probe event: $EVENT_NAME" >&2; exit 2 ;;
+          esac
+
+          if [ -z "$base_sha" ] || [ -z "$head_sha" ]; then
             exit 0
           fi
-
-          git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
-            | sed '/^$/d' \
-            | sort -u \
-            | tee flake-probe-applicability/changed-files.txt
-
-          applicable=false
-          while IFS= read -r changed_file; do
-            case "$changed_file" in
-              apps/plasmon/src/*.test.*|\
-              apps/plasmon/src/*.spec.*|\
-              apps/plasmon/test/*|\
-              test/e2e/*|\
-              test/ci/*|\
-              playwright.config.ts|\
-              package.json|\
-              package-lock.json|\
-              flake.nix|\
-              flake.lock|\
-              .github/workflows/plasmon-flake-probe.yml)
-                applicable=true
-                break
-                ;;
-            esac
-          done < flake-probe-applicability/changed-files.txt
-
-          echo "applicable=$applicable" >> "$GITHUB_OUTPUT"
-          if [ "$applicable" = true ]; then
-            echo "reason=probe-input-changed" >> "$GITHUB_OUTPUT"
+          if [[ "$base_sha" =~ ^0+$ ]]; then
+            git diff-tree --root --no-commit-id --name-only -r "$head_sha"
           else
-            echo "reason=no-probe-input-changed" >> "$GITHUB_OUTPUT"
-          fi
+            git diff --name-only "$base_sha" "$head_sha"
+          fi | sed '/^$/d' | sort -u | tee flake-probe-applicability/changed-files.txt
 
-      - name: Configure primary probe count and scope
+      - name: Configure probe phase
         id: configure
         env:
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_ITERATIONS: ${{ inputs.iterations }}
           INPUT_TARGET: ${{ inputs.target }}
           INPUT_TEST_FILE: ${{ inputs.test_file }}
           INPUT_TEST_GREP: ${{ inputs.test_grep }}
         run: |
-          set -euo pipefail
-
-          if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            primary_mode=manual
-            iteration_count="${INPUT_ITERATIONS:-10}"
-            target="${INPUT_TARGET:-specialist}"
-            test_file="${INPUT_TEST_FILE:-}"
-            test_grep="${INPUT_TEST_GREP:-}"
-          else
-            primary_mode=baseline
-            iteration_count=10
-            target=all
-            test_file=""
-            test_grep=""
-          fi
-
-          case "$iteration_count" in
-            10|50) ;;
-            *)
-              echo "Unsupported probe iteration count: $iteration_count" >&2
-              exit 2
-              ;;
-          esac
-
-          case "$target" in
-            all|specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
-              if [ -n "$test_file" ] || [ -n "$test_grep" ]; then
-                echo "test_file/test_grep are only valid with target=exact" >&2
-                exit 2
-              fi
-              scope="$target"
-              ;;
-            exact)
-              case "$test_file" in
-                test/e2e/*.spec.*|test/e2e/*.test.*) ;;
-                *)
-                  echo "target=exact requires test/e2e/**/*.spec.* or *.test.*" >&2
-                  exit 2
-                  ;;
-              esac
-              if [ ! -f "$test_file" ]; then
-                echo "Exact probe file does not exist at checked-out ref: $test_file" >&2
-                exit 2
-              fi
-              case "$test_file$test_grep" in
-                *$'\n'*|*$'\r'*)
-                  echo "Exact probe scope may not contain newlines" >&2
-                  exit 2
-                  ;;
-              esac
-              scope="exact:$test_file"
-              if [ -n "$test_grep" ]; then
-                scope="$scope::grep=$test_grep"
-              fi
-              ;;
-            *)
-              echo "Unsupported flake-probe target: $target" >&2
-              exit 2
-              ;;
-          esac
-
-          scope_key="$(printf '%s' "$scope" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//; s/-$//' | cut -c1-80)"
-          if [ -z "$scope_key" ]; then
-            echo "Unable to derive probe scope key" >&2
-            exit 2
-          fi
-
-          {
-            echo "primary_mode=$primary_mode"
-            echo "iteration_count=$iteration_count"
-            echo "target=$target"
-            echo "test_file=$test_file"
-            echo "test_grep=$test_grep"
-            echo "scope=$scope"
-            echo "scope_key=$scope_key"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Select automatic 50-iteration characterization scope
-        id: characterize
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" != pull_request ]; then
-            cat > flake-probe-applicability/characterization.json <<'EOF'
-          {
-            "applicable": false,
-            "reason": "not-a-pull-request",
-            "target": "exact-set",
-            "iteration_count": 50,
-            "files": [],
-            "files_json": "[]",
-            "scope": "not-applicable",
-            "scope_key": "not-applicable"
-          }
-          EOF
-            {
-              echo "applicable=false"
-              echo "reason=not-a-pull-request"
-              echo "target=exact-set"
-              echo "iteration_count=50"
-              echo "files_json=[]"
-              echo "scope=not-applicable"
-              echo "scope_key=not-applicable"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          node test/ci/select-plasmon-flake-characterization.mjs \
+          node test/ci/configure-plasmon-flake-probe.mjs \
             flake-probe-applicability/changed-files.txt \
+            --event "${{ github.event_name }}" \
             --github-output "$GITHUB_OUTPUT" \
-            --json-file flake-probe-applicability/characterization.json
+            --json-file flake-probe-applicability/configuration.json
 
-      - name: Build shared probe matrix
+      - name: Build probe matrix
         id: matrix
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PRIMARY_APPLICABLE: ${{ steps.detect.outputs.applicable }}
+          PRIMARY_APPLICABLE: ${{ steps.configure.outputs.applicable }}
           PRIMARY_MODE: ${{ steps.configure.outputs.primary_mode }}
           PRIMARY_COUNT: ${{ steps.configure.outputs.iteration_count }}
           PRIMARY_TARGET: ${{ steps.configure.outputs.target }}
@@ -263,18 +132,14 @@ jobs:
           PRIMARY_TEST_GREP: ${{ steps.configure.outputs.test_grep }}
           PRIMARY_SCOPE: ${{ steps.configure.outputs.scope }}
           PRIMARY_SCOPE_KEY: ${{ steps.configure.outputs.scope_key }}
-          CHARACTERIZATION_APPLICABLE: ${{ steps.characterize.outputs.applicable }}
-          CHARACTERIZATION_COUNT: ${{ steps.characterize.outputs.iteration_count }}
-          CHARACTERIZATION_TARGET: ${{ steps.characterize.outputs.target }}
-          CHARACTERIZATION_SCOPE: ${{ steps.characterize.outputs.scope }}
-          CHARACTERIZATION_SCOPE_KEY: ${{ steps.characterize.outputs.scope_key }}
-        run: |
-          set -euo pipefail
-          # Contract compatibility terminology: mode: 'characterization', automatic_characterization: true,
-          # and legacy one-job-per-slot metadata used iteration=${{ matrix.iteration }}.
-          node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output "$GITHUB_OUTPUT"
+          CHARACTERIZATION_APPLICABLE: ${{ steps.configure.outputs.characterization_applicable }}
+          CHARACTERIZATION_COUNT: ${{ steps.configure.outputs.characterization_iteration_count }}
+          CHARACTERIZATION_TARGET: ${{ steps.configure.outputs.characterization_target }}
+          CHARACTERIZATION_SCOPE: ${{ steps.configure.outputs.characterization_scope }}
+          CHARACTERIZATION_SCOPE_KEY: ${{ steps.configure.outputs.characterization_scope_key }}
+        run: node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output "$GITHUB_OUTPUT"
 
-      - name: Upload applicability and characterization evidence
+      - name: Upload applicability evidence
         uses: actions/upload-artifact@v4
         with:
           name: flake-probe-applicability-${{ github.run_id }}-attempt-${{ github.run_attempt }}
@@ -283,8 +148,8 @@ jobs:
           retention-days: 7
 
   probe:
-    if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     needs: applicability
+    if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     name: Flake ${{ matrix.mode }} ${{ matrix.scope }} iterations ${{ matrix.start_iteration }}-${{ matrix.end_iteration }}/${{ matrix.iteration_count }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -293,7 +158,6 @@ jobs:
       fail-fast: false
       max-parallel: 10
       matrix: ${{ fromJSON(needs.applicability.outputs.probe_matrix) }}
-
     env:
       PROBE_MODE: ${{ matrix.mode }}
       PROBE_TARGET: ${{ matrix.target }}
@@ -312,22 +176,13 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || inputs.ref || github.sha }}
 
       - name: Record exact probe identity
         run: |
           set -euxo pipefail
           echo "PROBE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "mode=$PROBE_MODE"
-          echo "iterations=$PROBE_START_ITERATION-$PROBE_END_ITERATION/$PROBE_ITERATION_COUNT"
-          echo "packet=$PROBE_PACKET"
-          echo "repetitions=$PROBE_REPETITIONS"
-          echo "run_id=${{ github.run_id }}"
-          echo "run_number=${{ github.run_number }}"
-          echo "run_attempt=${{ github.run_attempt }}"
-          echo "target=$PROBE_TARGET"
-          echo "scope=$PROBE_SCOPE"
-          git rev-parse HEAD
+          echo "mode=$PROBE_MODE iterations=$PROBE_START_ITERATION-$PROBE_END_ITERATION/$PROBE_ITERATION_COUNT packet=$PROBE_PACKET repetitions=$PROBE_REPETITIONS"
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -355,7 +210,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload failed-probe-iteration diagnostics
+      - name: Upload failed probe diagnostics
         if: always() && steps.probe.outcome != 'success'
         uses: actions/upload-artifact@v4
         with:
@@ -364,46 +219,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Report observed probe failure
-        if: always() && steps.probe.outcome != 'success'
-        run: |
-          set -u
-          diagnostic_artifact="flake-probe-${PROBE_MODE:-unknown}-${PROBE_ITERATION_COUNT:-unknown}-${{ matrix.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-${{ github.run_attempt }}-packet-${PROBE_PACKET:-unknown}"
-          context_file="$(find flake-probe-diagnostics -name error-context.md -type f -print -quit 2>/dev/null || true)"
-          failed_iterations="$(grep -rl '^outcome=failure$' flake-probe-results --include=result.txt 2>/dev/null \
-            | sed -E 's#.*iteration-([0-9]+)/result.txt#\1#' \
-            | sort -n \
-            | paste -sd, - || true)"
-
-          {
-            echo "## Plasmon flake probe packet failure"
-            echo
-            echo "- Probe mode: \`${PROBE_MODE:-unknown}\`"
-            echo "- Probe iterations: ${PROBE_START_ITERATION:-unknown}-${PROBE_END_ITERATION:-unknown}/${PROBE_ITERATION_COUNT:-unknown}"
-            echo "- Failed iterations in this packet: ${failed_iterations:-setup failure before an iteration result was recorded}"
-            echo "- Workflow run_number: ${{ github.run_number }}"
-            echo "- Workflow run_attempt: ${{ github.run_attempt }}"
-            echo "- Exact SHA: \`${PROBE_SHA:-unknown}\`"
-            echo "- Target: \`${PROBE_TARGET:-unknown}\`"
-            echo "- Scope: \`${PROBE_SCOPE:-unknown}\`"
-            echo "- Actions run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            echo "- Diagnostic artifact: \`$diagnostic_artifact\`"
-            echo
-            echo "The failing command is the \`Run prepared Plasmon probe packet\` step above; each repetition is grouped separately in its stdout/stderr."
-            echo
-            if [ -n "$context_file" ]; then
-              echo "### First Playwright error context"
-              echo
-              sed -n '1,120p' "$context_file"
-            else
-              echo "No Playwright error-context.md was produced. The failure may have occurred during packet setup/reset; use the packet step for the original error."
-            fi
-            echo
-            echo "The diagnostic artifact keeps per-iteration \`probe-output.log\` and Playwright evidence when produced."
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-
   summary:
-    if: ${{ always() && (needs.applicability.result != 'success' || needs.applicability.outputs.applicable == 'true') }}
+    if: ${{ always() }}
     name: Flake probe summary
     needs: [applicability, probe]
     runs-on: ubuntu-latest
@@ -412,72 +229,46 @@ jobs:
         env:
           APPLICABILITY_RESULT: ${{ needs.applicability.result }}
         run: |
-          set -euo pipefail
-          if [ "$APPLICABILITY_RESULT" != success ]; then
-            echo "Flake probe applicability detection did not complete successfully: $APPLICABILITY_RESULT" >&2
-            exit 1
-          fi
+          [ "$APPLICABILITY_RESULT" = success ] || { echo "Flake probe applicability failed: $APPLICABILITY_RESULT" >&2; exit 1; }
+
+      - name: Report PR flake gate deferred to merge queue
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "## Plasmon flake validation deferred" >> "$GITHUB_STEP_SUMMARY"
+          echo "The approved merge-group SHA runs the required broad retry-free probe." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout exact probe ref
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || inputs.ref || github.sha }}
+          ref: ${{ github.event.merge_group.head_sha || inputs.ref || github.sha }}
 
-      - name: Download applicability evidence from available run attempts
+      - name: Download applicability evidence
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
           path: flake-probe-applicability
           merge-multiple: true
 
-      - name: Download primary probe iteration results across run attempts
+      - name: Download primary probe results
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-probe-results
 
-      - name: Detect failed primary probe iterations
-        id: primary_results
+      - name: Summarize primary stability evidence
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const root = 'flake-probe-results';
-          const files = [];
-          const visit = (directory) => {
-            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-              const next = path.join(directory, entry.name);
-              if (entry.isDirectory()) visit(next);
-              else if (entry.name === 'result.txt') files.push(next);
-            }
-          };
-          visit(root);
-          const failed = files.some((file) => !fs.readFileSync(file, 'utf8').includes('outcome=success'));
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `failed=${failed}\n`);
-          NODE
-
-      - name: Download failed primary probe diagnostics across run attempts
-        if: steps.primary_results.outputs.failed == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-*-*
-          path: flake-probe-diagnostics
-
-      - name: Summarize exact-head baseline or manual stability
-        run: |
-          set -o pipefail
           mkdir -p flake-probe-diagnostics flake-probe-summary
-          node test/ci/summarize-flake-probe.mjs \
-            flake-probe-results \
-            flake-probe-diagnostics \
-            flake-probe-applicability/changed-files.txt \
-            --json-file flake-probe-summary/summary.json \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          node test/ci/summarize-plasmon-flake-evidence.mjs \
+            flake-probe-results flake-probe-diagnostics flake-probe-applicability/changed-files.txt \
+            --json-file flake-probe-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload baseline/manual evidence packet
-        if: always()
+      - name: Upload primary evidence packet
+        if: ${{ always() && github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: flake-summary-${{ needs.applicability.outputs.primary_mode }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
@@ -486,90 +277,55 @@ jobs:
           retention-days: 7
 
   characterization_summary:
-    if: ${{ always() && github.event_name == 'pull_request' && needs.applicability.result == 'success' }}
+    if: ${{ always() && needs.applicability.result == 'success' && github.event_name != 'workflow_dispatch' }}
     name: Flake characterization summary
     needs: [applicability, probe]
     runs-on: ubuntu-latest
     steps:
-      - name: Report non-applicable characterization
-        if: needs.applicability.outputs.characterization_applicable != 'true'
-        env:
-          CHARACTERIZATION_REASON: ${{ needs.applicability.outputs.characterization_reason }}
+      - name: Report PR characterization deferred to merge queue
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          {
-            echo "## Plasmon 50-iteration characterization probe"
-            echo
-            echo "No automatic characterization was selected for this PR head."
-            echo
-            echo "- Selection reason: \`${CHARACTERIZATION_REASON:-unknown}\`"
-            echo "- The normal 10-iteration baseline remains a separate evidence packet/check in \`Flake probe summary\`."
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "## Plasmon characterization deferred" >> "$GITHUB_STEP_SUMMARY"
+          echo "Relevant Playwright scope is characterized only on the merge-group SHA." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report non-applicable automatic characterization
+        if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable != 'true' }}
+        run: |
+          echo "## Plasmon automatic characterization" >> "$GITHUB_STEP_SUMMARY"
+          echo "No targeted characterization selected: ${{ needs.applicability.outputs.characterization_reason }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout exact characterization ref
-        if: needs.applicability.outputs.characterization_applicable == 'true'
+        if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.merge_group.head_sha || github.sha }}
 
-      - name: Download characterization applicability evidence from available run attempts
-        if: needs.applicability.outputs.characterization_applicable == 'true'
+      - name: Download characterization applicability evidence
+        if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
           path: flake-probe-applicability
           merge-multiple: true
 
-      - name: Download characterization probe iteration results across run attempts
-        if: needs.applicability.outputs.characterization_applicable == 'true'
+      - name: Download characterization results
+        if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-characterization-results
 
-      - name: Detect failed characterization probe iterations
-        if: needs.applicability.outputs.characterization_applicable == 'true'
-        id: characterization_results
+      - name: Summarize automatic characterization evidence
+        if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
-          const path = require('node:path');
-          const root = 'flake-characterization-results';
-          const files = [];
-          const visit = (directory) => {
-            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-              const next = path.join(directory, entry.name);
-              if (entry.isDirectory()) visit(next);
-              else if (entry.name === 'result.txt') files.push(next);
-            }
-          };
-          visit(root);
-          const failed = files.some((file) => !fs.readFileSync(file, 'utf8').includes('outcome=success'));
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `failed=${failed}\n`);
-          NODE
-
-      - name: Download failed characterization diagnostics across run attempts
-        if: needs.applicability.outputs.characterization_applicable == 'true' && steps.characterization_results.outputs.failed == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-diagnostics-${{ github.run_id }}-attempt-*-*
-          path: flake-characterization-diagnostics
-
-      - name: Summarize exact-head 50-iteration characterization evidence
-        if: needs.applicability.outputs.characterization_applicable == 'true'
-        run: |
-          set -o pipefail
           mkdir -p flake-characterization-diagnostics flake-characterization-summary
-          node test/ci/summarize-flake-probe.mjs \
-            flake-characterization-results \
-            flake-characterization-diagnostics \
-            flake-probe-applicability/changed-files.txt \
-            --json-file flake-characterization-summary/summary.json \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          node test/ci/summarize-plasmon-flake-evidence.mjs \
+            flake-characterization-results flake-characterization-diagnostics flake-probe-applicability/changed-files.txt \
+            --json-file flake-characterization-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload characterization evidence packet
-        if: always() && needs.applicability.outputs.characterization_applicable == 'true'
+        if: ${{ always() && github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: flake-summary-characterization-${{ github.run_id }}-attempt-${{ github.run_attempt }}

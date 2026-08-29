@@ -5,6 +5,8 @@ on:
     branches:
       - 'release/**'
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -29,12 +31,20 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs persistence
 
+      - name: Report PR gate deferred to merge queue
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "Packaged browser persistence is deferred until the approved PR enters the merge queue."
+          echo "The required check is intentionally satisfied on the PR head; the real package/browser gate runs on merge_group."
+
       - name: Install Nix
+        if: ${{ github.event_name != 'pull_request' }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run browser persistence gate
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail

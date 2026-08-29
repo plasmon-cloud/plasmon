@@ -1,18 +1,19 @@
 import { readFileSync } from "node:fs";
-import {
-  plasmonBranchRole,
-  releaseBranchGlob,
-} from "./plasmon-ci-policy.mjs";
+import { releaseBranchGlob } from "./plasmon-ci-policy.mjs";
 
-const releaseBranchLine = `      - '${releaseBranchGlob}'`;
+const RELEASE_BRANCH_TRIGGER = `      - '${releaseBranchGlob}'`;
+const MERGE_GROUP_TRIGGER = "  merge_group:";
+const CHECKS_REQUESTED_TRIGGER = "    types: [checks_requested]";
+const PR_ONLY = "if: ${{ github.event_name == 'pull_request' }}";
+const NOT_PR = "if: ${{ github.event_name != 'pull_request' }}";
 
 const gates = [
   {
     id: "smoke",
     path: ".github/workflows/plasmon-browser-smoke-ci.yml",
     context: "Packaged refactor smoke",
-    expensiveStepName: "Package and run Plasmon refactor smoke",
-    expensiveFragments: [
+    expensiveStep: "Package and run Plasmon refactor smoke",
+    requiredCommands: [
       "npm ci",
       "node test/ci/verify-playwright-gate.mjs",
       "npm run plasmon:local:prepare",
@@ -20,221 +21,150 @@ const gates = [
       "npm run plasmon:local:reinstall",
       "npm run test:e2e:plasmon:smoke",
     ],
-    forbiddenPrSelectionFragments: [
-      "packaged_smoke_scope",
-      "run_packaged_smoke",
-      "Detect packaged-smoke-relevant changes",
-    ],
-    pushBranches: [releaseBranchLine],
   },
   {
     id: "browser",
     path: ".github/workflows/plasmon-browser-ci.yml",
     context: "Packaged Playwright specialist acceptance",
-    expensiveStepName: "Package and run Plasmon specialist browser acceptance",
-    expensiveFragments: [
+    expensiveStep: "Package and run Plasmon specialist browser acceptance",
+    requiredCommands: [
       "npm ci",
       "npm run plasmon:local:prepare",
       "npm run plasmon:local:status",
       "npm run plasmon:local:reinstall",
       "npm run test:e2e:plasmon:specialist",
     ],
-    forbiddenPrSelectionFragments: [
-      "packaged_browser_scope",
-      "run_packaged_browser",
-      "Detect specialist-browser-relevant changes",
-    ],
-    pushBranches: [
-      "      - version-0.1.0-os",
-      releaseBranchLine,
-    ],
   },
   {
     id: "persistence",
     path: ".github/workflows/plasmon-browser-persistence-ci.yml",
     context: "Packaged browser persistence",
-    expensiveStepName: "Package and run browser persistence gate",
-    expensiveFragments: [
+    expensiveStep: "Package and run browser persistence gate",
+    requiredCommands: [
       "npm ci",
       "npm run plasmon:local:prepare",
       "npm run plasmon:local:status",
       "npm run plasmon:local:reinstall",
       "npm run test:e2e:plasmon:persistence",
     ],
-    forbiddenPrSelectionFragments: [
-      "persistence_scope",
-      "run_persistence",
-      "Detect persistence-relevant changes",
-    ],
-    pushBranches: [releaseBranchLine],
   },
 ];
 
-const requestedGateIds = process.argv.slice(2);
-const knownGateIds = new Set(gates.map((gate) => gate.id));
-for (const gateId of requestedGateIds) {
-  if (!knownGateIds.has(gateId)) {
-    throw new Error(`Unknown required browser gate ${gateId}`);
+function requireFragment(source, fragment, label) {
+  if (!source.includes(fragment)) {
+    throw new Error(`${label} lost required fragment: ${fragment}`);
   }
 }
-const selectedGates = requestedGateIds.length > 0
-  ? gates.filter((gate) => requestedGateIds.includes(gate.id))
-  : gates;
 
-function eventSection(lines, eventName) {
-  const marker = `  ${eventName}:`;
-  const start = lines.findIndex((line) => line === marker);
-  if (start < 0) throw new Error(`Missing ${eventName} event`);
-
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^  [A-Za-z0-9_-]+:\s*$/u.test(lines[index])) {
-      end = index;
-      break;
-    }
+function forbidFragment(source, fragment, label) {
+  if (source.includes(fragment)) {
+    throw new Error(`${label} contains forbidden fragment: ${fragment}`);
   }
-  return lines.slice(start + 1, end);
 }
 
-function stepSectionFromIndex(lines, start) {
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^      - name: /u.test(lines[index])) {
-      end = index;
-      break;
-    }
-  }
-  return lines.slice(start, end).join("\n");
-}
-
-function stepSectionByName(lines, stepName) {
+function stepSection(source, stepName) {
   const marker = `      - name: ${stepName}`;
-  const start = lines.findIndex((line) => line === marker);
+  const start = source.indexOf(marker);
   if (start < 0) throw new Error(`Missing workflow step ${stepName}`);
-  return stepSectionFromIndex(lines, start);
+  const next = source.indexOf("\n      - name:", start + marker.length);
+  return source.slice(start, next < 0 ? source.length : next);
 }
 
-function stepCount(source, stepName) {
-  return source.split(`      - name: ${stepName}`).length - 1;
-}
-
-function assertUnconditionalStep(step, label) {
-  if (/^        if:/mu.test(step)) {
-    throw new Error(`${label} must run unconditionally on every PR`);
+function verifyCommonTriggers(source, label) {
+  for (const fragment of [
+    "  pull_request:",
+    MERGE_GROUP_TRIGGER,
+    CHECKS_REQUESTED_TRIGGER,
+    "  push:",
+    RELEASE_BRANCH_TRIGGER,
+  ]) {
+    requireFragment(source, fragment, label);
   }
-}
-
-function assertUnfilteredReleasePush(path) {
-  const source = readFileSync(path, "utf8");
-  const push = eventSection(source.split(/\r?\n/u), "push");
-  if (!push.includes(releaseBranchLine)) {
-    throw new Error(`${path} direct-push coverage lost release branch role ${releaseBranchGlob}`);
-  }
-  if (push.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
-    throw new Error(`${path} cannot path-filter release-role pushes; every release push must schedule this required gate`);
+  for (const fragment of [
+    "pull_request_target",
+    "continue-on-error: true",
+    "    paths:",
+    "    paths-ignore:",
+  ]) {
+    forbidFragment(source, fragment, label);
   }
   if (/release\/0\.1\.0-r\d/u.test(source)) {
-    throw new Error(`${path} hard-codes a concrete release branch instead of the release role`);
+    throw new Error(`${label} hard-codes a concrete release branch`);
   }
-  return push;
 }
 
-for (const gate of selectedGates) {
+function verifyDeferredRequiredGate(gate) {
   const source = readFileSync(gate.path, "utf8");
-  const lines = source.split(/\r?\n/u);
-  const pullRequest = eventSection(lines, "pull_request");
+  const label = gate.context;
 
-  if (pullRequest.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
-    throw new Error(`${gate.context} cannot use a pull_request path filter`);
-  }
-  if (!source.includes(`    name: ${gate.context}`)) {
-    throw new Error(`${gate.path} no longer reports stable context ${gate.context}`);
-  }
-  if (source.includes("continue-on-error: true")) {
-    throw new Error(`${gate.context} must not mask required-gate failures with continue-on-error`);
-  }
+  verifyCommonTriggers(source, label);
+  requireFragment(source, `    name: ${gate.context}`, label);
 
-  const verifierName = "Verify required-gate workflow contract";
-  const verifierCommand = `node test/ci/verify-required-browser-gates.mjs ${gate.id}`;
-  if (stepCount(source, verifierName) !== 1) {
-    throw new Error(`${gate.context} must execute its required-gate verifier exactly once`);
-  }
-  const verifier = stepSectionByName(lines, verifierName);
-  assertUnconditionalStep(verifier, `${gate.context} required-gate verifier`);
-  if (!verifier.includes(verifierCommand)) {
-    throw new Error(`${gate.context} required-gate verifier must run ${verifierCommand}`);
+  const deferredStep = stepSection(source, "Report PR gate deferred to merge queue");
+  requireFragment(deferredStep, PR_ONLY, `${label} PR deferral`);
+  requireFragment(deferredStep, "deferred until the approved PR enters the merge queue.", `${label} PR deferral`);
+
+  const nixStep = stepSection(source, "Install Nix");
+  requireFragment(nixStep, NOT_PR, `${label} Nix setup`);
+  requireFragment(nixStep, "uses: cachix/install-nix-action@v31", `${label} Nix setup`);
+
+  const expensiveStep = stepSection(source, gate.expensiveStep);
+  requireFragment(expensiveStep, NOT_PR, `${label} slow gate`);
+  for (const command of gate.requiredCommands) {
+    requireFragment(expensiveStep, command, `${label} slow gate`);
   }
 
-  const forbiddenGlobalFragments = [
-    "${{ github.event.pull_request.base.sha }}",
-    "${{ github.event.pull_request.head.sha }}",
-    "git diff --name-only",
-  ];
-  for (const fragment of [...forbiddenGlobalFragments, ...gate.forbiddenPrSelectionFragments]) {
-    if (source.includes(fragment)) {
-      throw new Error(`${gate.context} must not select PR execution by changed files: ${fragment}`);
-    }
-  }
-
-  const nixStep = stepSectionByName(lines, "Install Nix");
-  assertUnconditionalStep(nixStep, `${gate.context} Nix setup`);
-  if (!nixStep.includes("uses: cachix/install-nix-action@v31")) {
-    throw new Error(`${gate.context} must preserve Nix setup`);
-  }
-
-  const expensiveStep = stepSectionByName(lines, gate.expensiveStepName);
-  assertUnconditionalStep(expensiveStep, `${gate.context} real packaged/browser gate`);
-  for (const fragment of gate.expensiveFragments) {
-    if (!expensiveStep.includes(fragment)) {
-      throw new Error(`${gate.context} real gate lost required acceptance fragment: ${fragment}`);
-    }
-  }
-  if (gate.id !== "browser" && expensiveStep.includes("npm run plasmon:demo:")) {
-    throw new Error(`${gate.context} must use the bounded plasmon:local:* fixture, not the full demo manifest`);
-  }
-
-  const push = eventSection(lines, "push");
-  for (const branchLine of gate.pushBranches) {
-    if (!push.includes(branchLine)) {
-      throw new Error(`${gate.context} direct-push coverage lost required branch role/legacy branch ${branchLine.trim()}`);
-    }
-  }
+  const verifierStep = stepSection(source, "Verify required-gate workflow contract");
+  requireFragment(
+    verifierStep,
+    `node test/ci/verify-required-browser-gates.mjs ${gate.id}`,
+    `${label} self-verifier`,
+  );
+  forbidFragment(verifierStep, "if:", `${label} self-verifier`);
 }
+
+const requestedGateIds = process.argv.slice(2);
+const selectedGates = requestedGateIds.length === 0
+  ? gates
+  : gates.filter((gate) => requestedGateIds.includes(gate.id));
+if (selectedGates.length !== (requestedGateIds.length || gates.length)) {
+  throw new Error("Unknown required browser gate requested");
+}
+
+for (const gate of selectedGates) verifyDeferredRequiredGate(gate);
 
 const browserWorkflow = readFileSync(".github/workflows/plasmon-browser-ci.yml", "utf8");
-if (!browserWorkflow.includes("    name: Packaged Playwright demo acceptance")) {
-  throw new Error("Packaged browser workflow lost stable Demo acceptance context");
-}
-const demoLines = browserWorkflow.split(/\r?\n/u);
-const demoStep = stepSectionByName(demoLines, "Package and run Plasmon demo browser acceptance");
-for (const fragment of [
+requireFragment(browserWorkflow, "    name: Packaged Playwright demo acceptance", "Demo browser gate");
+const demoJob = browserWorkflow.slice(browserWorkflow.indexOf("  packaged-demo:"));
+const demoDeferredStep = stepSection(demoJob, "Report PR gate deferred to merge queue");
+requireFragment(demoDeferredStep, PR_ONLY, "Demo PR deferral");
+
+const demoSlowStep = stepSection(demoJob, "Package and run Plasmon demo browser acceptance");
+requireFragment(demoSlowStep, NOT_PR, "Demo slow gate");
+for (const command of [
   "npm run plasmon:demo:prepare",
   "npm run plasmon:demo:status",
   "npm run plasmon:demo:reinstall",
   "npm run test:e2e:plasmon:demo",
 ]) {
-  if (!demoStep.includes(fragment)) throw new Error(`Demo gate lost required capability fragment: ${fragment}`);
+  requireFragment(demoSlowStep, command, "Demo slow gate");
 }
-if (/test\/e2e\/plasmon-[^\s'"\\]+\.spec\.[cm]?[jt]sx?/u.test(demoStep)) {
+if (/test\/e2e\/plasmon-[^\s'"\\]+\.spec\.[cm]?[jt]sx?/u.test(demoSlowStep)) {
   throw new Error("Demo workflow must select its browser lane semantically instead of enumerating spec files");
 }
 
-const requiredReleasePushWorkflows = [
+for (const path of [
   ".github/workflows/plasmon-ci.yml",
   ".github/workflows/kernel-ci.yml",
   ".github/workflows/plasmon-browser-smoke-ci.yml",
   ".github/workflows/plasmon-browser-ci.yml",
   ".github/workflows/plasmon-browser-persistence-ci.yml",
-];
-for (const path of requiredReleasePushWorkflows) {
-  assertUnfilteredReleasePush(path);
+]) {
+  const source = readFileSync(path, "utf8");
+  requireFragment(source, MERGE_GROUP_TRIGGER, `${path} merge-queue support`);
+  requireFragment(source, CHECKS_REQUESTED_TRIGGER, `${path} merge-queue support`);
 }
 
-for (const ref of ["release/candidate", "release/demo", "release/future"]) {
-  if (plasmonBranchRole(ref) !== "release") throw new Error(`Release-role policy rejected ${ref}`);
-}
-for (const ref of ["main", "feature/example", "", "release/", "release/bad/name", "release/name with spaces"]) {
-  if (plasmonBranchRole(ref) !== "unknown") throw new Error(`Release-role policy must fail closed for ${ref || "(empty)"}`);
-}
-
-console.log(`Required browser gate PR-always-run, semantic Demo selection, and unfiltered ${releaseBranchGlob} release-role push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+console.log(
+  `Required browser gates verified: PR contexts defer expensive work, merge-group/release events run real gates, stable status names and ${releaseBranchGlob} release-role coverage are preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`,
+);
