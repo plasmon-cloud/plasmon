@@ -13,19 +13,19 @@ async function launchPlasmon(page: Page) {
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #44; this gate exercises the real packaged FileManager command surfaces",
+        reason: "Kernel-owned installed-app iframe warning is outside this packaged FileManager command gate",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #44 shortcut creation",
+        reason: "Known product icon URL-resolution defect is outside shortcut creation",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
         urlPathPrefix: "/app/plasmon/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #44 shortcut creation",
+        reason: "Known product icon URL-resolution defect is outside shortcut creation",
       },
     ],
   });
@@ -78,12 +78,12 @@ async function expectResolvedDirectoryShortcut(shortcut: Locator) {
 }
 
 /**
- * #44 already has deterministic coverage for canonical NodeId metadata,
- * capabilities, collision naming, and selection state. This packaged gate proves
- * the remaining user-visible boundary through the real toolbar/context-menu
- * commands and canonical open dispatcher.
+ * Deterministic coverage already owns canonical NodeId metadata, capabilities,
+ * collision naming, and selection state. This packaged gate proves the remaining
+ * user-visible boundary through the real toolbar/context-menu commands and
+ * canonical open dispatcher.
  */
-test("#44 — packaged FileManager exposes and activates Create Shortcut", async ({ page }) => {
+test("packaged FileManager exposes and activates Create Shortcut", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
     const { explorer, files } = await openExplorer(app);
