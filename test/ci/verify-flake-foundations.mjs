@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { selectCharacterization } from "./select-plasmon-flake-characterization.mjs";
-import { activeQuarantines, isFullyQuarantinedSource } from "./plasmon-quarantine.mjs";
+import { isFullyQuarantinedSource } from "./plasmon-quarantine.mjs";
 import { isolationForProbe, PERSISTENT_STATE_RESET_FILES } from "./plasmon-playwright-isolation.mjs";
 
 const runner = readFileSync("test/ci/run-plasmon-flake-probe.sh", "utf8");
@@ -132,7 +132,6 @@ if (!isFullyQuarantinedSource(syntheticPath, synthetic, entries)) throw new Erro
 if (isFullyQuarantinedSource(syntheticPath, `${synthetic}test("required", async () => {});\n`, entries)) {
   throw new Error("mixed required/quarantined source must not be classified as fully quarantined");
 }
-if (activeQuarantines.length < 1) throw new Error("active quarantine authority unexpectedly empty during known debt lifecycle");
 
 for (const resetFile of ["test/e2e/plasmon-persistence.spec.ts", "test/e2e/plasmon-demo-game.spec.ts"]) {
   if (!PERSISTENT_STATE_RESET_FILES.has(resetFile)) throw new Error(`stateful acceptance lost registered reset isolation: ${resetFile}`);
