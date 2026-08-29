@@ -68,7 +68,7 @@ test("thumbnail lifecycle stays lazy and revokes loaded URLs on replacement/unmo
 
   try {
     globalThis.IntersectionObserver = ControlledIntersectionObserver;
-    URL.createObjectURL = () => `blob:issue-93-${nextUrl++}`;
+    URL.createObjectURL = () => `blob:thumbnail-fixture-${nextUrl++}`;
     URL.revokeObjectURL = (url) => { revoked.push(url); };
 
     const first = imageNode("image-1", "portrait.png");
@@ -86,22 +86,22 @@ test("thumbnail lifecycle stays lazy and revokes loaded URLs on replacement/unmo
     await waitFor(() => {
       expect(readIds).toEqual(["image-1"]);
       expect(rendered.container.firstElementChild?.getAttribute("data-thumbnail"))
-        .toBe("blob:issue-93-1");
+        .toBe("blob:thumbnail-fixture-1");
     });
 
     rendered.rerender(<ThumbnailHarness fs={fs} node={second} />);
-    await waitFor(() => expect(revoked).toEqual(["blob:issue-93-1"]));
+    await waitFor(() => expect(revoked).toEqual(["blob:thumbnail-fixture-1"]));
     expect(readIds).toEqual(["image-1"]);
 
     act(() => emitIntersection(true));
     await waitFor(() => {
       expect(readIds).toEqual(["image-1", "image-2"]);
       expect(rendered.container.firstElementChild?.getAttribute("data-thumbnail"))
-        .toBe("blob:issue-93-2");
+        .toBe("blob:thumbnail-fixture-2");
     });
 
     rendered.unmount();
-    expect(revoked).toEqual(["blob:issue-93-1", "blob:issue-93-2"]);
+    expect(revoked).toEqual(["blob:thumbnail-fixture-1", "blob:thumbnail-fixture-2"]);
   } finally {
     globalThis.IntersectionObserver = originalIntersectionObserver;
     URL.createObjectURL = originalCreateObjectURL;
