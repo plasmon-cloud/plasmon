@@ -1,60 +1,62 @@
-export interface ScriptCommandResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
+export type OsResourceKind = "file" | "directory" | "shortcut" | "atom";
 
-export interface ScriptIO {
-  stdout(text: string): void;
-  stderr(text: string): void;
-}
-
-export interface ScriptDirectoryEntry {
-  name: string;
+export interface OsResource {
+  id: string;
   path: string;
-  kind: "directory" | "file" | "shortcut" | "atom";
+  name: string;
+  kind: OsResourceKind;
   size: number;
+  mimeType?: string;
 }
 
-export interface ScriptFileSystem {
-  cwd(): string;
+export interface OpenResult {
+  resource: OsResource;
+  handlerId?: string;
+  processId?: string;
+  windowId?: string;
+}
+
+export interface OsProcess {
+  id: string;
+  appId: string;
+  handlerId: string;
+  state: "starting" | "running" | "closing";
+  windowId?: string;
+}
+
+export interface OsWindow {
+  id: string;
+  processId: string;
+  title?: string;
+  minimized: boolean;
+  maximized: boolean;
+}
+
+export interface OsFileSystemApi {
+  stat(path: string): Promise<OsResource>;
+  exists(path: string): Promise<boolean>;
   readText(path: string): Promise<string>;
-  writeText(path: string, text: string): Promise<void>;
-  mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
-  list(path?: string): Promise<readonly ScriptDirectoryEntry[]>;
+  writeText(path: string, text: string): Promise<OsResource>;
+  createDirectory(path: string): Promise<OsResource>;
+  /** Experimental R4/R5 addition used by shell-style directory listing. */
+  list(path?: string): Promise<readonly OsResource[]>;
 }
 
-export interface ScriptCommand {
-  readonly name: string;
-  readonly args: readonly string[];
+export interface OsProcessesApi {
+  list(): readonly OsProcess[];
 }
 
-export interface ScriptCommandFactory {
-  command(name: string, args?: readonly string[]): ScriptCommand;
-  cat(args?: readonly string[]): ScriptCommand;
-  grep(args?: readonly string[]): ScriptCommand;
-  echo(args?: readonly string[]): ScriptCommand;
-  ls(args?: readonly string[]): ScriptCommand;
-  pwd(args?: readonly string[]): ScriptCommand;
-  cd(args?: readonly string[]): ScriptCommand;
-  mkdir(args?: readonly string[]): ScriptCommand;
-  open(args?: readonly string[]): ScriptCommand;
+export interface OsWindowsApi {
+  list(): readonly OsWindow[];
 }
 
-export interface ScriptPipeline {
-  run(): Promise<ScriptCommandResult>;
-  writeTo(path: string): Promise<ScriptCommandResult>;
-}
-
-export interface ScriptShell {
-  pipeline(commands: readonly ScriptCommand[]): ScriptPipeline;
-}
-
-/** Stable, user-facing scripting surface. It intentionally hides Plasmon implementation classes. */
-export interface ScriptOS {
-  readonly fs: ScriptFileSystem;
-  readonly commands: ScriptCommandFactory;
-  readonly shell: ScriptShell;
-  open(path: string): Promise<void>;
-  install(packageName: string): Promise<void>;
+/**
+ * Experimental compatibility contract pending the canonical production OsApi.
+ * Shell commands, stdio, cwd, and runtime helpers intentionally live above it.
+ */
+export interface OsApi {
+  readonly fs: OsFileSystemApi;
+  readonly processes: OsProcessesApi;
+  readonly windows: OsWindowsApi;
+  open(path: string): Promise<OpenResult>;
 }

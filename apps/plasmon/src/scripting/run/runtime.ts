@@ -1,5 +1,5 @@
-import type { ScriptOS } from "../os-api/types.ts";
 import type { RunCompiler } from "./compiler.ts";
+import type { RunContext } from "./context.ts";
 
 export interface RunExecutionResult {
   diagnostics: readonly string[];
@@ -7,14 +7,19 @@ export interface RunExecutionResult {
 
 let nextContextId = 0;
 
-/** Execute real TypeScript after compilation, with only the implicit `os` binding added. */
+/**
+ * Execute ordinary TypeScript after compilation. The implicit bindings come
+ * from RunContext; OsApi remains only the legitimate OS-capability surface.
+ */
 export class RunRuntime {
   constructor(private readonly compiler: RunCompiler) {}
 
-  async execute(source: string, os: ScriptOS, filename = "script.run"): Promise<RunExecutionResult> {
+  async execute(source: string, context: RunContext, filename = "script.run"): Promise<RunExecutionResult> {
     const contextKey = `__plasmon_run_context_${++nextContextId}`;
     const wrapped = [
-      `const os = (globalThis as any)[${JSON.stringify(contextKey)}] as RunOS;`,
+      "export {};",
+      `const __run = (globalThis as any)[${JSON.stringify(contextKey)}] as RunContext;`,
+      "const { os, commands, shell, args, stdin, stdout, stderr, signal, print } = __run;",
       source,
     ].join("\n");
     const compiled = await this.compiler.compile(wrapped, filename);
@@ -23,7 +28,7 @@ export class RunRuntime {
     }
 
     const host = globalThis as typeof globalThis & Record<string, unknown>;
-    host[contextKey] = os;
+    host[contextKey] = context;
     const blob = new Blob([compiled.javascript], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     try {
