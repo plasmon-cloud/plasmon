@@ -3,8 +3,8 @@ import { act, waitFor } from "@testing-library/react";
 import { readSharedShortcut } from "../../src/os/fs/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
-const FOLDER_ICON = "static/plasmon/icons/folder.svg";
-const FALLBACK_FILE_ICON = "static/plasmon/icons/file.svg";
+const FOLDER_ICON_ID = "file-type:folder";
+const FALLBACK_FILE_ICON_ID = "file-type:file";
 
 test("#420 keeps last resolved shortcut artwork through transient target lookup failure", async () => {
   const app = await renderPlasmon();
@@ -21,21 +21,21 @@ test("#420 keeps last resolved shortcut artwork through transient target lookup 
     }
 
     const rootEntry = await app.findByRole("option", { name: "Root" });
-    const renderedIconSource = (): string | null =>
-      rootEntry.querySelector<HTMLImageElement>("img")?.getAttribute("src") ?? null;
-    await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
+    const renderedIconIdentity = (): string | null =>
+      rootEntry.querySelector<SVGElement>("[data-plasmon-owned-icon]")?.getAttribute("data-plasmon-owned-icon") ?? null;
+    await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
 
-    const observedSources: string[] = [];
+    const observedIdentities: string[] = [];
     const observer = new MutationObserver((records) => {
       for (const record of records) {
-        if (record.type === "attributes" && record.oldValue) observedSources.push(record.oldValue);
+        if (record.type === "attributes" && record.oldValue) observedIdentities.push(record.oldValue);
       }
-      const src = renderedIconSource();
-      if (src) observedSources.push(src);
+      const identity = renderedIconIdentity();
+      if (identity) observedIdentities.push(identity);
     });
     observer.observe(rootEntry, {
       attributes: true,
-      attributeFilter: ["src"],
+      attributeFilter: ["data-plasmon-owned-icon"],
       attributeOldValue: true,
       childList: true,
       subtree: true,
@@ -55,21 +55,21 @@ test("#420 keeps last resolved shortcut artwork through transient target lookup 
     });
     await app.findByRole("option", { name: "Issue 420 refresh.txt" });
     await waitFor(() => expect(injectedFailurePending).toBe(false));
-    await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
+    await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
 
     // Restore target lookup and force one more authoritative Desktop snapshot so
     // the same mounted NodeId proves it can recover normally after the failed
-    // enrichment without ever publishing the generic shortcut icon in between.
+    // enrichment without ever publishing the generic file artwork in between.
     fs.stat = originalStat;
     await act(async () => {
       await fs.createFile(desktop.id, "Issue 420 recovery.txt", { mime: "text/plain" });
     });
     await app.findByRole("option", { name: "Issue 420 recovery.txt" });
-    await waitFor(() => expect(renderedIconSource()).toBe(FOLDER_ICON));
+    await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
     await act(async () => { await Promise.resolve(); });
     observer.disconnect();
 
-    expect(observedSources).not.toContain(FALLBACK_FILE_ICON);
+    expect(observedIdentities).not.toContain(FALLBACK_FILE_ICON_ID);
   } finally {
     fs.stat = originalStat;
     app.dispose();

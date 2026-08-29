@@ -67,7 +67,7 @@ test("Properties resource presentation maps FileManager semantic kinds to shared
   expect(resourceIconPresentationForFile(node("opaque.bin"))).toEqual({ kind: "file-type", icon: "file" });
 });
 
-test("system and Neutron projections use canonical shared/application artwork", () => {
+test("first-party system projections stay semantic while Neutron projections preserve authored artwork", () => {
   const explorer = node(
     "FileManager.sys",
     "file",
@@ -92,6 +92,10 @@ test("system and Neutron projections use canonical shared/application artwork", 
   );
   expect(directFileResourcePresentation(mail)).toEqual({ kind: "application", src: "/apps/mail/icon.svg" });
 
+  // A known Plasmon first-party handler keeps its semantic owned identity even
+  // when legacy registry metadata supplies fixed-color image artwork. That is
+  // what allows the live icon geometry to inherit the active theme. This rule
+  // does not apply to Neutron/application artwork above.
   const iconRegistry = associationRegistry({ "native:settings": "data:image/svg+xml,settings" });
   const settings = node(
     "Settings.sys",
@@ -100,8 +104,8 @@ test("system and Neutron projections use canonical shared/application artwork", 
     systemAppMetadata("native:settings", "native:settings"),
   );
   expect(directFileResourcePresentation(settings, iconRegistry)).toEqual({
-    kind: "application",
-    src: "data:image/svg+xml,settings",
+    kind: "system",
+    icon: "settings",
   });
 });
 
