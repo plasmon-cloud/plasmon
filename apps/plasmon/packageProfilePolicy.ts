@@ -1,17 +1,15 @@
-export const PACKAGE_PROFILES = ["hackathon", "slim", "full", "demo"] as const;
+export const PACKAGE_PROFILES = ["slim", "full", "demo"] as const;
 export type PackageProfile = (typeof PACKAGE_PROFILES)[number];
-export type CanonicalPackageProfile = "hackathon" | "full" | "demo";
 export type MonacoPackageProfile = "slim" | "full";
 
-// Keep the existing default until the separately owned full/default restoration
-// changes normal product packaging. `slim` is a compatibility spelling for the
-// explicit Hackathon composition, not a second package contract.
+// Keep the existing default until #527 deliberately changes ordinary product
+// packaging to the Base composition. Slim is the permanent constrained package
+// contract; it is not event- or release-specific.
 export const DEFAULT_PACKAGE_PROFILE: PackageProfile = "slim";
 
 export interface PackageProfilePolicy {
   readonly requestedProfile: PackageProfile;
-  readonly canonicalProfile: CanonicalPackageProfile;
-  readonly isHackathon: boolean;
+  readonly isSlim: boolean;
   readonly isDemo: boolean;
   readonly monacoProfile: MonacoPackageProfile;
 }
@@ -28,17 +26,13 @@ export function resolvePackageProfile(value = process.env.PLASMON_PACKAGE_PROFIL
     );
   }
 
-  const canonicalProfile: CanonicalPackageProfile = requestedProfile === "slim"
-    ? "hackathon"
-    : requestedProfile;
-  const isHackathon = canonicalProfile === "hackathon";
-  const isDemo = canonicalProfile === "demo";
-  const monacoProfile: MonacoPackageProfile = canonicalProfile === "full" ? "full" : "slim";
+  const isSlim = requestedProfile === "slim";
+  const isDemo = requestedProfile === "demo";
+  const monacoProfile: MonacoPackageProfile = requestedProfile === "full" ? "full" : "slim";
 
   return Object.freeze({
     requestedProfile,
-    canonicalProfile,
-    isHackathon,
+    isSlim,
     isDemo,
     monacoProfile,
   });
