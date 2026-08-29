@@ -41,6 +41,7 @@ export interface OsWindow {
   readonly maximized: boolean;
 }
 
+/** Filesystem operations use absolute Plasmon paths and preserve production filesystem policy. */
 export interface OsFileSystemApi {
   stat(path: string): Promise<OsResource | null>;
   exists(path: string): Promise<boolean>;
@@ -55,7 +56,7 @@ export interface OsFileSystemApi {
   copy(sourcePath: string, destinationPath: string): Promise<OsResource>;
   /** Move one resource into an existing destination directory through normal filesystem policy. */
   move(sourcePath: string, destinationPath: string): Promise<OsResource>;
-  /** Perform the normal user-facing removal operation for one resource. */
+  /** Perform normal user-facing removal (Recycle Bin where applicable), not permanent deletion. */
   remove(path: string): Promise<void>;
 }
 
