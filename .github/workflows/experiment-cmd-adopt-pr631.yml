@@ -25,9 +25,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin work/issue-607-os-api
+
           if ! git merge --no-ff --no-edit origin/work/issue-607-os-api; then
-            git status --short
-            git diff --name-only --diff-filter=U
-            exit 1
+            expected="apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts"
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [[ "$conflicts" != "$expected" ]]; then
+              echo "Unexpected merge conflicts:"
+              printf '%s\n' "$conflicts"
+              exit 1
+            fi
+
+            # The experiment intentionally changes the slim profile to package
+            # the TypeScript worker so .run compilation and Monaco completion
+            # are available. Preserve those newer assertions over the old
+            # editor-worker-only expectation from the R3 side.
+            git checkout --ours -- "$expected"
+            git add "$expected"
+            git commit --no-edit
           fi
+
           git push origin HEAD:experiment/cmd
