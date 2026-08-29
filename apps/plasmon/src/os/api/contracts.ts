@@ -49,6 +49,8 @@ export interface OsFileSystemApi {
   writeText(path: string, content: string): Promise<OsResource>;
   /** Create one directory. The parent must already exist. */
   createDirectory(path: string): Promise<OsResource>;
+  /** List the direct children of one absolute directory path through normal filesystem semantics. */
+  list(path: string): Promise<readonly OsResource[]>;
 }
 
 export interface OsProcessesApi {
