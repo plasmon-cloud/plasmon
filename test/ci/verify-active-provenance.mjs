@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,16 +50,16 @@ function slash(path) {
   return path.replaceAll("\\", "/");
 }
 
-function walkInput(input) {
-  const absolute = resolve(repoRoot, input);
+function walkInput(input, root = repoRoot) {
+  const absolute = resolve(root, input);
   const stat = statSync(absolute);
-  if (stat.isFile()) return [slash(relative(repoRoot, absolute))];
+  if (stat.isFile()) return [slash(relative(root, absolute))];
 
   const files = [];
   for (const entry of readdirSync(absolute, { withFileTypes: true })) {
     const path = resolve(absolute, entry.name);
-    if (entry.isDirectory()) files.push(...walkInput(slash(relative(repoRoot, path))));
-    else if (entry.isFile()) files.push(slash(relative(repoRoot, path)));
+    if (entry.isDirectory()) files.push(...walkInput(slash(relative(root, path)), root));
+    else if (entry.isFile()) files.push(slash(relative(root, path)));
   }
   return files;
 }
@@ -115,9 +116,9 @@ function lineFailures(path, line) {
   return failures;
 }
 
-export function scanActiveProvenance() {
+export function scanActiveProvenance({ root = repoRoot, inputs = activeInputs } = {}) {
   const failures = [];
-  const files = [...new Set(activeInputs.flatMap(walkInput))]
+  const files = [...new Set(inputs.flatMap((input) => walkInput(input, root)))]
     .filter((path) => path !== guardPath && !isHistorical(path))
     .sort((a, b) => a.localeCompare(b));
 
@@ -129,7 +130,7 @@ export function scanActiveProvenance() {
     }
     if (!isText(path)) continue;
 
-    const lines = readFileSync(resolve(repoRoot, path), "utf8").split(/\r?\n/u);
+    const lines = readFileSync(resolve(root, path), "utf8").split(/\r?\n/u);
     lines.forEach((line, index) => {
       for (const label of lineFailures(path, line)) {
         failures.push(`${label}: ${path}:${index + 1}: ${line.trim()}`);
@@ -144,25 +145,45 @@ function selfTest() {
   const numberedSpec = `test/e2e/plasmon-foo-${"999"}.spec.ts`;
   const camelCaseTest = `startMenuReconciliation${"999"}.test.ts`;
   const issueTag = `@issue-${"999"}`;
-  const releaseTag = `@r${"9"}-quarantine`;
-  const releaseBranch = ["release", "0.1.0-r9"].join("/");
+  const releaseTag = `@r${"2"}-quarantine`;
+  const r2ReleaseBranch = ["release", "0.1.0-r2"].join("/");
+  const r3ReleaseBranch = ["release", "0.1.0-r3"].join("/");
   const testTitle = `test("#${"999"} behavior", () => {})`;
   const artifact = `issue-${"999"}-graphite.png`;
 
-  const blockedPaths = [
-    [issuePath, pathRules[0][1]],
-    [numberedSpec, pathRules[2][1]],
-    [camelCaseTest, pathRules[4][1]],
-  ];
-  for (const [sample, rule] of blockedPaths) {
-    if (!rule.test(sample)) throw new Error(`guard self-test failed to reject path: ${sample}`);
-  }
+  const fixtureRoot = mkdtempSync(resolve(tmpdir(), "plasmon-active-provenance-"));
+  try {
+    mkdirSync(resolve(fixtureRoot, "test/e2e"), { recursive: true });
+    writeFileSync(resolve(fixtureRoot, "test", issuePath), "export {};\n");
+    writeFileSync(resolve(fixtureRoot, numberedSpec), [
+      testTitle,
+      `// ${issueTag}`,
+      `// ${releaseTag}`,
+      `const r2Branch = "${r2ReleaseBranch}";`,
+      `const r3Branch = "${r3ReleaseBranch}";`,
+      `const evidence = "${artifact}";`,
+    ].join("\n"));
+    writeFileSync(resolve(fixtureRoot, "test", camelCaseTest), "export {};\n");
 
-  const blockedContent = [issueTag, releaseTag, releaseBranch, testTitle, artifact];
-  for (const sample of blockedContent) {
-    if (!contentRules.some(([, rule]) => rule.test(sample))) {
-      throw new Error(`guard self-test failed to reject content: ${sample}`);
+    const fixtureFailures = scanActiveProvenance({ root: fixtureRoot, inputs: ["test"] });
+    const expectedFailures = [
+      `Issue-numbered active path: test/${issuePath}`,
+      `numbered Plasmon browser spec: ${numberedSpec}`,
+      `camelCase work-item test suffix: test/${camelCaseTest}`,
+      "Issue tag:",
+      "release-numbered tag:",
+      "Issue-numbered test title:",
+      "Issue-numbered active artifact/resource:",
+      `concrete release branch coupling: ${numberedSpec}:4:`,
+      `concrete release branch coupling: ${numberedSpec}:5:`,
+    ];
+    for (const expected of expectedFailures) {
+      if (!fixtureFailures.some((failure) => failure.includes(expected))) {
+        throw new Error(`guard self-test did not report scanner failure: ${expected}`);
+      }
     }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
   }
 
   const allowed = [
