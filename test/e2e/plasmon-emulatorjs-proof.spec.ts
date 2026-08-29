@@ -260,9 +260,9 @@ test("packaged Plasmon loads EmulatorJS from local assets without external runti
   await closeEmulator(harness);
 });
 
-// #245 restores this acceptance to required Specialist execution. Runtime
-// readiness follows the production game-started phase, which is emitted only
-// after the packaged child reports the real EmulatorJS EJS_onGameStart event.
+// This acceptance remains required Specialist execution. Runtime readiness
+// follows the production game-started phase, which is emitted only after the
+// packaged child reports the real EmulatorJS EJS_onGameStart event.
 test(
   "packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets",
   async ({ page }) => {
