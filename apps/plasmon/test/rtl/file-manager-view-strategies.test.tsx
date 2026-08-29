@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { act, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
-const strategySeamName = /^Issue 196 Strategy Seam\.txt/;
+const strategySeamName = /^Strategy Seam Fixture\.txt/;
 
 test("Grid, List and Details render one shared NodeId selection through explicit view strategies", async () => {
   const app = await renderPlasmon();
@@ -12,7 +12,7 @@ test("Grid, List and Details render one shared NodeId selection through explicit
 
     const created = await act(async () => app.environment.services.fs.createFile(
       documents.id,
-      "Issue 196 Strategy Seam.txt",
+      "Strategy Seam Fixture.txt",
       { mime: "text/plain" },
     ));
 
