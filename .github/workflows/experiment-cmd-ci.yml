@@ -68,13 +68,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm tools/experiment_cmd_finish.py
-          git add \
-            apps/plasmon/src/native-apps/explorer/ExplorerApp.tsx \
-            apps/plasmon/src/native-apps/explorer/index.ts \
-            apps/plasmon/src/os/file-manager/FileManager.tsx \
-            apps/plasmon/src/os/file-manager/FileManagerContextMenu.tsx \
-            apps/plasmon/src/os/integration/services.ts \
-            apps/plasmon/src/scripting/experiment.test.ts \
-            apps/plasmon/test/rtl/experiment-cmd-context.test.tsx
-          git commit -m 'Experiment: add cmd transpile action and focused tests'
+          git add -A
+          git commit -m 'Experiment: adopt canonical OsApi and v1 commands'
           git push origin HEAD:experiment/cmd
