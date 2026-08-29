@@ -32,6 +32,9 @@ jobs:
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
+            if [ -f tools/experiment_cmd_polish.py ]; then
+              python3 tools/experiment_cmd_polish.py
+            fi
             npm ci
             node test/ci/verify-playwright-gate.mjs
             npm run plasmon:local:prepare
