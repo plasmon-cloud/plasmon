@@ -12,13 +12,12 @@ async function finishAnimations(target: Locator): Promise<void> {
 }
 
 /**
- * #194 already has deterministic Start reconciliation/state coverage and bounded
- * RTL interaction coverage. #573 restores the same stable re-open geometry
- * contract during filesystem-backed Start revalidation. This packaged browser
- * acceptance proves stable panel geometry, real focus, keyboard
- * dismissal/opening, and pointer click-away dismissal.
+ * Deterministic Start reconciliation/state coverage and bounded RTL interaction
+ * coverage already protect internal mechanics. This packaged browser acceptance
+ * proves stable panel geometry, real focus, keyboard dismissal/opening, and
+ * pointer click-away dismissal during filesystem-backed Start revalidation.
  */
-test("#573 — packaged Start preserves panel geometry, focus, and dismissal", async ({ page }) => {
+test("packaged Start preserves panel geometry, focus, and dismissal", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -28,19 +27,19 @@ test("#573 — packaged Start preserves panel geometry, focus, and dismissal", a
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #194; this gate still exercises the real packaged Start adapter",
+        reason: "Kernel-owned installed-app iframe warning is outside this Start gate; it still exercises the real packaged Start adapter",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #194 Start geometry/focus/dismissal",
+        reason: "Tracked product URL-resolution defect is outside Start geometry/focus/dismissal",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #194 Start geometry/focus/dismissal",
+        reason: "Tracked product URL-resolution defect is outside Start geometry/focus/dismissal",
       },
     ],
   });
