@@ -90,7 +90,7 @@ async function prepareDesktopMoveFixture(environment: ReturnType<typeof createHe
   return { desktop, target, source };
 }
 
-test("#92/#377 multi-item drag move exposes running state without persistent success text", async () => {
+test("multi-item drag move exposes running state without persistent success text", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
