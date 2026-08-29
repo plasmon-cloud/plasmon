@@ -37,7 +37,15 @@ const FORBIDDEN_ARCHIVE_ROOTS = [
 ] as const;
 
 const FORBIDDEN_GAME_EXTENSIONS = [".jsdos", ".dosz", ".nes", ".rom"] as const;
-const FORBIDDEN_DEMO_LITERALS = ["Demo Notes.txt", "Demo Guide.md", "Demo Artwork.svg"] as const;
+
+// File names remain in shared demo helper source even when demo activation is
+// compiled off. These markers come from the actual repository-owned payloads,
+// so their absence proves the demo file bytes were not embedded in Hackathon.
+export const DEMO_PAYLOAD_MARKERS = [
+  "These files are repository-owned demo content installed only by plasmon:demo.",
+  "All content in this file is authored in the Plasmon repository and is safe to redistribute with the demo package.",
+  "Abstract vector artwork with glowing orbital rings around a central Plasmon mark.",
+] as const;
 
 function fail(message: string): never {
   throw new Error(`Hackathon package gate failed: ${message}`);
@@ -45,8 +53,8 @@ function fail(message: string): never {
 
 export async function verifyHackathonPackage(): Promise<{ archive: string; bytes: number }> {
   const policy = resolvePackageProfile();
-  if (policy.requestedProfile !== "hackathon" || !policy.isHackathon) {
-    fail(`expected explicit PLASMON_PACKAGE_PROFILE=hackathon, got ${policy.requestedProfile}`);
+  if (policy.requestedProfile !== "hackathon" || !policy.isHackathon || policy.isDemo) {
+    fail(`expected explicit non-demo PLASMON_PACKAGE_PROFILE=hackathon, got ${policy.requestedProfile}`);
   }
 
   const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as NeutronManifest;
@@ -91,9 +99,9 @@ export async function verifyHackathonPackage(): Promise<{ archive: string; bytes
   if (gamePayloads.length > 0) fail(`game/demo payloads present: ${gamePayloads.join(", ")}`);
 
   const mainBundle = await readFile(mainBundleUrl, "utf8");
-  const demoLiterals = FORBIDDEN_DEMO_LITERALS.filter((literal) => mainBundle.includes(literal));
-  if (demoLiterals.length > 0) {
-    fail(`ordinary demo seed content leaked into Hackathon bundle: ${demoLiterals.join(", ")}`);
+  const embeddedDemoPayloads = DEMO_PAYLOAD_MARKERS.filter((marker) => mainBundle.includes(marker));
+  if (embeddedDemoPayloads.length > 0) {
+    fail(`ordinary demo payload bytes leaked into Hackathon bundle (${embeddedDemoPayloads.length} marker(s))`);
   }
 
   console.log(`Hackathon package: ${archive}`);
