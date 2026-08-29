@@ -1,8 +1,10 @@
+import { CommandExit } from "../command/runtime.ts";
 import type { RunCompiler } from "./compiler.ts";
 import type { RunContext } from "./context.ts";
 
 export interface RunExecutionResult {
   diagnostics: readonly string[];
+  exitCode: number;
 }
 
 const MODULE_EXECUTION_TIMEOUT_MS = 10_000;
@@ -50,8 +52,15 @@ export class RunRuntime {
     const blob = new Blob([compiled.javascript], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     try {
-      await withExecutionTimeout("compiled module import", import(url));
-      return { diagnostics: compiled.diagnostics };
+      try {
+        await withExecutionTimeout("compiled module import", import(url));
+        return { diagnostics: compiled.diagnostics, exitCode: 0 };
+      } catch (error) {
+        if (error instanceof CommandExit) {
+          return { diagnostics: compiled.diagnostics, exitCode: error.exitCode };
+        }
+        throw error;
+      }
     } finally {
       URL.revokeObjectURL(url);
       delete host[contextKey];

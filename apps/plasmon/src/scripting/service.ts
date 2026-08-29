@@ -16,11 +16,13 @@ export interface ScriptingSessionOptions {
   stdout?: (text: string) => void;
   stderr?: (text: string) => void;
   stdin?: () => string | Promise<string>;
+  clear?: () => void;
 }
 
 export interface CmdExecutionResult {
   runSource: string;
   diagnostics: readonly string[];
+  exitCode: number;
 }
 
 export interface ScriptingServiceOptions {
@@ -49,6 +51,7 @@ export class ScriptingSession {
       stdin: this.stdin,
       stdout: this.stdout,
       stderr: this.stderr,
+      clear: options.clear,
     });
   }
 
@@ -61,6 +64,7 @@ export class ScriptingSession {
   }
 
   async executeCmd(source: string, filename = "terminal.cmd"): Promise<CmdExecutionResult> {
+    this.commands.recordHistory(source);
     const program = await this.parser.parse(source, filename);
     const runSource = transpileCmdToRun(program);
     const abort = new AbortController();
@@ -76,7 +80,11 @@ export class ScriptingSession {
         }),
         filename.replace(/\.cmd$/u, ".run"),
       );
-      return { runSource, diagnostics: execution.diagnostics };
+      return {
+        runSource,
+        diagnostics: execution.diagnostics,
+        exitCode: execution.exitCode,
+      };
     } finally {
       if (this.activeAbort === abort) this.activeAbort = null;
     }

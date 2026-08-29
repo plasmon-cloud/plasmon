@@ -37,6 +37,7 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
     sessionRef.current = scripting.createSession({
       stdout: (text) => append("stdout", text),
       stderr: (text) => append("stderr", text),
+      clear: () => setLines([]),
     });
   }
   const session = sessionRef.current;

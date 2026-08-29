@@ -1,7 +1,9 @@
 import type { CmdInvocation, CmdProgram } from "./types.ts";
 
 const KNOWN_COMMAND_FACTORIES = new Set([
-  "cat", "grep", "echo", "ls", "pwd", "cd", "mkdir", "open", "help", "true", "false",
+  "cat", "grep", "echo", "ls", "pwd", "cd", "mkdir", "cp", "mv", "rm",
+  "head", "tail", "wc", "sort", "uniq", "tee", "ps", "clear", "history",
+  "open", "help", "true", "false", "exit",
 ]);
 
 function args(values: readonly string[]): string {

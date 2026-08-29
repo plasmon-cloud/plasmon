@@ -70,10 +70,23 @@ interface RunCommandFactory {
   pwd(args?: readonly string[]): RunCommand;
   cd(args?: readonly string[]): RunCommand;
   mkdir(args?: readonly string[]): RunCommand;
+  cp(args?: readonly string[]): RunCommand;
+  mv(args?: readonly string[]): RunCommand;
+  rm(args?: readonly string[]): RunCommand;
+  head(args?: readonly string[]): RunCommand;
+  tail(args?: readonly string[]): RunCommand;
+  wc(args?: readonly string[]): RunCommand;
+  sort(args?: readonly string[]): RunCommand;
+  uniq(args?: readonly string[]): RunCommand;
+  tee(args?: readonly string[]): RunCommand;
+  ps(args?: readonly string[]): RunCommand;
+  clear(args?: readonly string[]): RunCommand;
+  history(args?: readonly string[]): RunCommand;
   open(args?: readonly string[]): RunCommand;
   help(args?: readonly string[]): RunCommand;
   true(args?: readonly string[]): RunCommand;
   false(args?: readonly string[]): RunCommand;
+  exit(args?: readonly string[]): RunCommand;
 }
 interface RunPipeline {
   run(): Promise<RunCommandResult>;
