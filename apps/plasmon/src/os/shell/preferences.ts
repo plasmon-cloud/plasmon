@@ -71,7 +71,7 @@ export interface ShellPreferences {
   pinnedElements: string[];
   themeId: ShellThemeId;
   wallpaper: ShellWallpaperPreference;
-  /** Defaults to true for legacy v1 preference objects that predate #512 branding. */
+  /** Defaults to true for legacy v1 preference objects that predate the watermark preference. */
   showBrandWatermark?: boolean;
   taskbarAlignment: ShellTaskbarAlignment;
 }
