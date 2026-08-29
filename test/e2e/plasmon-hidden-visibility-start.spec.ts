@@ -62,7 +62,7 @@ async function expectStartFixture(plasmon: FrameLocator, visible: boolean): Prom
   await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 }
 
-test("#429 — packaged Start follows global visibility for an existing hidden target", async ({ page }) => {
+test("packaged Start follows global visibility for an existing hidden target", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -142,7 +142,7 @@ test("#429 — packaged Start follows global visibility for an existing hidden t
           kind: "console.warn",
           messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
           urlPathPrefix: "/chunks/",
-          reason: "Kernel-owned installed-app iframe warning is outside #429; the hidden-visibility journey still runs in the packaged app",
+          reason: "Kernel-owned installed-app iframe warning is outside the hidden-visibility journey",
         },
       ],
     });
