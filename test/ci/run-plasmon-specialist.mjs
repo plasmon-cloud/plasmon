@@ -22,7 +22,7 @@ const result = spawnSync(
     'test',
     '--workers=1',
     '--grep-invert',
-    '@r2-quarantine',
+    '@quarantine',
     ...tests,
     ...process.argv.slice(2),
   ],
