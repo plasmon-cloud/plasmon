@@ -92,7 +92,7 @@ test("[demo profile] Text classifies FileManager rename and Save As language tra
 
     // Reproduce the screenshot boundary: FileManager creates a blank text document,
     // immediately renames the same NodeId to .js, and Text must open real JavaScript.
-    const generatedName = `Issue 415 Generated ${Date.now()}.js`;
+    const generatedName = `Generated JavaScript ${Date.now()}.js`;
     await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
     const generatedRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(generatedRename).toBeVisible();
@@ -158,7 +158,7 @@ test("[demo profile] Text classifies FileManager rename and Save As language tra
     await page.keyboard.insertText(javascriptSource);
     await expect(textWindow.getByText("Modified", { exact: true })).toBeVisible();
 
-    const scriptName = `Issue 415 ${Date.now()}.js`;
+    const scriptName = `Saved JavaScript ${Date.now()}.js`;
     await textWindow.getByRole("textbox", { name: "Save As file name" }).fill(scriptName);
     await textWindow.getByRole("button", { name: "Create copy", exact: true }).click();
 
@@ -196,7 +196,7 @@ test("[demo profile] Text classifies FileManager rename and Save As language tra
     const reopenedModelUri = await reopenedSurface.getAttribute("data-editor-model-uri");
     expect(reopenedModelUri, "reopened JavaScript should expose concrete Monaco model identity").toBeTruthy();
 
-    const roundTripName = `Issue 415 ${Date.now()}.txt`;
+    const roundTripName = `Round Trip Text ${Date.now()}.txt`;
     await reopenedWindow.getByRole("textbox", { name: "Save As file name" }).fill(roundTripName);
     await reopenedWindow.getByRole("button", { name: "Create copy", exact: true }).click();
     await expect(reopenedWindow).toHaveAttribute("aria-label", `${roundTripName} - Monaco Editor`);
