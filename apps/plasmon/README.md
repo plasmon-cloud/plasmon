@@ -87,6 +87,26 @@ For both lanes:
 npm --workspace neutron-plasmon run test:all
 ```
 
+### Package profiles
+
+Package-profile parsing is finite and fail-closed. The accepted spellings are `hackathon`, `slim`, `full`, and `demo`; any other `PLASMON_PACKAGE_PROFILE` value is a build error.
+
+`hackathon` is the immutable competition composition. It keeps the normal Plasmon shell plus Text, Markdown, Monaco editor/base assets, and only `editor.worker.js`. It excludes the dedicated JSON/CSS/HTML/TypeScript Monaco workers, js-dos, EmulatorJS, Games runtime/library roots, ROM/`.jsdos`/`.dosz` payloads, and ordinary demo seed content. The production command is:
+
+```sh
+npm --workspace neutron-plasmon run package:hackathon
+```
+
+That command emits the real `.neutron`, then fails unless the archive is **strictly less than 1,900,000 bytes** and its package inventory satisfies the Hackathon exclusions. The corresponding deterministic package test is:
+
+```sh
+npm --workspace neutron-plasmon run test:package:hackathon
+```
+
+`slim` is retained temporarily as a compatibility spelling for the exact same Hackathon package composition and therefore carries the same competition assertions. It remains the default package spelling until normal/default package capability is changed deliberately; code must not treat it as a separate size contract.
+
+`full` retains the complete Monaco worker set and is not subject to the Hackathon byte ceiling. `demo` selects demo content separately and is likewise not subject to the Hackathon ceiling. Neither name implies permission to rebundle emulator runtimes or game payloads into the core package; heavyweight runtime delivery remains a separate package/runtime concern.
+
 See [`TESTING.md`](TESTING.md) for the canonical matrix.
 
 The testing goal is layered confidence, not maximum browser coverage. Keep deterministic semantics in fast unit/integration tests. Use a real browser for behavior that actually depends on the DOM, focus/pointer events, workers, media/iframe behavior, packaged assets, or installed Neutron integration. Manual review remains necessary for visual quality and interaction feel that automation cannot establish.
