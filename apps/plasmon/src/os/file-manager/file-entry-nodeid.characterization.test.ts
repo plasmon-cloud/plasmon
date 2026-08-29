@@ -6,16 +6,13 @@ import { FileEntry } from "./FileEntry.tsx";
 import type { InlineRenameState } from "./rename.ts";
 
 /**
- * Adopted from Luna TDD-A's #191 RED packet.
- *
- * Existing guards remain in their owning suites. This characterization stays
- * deliberately component-level while the real geometry correction is covered
- * by the companion packaged Playwright regression.
+ * Characterizes the component-level NodeId selection/rename contract while
+ * the companion packaged Playwright regression owns browser geometry.
  */
 const node: FsNode = {
-  id: "issue-191-node",
+  id: "rename-fixture-node",
   parentId: "desktop",
-  name: "Issue 191.txt",
+  name: "Rename Fixture.txt",
   kind: "file",
   mime: "text/plain",
   size: 0,
@@ -56,7 +53,7 @@ test("characterization keeps FileEntry selection and rename state keyed to NodeI
   const selected = renderEntry({ selected: true, focused: true });
   expect(selected).toContain('role="option"');
   expect(selected).toContain('aria-selected="true"');
-  expect(selected).toContain('data-fm-node-id="issue-191-node"');
+  expect(selected).toContain('data-fm-node-id="rename-fixture-node"');
   expect(selected).toContain("is-focused");
 
   const rename: InlineRenameState = {
