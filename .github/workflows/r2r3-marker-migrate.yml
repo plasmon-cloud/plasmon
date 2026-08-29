@@ -1,0 +1,53 @@
+name: R2R3 quarantine marker migration
+
+on:
+  pull_request:
+    branches: [release/0.1.0-r2r3]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.pull_request.head.ref == 'cleanup/r2r3-testing-ci-provenance'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename active quarantine marker only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          mapfile -t files < <(git grep -Il '@r2-quarantine' -- ':!*.lock' || true)
+          printf 'Marker occurrences before migration:\n'
+          git grep -n '@r2-quarantine' -- ':!*.lock' || true
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo 'No @r2-quarantine occurrences found' >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            sed -i 's/@r2-quarantine/@quarantine/g' "$file"
+          done
+          if git grep -n '@r2-quarantine' -- ':!*.lock'; then
+            echo 'stale @r2-quarantine remains' >&2
+            exit 1
+          fi
+          # Narrow invariant: exactly one active quarantined Playwright test remains.
+          count="$(git grep -n 'tag:.*@quarantine' -- 'test/e2e/*.spec.ts' | wc -l | tr -d ' ')"
+          test "$count" = 1
+          git grep -n 'saved js-dos resource publishes a blob-backed preview after save' test/e2e/plasmon-demo-game.spec.ts
+          git grep -n -- '--grep-invert @quarantine' test/ci/run-plasmon-specialist.mjs test/ci/run-plasmon-flake-probe.sh .github/workflows/plasmon-browser-ci.yml .github/workflows/plasmon-flake-probe-label.yml
+          node test/ci/verify-plasmon-test-inventory.mjs
+          node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
+          git add -u
+          git commit -m '#539 Rename active quarantine marker'
+          git rm .github/workflows/r2r3-marker-migrate.yml
+          git commit -m '#539 Remove one-shot migration workflow'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
