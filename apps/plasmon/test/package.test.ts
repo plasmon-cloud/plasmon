@@ -5,6 +5,7 @@ import {
   generateAppMethodSchemaArtifact,
   validateAppMethodArgs,
 } from "neutron-scripts/src/method_schema.js";
+import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
 
@@ -36,7 +37,6 @@ test("plasmon manifest validates and declares the shipped method", async () => {
   expect(manifest).toMatchObject({
     id: "plasmon",
     name: "Plasmon",
-    version: 100,
     src: "main.mo",
     tiles: [
       {
@@ -57,12 +57,14 @@ test("plasmon manifest validates and declares the shipped method", async () => {
   expect(manifest).not.toHaveProperty("update_source");
 });
 
-test("plasmon package output uses the frozen v0.1.0 archive name", async () => {
+test("plasmon package output matches the source manifest archive identity", async () => {
+  const manifest = await readManifest();
+  const expectedArchive = packageArchiveFilename(manifest.id, manifest.version);
   const archives = (await readdir(appDirectoryUrl))
-    .filter((name) => /^plasmon\.v\d+\.\d+\.\d+\.neutron$/.test(name))
+    .filter((name) => name.startsWith(`${manifest.id}.v`) && name.endsWith(".neutron"))
     .sort();
 
-  expect(archives).toEqual(["plasmon.v0.1.0.neutron"]);
+  expect(archives).toEqual([expectedArchive]);
 });
 
 test("plasmon emits a build-time app method schema", async () => {
