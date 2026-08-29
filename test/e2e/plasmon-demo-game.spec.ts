@@ -177,7 +177,7 @@ test(
 // acceptable substitute. Targeted flake-probe validation runs this with retries=0.
 test(
   "saved js-dos resource publishes a blob-backed preview after save",
-  { tag: ["@quarantine", "@issue-124", "@issue-304"] },
+  { tag: ["@r2-quarantine", "@issue-124", "@issue-304"] },
   async ({ page, request }) => {
     const { savedDemo, pageErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: false });
     const savePreview = savedDemo.locator("img.plasmon-media-thumbnail").first();

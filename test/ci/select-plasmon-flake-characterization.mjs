@@ -178,7 +178,7 @@ function isRelevantPlaywrightTest(path, graph, sources, playwrightMemo) {
 }
 
 function isQuarantinedAcceptance(path, sources) {
-  return (sources.get(path) ?? "").includes("@quarantine");
+  return (sources.get(path) ?? "").includes("@r2-quarantine");
 }
 
 function unresolvedSupportInput(path, root, impactedCount) {

@@ -238,7 +238,7 @@ for (const fragment of [
   "npm run plasmon:local:serve",
   "--workers=1",
   "--retries=0",
-  "--grep-invert @quarantine",
+  "--grep-invert @r2-quarantine",
 ]) {
   requireFragment(flakeRunner, fragment, "prepared-compatible flake runner");
 }

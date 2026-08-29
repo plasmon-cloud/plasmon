@@ -56,7 +56,7 @@ for (const fragment of [
   "inputs.test_file = selectedTestFile",
   "inputs.test_grep = selectedTestGrep",
   "Quarantine: always excluded",
-  "--workers=1 --retries=0 --grep-invert @quarantine",
+  "--workers=1 --retries=0 --grep-invert @r2-quarantine",
 ]) {
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
@@ -91,7 +91,7 @@ for (const fragment of ["include_quarantined: true", "shared-support-fallback"])
 for (const fragment of [
   "--workers=1",
   "--retries=0",
-  "--grep-invert @quarantine",
+  "--grep-invert @r2-quarantine",
 ]) {
   requireFragment(probeRunner, fragment, "flake-probe runner quarantine boundary");
 }
