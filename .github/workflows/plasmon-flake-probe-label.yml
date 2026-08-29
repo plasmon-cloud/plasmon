@@ -32,6 +32,10 @@ jobs:
             exit 1
           fi
           case "$BASE_REF" in
+            release/|release/*/*)
+              echo "ci:flake-probe requires a single-segment release-role base branch; base=$BASE_REF" >&2
+              exit 1
+              ;;
             release/*) ;;
             *)
               echo "ci:flake-probe requires a release-role base branch; base=$BASE_REF" >&2
