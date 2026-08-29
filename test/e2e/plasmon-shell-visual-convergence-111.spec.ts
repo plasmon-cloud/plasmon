@@ -97,13 +97,13 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     const searchInput = search.getByRole("textbox", { name: "Search Plasmon" });
     await searchInput.fill("Settings");
     const searching = search.getByRole("status").filter({ hasText: "Searching…" });
-    await expect(searching).toHaveCount(0, { timeout: 20_000 });
+    await expect(searching).toHaveCount(0);
     const settingsResult = search.locator("[data-search-result]", { hasText: "Settings" }).first();
-    await expect(settingsResult).toBeVisible({ timeout: 20_000 });
+    await expect(settingsResult).toBeVisible();
     await settingsResult.click();
 
     const nativeSettings = plasmon.getByRole("region", { name: "Settings" }).last();
-    await expect(nativeSettings).toBeVisible({ timeout: 20_000 });
+    await expect(nativeSettings).toBeVisible();
     await expectSemanticBackground(nativeSettings, "--plasmon-window-background");
 
     const windows = plasmon.locator(".plasmon-window-layer [data-window-id]");
@@ -117,10 +117,10 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     await expectSemanticBackground(browserAppsTab, "--plasmon-selection");
     await expect(browserAppsTab).toHaveCSS("border-bottom-color", await resolvedBorder(browserAppsTab, "--plasmon-selection-border"));
     const browserResult = browserSearch.locator("[data-search-result]", { hasText: "Browser" }).first();
-    await expect(browserResult).toBeVisible({ timeout: 20_000 });
+    await expect(browserResult).toBeVisible();
     const windowCountBeforeBrowser = await windows.count();
     await browserResult.click();
-    await expect(windows).toHaveCount(windowCountBeforeBrowser + 1, { timeout: 20_000 });
+    await expect(windows).toHaveCount(windowCountBeforeBrowser + 1);
     const focusedTask = taskbar.locator(".plasmon-shell__task-button.is-focused").last();
     await expect(focusedTask).toBeVisible();
     await expectSemanticBackground(focusedTask, "--plasmon-selection");
