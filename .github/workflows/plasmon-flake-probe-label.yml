@@ -31,7 +31,13 @@ jobs:
             echo "ci:flake-probe requires a same-repository PR; head_repository=$HEAD_REPOSITORY repository=$GITHUB_REPOSITORY" >&2
             exit 1
           fi
-          node test/ci/plasmon-ci-policy.mjs "$BASE_REF" release
+          case "$BASE_REF" in
+            release/*) ;;
+            *)
+              echo "ci:flake-probe requires a release-role base branch; base=$BASE_REF" >&2
+              exit 1
+              ;;
+          esac
           echo "eligible=true" >> "$GITHUB_OUTPUT"
 
       - name: Checkout exact PR head for target selection
