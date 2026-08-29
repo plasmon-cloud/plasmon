@@ -87,25 +87,32 @@ For both lanes:
 npm --workspace neutron-plasmon run test:all
 ```
 
-### Package profiles
+### Package and runtime configuration model
 
-Package-profile parsing is finite and fail-closed. The accepted spellings are `hackathon`, `slim`, `full`, and `demo`; any other `PLASMON_PACKAGE_PROFILE` value is a build error.
+Plasmon's durable distribution model separates **package tier**, **demo content**, and **optional heavyweight runtimes**. Do not create a new package-profile name merely to select a runtime or demo dataset.
 
-`hackathon` is the immutable competition composition. It keeps the normal Plasmon shell plus Text, Markdown, Monaco editor/base assets, and only `editor.worker.js`. It excludes the dedicated JSON/CSS/HTML/TypeScript Monaco workers, js-dos, EmulatorJS, Games runtime/library roots, ROM/`.jsdos`/`.dosz` payloads, and ordinary demo seed content. The production command is:
+- **Slim** — the permanently constrained Plasmon package. It is a normal installable Plasmon environment with Text, Markdown, Monaco editor/base assets, and only `editor.worker.js`. It excludes the dedicated JSON/CSS/HTML/TypeScript Monaco workers, js-dos, EmulatorJS, Games runtime/library roots, ROM/`.jsdos`/`.dosz` payloads, and demo-only content. Its emitted `.neutron` must remain **strictly less than 1,900,000 bytes**.
+- **Base** — the ordinary/default Plasmon product composition. It is intended to contain normal product features, including the complete Monaco language-service worker set and theming, without the Slim byte ceiling, while still excluding heavyweight optional runtimes and game payloads. #527 owns completing the current transition from the historical `full` spelling/default behavior to this Base model.
+- **Demo** — Base plus explicit demo/bootstrap content. Demo is an overlay/setup concern, not a different product capability tier. It may later select optional runtime dependencies and preinstalled legal demo games through the runtime-configuration mechanism; those assets do not become unconditional Base content.
+- **Runtime configuration** — an orthogonal, declarative selection of optional heavyweight capabilities such as js-dos, EmulatorJS, and associated pinned content. #370 owns the durable runtime-delivery/configuration mechanism. A custom runtime configuration should be data/configuration, not a new package profile or source-code fork.
+
+Package-profile parsing is finite and fail-closed. During the current transition the accepted `PLASMON_PACKAGE_PROFILE` spellings are `slim`, `full`, and `demo`; event-specific historical profile names are intentionally invalid. #527 will reconcile these transition spellings with canonical Base + Demo-overlay semantics.
+
+The production Slim command is:
 
 ```sh
-npm --workspace neutron-plasmon run package:hackathon
+npm --workspace neutron-plasmon run package:slim
 ```
 
-That command emits the real `.neutron`, then fails unless the archive is **strictly less than 1,900,000 bytes** and its package inventory satisfies the Hackathon exclusions. The corresponding deterministic package test is:
+That command emits the real `.neutron`, then fails unless the archive is **strictly less than 1,900,000 bytes** and its package inventory satisfies the Slim exclusions. The corresponding deterministic package test is:
 
 ```sh
-npm --workspace neutron-plasmon run test:package:hackathon
+npm --workspace neutron-plasmon run test:package:slim
 ```
 
-`slim` is retained temporarily as a compatibility spelling for the exact same Hackathon package composition and therefore carries the same competition assertions. It remains the default package spelling until normal/default package capability is changed deliberately; code must not treat it as a separate size contract.
+`slim` remains the default package spelling only until #527 deliberately changes ordinary/default packaging to Base. The `<1,900,000` assertion belongs only to Slim; Base, Demo, and custom runtime-enabled preparations must not inherit that ceiling.
 
-`full` retains the complete Monaco worker set and is not subject to the Hackathon byte ceiling. `demo` selects demo content separately and is likewise not subject to the Hackathon ceiling. Neither name implies permission to rebundle emulator runtimes or game payloads into the core package; heavyweight runtime delivery remains a separate package/runtime concern.
+Heavyweight runtime delivery remains separately owned by #370. Slim must remain runtime-free even if a demo or custom runtime configuration exists; Base starts without heavyweight runtime payloads; Demo/custom preparations may opt into approved pinned runtimes without redefining either base package tier.
 
 See [`TESTING.md`](TESTING.md) for the canonical matrix.
 
