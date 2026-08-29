@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
 
 describe("production OsApi in headless composition", () => {
-  test("creates, replaces, reads, and stats user text resources through filesystem policy", async () => {
+  test("creates, replaces, reads, stats, and lists user resources through filesystem policy", async () => {
     const env = createHeadlessPlasmonEnvironment();
 
     try {
@@ -21,10 +21,34 @@ describe("production OsApi in headless composition", () => {
       expect(await env.os.fs.exists(created.path)).toBe(true);
       expect(await env.os.fs.readText(created.path)).toBe("first value");
 
+      const second = await env.os.fs.writeText(
+        "/Desktop/OsApi Folder/second.txt",
+        "second value",
+      );
+      const listed = await env.os.fs.list(folder.path);
+      expect(listed).toHaveLength(2);
+      expect(new Set(listed.map((resource) => resource.id))).toEqual(
+        new Set([created.id, second.id]),
+      );
+      expect(listed.every((resource) => resource.path.startsWith(`${folder.path}/`))).toBe(true);
+
       const replaced = await env.os.fs.writeText(created.path, "replacement");
       expect(replaced.id).toBe(created.id);
       expect(await env.os.fs.readText(created.path)).toBe("replacement");
       expect(await env.os.fs.stat(created.path)).toEqual(replaced);
+    } finally {
+      env.dispose();
+    }
+  });
+
+  test("directory listing requires an absolute directory path", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      const file = await env.os.fs.writeText("/Desktop/list-target.txt", "value");
+      await expect(env.os.fs.list("Desktop")).rejects.toThrow("absolute path");
+      await expect(env.os.fs.list(file.path)).rejects.toThrow("not a directory");
     } finally {
       env.dispose();
     }
