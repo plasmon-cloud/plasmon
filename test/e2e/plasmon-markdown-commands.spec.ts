@@ -49,7 +49,7 @@ test(
     await expect(documents).toHaveAttribute("aria-selected", "true");
     await explorer.getByRole("listbox", { name: "Files" }).press("Enter");
     await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
-    const markdownName = `Issue 114 Markdown ${Date.now()}.md`;
+    const markdownName = `Markdown Commands ${Date.now()}.md`;
     await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
     const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(rename).toBeVisible();
@@ -146,8 +146,8 @@ test(
     await expect(list).toBeVisible();
     await expect(surface).toBeVisible();
 
-    // #416 compatibility: the installed Preview accepts a standalone compact
-    // top-level heading, while the editor/persisted source remains literal.
+    // The installed Preview accepts a standalone compact top-level heading,
+    // while the editor/persisted source remains literal.
     await editorWindow.getByRole("button", { name: "Edit", exact: true }).click();
     await firstLine.click({ position: { x: 8, y: 10 } });
     await expect(browserInput).toBeFocused();
