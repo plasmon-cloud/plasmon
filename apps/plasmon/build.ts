@@ -2,9 +2,10 @@ import esbuild from "esbuild";
 import copyStaticFiles from "esbuild-copy-static-files";
 import { sassPlugin } from "esbuild-sass-plugin";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
+import { resolvePackageProfile } from "./packageProfilePolicy.ts";
 import { assertMatureNativeAppBundle, cacheBustEntryAssets } from "./src/native-apps/packaging.ts";
 
 const mainOutfile = "./dist/web/main.js";
@@ -13,14 +14,9 @@ const outputCss = "./dist/web/main.css";
 const outputIndex = "./dist/web/index.html";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
-// The slim profile is the default: it retains Monaco, Text, and Markdown while
-// keeping game/emulator payloads and unused language workers out. The full
-// profile is retained for the complete local comparison build.
-const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
-const isEditorProfile = packageProfile === "slim" || packageProfile === "full" || packageProfile === "demo";
-const isHackathonCoreProfile = !isEditorProfile;
-const isSlimMonacoProfile = packageProfile === "slim" || packageProfile === "demo";
-const isDemoProfile = packageProfile === "demo";
+const packagePolicy = resolvePackageProfile();
+const isSlimMonacoProfile = packagePolicy.monacoProfile === "slim";
+const isDemoProfile = packagePolicy.isDemo;
 
 const [demoTextSource, demoMarkdownSource, demoSvgSource] = isDemoProfile
   ? await Promise.all([
@@ -79,11 +75,9 @@ const config: BuildOptions = {
   entryPoints: [
     { in: "./src/index.tsx", out: "main" },
     { in: "./src/os/fs/background.ts", out: "service" },
-    ...(isHackathonCoreProfile
-      ? []
-      : isSlimMonacoProfile
-        ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
-        : monacoEntryPoints),
+    ...(isSlimMonacoProfile
+      ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
+      : monacoEntryPoints),
   ],
   outdir: "./dist/web",
   bundle: true,
@@ -95,9 +89,6 @@ const config: BuildOptions = {
   external: [
     "/static/*",
     "static/*",
-    ...(isHackathonCoreProfile
-      ? ["monaco-editor", "monaco-editor/*", "./text/*", "./markdown/*"]
-      : []),
   ],
   format: "esm",
   jsx: "automatic",
@@ -105,7 +96,7 @@ const config: BuildOptions = {
   outExtension: { ".css": ".bundle.css" },
   platform: "browser",
   define: {
-    __PLASMON_HACKATHON_CORE__: JSON.stringify(isHackathonCoreProfile),
+    __PLASMON_HACKATHON_PROFILE__: JSON.stringify(packagePolicy.isHackathon),
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
@@ -131,14 +122,10 @@ const config: BuildOptions = {
           if (result.errors.length !== 0) return;
           if (!result.metafile) throw new Error("Plasmon build requires an esbuild metafile");
           assertMatureNativeAppBundle(result.metafile, {
-            requireEditors: isEditorProfile,
-            monacoProfile: isEditorProfile ? (isSlimMonacoProfile ? "slim" : "full") : undefined,
+            requireEditors: true,
+            monacoProfile: packagePolicy.monacoProfile,
           });
           await mergeApplicationStyles();
-          if (isHackathonCoreProfile) {
-            const html = await readFile(outputIndex, "utf8");
-            await writeFile(outputIndex, html.replace(/\s*<script src="\.\/runtime\/monaco\/worker-sources\.js"><\/script>/u, ""));
-          }
           if (!devMode) await stripRemoteDiagnostics();
           await fingerprintEntryAssets();
         });
@@ -148,12 +135,6 @@ const config: BuildOptions = {
 };
 
 await rm("./dist/web", { recursive: true, force: true });
-if (isHackathonCoreProfile) {
-  await Promise.all([
-    rm("./public/runtime/monaco", { recursive: true, force: true }),
-    rm("./public/System/Program Files/MonacoEditor", { recursive: true, force: true }),
-  ]);
-}
 
 if (args[0] === "watch") {
   const ctx = await esbuild.context(config);
