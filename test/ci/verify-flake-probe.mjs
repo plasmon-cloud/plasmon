@@ -127,7 +127,7 @@ for (const fragment of [
   "npm run plasmon:local:reinstall",
   "--workers=1",
   "--retries=0",
-  "--grep-invert @r2-quarantine",
+  "--grep-invert @quarantine",
   "npm run test:e2e:plasmon:specialist -- --retries=0",
   "exact)",
   "exact-set)",
@@ -161,7 +161,7 @@ for (const fragment of [
   "lane === 'specialist'",
   "--workers=1",
   "--grep-invert",
-  "@r2-quarantine",
+  "@quarantine",
 ]) {
   requireFragment(specialistRunner, fragment, "automatic Specialist runner");
 }
@@ -262,7 +262,7 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
 
 function assertNoQuarantinedFiles(selection, label) {
   for (const file of selection.files) {
-    if (readFileSync(file, "utf8").includes("@r2-quarantine")) {
+    if (readFileSync(file, "utf8").includes("@quarantine")) {
       throw new Error(`${label} selected quarantined acceptance: ${file}`);
     }
   }
@@ -313,7 +313,7 @@ async function verifyCharacterizationSelection() {
       [
         'import { test } from "@playwright/test";',
         "",
-        'test("synthetic quarantine fixture", { tag: ["@r2-quarantine"] }, async () => {});',
+        'test("synthetic quarantine fixture", { tag: ["@quarantine"] }, async () => {});',
         "",
       ].join("\n"),
     );

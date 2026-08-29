@@ -129,7 +129,7 @@ jobs:
             npm run plasmon:demo:status
             npm run plasmon:demo:reinstall
             npm run test:e2e:plasmon:demo
-            NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json npx --no-install playwright test --workers=1 --retries=0 --grep-invert @r2-quarantine \
+            NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json npx --no-install playwright test --workers=1 --retries=0 --grep-invert @quarantine \
               test/e2e/plasmon-demo-markdown-commands-114.spec.ts \
               test/e2e/plasmon-demo-monaco-packaged.spec.ts \
               test/e2e/plasmon-demo-native-app-chrome-112.spec.ts \
