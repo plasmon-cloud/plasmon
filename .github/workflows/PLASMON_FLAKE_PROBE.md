@@ -16,7 +16,7 @@ Characterization is diagnostic/non-required. Characterization matrix entries may
 
 ## Automatic characterization selection
 
-For every supported pull-request event, selection is recomputed from the exact base/head diff. A persistent label is not required.
+For every supported pull-request event — `opened`, `reopened`, and `synchronize` — selection is recomputed from the exact base/head diff. A persistent label is not required.
 
 The automatic selector is deliberately narrow:
 
