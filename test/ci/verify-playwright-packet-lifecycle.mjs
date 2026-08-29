@@ -236,9 +236,10 @@ for (const fragment of [
   "PLASMON_PLAYWRIGHT_ENV_READY:-0",
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
+  "quarantine_marker=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
   "--workers=1",
   "--retries=0",
-  "--grep-invert @quarantine",
+  "--grep-invert \"$quarantine_marker\"",
 ]) {
   requireFragment(flakeRunner, fragment, "prepared-compatible flake runner");
 }
@@ -246,5 +247,5 @@ forbidFragment(flakeRunner, "include_quarantined", "prepared-compatible flake ru
 forbidFragment(packetRunner, "--repeat-each", "reusable Playwright packet lifecycle");
 
 console.log(
-  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; prepared deployment reuse is the default; only explicit persistent-state-mutating files pay per-repetition reinstall reset; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
+  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; prepared deployment reuse is the default; only explicit persistent-state-mutating files pay per-repetition reinstall reset; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and shared quarantine exclusion are preserved",
 );
