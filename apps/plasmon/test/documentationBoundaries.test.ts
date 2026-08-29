@@ -110,6 +110,15 @@ test("current documentation boundaries and discovery roots stay classified", () 
   expect(paths.has("apps/plasmon/src/platform")).toBe(false);
   expect(paths.has("apps/plasmon/src/gui2")).toBe(false);
 
+  const historyBoundary = registry.boundaries.find(
+    (boundary) => boundary.path === "apps/plasmon/docs/history",
+  );
+  expect(historyBoundary?.kind).toBe("documentation-history");
+
+  const historyIndex = readFileSync(resolve(appRoot, "docs/history/README.md"), "utf8");
+  expect(historyIndex).toContain("historical evidence, not current architecture or contributor authority");
+
   const docsMap = readFileSync(resolve(appRoot, "docs/README.md"), "utf8");
   expect(docsMap).toContain("[`documentation-boundaries.json`](documentation-boundaries.json)");
+  expect(docsMap).toContain("[`history/`](history/)");
 });
