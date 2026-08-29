@@ -1,6 +1,6 @@
 export type OsResourceKind = "directory" | "file" | "shortcut" | "atom";
 
-/** Stable dependency-light filesystem resource exposed through OsApi. */
+/** Stable dependency-light filesystem resource exposed through the production OS API. */
 export interface OsResource {
   readonly id: string;
   readonly path: string;
@@ -44,13 +44,19 @@ export interface OsWindow {
 export interface OsFileSystemApi {
   stat(path: string): Promise<OsResource | null>;
   exists(path: string): Promise<boolean>;
+  /** List the direct children of one absolute directory path through normal filesystem semantics. */
+  list(path: string): Promise<readonly OsResource[]>;
   readText(path: string): Promise<string>;
   /** Create or replace one UTF-8 text file through normal filesystem policy. */
   writeText(path: string, content: string): Promise<OsResource>;
   /** Create one directory. The parent must already exist. */
   createDirectory(path: string): Promise<OsResource>;
-  /** List the direct children of one absolute directory path through normal filesystem semantics. */
-  list(path: string): Promise<readonly OsResource[]>;
+  /** Copy one resource into an existing destination directory through normal filesystem policy. */
+  copy(sourcePath: string, destinationPath: string): Promise<OsResource>;
+  /** Move one resource into an existing destination directory through normal filesystem policy. */
+  move(sourcePath: string, destinationPath: string): Promise<OsResource>;
+  /** Perform the normal user-facing removal operation for one resource. */
+  remove(path: string): Promise<void>;
 }
 
 export interface OsProcessesApi {
