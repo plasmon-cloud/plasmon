@@ -1,0 +1,34 @@
+name: Experiment Cmd Adopt PR631 Base
+
+on:
+  push:
+    branches:
+      - experiment/cmd
+    paths:
+      - .github/workflows/experiment-cmd-adopt-pr631.yml
+
+permissions:
+  contents: write
+
+jobs:
+  adopt-base:
+    if: github.event.head_commit.message == 'Experiment: adopt PR 631 as cmd base'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge PR 631 head into experiment/cmd
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin work/issue-607-os-api
+          if ! git merge --no-ff --no-edit origin/work/issue-607-os-api; then
+            git status --short
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+          git push origin HEAD:experiment/cmd
