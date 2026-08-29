@@ -4,7 +4,7 @@ import { MemoryFsRepository } from "./repository.ts";
 import { PersistentFsService } from "./service.ts";
 import { bootstrapFilesystem } from "./managed.ts";
 
-test("issue #182: fresh Plasmon omits Downloads from the root inventory", async () => {
+test("fresh Plasmon omits Downloads from the root inventory", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   await bootstrapFilesystem(fs);
 
@@ -18,7 +18,7 @@ test("issue #182: fresh Plasmon omits Downloads from the root inventory", async 
   assert.equal(await fs.resolvePath("/Downloads"), null);
 });
 
-test("issue #182: bootstrap preserves an existing Downloads tree without guessing ownership", async () => {
+test("bootstrap preserves an existing Downloads tree without guessing ownership", async () => {
   const repository = new MemoryFsRepository();
   const fs = new PersistentFsService(repository);
   const root = await fs.resolvePath("/");
@@ -39,7 +39,7 @@ test("issue #182: bootstrap preserves an existing Downloads tree without guessin
   assert.equal(new TextDecoder().decode(await reloaded.read(child.id)), "preserve me");
 });
 
-test("issue #367/#182: intentional user root deletion remains durable across recomposition", async () => {
+test("intentional user root deletion remains durable across recomposition", async () => {
   const repository = new MemoryFsRepository();
   const fs = new PersistentFsService(repository);
   await bootstrapFilesystem(fs);
