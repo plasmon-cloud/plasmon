@@ -31,6 +31,33 @@ const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(appRoot, "../..");
 const registryPath = resolve(appRoot, "docs/documentation-boundaries.json");
 
+const requiredCurrentDocuments = [
+  "apps/plasmon/README.md",
+  "apps/plasmon/AGENTS.md",
+  "apps/plasmon/TESTING.md",
+  "apps/plasmon/docs/README.md",
+  "apps/plasmon/docs/GLOSSARY.md",
+  "apps/plasmon/docs/FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md",
+  "apps/plasmon/docs/atoms/README.md",
+  "apps/plasmon/test/README.md",
+  "apps/plasmon/test/AGENTS.md",
+] as const;
+
+const historicalMoves = [
+  ["apps/plasmon/docs/ACCEPTANCE_2026-08-11_BASELINE_GATE.md", "apps/plasmon/docs/history/ACCEPTANCE_2026-08-11_BASELINE_GATE.md"],
+  ["apps/plasmon/docs/DAEDALOS_PARITY_LEDGER.md", "apps/plasmon/docs/history/DAEDALOS_PARITY_LEDGER.md"],
+  ["apps/plasmon/docs/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md", "apps/plasmon/docs/history/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md"],
+  ["apps/plasmon/docs/GAMES_DAEDALOS_ARCHITECTURE.md", "apps/plasmon/docs/history/GAMES_DAEDALOS_ARCHITECTURE.md"],
+  ["apps/plasmon/docs/VISUAL_SYSTEM_THEME.md", "apps/plasmon/docs/history/VISUAL_SYSTEM_THEME.md"],
+  ["apps/plasmon/docs/atoms/FIRST_COLLABORATIVE_ATOM_DESIGN.md", "apps/plasmon/docs/history/FIRST_COLLABORATIVE_ATOM_DESIGN.md"],
+  ["apps/plasmon/docs/atoms/FIRST_COLLABORATIVE_ATOM_MVP.md", "apps/plasmon/docs/history/FIRST_COLLABORATIVE_ATOM_MVP.md"],
+  ["apps/plasmon/GUI_EXPERIMENT.md", "apps/plasmon/docs/history/GUI_EXPERIMENT.md"],
+  ["apps/plasmon/GUI2_EXPERIMENT.md", "apps/plasmon/docs/history/GUI2_EXPERIMENT.md"],
+  ["apps/plasmon/test/LUNA_POST_REFACTOR_RECONCILIATION.md", "apps/plasmon/docs/history/LUNA_POST_REFACTOR_RECONCILIATION.md"],
+  ["apps/plasmon/docs/refactor/issue-191-red-packet.md", "apps/plasmon/docs/history/refactor-issue-191-red-packet.md"],
+  ["apps/plasmon/docs/refactor/issue-192-red-packet.md", "apps/plasmon/docs/history/refactor-issue-192-red-packet.md"],
+] as const;
+
 function loadRegistry(): BoundaryRegistry {
   return JSON.parse(readFileSync(registryPath, "utf8")) as BoundaryRegistry;
 }
@@ -121,4 +148,35 @@ test("current documentation boundaries and discovery roots stay classified", () 
   const docsMap = readFileSync(resolve(appRoot, "docs/README.md"), "utf8");
   expect(docsMap).toContain("[`documentation-boundaries.json`](documentation-boundaries.json)");
   expect(docsMap).toContain("[`history/`](history/)");
+});
+
+test("current authority remains present and archived packets cannot regain canonical paths", () => {
+  for (const path of requiredCurrentDocuments) {
+    expect(existsSync(absoluteRepoPath(path))).toBe(true);
+  }
+
+  for (const [oldPath, historicalPath] of historicalMoves) {
+    expect(existsSync(absoluteRepoPath(oldPath))).toBe(false);
+    expect(existsSync(absoluteRepoPath(historicalPath))).toBe(true);
+  }
+
+  const docsMap = readFileSync(resolve(appRoot, "docs/README.md"), "utf8");
+  expect(docsMap).toContain("[`FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md`](FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md)");
+  expect(docsMap).toContain("[`atoms/README.md`](atoms/README.md)");
+  expect(docsMap).not.toContain("](DAEDALOS_PARITY_LEDGER.md)");
+  expect(docsMap).not.toContain("](GAMES_DAEDALOS_ARCHITECTURE.md)");
+  expect(docsMap).not.toContain("](FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md)");
+  expect(docsMap).not.toContain("](VISUAL_SYSTEM_THEME.md)");
+
+  const currentArchitecture = readFileSync(
+    resolve(appRoot, "docs/FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md"),
+    "utf8",
+  );
+  expect(currentArchitecture).toContain("Status: current normative cross-subsystem architecture");
+
+  const historicalArchitecture = readFileSync(
+    resolve(appRoot, "docs/history/FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md"),
+    "utf8",
+  );
+  expect(historicalArchitecture).toContain("Status: design for implementation review");
 });
