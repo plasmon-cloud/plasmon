@@ -22,6 +22,10 @@ export interface CreatePlasmonOsApiOptions {
   services: PlasmonServices;
 }
 
+function requireAbsolutePath(path: string): void {
+  if (!path.startsWith("/")) throw new Error(`OsApi requires an absolute path: ${path}`);
+}
+
 function splitAbsolutePath(path: string): { parentPath: string; name: string } {
   if (!path.startsWith("/") || path === "/" || path.endsWith("/")) {
     throw new Error(`OsApi requires an absolute non-root path: ${path}`);
@@ -148,6 +152,16 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       await services.filesystem.ready;
       const { parent, name } = await requireParent(services, path);
       return toResource(services, await services.fs.mkdir(parent.id, name));
+    },
+
+    list: async (path: string): Promise<readonly OsResource[]> => {
+      requireAbsolutePath(path);
+      const directory = await requireNode(services, path);
+      if (directory.kind !== "directory") {
+        throw new Error(`OsApi path is not a directory: ${path}`);
+      }
+      const children = await services.fs.list(directory.id);
+      return Promise.all(children.map((node) => toResource(services, node)));
     },
   } satisfies OsApi["fs"];
 
