@@ -57,5 +57,5 @@ jobs:
 
             npm run plasmon:local:status
             npm run plasmon:local:reinstall
-            NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/experiment-cmd-runtime.spec.ts
+            NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json npm exec -- playwright test test/e2e/experiment-cmd-runtime.spec.ts
           '
