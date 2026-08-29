@@ -25,4 +25,4 @@ The Markdown file contains representative headings, lists, a task list, a table,
 
 All three assets are authored directly in this repository for the Plasmon demo environment and require no external download or license grant.
 
-Game/demo-runtime fixtures are deliberately not owned here. Issue #121 retains separate game/runtime fixture ownership.
+Game/demo-runtime fixtures are deliberately not owned here. Current game/runtime fixture authority lives in [`../games/README.md`](../games/README.md) and the owning runtime documentation under [`../native-apps/`](../native-apps/).
