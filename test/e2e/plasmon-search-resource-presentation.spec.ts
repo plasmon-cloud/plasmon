@@ -47,7 +47,7 @@ function expectNear(actual: number, expected: number, label: string): void {
   expect(Math.abs(actual - expected), label).toBeLessThanOrEqual(1);
 }
 
-test("#426 Search keeps sparse rows compact and renders real resource thumbnails", async ({ page }) => {
+test("Search keeps sparse rows compact and renders real resource thumbnails", async ({ page }) => {
   const assertBrowserHealthy = installStrictBrowserHealth(page);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -69,9 +69,9 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
 
   const importer = plasmon.locator('input[type="file"][multiple]').first();
   for (const fixture of [
-    { name: "issue426-wide.png", mimeType: "image/png", buffer: WIDE_PNG },
-    { name: "issue426-tall.png", mimeType: "image/png", buffer: TALL_PNG },
-    { name: "issue426-note.txt", mimeType: "text/plain", buffer: Buffer.from("issue 426 document") },
+    { name: "search-wide.png", mimeType: "image/png", buffer: WIDE_PNG },
+    { name: "search-tall.png", mimeType: "image/png", buffer: TALL_PNG },
+    { name: "search-note.txt", mimeType: "text/plain", buffer: Buffer.from("search document fixture") },
   ] satisfies BrowserFixture[]) {
     await importDesktopFixture(plasmon, importer, fixture);
   }
@@ -81,7 +81,7 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   const tabs = panel.getByRole("tablist");
   const results = panel.locator(".plasmon-shell__results");
   await finishElementAnimations(panel);
-  await panel.getByRole("textbox", { name: "Search Plasmon" }).fill("issue426-");
+  await panel.getByRole("textbox", { name: "Search Plasmon" }).fill("search-");
 
   const baselinePanel = await panel.boundingBox();
   const baselineTabs = await tabs.boundingBox();
@@ -103,8 +103,8 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   expect(baselineResults.height - (secondBox.y + secondBox.height - baselineResults.y)).toBeGreaterThan(80);
 
   for (const [name, naturalWidth, naturalHeight] of [
-    ["issue426-wide.png", 8, 4],
-    ["issue426-tall.png", 4, 8],
+    ["search-wide.png", 8, 4],
+    ["search-tall.png", 4, 8],
   ] as const) {
     const row = mediaRows.filter({ hasText: name });
     const image = row.locator("img.plasmon-media-thumbnail");
@@ -117,12 +117,12 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   }
 
   await importDesktopFixture(plasmon, importer, {
-    name: "issue426-unavailable.png",
+    name: "search-unavailable.png",
     mimeType: "image/png",
     buffer: Buffer.alloc(0),
   });
   await expect(mediaRows).toHaveCount(3);
-  const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
+  const unavailableRow = mediaRows.filter({ hasText: "search-unavailable.png" });
   await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
   await expect(unavailableRow.locator('[data-plasmon-owned-icon="file-type:image"]')).toBeVisible();
 
