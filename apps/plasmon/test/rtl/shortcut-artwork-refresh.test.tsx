@@ -34,11 +34,11 @@ test("keeps resolved shortcut artwork stable across authoritative Desktop refres
     });
 
     await act(async () => {
-      await app.environment.services.fs.createFile(desktop.id, "Issue 217 refresh.txt", {
+      await app.environment.services.fs.createFile(desktop.id, "Refresh Fixture.txt", {
         mime: "text/plain",
       });
     });
-    await app.findByRole("option", { name: "Issue 217 refresh.txt" });
+    await app.findByRole("option", { name: "Refresh Fixture.txt" });
     await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
     await act(async () => { await Promise.resolve(); });
     observer.disconnect();
