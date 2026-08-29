@@ -10,11 +10,18 @@ import {
   optionalCoreBrowserTests,
   repoRoot,
 } from './plasmon-test-inventory.mjs';
+import {
+  activeQuarantines as activeQuarantineEntries,
+  quarantineMarker,
+} from './plasmon-quarantine.mjs';
 
 const args = new Set(process.argv.slice(2));
-const activeQuarantines = Object.freeze({
-  'test/e2e/plasmon-demo-game.spec.ts': { count: 1, issues: ['@issue-124', '@issue-304'] }
-});
+const activeQuarantines = Object.freeze(Object.fromEntries(
+  [...new Set(activeQuarantineEntries.map((entry) => entry.path))].map((path) => [
+    path,
+    { count: activeQuarantineEntries.filter((entry) => entry.path === path).length },
+  ]),
+));
 
 function sameSet(actual, expected) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
@@ -69,6 +76,11 @@ function verifyBrowserScript(scripts, scriptName, expectedPaths) {
   assert(sameSet(actual, expected), `${scriptName} browser ownership mismatch\nexpected: ${expected.join(', ')}\nactual: ${actual.join(', ')}`);
 }
 
+function quarantineTagBlocks(source) {
+  const escaped = quarantineMarker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return source.match(new RegExp(`tag:\\s*\\[[^\\]]*["']${escaped}["'][^\\]]*\\]`, 'g')) ?? [];
+}
+
 async function verify(inventory) {
   const orphans = inventoryOrphans(inventory);
   assert(orphans.length === 0, `Unclassified Playwright spec(s) under test/e2e; classify as a required Plasmon lane or an explicit non-Plasmon owner: ${orphans.map((test) => test.path).join(', ')}`);
@@ -102,19 +114,16 @@ async function verify(inventory) {
   assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
   assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
+  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('quarantineMarker') && specialistRunner.includes('plasmon-quarantine.mjs'), 'Specialist acceptance must consume the shared quarantine marker authority');
 
   for (const path of browserLanes.specialist) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
-    const quarantineTags = source.match(/tag:\s*\[[^\]]*"@quarantine"[^\]]*\]/g) ?? [];
+    const quarantineTags = quarantineTagBlocks(source);
     const expected = activeQuarantines[path];
     if (expected) {
-      assert(quarantineTags.length === expected.count, `${path} must contain exactly ${expected.count} active @quarantine test(s)`);
-      for (const issue of expected.issues) {
-        assert(quarantineTags.some((tag) => tag.includes(issue)), `${path} active quarantine must remain linked to ${issue}`);
-      }
+      assert(quarantineTags.length === expected.count, `${path} must contain exactly ${expected.count} active ${quarantineMarker} test(s)`);
     } else {
-      assert(quarantineTags.length === 0, `${path} must remain required; no @quarantine tag is authorized`);
+      assert(quarantineTags.length === 0, `${path} must remain required; no ${quarantineMarker} tag is authorized`);
     }
   }
 
@@ -125,16 +134,8 @@ async function verify(inventory) {
 
   const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
   assert(
-    demoGame.includes('{ tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] }'),
-    'Broad demo-game acceptance must remain required for #250/#123/#202/#64 without @quarantine',
-  );
-  assert(
-    demoGame.includes('{ tag: ["@quarantine", "@issue-124", "@issue-304"] }'),
-    '#304 quarantine must remain isolated to the dedicated #124 saved-preview acceptance',
-  );
-  assert(
     demoGame.includes('toHaveAttribute("src", /^blob:/'),
-    '#304 executable debt must retain the required blob-backed preview assertion',
+    'Saved-preview executable debt must retain the required blob-backed preview assertion',
   );
 
   const browserHealth = await readFile(resolve(repoRoot, 'test/e2e/plasmon-browser-health.ts'), 'utf8');
@@ -143,17 +144,18 @@ async function verify(inventory) {
   assert(!browserHealth.includes('messageIncludes: "sandbox"'), 'BrowserHealth must not broadly ignore sandbox warnings');
 
   const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');
-  assert(quarantineDoc.includes('#244') && quarantineDoc.includes('#245'), 'Quarantine documentation must retain #244 and #245 restoration ownership');
-  assert(quarantineDoc.includes('#277') && quarantineDoc.includes('#279'), 'Quarantine documentation must retain #277 history and #279 restoration ownership');
-  for (const issue of ['#251', '#268', '#289', '#303', '#304', '#305', '#306', '#308', '#320', '#330', '#391', '#406', '#420', '#434']) {
-    assert(quarantineDoc.includes(issue), `Quarantine documentation must preserve ${issue} disposition`);
-  }
+  assert(quarantineDoc.includes('plasmon-quarantine.json'), 'Quarantine documentation must point to the machine-readable authority');
+  assert(quarantineDoc.includes(quarantineMarker), 'Quarantine documentation must name the stable marker');
+  assert(!quarantineDoc.includes('@r2-quarantine') && !quarantineDoc.includes('@r3-quarantine'), 'Current quarantine documentation must not define release-numbered active markers');
+  assert(activeQuarantineEntries.length === 1, 'Current executable quarantine debt must remain exactly one acceptance during this migration');
+  assert(activeQuarantineEntries[0].title === 'saved js-dos resource publishes a blob-backed preview after save', 'Saved-preview debt identity must remain unchanged');
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
   assertAlwaysRunPrWorkflow(fastWorkflow, 'Fast Bun tests');
   assert(fastWorkflow.includes('name: Fast Bun tests'), 'Fast CI must preserve required context Fast Bun tests');
   assert(fastWorkflow.includes('node test/ci/verify-plasmon-test-inventory.mjs'), 'Fast CI must run the no-orphan inventory guard');
   assert(fastWorkflow.includes('node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan'), 'Fast CI must prove the inventory guard rejects an orphan');
+  assert(fastWorkflow.includes('node test/ci/verify-plasmon-quarantine.mjs'), 'Fast CI must verify exact active quarantine debt');
   assert(fastWorkflow.includes('npm --workspace neutron-plasmon test'), 'Fast CI must run the complete Plasmon Bun/RTL suite');
 
   const smokeWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-browser-smoke-ci.yml'), 'utf8');
@@ -168,6 +170,7 @@ async function verify(inventory) {
   }
   assert(smokeWorkflow.includes('npm run test:e2e:plasmon:smoke'), 'Required Smoke CI must execute the complete smoke browser lane');
   assert(browserWorkflow.includes('npm run test:e2e:plasmon:specialist'), 'Required Specialist CI must execute the complete specialist browser lane');
+  assert(browserWorkflow.includes('test/ci/plasmon-quarantine.mjs --marker'), 'Required Demo CI must consume the shared quarantine marker authority');
   for (const path of browserLanes.persistence) {
     assert(persistenceWorkflow.includes(path), `Required Persistence CI must execute ${path}`);
   }
