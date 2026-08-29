@@ -1,83 +1,282 @@
-name: "R2R3 #529 exact-head provenance inventory"
+name: "R2R3 #529 semantic identity migration"
 
 on:
-  pull_request:
   push:
     branches:
       - cleanup/r2r3-test-identities-v2
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inventory:
+  migrate:
+    if: github.event.head_commit.message == '#529 execute post-R2 semantic identity migration'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: cleanup/r2r3-test-identities-v2
           fetch-depth: 1
-      - name: Scan active executable and test-artifact identities
+      - name: Rename active tests and test artifacts behaviorally
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name "plasmon-ci"
+          git config user.email "plasmon-ci@users.noreply.github.com"
           python3 - <<'PY'
           from pathlib import Path
           import re
+          import subprocess
 
-          roots = [Path('apps/plasmon/src'), Path('apps/plasmon/test'), Path('test')]
-          text_suffixes = {'.ts','.tsx','.js','.mjs','.cjs','.json','.sh','.md','.yml','.yaml','.txt','.svg','.html','.css','.scss'}
-          path_issue = re.compile(r'(?i)(?:^|[/_.-])issue[-_]?\d+(?:[/_.-]|$)')
-          path_pr = re.compile(r'(?i)(?:^|[/_.-])pr[-_]?\d+(?:[/_.-]|$)')
-          numbered_spec = re.compile(r'-\d+\.spec\.(?:ts|tsx|js)$', re.I)
-          numbered_fixture = re.compile(r'(?i)(?:issue|pr)[-_]?\d+|[-_]\d+[-_].*\.(?:png|jpg|jpeg|webp|svg|webm|json|txt)$')
+          moves = {
+            'apps/plasmon/src/native-apps/issue-511-light-theme-chrome.test.ts': 'apps/plasmon/src/native-apps/theme-aware-native-chrome.test.ts',
+            'apps/plasmon/src/native-apps/issue-96.test.ts': 'apps/plasmon/src/native-apps/packaged-application-identities.test.ts',
+            'apps/plasmon/src/native-apps/markdown/issue-511-theme.test.ts': 'apps/plasmon/src/native-apps/markdown/markdown-theme-projection.test.ts',
+            'apps/plasmon/src/native-apps/shared/monaco/issue-511-theme.test.ts': 'apps/plasmon/src/native-apps/shared/monaco/monaco-theme-projection.test.ts',
+            'apps/plasmon/src/os/desktop/issue-192.test.ts': 'apps/plasmon/src/os/desktop/desktop-placement.test.ts',
+            'apps/plasmon/src/os/file-manager/issue-124-preview.test.ts': 'apps/plasmon/src/os/file-manager/saved-resource-preview.test.ts',
+            'apps/plasmon/src/os/file-manager/issue-191.characterization.test.ts': 'apps/plasmon/src/os/file-manager/file-entry-rename.characterization.test.ts',
+            'apps/plasmon/src/os/file-manager/issue-195.characterization.test.ts': 'apps/plasmon/src/os/file-manager/refresh-selection.characterization.test.ts',
+            'apps/plasmon/src/os/file-manager/issue-511-theme-surfaces.test.ts': 'apps/plasmon/src/os/file-manager/file-manager-theme-surfaces.test.ts',
+            'apps/plasmon/src/os/fs/issue-123.test.ts': 'apps/plasmon/src/os/fs/resource-artwork.test.ts',
+            'apps/plasmon/src/os/fs/issue-182.test.ts': 'apps/plasmon/src/os/fs/root-inventory.test.ts',
+            'apps/plasmon/src/os/shell/issue-111-visual-convergence.test.ts': 'apps/plasmon/src/os/shell/shell-visual-convergence.test.ts',
+            'apps/plasmon/src/os/shell/issue-123.test.ts': 'apps/plasmon/src/os/shell/search-resource-presentation.test.ts',
+            'apps/plasmon/src/os/shell/issue-511-five-themes.test.ts': 'apps/plasmon/src/os/shell/six-theme-visual-palette.test.ts',
+            'apps/plasmon/src/os/shell/issue-512-wallpapers.test.ts': 'apps/plasmon/src/os/shell/generated-theme-wallpapers.test.ts',
+            'apps/plasmon/src/os/visual/issue-123.test.ts': 'apps/plasmon/src/os/visual/resource-artwork-presentation.test.ts',
+            'apps/plasmon/src/os/visual/issue-190.test.ts': 'apps/plasmon/src/os/visual/resource-presentation.test.ts',
+            'apps/plasmon/src/os/visual/issue-513-theme-icons.test.ts': 'apps/plasmon/src/os/visual/theme-aware-owned-icons.test.ts',
+            'apps/plasmon/test/refactor/189/issue-189.test.ts': 'apps/plasmon/test/refactor/resource-classification/resource-classification.test.ts',
+            'apps/plasmon/test/rtl/issue-112-native-app-chrome.test.tsx': 'apps/plasmon/test/rtl/native-app-chrome.test.tsx',
+            'apps/plasmon/test/rtl/issue-176.test.tsx': 'apps/plasmon/test/rtl/file-context-menu.test.tsx',
+            'apps/plasmon/test/rtl/issue-191.test.tsx': 'apps/plasmon/test/rtl/inline-rename-escape.test.tsx',
+            'apps/plasmon/test/rtl/issue-194.test.tsx': 'apps/plasmon/test/rtl/start-surface.test.tsx',
+            'apps/plasmon/test/rtl/issue-196.test.tsx': 'apps/plasmon/test/rtl/file-manager-strategy-seam.test.tsx',
+            'apps/plasmon/test/rtl/issue-197-shell-composition.test.tsx': 'apps/plasmon/test/rtl/shell-composition.test.tsx',
+            'apps/plasmon/test/rtl/issue-217.test.tsx': 'apps/plasmon/test/rtl/shortcut-artwork-refresh.test.tsx',
+            'apps/plasmon/test/rtl/issue-420.test.tsx': 'apps/plasmon/test/rtl/shortcut-artwork-recovery.test.tsx',
+            'apps/plasmon/test/rtl/issue-45-recycle-bin-empty.test.tsx': 'apps/plasmon/test/rtl/recycle-bin-empty.test.tsx',
+            'apps/plasmon/test/rtl/issue-509-svg-thumbnail.test.tsx': 'apps/plasmon/test/rtl/svg-thumbnail.test.tsx',
+            'apps/plasmon/test/rtl/issue-51-send-to-desktop.test.tsx': 'apps/plasmon/test/rtl/send-to-desktop.test.tsx',
+            'apps/plasmon/test/rtl/issue-570-download.test.tsx': 'apps/plasmon/test/rtl/download-menu-preparation.test.tsx',
+            'apps/plasmon/test/rtl/issue-63-alt-tab.test.tsx': 'apps/plasmon/test/rtl/alt-tab.test.tsx',
+            'apps/plasmon/test/rtl/issue-65-operation-progress.test.tsx': 'apps/plasmon/test/rtl/operation-progress.test.tsx',
+            'apps/plasmon/test/rtl/issue-90-search-presentation.test.tsx': 'apps/plasmon/test/rtl/search-presentation.test.tsx',
+            'apps/plasmon/test/rtl/issue-92.test.tsx': 'apps/plasmon/test/rtl/multi-item-drag-progress.test.tsx',
+            'apps/plasmon/test/rtl/issue-93-thumbnail-lifecycle.test.tsx': 'apps/plasmon/test/rtl/thumbnail-lifecycle.test.tsx',
+            'apps/plasmon/src/os/shell/startMenuReconciliation169.test.ts': 'apps/plasmon/src/os/shell/startMenuReconciliation.test.ts',
+            'test/e2e/plasmon-five-themes.spec.ts': 'test/e2e/plasmon-six-theme-visual-palette.spec.ts',
+            'test/e2e/plasmon-theme-icons.spec.ts': 'test/e2e/plasmon-theme-aware-owned-icons.spec.ts',
+            'test/e2e/plasmon-wallpapers.spec.ts': 'test/e2e/plasmon-generated-theme-wallpapers.spec.ts',
+          }
 
-          paths = []
-          for root in roots:
-            if not root.exists():
+          for old, new in moves.items():
+            src, dst = Path(old), Path(new)
+            if not src.exists():
+              raise SystemExit(f'missing rename source: {old}')
+            if dst.exists():
+              raise SystemExit(f'rename destination already exists: {new}')
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(['git', 'mv', old, new], check=True)
+
+          def active_text_paths():
+            for root in [Path('apps/plasmon/src'), Path('apps/plasmon/test'), Path('test')]:
+              if not root.exists():
+                continue
+              for p in root.rglob('*'):
+                if not p.is_file():
+                  continue
+                s = p.as_posix()
+                if s.startswith('apps/plasmon/src/') and not re.search(r'(?:test|characterization)\.[cm]?[jt]sx?$', p.name):
+                  continue
+                if p.suffix.lower() not in {'.ts','.tsx','.js','.mjs','.cjs','.sh','.json'}:
+                  continue
+                yield p
+            for p in [Path('package.json'), Path('apps/plasmon/package.json')]:
+              if p.exists():
+                yield p
+
+          paths = list(dict.fromkeys(active_text_paths()))
+          path_replacements = sorted(moves.items(), key=lambda pair: len(pair[0]), reverse=True)
+          for p in paths:
+            text = p.read_text(errors='strict')
+            updated = text
+            for old, new in path_replacements:
+              updated = updated.replace(old, new)
+            if updated != text:
+              p.write_text(updated)
+
+          # Stable behavioral fixture/resource/evidence identities.
+          replacements = {
+            'issue-191-node': 'rename-characterization-node',
+            'Issue 191.txt': 'Rename Characterization.txt',
+            'Issue 191 Escape.txt': 'Inline Rename Escape.txt',
+            'Issue 196 Strategy Seam.txt': 'Strategy Seam.txt',
+            'Issue 217 refresh.txt': 'Shortcut Artwork Refresh.txt',
+            'Issue 420 transient shortcut target lookup failure': 'transient shortcut target lookup failure',
+            'Issue 420 refresh.txt': 'Shortcut Artwork Refresh.txt',
+            'Issue 420 recovery.txt': 'Shortcut Artwork Recovery.txt',
+            'blob:issue-93-': 'blob:thumbnail-lifecycle-',
+            'Issue 415 Generated ': 'Language Transition Generated ',
+            'Issue 415 Plain ': 'Language Transition Plain ',
+            'Issue 415 ': 'Language Transition ',
+            'Issue 405 ': 'Explorer Documents ',
+            'Issue 511 Theme Probe ': 'Theme Palette Probe ',
+            'issue-511-${theme.id}.png': 'six-theme-visual-palette-${theme.id}.png',
+            '.issue-110-hidden-': '.hidden-preference-',
+            'issue-107-download-': 'packaged-download-',
+            'Issue 107 Restore ': 'Recycle Restore ',
+            'Issue 107 Permanent ': 'Recycle Permanent ',
+            'issue-107-unsupported-': 'unsupported-resource-',
+            'Issue 114 Markdown ': 'Markdown Commands ',
+            'issue-186-persistence-probe-': 'plasmon-persistence-probe-',
+            'issue426-note.txt': 'search-thumbnail-note.txt',
+            'issue 426 document': 'search thumbnail document',
+            'issue-111-shell-visual-review.png': 'shell-visual-convergence.png',
+            'issue-513-${theme.id}.png': 'theme-aware-owned-icons-${theme.id}.png',
+            'issue-512-${themeId}.png': 'generated-theme-wallpapers-${themeId}.png',
+            'issue-169-review': 'start-menu-reconciliation-review',
+            'Issue 169 Review': 'Start Menu Reconciliation Review',
+            'Flake-Probe-Grep: @issue-277': 'Flake-Probe-Grep: @semantic-probe',
+            'explicit.test_grep !== "@issue-277"': 'explicit.test_grep !== "@semantic-probe"',
+            'R2_KNOWN_CHROMIUM_SANDBOX_WARNING': 'KNOWN_CHROMIUM_SANDBOX_WARNING',
+            'R2_KNOWN_BROWSER_HEALTH_ALLOW': 'KNOWN_BROWSER_HEALTH_ALLOW',
+          }
+          for p in paths:
+            text = p.read_text(errors='strict')
+            updated = text
+            for old, new in replacements.items():
+              updated = updated.replace(old, new)
+            # Remove work-item prefixes from executable test/describe titles while preserving the behavioral title.
+            updated = re.sub(
+              r'(\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["\'`])(?:issue\s*#?\s*\d+(?:\s*/\s*#?\s*\d+)*|#\d+(?:\s*/\s*#\d+)*)(?:\s*[—:\-]\s*|\s+)',
+              r'\1',
+              updated,
+              flags=re.I,
+            )
+            if updated != text:
+              p.write_text(updated)
+
+          # Rewrite active test-only provenance comments into the behavior they protect.
+          comment_rewrites = {
+            Path('apps/plasmon/src/os/desktop/desktop-placement.test.ts'): (
+              '/**\n * Issue #192 corrective gates adopted from Luna TDD-A `e56b246`.\n * Assertions are unchanged; the test now targets the production NodeId-only\n * placement authority directly.\n */',
+              '/**\n * Corrective gates for the production NodeId-only Desktop placement authority.\n * They preserve occupied-slot avoidance, coordinate repair, and unrelated placement stability.\n */',
+            ),
+            Path('apps/plasmon/src/os/file-manager/file-entry-rename.characterization.test.ts'): (
+              '/**\n * Adopted from Luna TDD-A\'s #191 RED packet.\n *\n * Existing guards remain in their owning suites. This characterization stays\n * deliberately component-level while the real geometry correction is covered\n * by the companion packaged Playwright regression.\n */',
+              '/**\n * Component-level characterization for FileEntry selection and inline-rename identity.\n * The companion packaged browser acceptance owns rendered geometry.\n */',
+            ),
+            Path('apps/plasmon/src/os/file-manager/refresh-selection.characterization.test.ts'): (
+              '/**\n * Adopted from Luna-A\'s validated #195 characterization packet.\n *\n * These guards protect the refresh boundary that the FileManager browser/render\n * decomposition must preserve: filesystem events decide when the adapter\n * re-reads authoritative directory state, and selection is reconciled by stable\n * NodeId after that authoritative refresh.\n */',
+              '/**\n * Characterization of the FileManager refresh boundary: filesystem events decide\n * when authoritative directory state is reread, then selection reconciles by stable NodeId.\n */',
+            ),
+          }
+          for p, (old, new) in comment_rewrites.items():
+            text = p.read_text()
+            if old not in text:
+              raise SystemExit(f'expected provenance comment not found in {p}')
+            p.write_text(text.replace(old, new))
+
+          p = Path('apps/plasmon/test/rtl/download-menu-preparation.test.tsx')
+          text = p.read_text().replace('the #570 download regression', 'download-menu preparation')
+          p.write_text(text)
+
+          p = Path('test/e2e/plasmon-browser-health.ts')
+          text = p.read_text()
+          old = ''' * r2 additionally carries one release-scoped exact diagnostic quarantine from\n * #305. It matches the full Chromium warning text only; every other console\n * warning/error continues through the strict failure path.'''
+          new = ''' * One exact Chromium sandbox diagnostic allowance is intentionally narrow: it\n * matches the full warning text only; every other console warning/error continues\n * through the strict failure path.'''
+          if old not in text:
+            raise SystemExit('expected BrowserHealth release provenance comment not found')
+          p.write_text(text.replace(old, new))
+
+          p = Path('test/ci/verify-plasmon-test-inventory.mjs')
+          text = p.read_text()
+          text = text.replace(
+            "  assert(browserHealth.includes('#305'), 'BrowserHealth exact warning quarantine must remain linked to #305');\n",
+            "  assert(browserHealth.includes('KNOWN_CHROMIUM_SANDBOX_WARNING'), 'BrowserHealth exact warning allowance must retain a semantic constant');\n",
+          )
+          text = text.replace("BrowserHealth #305 rule must remain exact-message bounded", "BrowserHealth sandbox-warning rule must remain exact-message bounded")
+          p.write_text(text)
+
+          p = Path('test/e2e/plasmon-golden-path.spec.ts')
+          text = p.read_text()
+          old = '''  // Issue #277 temporarily quarantines only the shared #43 left-edge\n  // preview/snap journey that flaked on the post-merge r2 release push. Keep\n  // the preceding normalization proof and all following golden-path contracts\n  // required. The isolated acceptance remains executable under\n  // @r2-quarantine/@issue-277 until deterministic restoration evidence exists.\n\n  // Issue #244 tracks the quarantined snapped -> restore -> opposite-edge\n  // right-snap journey. That acceptance is isolated in\n  // plasmon-golden-path-right-snap.spec.ts and excluded only by the\n  // @r2-quarantine Specialist filter; the rest of this golden path remains\n  // required.\n\n  // Issue #42 visible boundary: create/open a real filesystem document through\n'''
+          new = '''  // The left-edge preview/snap journey is isolated in\n  // plasmon-golden-path-left-snap.spec.ts. Keep the preceding normalization proof\n  // and all following golden-path contracts required.\n\n  // The snapped -> restore -> opposite-edge right-snap journey is isolated in\n  // plasmon-golden-path-right-snap.spec.ts; the rest of this golden path remains required.\n\n  // Visible browser boundary: create/open a real filesystem document through\n'''
+          if old not in text:
+            raise SystemExit('expected golden-path snap provenance block not found')
+          text = text.replace(old, new)
+          old = '''  // Issue #251 tracks the quarantined repeated sibling-window lifetime cascade.\n  // That acceptance is isolated in plasmon-golden-path-window-lifetime.spec.ts\n  // and excluded only by the @r2-quarantine Specialist filter; all preceding\n  // packaged golden-path contracts remain required.\n'''
+          new = '''  // The repeated sibling-window lifetime cascade is isolated in\n  // plasmon-golden-path-window-lifetime.spec.ts; all preceding packaged\n  // golden-path contracts remain required.\n'''
+          if old not in text:
+            raise SystemExit('expected golden-path window provenance block not found')
+          p.write_text(text.replace(old, new))
+
+          # Stale selector assertions from the pre-rename characterization verifier.
+          p = Path('test/ci/verify-flake-probe.mjs')
+          text = p.read_text()
+          text = text.replace('test/e2e/plasmon-start-inventory-428.spec.ts', 'test/e2e/plasmon-start-inventory.spec.ts')
+          text = text.replace('test/e2e/plasmon-demo-native-app-chrome-112.spec.ts', 'test/e2e/plasmon-demo-native-app-chrome.spec.ts')
+          p.write_text(text)
+
+          # Fail closed on remaining active work-item identity. Historical documentation assertions are narrowly excluded.
+          bad = []
+          issue_word = re.compile(r'\bIssue\s*#?\s*\d+\b', re.I)
+          issue_slug = re.compile(r'(?i)(?:\bissue[-_]\d+\b|\bissue\d+\b)')
+          issue_tag = re.compile(r'@(?:issue|pr)-\d+\b', re.I)
+          release_quarantine = re.compile(r'@r[23][-_][A-Za-z0-9_-]+\b', re.I)
+          numbered_title = re.compile(r'\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["\'`]#\d+\b')
+          numeric_comment = re.compile(r'(?://|/\*|\*)[^\n]*#\d+\b')
+
+          for p in paths:
+            s = p.as_posix()
+            if s == 'apps/plasmon/test/documentationBoundaries.test.ts':
               continue
+            text = p.read_text(errors='strict')
+            for i, line in enumerate(text.splitlines(), 1):
+              hits = []
+              for label, rx in [
+                ('issue-word', issue_word),
+                ('issue-slug', issue_slug),
+                ('issue-tag', issue_tag),
+                ('release-quarantine', release_quarantine),
+                ('numbered-test-title', numbered_title),
+                ('numeric-comment', numeric_comment),
+              ]:
+                if rx.search(line): hits.append(label)
+              if hits:
+                bad.append(f'{s}:{i}:{",".join(hits)}:{line.strip()}')
+
+          path_bad = []
+          for root in [Path('apps/plasmon/src'), Path('apps/plasmon/test'), Path('test/e2e')]:
+            if not root.exists(): continue
             for p in root.rglob('*'):
-              if not p.is_file():
-                continue
+              if not p.is_file(): continue
               s = p.as_posix()
-              if path_issue.search(s) or path_pr.search(s) or numbered_spec.search(s) or numbered_fixture.search(s):
-                paths.append(s)
-          print('=== PATH CANDIDATES ===')
-          for s in sorted(set(paths)):
-            print(s)
+              if re.search(r'(?i)(?:^|[/_.-])issue[-_]?\d+(?:[/_.-]|$)', s) or re.search(r'-\d+\.spec\.[cm]?[jt]sx?$', s) or re.search(r'apps/plasmon/test/refactor/\d+/', s):
+                path_bad.append(s)
+          if bad or path_bad:
+            print('=== RESIDUAL ACTIVE PROVENANCE ===')
+            for item in path_bad: print(f'PATH:{item}')
+            for item in bad: print(item)
+            raise SystemExit(f'residual active provenance: paths={len(path_bad)} content={len(bad)}')
 
-          patterns = [
-            ('issue-tag', re.compile(r'@issue-\d+\b', re.I)),
-            ('pr-tag', re.compile(r'@pr-\d+\b', re.I)),
-            ('release-tag', re.compile(r'@r[23](?:[-_][A-Za-z0-9_-]+)?\b', re.I)),
-            ('numbered-test-title', re.compile(r'(?m)\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["\'`]#\d+\b')),
-            ('issue-resource', re.compile(r'(?i)\bissue[-_ ]\d+\b')),
-            ('pr-resource', re.compile(r'(?i)\bpr[-_ ]\d+\b')),
-          ]
-          print('=== CONTENT CANDIDATES ===')
-          for root in roots:
-            if not root.exists():
-              continue
-            for p in sorted(root.rglob('*')):
-              if not p.is_file() or p.suffix.lower() not in text_suffixes:
-                continue
-              s = p.as_posix()
-              active_testish = ('/test/' in '/' + s or '/test/' in s or '/test/e2e/' in '/' + s or p.name.endswith(('.test.ts','.test.tsx','.spec.ts','.spec.tsx','.test.js','.spec.js','.mjs','.sh')))
-              if not active_testish:
-                continue
-              try:
-                lines = p.read_text(errors='replace').splitlines()
-              except Exception:
-                continue
-              for i,line in enumerate(lines,1):
-                hits = [name for name,rx in patterns if rx.search(line)]
-                if hits:
-                  print(f'{s}:{i}:{",".join(hits)}:{line.strip()}')
-
-          pkg = Path('package.json')
-          if pkg.exists():
-            print('=== PACKAGE SCRIPT CANDIDATES ===')
-            for i,line in enumerate(pkg.read_text(errors='replace').splitlines(),1):
-              if re.search(r'(?i)(issue[-_ ]?\d+|@issue-\d+|pr[-_ ]?\d+|@pr-\d+|plasmon-[^" ]+-\d+\.spec)', line):
-                print(f'package.json:{i}:{line.strip()}')
+          print(f'Semantic identity migration scan passed across {len(paths)} active text files')
           PY
+      - name: Verify deterministic CI contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
+          node test/ci/verify-playwright-packet-lifecycle.mjs
+          node test/ci/verify-plasmon-test-inventory.mjs
+      - name: Commit semantic migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          git add -A
+          git commit -m '#529 Reconcile behavioral identities after R2'
+          git push origin HEAD:cleanup/r2r3-test-identities-v2
