@@ -5,7 +5,25 @@ export interface RunExecutionResult {
   diagnostics: readonly string[];
 }
 
+const MODULE_EXECUTION_TIMEOUT_MS = 10_000;
 let nextContextId = 0;
+
+async function withExecutionTimeout<T>(stage: string, operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`.run execution timed out during ${stage}`)),
+          MODULE_EXECUTION_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
 
 /**
  * Execute ordinary TypeScript after compilation. The implicit bindings come
@@ -32,7 +50,7 @@ export class RunRuntime {
     const blob = new Blob([compiled.javascript], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
     try {
-      await import(url);
+      await withExecutionTimeout("compiled module import", import(url));
       return { diagnostics: compiled.diagnostics };
     } finally {
       URL.revokeObjectURL(url);
