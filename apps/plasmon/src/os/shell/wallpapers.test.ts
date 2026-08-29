@@ -47,7 +47,7 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
   };
 }
 
-test("#512 exposes six theme companions: five generated designs plus Graphite Sand JPG", () => {
+test("exposes six theme companions: five generated designs plus Graphite Sand JPG", () => {
   expect(SHELL_THEME_IDS).toEqual(THEMES);
   expect(SHELL_GENERATED_WALLPAPER_IDS).toEqual(GENERATED_WALLPAPERS);
   expect(SHELL_JPG_WALLPAPER_ID).toBe("graphite-sand");
@@ -61,14 +61,14 @@ test("#512 exposes six theme companions: five generated designs plus Graphite Sa
   expect(SHELL_THEME_WALLPAPERS["plasmon-verdant"]).toBe("plasmon-lattice");
 });
 
-test("#512 Follow theme resolves from the active theme while any pinned wallpaper remains independent", () => {
+test("Follow theme resolves from the active theme while any pinned wallpaper remains independent", () => {
   for (const themeId of THEMES) {
     expect(effectiveShellWallpaper(themeId, { mode: "follow-theme" })).toBe(SHELL_THEME_WALLPAPERS[themeId]);
     expect(effectiveShellWallpaper(themeId, { mode: "pinned", id: "graphite-sand" })).toBe("graphite-sand");
   }
 });
 
-test("#512 legacy, preview, and corrupt appearance state migrates without erasing unrelated v1 preferences", () => {
+test("legacy, preview, and corrupt appearance state migrates without erasing unrelated v1 preferences", () => {
   for (const legacy of ["aurora", "plain"]) {
     expect(validateShellPreferences(stored(legacy))).toEqual({
       ...stored({ mode: "follow-theme" }),
@@ -94,7 +94,7 @@ test("#512 legacy, preview, and corrupt appearance state migrates without erasin
     .toEqual({ mode: "pinned", id: "glacier-prism" });
 });
 
-test("#512 uses packaged image artwork for all six wallpapers with uniform cover rendering", () => {
+test("uses packaged image artwork for all six wallpapers with uniform cover rendering", () => {
   const css = readFileSync(new URL("./wallpapers.scss", import.meta.url), "utf8");
   for (const wallpaperId of GENERATED_WALLPAPERS) {
     expect(css).toContain(`.plasmon-shell--wallpaper-${wallpaperId} .plasmon-shell__wallpaper`);
@@ -106,7 +106,7 @@ test("#512 uses packaged image artwork for all six wallpapers with uniform cover
   expect(css.match(/\.(?:svg|jpe?g)\b/gi)?.length).toBe(6);
 });
 
-test("#512 Graphite Sand packages the exact selected raster artwork without pretending it is an SVG", () => {
+test("Graphite Sand packages the exact selected raster artwork without pretending it is an SVG", () => {
   const photo = readFileSync(new URL("../../../public/static/plasmon/wallpapers/graphite-sand.jpg", import.meta.url));
   expect(photo[0]).toBe(0xff);
   expect(photo[1]).toBe(0xd8);
@@ -116,7 +116,7 @@ test("#512 Graphite Sand packages the exact selected raster artwork without pret
   expect(photo.subarray(0, 256).toString("utf8")).not.toContain("<svg");
 });
 
-test("#512 Plasmon watermark is a separate bottom-right SVG overlay with a persisted Settings toggle", () => {
+test("Plasmon watermark is a separate bottom-right SVG overlay with a persisted Settings toggle", () => {
   const overlay = readFileSync(new URL("./desktop-overlays.scss", import.meta.url), "utf8");
   const surface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
   const shell = readFileSync(new URL("./Shell.tsx", import.meta.url), "utf8");
@@ -133,7 +133,7 @@ test("#512 Plasmon watermark is a separate bottom-right SVG overlay with a persi
   expect(watermark).toContain("<svg");
 });
 
-test("#512 Shell wallpaper remains exposed through the FileManager-owned desktop canvas", () => {
+test("Shell wallpaper remains exposed through the FileManager-owned desktop canvas", () => {
   const css = readFileSync(new URL("./wallpaper-visibility.scss", import.meta.url), "utf8");
   const style = readFileSync(new URL("../../style.scss", import.meta.url), "utf8");
 
@@ -143,7 +143,7 @@ test("#512 Shell wallpaper remains exposed through the FileManager-owned desktop
   expect(css).toContain("background: transparent;");
 });
 
-test("#512 Settings exposes Follow theme and every canonical wallpaper choice", () => {
+test("Settings exposes Follow theme and every canonical wallpaper choice", () => {
   const surface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
   const shell = readFileSync(new URL("./Shell.tsx", import.meta.url), "utf8");
   expect(surface).toContain(">Follow theme</button>");
