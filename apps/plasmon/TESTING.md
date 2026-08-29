@@ -256,6 +256,12 @@ If an agent environment cannot run Bun locally, push the Issue branch and use Pl
 
 Kernel and independently installed application workflows remain separate required evidence when the changed boundary requires them. Do not weaken or skip those gates to make Plasmon CI green.
 
+### Browser quarantine authority
+
+Required browser CI and Flake Probe use the fixed Playwright tag `@quarantine`. The machine-readable current debt authority is [`../../test/ci/plasmon-quarantine.json`](../../test/ci/plasmon-quarantine.json); [`../../test/ci/QUARANTINED_BROWSER_TESTS.md`](../../test/ci/QUARANTINED_BROWSER_TESTS.md) explains the same current state for contributors. The inventory records which exact semantic acceptances are authorized debt; it does not configure or rename the quarantine tag.
+
+Quarantine is exact-test scoped and must not become a suite skip, retry policy, timeout increase, or generic green-on-failure path. Restoration removes the exact `@quarantine` marker and inventory entry before collecting retry-free proof. Unknown and non-quarantined failures remain hard failures.
+
 ## Required agent workflow
 
 For every implementation unit:

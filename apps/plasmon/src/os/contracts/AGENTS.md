@@ -15,7 +15,7 @@
 
 ## Change policy
 
-A contract change is not a local refactor. Before editing, inspect all implementers, fakes/adapters, consumers, persistence implications, and tests. Prefer compatibility-preserving additions where practical; surface breaking semantic changes for coordinator/owner review.
+A contract change is not a local refactor. Before editing, inspect all implementers, fakes/adapters, consumers, persistence implications, and tests. Prefer compatibility-preserving additions where practical; surface breaking semantic changes for explicit owner/reviewer approval.
 
 ## Validation
 
