@@ -17,7 +17,7 @@ const shellSurfaces = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.ur
 const startSurface = readFileSync(new URL("./StartSurface.tsx", import.meta.url), "utf8");
 const visualTokens = readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8");
 
-test("#111 active Shell styles consume shared Visual semantics instead of a parallel token palette", () => {
+test("active Shell styles consume shared Visual semantics instead of a parallel token palette", () => {
   for (const retiredToken of [
     "--plasmon-bg",
     "--plasmon-bg-elevated",
@@ -53,7 +53,7 @@ test("#111 active Shell styles consume shared Visual semantics instead of a para
   ]) expect(visualTokens).toContain(sharedToken);
 });
 
-test("#111 assembled Shell surfaces use shared focus, framing, state, typography, and elevation semantics", () => {
+test("assembled Shell surfaces use shared focus, framing, state, typography, and elevation semantics", () => {
   for (const token of [
     "var(--plasmon-taskbar-background)",
     "var(--plasmon-panel-elevated)",
@@ -95,7 +95,7 @@ test("#111 assembled Shell surfaces use shared focus, framing, state, typography
   ]) expect(shellStyles).toContain(surface);
 });
 
-test("#111 Start and Search marks consume shared Visual assets instead of duplicate Shell SVGs", () => {
+test("Start and Search marks consume shared Visual assets instead of duplicate Shell SVGs", () => {
   expect(shellSurfaces).toContain('SystemIcon icon="start"');
   expect(shellSurfaces).toContain('SystemIcon icon="search"');
   expect(startSurface).toContain('SystemIcon icon="search"');
@@ -106,7 +106,7 @@ test("#111 Start and Search marks consume shared Visual assets instead of duplic
   expect(shellSurfaces).toContain("function TrayMark");
 });
 
-test("#111 theme variants belong to Visual and override shared semantics for all descendant surfaces", () => {
+test("theme variants belong to Visual and override shared semantics for all descendant surfaces", () => {
   expect(shellCss).not.toContain("data-plasmon-theme=\"plasmon-midnight\"");
   const midnight = visualTokens.match(/\.plasmon-shell\[data-plasmon-theme="plasmon-midnight"\]\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? "";
   expect(midnight).not.toBe("");
