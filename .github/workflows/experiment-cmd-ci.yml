@@ -39,6 +39,20 @@ jobs:
         if: ${{ hashFiles('tools/experiment_cmd_finish.py') != '' }}
         run: python3 tools/experiment_cmd_finish.py
 
+      - name: Reconcile canonical scripting fixture
+        if: ${{ hashFiles('tools/experiment_cmd_finish.py') != '' }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('apps/plasmon/src/scripting/experiment.test.ts')
+          text = path.read_text()
+          old = '    const destination = await env.services.scripting.transpileCmdFile("/Documents/demo.cmd");'
+          new = '    const scripting = new ScriptingService({ os: env.os });\n    const destination = await scripting.transpileCmdFile("/Documents/demo.cmd");'
+          if old not in text:
+              raise SystemExit('expected stale scripting fixture reference not found')
+          path.write_text(text.replace(old, new))
+          PY
+
       - name: Install dependencies
         run: npm ci
 
