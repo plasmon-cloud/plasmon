@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { MARKDOWN_PREVIEW_CSS } from "./MarkdownPreview.tsx";
 
-test("#511 Markdown preview consumes the active Visual palette instead of a fixed dark canvas", () => {
+test("Markdown preview consumes the active Visual palette instead of a fixed dark canvas", () => {
   const source = readFileSync(new URL("./MarkdownPreview.tsx", import.meta.url), "utf8");
 
   expect(source).toContain('background: "var(--plasmon-window-background, Canvas)"');
