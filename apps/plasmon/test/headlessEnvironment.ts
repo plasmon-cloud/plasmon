@@ -78,7 +78,7 @@ export function createHeadlessPlasmonEnvironment(
     neutron,
     windows,
   });
-  const os = createPlasmonOsApi(services);
+  const os = createPlasmonOsApi({ services });
 
   const node = (path: string): Promise<FsNode | null> => services.fs.resolvePath(path);
 
