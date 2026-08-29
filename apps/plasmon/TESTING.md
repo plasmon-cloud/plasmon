@@ -240,13 +240,13 @@ If the existing shared harness lacks only a reusable browser adapter or RTL comp
 
 ## CI
 
-For r2 pull requests, `.github/workflows/plasmon-ci.yml` runs **Plasmon Fast CI on every PR**, independent of changed files, using:
+For pull requests selected by the canonical Plasmon CI branch-role policy, `.github/workflows/plasmon-ci.yml` runs **Plasmon Fast CI** using:
 
 ```sh
 npm --workspace neutron-plasmon test
 ```
 
-Direct-push applicability may retain its explicit branch/path filters; that does not change the complete-PR execution contract.
+Direct-push applicability may retain its explicit branch/path filters; that does not change the pull-request execution contract for branches covered by that policy.
 
 It installs the test dependencies but intentionally avoids Kernel packaging, Motoko/Nix, and Playwright. Fast CI also executes the focused deployment command/manifest regression so the `demo` and `local` namespaces cannot silently converge again.
 
