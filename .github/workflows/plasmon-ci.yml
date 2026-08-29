@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: plasmon-fast-${{ github.workflow }}-${{ github.ref }}
@@ -25,42 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Apply narrow quarantine marker migration
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'cleanup/r2r3-testing-ci-provenance'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          mapfile -t files < <(git grep -Il '@r2-quarantine' -- ':!*.lock' || true)
-          printf 'Marker occurrences before migration:\n'
-          git grep -n '@r2-quarantine' -- ':!*.lock' || true
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo 'No @r2-quarantine occurrences found' >&2
-            exit 1
-          fi
-          for file in "${files[@]}"; do
-            sed -i 's/@r2-quarantine/@quarantine/g' "$file"
-          done
-          if git grep -n '@r2-quarantine' -- ':!*.lock'; then
-            echo 'stale @r2-quarantine remains' >&2
-            exit 1
-          fi
-          count="$(git grep -n 'tag:.*@quarantine' -- 'test/e2e/*.spec.ts' | wc -l | tr -d ' ')"
-          test "$count" = 1
-          git grep -n 'saved js-dos resource publishes a blob-backed preview after save' test/e2e/plasmon-demo-game.spec.ts
-          node test/ci/verify-plasmon-test-inventory.mjs
-          node test/ci/verify-flake-probe.mjs
-          node test/ci/verify-labeled-flake-probe.mjs
-          git checkout origin/release/0.1.0-r2r3 -- .github/workflows/plasmon-ci.yml
-          git rm -f .github/workflows/r2r3-marker-migrate.yml
-          git add -u
-          git commit -m '#539 Rename active quarantine marker'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
       - name: Set up Node
         uses: actions/setup-node@v6
