@@ -63,7 +63,7 @@ const nativeAppThemeAudit = {
   },
 } as const;
 
-test("#511 every packaged first-party native app has an explicit theme-chrome contract", () => {
+test("every packaged first-party native app has an explicit theme-chrome contract", () => {
   const packaged = FIRST_PARTY_NATIVE_APP_PACKAGE_INPUTS.map(({ name }) => name).sort();
   const audited = Object.keys(nativeAppThemeAudit).sort();
   expect(audited).toEqual(packaged);
@@ -76,7 +76,7 @@ test("#511 every packaged first-party native app has an explicit theme-chrome co
   }
 });
 
-test("#511 first-party Browser chrome uses the Visual palette while web content stays unmodified", () => {
+test("first-party Browser chrome uses the Visual palette while web content stays unmodified", () => {
   const source = read("./browser/Browser.tsx");
 
   for (const token of [
@@ -109,7 +109,7 @@ test("#511 first-party Browser chrome uses the Visual palette while web content 
   expect(source).toContain('background: "#fff"');
 });
 
-test("#511 Recycle Bin consumes current Visual semantics instead of dark local fallbacks", () => {
+test("Recycle Bin consumes current Visual semantics instead of dark local fallbacks", () => {
   const source = read("./recycle-bin/recycle-bin.scss");
 
   for (const token of [
@@ -150,7 +150,7 @@ test("#511 Recycle Bin consumes current Visual semantics instead of dark local f
   }
 });
 
-test("#511 preserves dedicated media/content stages rather than recoloring user content", () => {
+test("preserves dedicated media/content stages rather than recoloring user content", () => {
   const photos = read("./photos/Photos.tsx");
   const video = read("./video/VideoPlayer.tsx");
 
