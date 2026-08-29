@@ -1,9 +1,11 @@
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-export const TARGETED_CHARACTERIZATION_PACKET_SIZE = 5;
-export const MERGE_VALIDATION_CHARACTERIZATION_COUNT = 10;
+import {
+  MERGE_QUEUE_CHARACTERIZATION_COUNT,
+  POST_MERGE_CHARACTERIZATION_COUNT,
+  TARGETED_CHARACTERIZATION_PACKET_SIZE,
+} from "./plasmon-flake-probe-policy.mjs";
 
 const targetedPlaywrightTargets = new Set([
   "exact",
@@ -18,26 +20,21 @@ const targetedPlaywrightTargets = new Set([
 
 export function packetSizeForProbe({ iteration_count, target, mode }) {
   if (!targetedPlaywrightTargets.has(target)) return 1;
-  if (mode === "characterization" && iteration_count === MERGE_VALIDATION_CHARACTERIZATION_COUNT) {
-    return MERGE_VALIDATION_CHARACTERIZATION_COUNT;
+  if (mode === "characterization" && iteration_count === MERGE_QUEUE_CHARACTERIZATION_COUNT) {
+    return MERGE_QUEUE_CHARACTERIZATION_COUNT;
   }
-  if (iteration_count === 50) return TARGETED_CHARACTERIZATION_PACKET_SIZE;
+  if (iteration_count === POST_MERGE_CHARACTERIZATION_COUNT) {
+    return TARGETED_CHARACTERIZATION_PACKET_SIZE;
+  }
   return 1;
 }
 
 export function addProbePackets(include, config) {
   const packetSize = packetSizeForProbe(config);
   let packet = 0;
-  for (
-    let startIteration = 1;
-    startIteration <= config.iteration_count;
-    startIteration += packetSize
-  ) {
+  for (let startIteration = 1; startIteration <= config.iteration_count; startIteration += packetSize) {
     packet += 1;
-    const repetitions = Math.min(
-      packetSize,
-      config.iteration_count - startIteration + 1,
-    );
+    const repetitions = Math.min(packetSize, config.iteration_count - startIteration + 1);
     include.push({
       ...config,
       packet,
@@ -52,7 +49,6 @@ export function addProbePackets(include, config) {
 
 export function buildProbeMatrix(env = process.env) {
   const include = [];
-
   if (env.PRIMARY_APPLICABLE === "true") {
     addProbePackets(include, {
       mode: env.PRIMARY_MODE,
@@ -65,7 +61,6 @@ export function buildProbeMatrix(env = process.env) {
       scope_key: env.PRIMARY_SCOPE_KEY,
     });
   }
-
   if (env.CHARACTERIZATION_APPLICABLE === "true") {
     addProbePackets(include, {
       mode: "characterization",
@@ -78,15 +73,13 @@ export function buildProbeMatrix(env = process.env) {
       scope_key: env.CHARACTERIZATION_SCOPE_KEY,
     });
   }
-
   return { include };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const outputIndex = process.argv.indexOf("--github-output");
   const outputPath = outputIndex === -1 ? null : process.argv[outputIndex + 1];
-  const matrix = buildProbeMatrix();
-  const line = `matrix=${JSON.stringify(matrix)}\n`;
+  const line = `matrix=${JSON.stringify(buildProbeMatrix())}\n`;
   if (outputPath) appendFileSync(outputPath, line);
   else process.stdout.write(line);
 }

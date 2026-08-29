@@ -38,21 +38,20 @@ on:
 permissions:
   contents: read
 
-# Only transient PR-head deferral runs are cancellable. Merge-group and release
-# integration evidence is keyed by immutable SHA so a later merge cannot erase
-# or cancel the previous integrated result.
+# PR-head runs are disposable review-readiness checks. Merge-group and release
+# integration runs are immutable evidence and must not cancel one another.
 concurrency:
   group: plasmon-flake-probe-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.event.after || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   applicability:
-    name: Determine flake probe phase and configuration
+    name: Determine flake probe configuration
     runs-on: ubuntu-latest
     outputs:
-      applicable: ${{ steps.detect.outputs.applicable }}
-      phase: ${{ steps.detect.outputs.phase }}
-      reason: ${{ steps.detect.outputs.reason }}
+      applicable: ${{ steps.configure.outputs.applicable }}
+      phase: ${{ steps.configure.outputs.phase }}
+      reason: ${{ steps.configure.outputs.reason }}
       primary_mode: ${{ steps.configure.outputs.primary_mode }}
       iteration_count: ${{ steps.configure.outputs.iteration_count }}
       target: ${{ steps.configure.outputs.target }}
@@ -60,15 +59,16 @@ jobs:
       test_grep: ${{ steps.configure.outputs.test_grep }}
       scope: ${{ steps.configure.outputs.scope }}
       scope_key: ${{ steps.configure.outputs.scope_key }}
-      characterization_applicable: ${{ steps.characterize.outputs.applicable }}
-      characterization_reason: ${{ steps.characterize.outputs.reason }}
-      characterization_target: ${{ steps.characterize.outputs.target }}
-      characterization_iteration_count: ${{ steps.characterize.outputs.iteration_count }}
-      characterization_files_json: ${{ steps.characterize.outputs.files_json }}
-      characterization_scope: ${{ steps.characterize.outputs.scope }}
-      characterization_scope_key: ${{ steps.characterize.outputs.scope_key }}
-      characterization_profile: ${{ steps.characterize.outputs.profile }}
+      characterization_applicable: ${{ steps.configure.outputs.characterization_applicable }}
+      characterization_reason: ${{ steps.configure.outputs.characterization_reason }}
+      characterization_target: ${{ steps.configure.outputs.characterization_target }}
+      characterization_iteration_count: ${{ steps.configure.outputs.characterization_iteration_count }}
+      characterization_files_json: ${{ steps.configure.outputs.characterization_files_json }}
+      characterization_scope: ${{ steps.configure.outputs.characterization_scope }}
+      characterization_scope_key: ${{ steps.configure.outputs.characterization_scope_key }}
+      characterization_profile: ${{ steps.configure.outputs.characterization_profile }}
       probe_matrix: ${{ steps.matrix.outputs.matrix }}
+
     steps:
       - name: Checkout exact probe ref
         uses: actions/checkout@v6
@@ -76,8 +76,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || inputs.ref || github.sha }}
 
-      - name: Determine phase and changed files
-        id: detect
+      - name: Record changed files for this phase
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -92,157 +91,40 @@ jobs:
           : > flake-probe-applicability/changed-files.txt
 
           case "$EVENT_NAME" in
-            pull_request)
-              phase=pr-review
-              applicable=false
-              reason=deferred-to-merge-queue
-              base_sha="$PR_BASE_SHA"
-              head_sha="$PR_HEAD_SHA"
-              ;;
-            merge_group)
-              phase=merge-queue
-              applicable=true
-              reason=merge-group-validation
-              base_sha="$MERGE_GROUP_BASE_SHA"
-              head_sha="$MERGE_GROUP_HEAD_SHA"
-              ;;
-            push)
-              phase=post-merge
-              applicable=true
-              reason=integrated-release-push
-              base_sha="$PUSH_BEFORE_SHA"
-              head_sha="$PUSH_AFTER_SHA"
-              ;;
-            workflow_dispatch)
-              phase=manual
-              applicable=true
-              reason=manual-dispatch
-              base_sha=""
-              head_sha=""
-              ;;
-            *)
-              echo "Unsupported Flake Probe event: $EVENT_NAME" >&2
-              exit 2
-              ;;
+            pull_request) base_sha="$PR_BASE_SHA"; head_sha="$PR_HEAD_SHA" ;;
+            merge_group) base_sha="$MERGE_GROUP_BASE_SHA"; head_sha="$MERGE_GROUP_HEAD_SHA" ;;
+            push) base_sha="$PUSH_BEFORE_SHA"; head_sha="$PUSH_AFTER_SHA" ;;
+            workflow_dispatch) base_sha=""; head_sha="" ;;
+            *) echo "Unsupported Flake Probe event: $EVENT_NAME" >&2; exit 2 ;;
           esac
 
-          if [ -n "$base_sha" ] && [ -n "$head_sha" ]; then
-            if [[ "$base_sha" =~ ^0+$ ]]; then
-              git diff-tree --root --no-commit-id --name-only -r "$head_sha"
-            else
-              git diff --name-only "$base_sha" "$head_sha"
-            fi | sed '/^$/d' | sort -u | tee flake-probe-applicability/changed-files.txt
+          if [ -z "$base_sha" ] || [ -z "$head_sha" ]; then
+            exit 0
           fi
+          if [[ "$base_sha" =~ ^0+$ ]]; then
+            git diff-tree --root --no-commit-id --name-only -r "$head_sha"
+          else
+            git diff --name-only "$base_sha" "$head_sha"
+          fi | sed '/^$/d' | sort -u | tee flake-probe-applicability/changed-files.txt
 
-          {
-            echo "phase=$phase"
-            echo "applicable=$applicable"
-            echo "reason=$reason"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Configure primary probe count and scope
+      - name: Configure probe phase
         id: configure
         env:
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_ITERATIONS: ${{ inputs.iterations }}
           INPUT_TARGET: ${{ inputs.target }}
           INPUT_TEST_FILE: ${{ inputs.test_file }}
           INPUT_TEST_GREP: ${{ inputs.test_grep }}
         run: |
-          set -euo pipefail
-          case "$EVENT_NAME" in
-            pull_request|merge_group)
-              primary_mode=merge-validation
-              iteration_count=1
-              target=all
-              test_file=""
-              test_grep=""
-              ;;
-            push)
-              primary_mode=baseline
-              iteration_count=10
-              target=all
-              test_file=""
-              test_grep=""
-              ;;
-            workflow_dispatch)
-              primary_mode=manual
-              iteration_count="${INPUT_ITERATIONS:-10}"
-              target="${INPUT_TARGET:-specialist}"
-              test_file="${INPUT_TEST_FILE:-}"
-              test_grep="${INPUT_TEST_GREP:-}"
-              ;;
-          esac
-
-          case "$iteration_count" in 1|10|50) ;; *) echo "Unsupported probe iteration count: $iteration_count" >&2; exit 2 ;; esac
-          case "$target" in
-            all|specialist|right-snap|left-snap|window-lifetime|monaco|emulatorjs|saved-preview)
-              [ -z "$test_file$test_grep" ] || { echo "test_file/test_grep are only valid with target=exact" >&2; exit 2; }
-              scope="$target"
-              ;;
-            exact)
-              case "$test_file" in test/e2e/*.spec.*|test/e2e/*.test.*) ;; *) echo "target=exact requires a Playwright test file" >&2; exit 2 ;; esac
-              [ -f "$test_file" ] || { echo "Exact probe file does not exist: $test_file" >&2; exit 2; }
-              case "$test_file$test_grep" in *$'\n'*|*$'\r'*) echo "Exact probe scope may not contain newlines" >&2; exit 2 ;; esac
-              scope="exact:$test_file"
-              [ -z "$test_grep" ] || scope="$scope::grep=$test_grep"
-              ;;
-            *) echo "Unsupported flake-probe target: $target" >&2; exit 2 ;;
-          esac
-          [ "$EVENT_NAME" != pull_request ] || scope="deferred:$scope"
-          scope_key="$(printf '%s' "$scope" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//;s/-$//' | cut -c1-80)"
-          [ -n "$scope_key" ] || { echo "Unable to derive probe scope key" >&2; exit 2; }
-          {
-            echo "primary_mode=$primary_mode"
-            echo "iteration_count=$iteration_count"
-            echo "target=$target"
-            echo "test_file=$test_file"
-            echo "test_grep=$test_grep"
-            echo "scope=$scope"
-            echo "scope_key=$scope_key"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Select automatic characterization scope
-        id: characterize
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          case "$EVENT_NAME" in
-            merge_group) characterization_count=10 ;;
-            push) characterization_count=50 ;;
-            pull_request)
-              cat > flake-probe-applicability/characterization.json <<'JSON'
-          {"applicable":false,"reason":"deferred-to-merge-queue","target":"exact-set","iteration_count":10,"profile":"none","files":[],"files_json":"[]","scope":"not-applicable","scope_key":"not-applicable"}
-          JSON
-              {
-                echo "applicable=false"; echo "reason=deferred-to-merge-queue"; echo "target=exact-set"
-                echo "iteration_count=10"; echo "profile=none"; echo "files_json=[]"
-                echo "scope=not-applicable"; echo "scope_key=not-applicable"
-              } >> "$GITHUB_OUTPUT"
-              exit 0
-              ;;
-            workflow_dispatch)
-              {
-                echo "applicable=false"; echo "reason=manual-dispatch"; echo "target=exact-set"
-                echo "iteration_count=50"; echo "profile=none"; echo "files_json=[]"
-                echo "scope=not-applicable"; echo "scope_key=not-applicable"
-              } >> "$GITHUB_OUTPUT"
-              exit 0
-              ;;
-          esac
-
-          node test/ci/select-plasmon-flake-characterization-phase.mjs \
+          node test/ci/configure-plasmon-flake-probe.mjs \
             flake-probe-applicability/changed-files.txt \
-            --iterations "$characterization_count" \
+            --event "${{ github.event_name }}" \
             --github-output "$GITHUB_OUTPUT" \
-            --json-file flake-probe-applicability/characterization.json
+            --json-file flake-probe-applicability/configuration.json
 
-      - name: Build shared probe matrix
+      - name: Build probe matrix
         id: matrix
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PRIMARY_APPLICABLE: ${{ steps.detect.outputs.applicable }}
+          PRIMARY_APPLICABLE: ${{ steps.configure.outputs.applicable }}
           PRIMARY_MODE: ${{ steps.configure.outputs.primary_mode }}
           PRIMARY_COUNT: ${{ steps.configure.outputs.iteration_count }}
           PRIMARY_TARGET: ${{ steps.configure.outputs.target }}
@@ -250,11 +132,11 @@ jobs:
           PRIMARY_TEST_GREP: ${{ steps.configure.outputs.test_grep }}
           PRIMARY_SCOPE: ${{ steps.configure.outputs.scope }}
           PRIMARY_SCOPE_KEY: ${{ steps.configure.outputs.scope_key }}
-          CHARACTERIZATION_APPLICABLE: ${{ steps.characterize.outputs.applicable }}
-          CHARACTERIZATION_COUNT: ${{ steps.characterize.outputs.iteration_count }}
-          CHARACTERIZATION_TARGET: ${{ steps.characterize.outputs.target }}
-          CHARACTERIZATION_SCOPE: ${{ steps.characterize.outputs.scope }}
-          CHARACTERIZATION_SCOPE_KEY: ${{ steps.characterize.outputs.scope_key }}
+          CHARACTERIZATION_APPLICABLE: ${{ steps.configure.outputs.characterization_applicable }}
+          CHARACTERIZATION_COUNT: ${{ steps.configure.outputs.characterization_iteration_count }}
+          CHARACTERIZATION_TARGET: ${{ steps.configure.outputs.characterization_target }}
+          CHARACTERIZATION_SCOPE: ${{ steps.configure.outputs.characterization_scope }}
+          CHARACTERIZATION_SCOPE_KEY: ${{ steps.configure.outputs.characterization_scope_key }}
         run: node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output "$GITHUB_OUTPUT"
 
       - name: Upload applicability evidence
@@ -266,8 +148,8 @@ jobs:
           retention-days: 7
 
   probe:
-    if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     needs: applicability
+    if: needs.applicability.outputs.applicable == 'true' || needs.applicability.outputs.characterization_applicable == 'true'
     name: Flake ${{ matrix.mode }} ${{ matrix.scope }} iterations ${{ matrix.start_iteration }}-${{ matrix.end_iteration }}/${{ matrix.iteration_count }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -288,6 +170,7 @@ jobs:
       PROBE_START_ITERATION: ${{ matrix.start_iteration }}
       PROBE_END_ITERATION: ${{ matrix.end_iteration }}
       PROBE_REPETITIONS: ${{ matrix.repetitions }}
+
     steps:
       - name: Checkout exact probe ref
         uses: actions/checkout@v6
@@ -352,7 +235,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "## Plasmon flake validation deferred" >> "$GITHUB_STEP_SUMMARY"
-          echo "Fast PR review does not pay the expensive Flake Probe. The approved merge-group SHA runs one broad retry-free probe." >> "$GITHUB_STEP_SUMMARY"
+          echo "The approved merge-group SHA runs the required broad retry-free probe." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout exact probe ref
         if: ${{ github.event_name != 'pull_request' }}
@@ -380,7 +263,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         run: |
           mkdir -p flake-probe-diagnostics flake-probe-summary
-          node test/ci/summarize-staged-flake-probe.mjs \
+          node test/ci/summarize-plasmon-flake-evidence.mjs \
             flake-probe-results flake-probe-diagnostics flake-probe-applicability/changed-files.txt \
             --json-file flake-probe-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 
@@ -403,7 +286,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "## Plasmon characterization deferred" >> "$GITHUB_STEP_SUMMARY"
-          echo "If Playwright scope is affected, merge-queue validation uses one prepared packet with 10 retry-free repetitions." >> "$GITHUB_STEP_SUMMARY"
+          echo "Relevant Playwright scope is characterized only on the merge-group SHA." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report non-applicable automatic characterization
         if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable != 'true' }}
@@ -437,7 +320,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' && needs.applicability.outputs.characterization_applicable == 'true' }}
         run: |
           mkdir -p flake-characterization-diagnostics flake-characterization-summary
-          node test/ci/summarize-staged-flake-probe.mjs \
+          node test/ci/summarize-plasmon-flake-evidence.mjs \
             flake-characterization-results flake-characterization-diagnostics flake-probe-applicability/changed-files.txt \
             --json-file flake-characterization-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 

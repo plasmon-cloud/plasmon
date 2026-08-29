@@ -1,23 +1,22 @@
 import { readFileSync } from "node:fs";
+import { buildProbeMatrix, packetSizeForProbe } from "./build-plasmon-flake-probe-matrix.mjs";
+import { browserLanes } from "./plasmon-test-inventory.mjs";
+import { isolationForProbe, PERSISTENT_STATE_RESET_FILES } from "./plasmon-playwright-isolation.mjs";
 import {
-  buildProbeMatrix,
-  packetSizeForProbe,
+  MERGE_QUEUE_CHARACTERIZATION_COUNT,
+  MERGE_QUEUE_PROBE_COUNT,
+  POST_MERGE_CHARACTERIZATION_COUNT,
+  POST_MERGE_PROBE_COUNT,
   TARGETED_CHARACTERIZATION_PACKET_SIZE,
-  MERGE_VALIDATION_CHARACTERIZATION_COUNT,
-} from "./build-plasmon-flake-probe-matrix.mjs";
-import {
-  isolationForProbe,
-  PERSISTENT_STATE_RESET_FILES,
-} from "./plasmon-playwright-isolation.mjs";
+} from "./plasmon-flake-probe-policy.mjs";
 
 const workflow = readFileSync(".github/workflows/plasmon-flake-probe.yml", "utf8");
 const packetRunner = readFileSync("test/e2e/run-plasmon-playwright-packet.sh", "utf8");
 const iterationRunner = readFileSync("test/ci/run-plasmon-flake-probe-iteration.sh", "utf8");
 const flakeRunner = readFileSync("test/ci/run-plasmon-flake-probe.sh", "utf8");
 
-const reuseProbeFile = "test/e2e/plasmon-golden-path-left-snap.spec.ts";
-const persistenceProbeFile = "test/e2e/plasmon-persistence.spec.ts";
-const savedGameProbeFile = "test/e2e/plasmon-demo-game.spec.ts";
+const reusableProbeFile = browserLanes.specialist.find((path) => !PERSISTENT_STATE_RESET_FILES.has(path));
+if (!reusableProbeFile) throw new Error("Specialist inventory must contain a reusable Playwright acceptance");
 
 function requireFragment(source, fragment, label) {
   if (!source.includes(fragment)) throw new Error(`${label} lost required fragment: ${fragment}`);
@@ -28,68 +27,84 @@ function forbidFragment(source, fragment, label) {
 function occurrenceCount(source, fragment) {
   return source.split(fragment).length - 1;
 }
-function env({ primaryCount, primaryMode = "merge-validation", primaryTarget = "all", charCount = 10, char = false }) {
+function matrixEnv({ primaryCount, primaryMode, charCount, characterize }) {
   return {
-    EVENT_NAME: primaryMode === "merge-validation" ? "merge_group" : "push",
     PRIMARY_APPLICABLE: "true",
     PRIMARY_MODE: primaryMode,
     PRIMARY_COUNT: String(primaryCount),
-    PRIMARY_TARGET: primaryTarget,
+    PRIMARY_TARGET: "all",
     PRIMARY_TEST_FILE: "",
     PRIMARY_TEST_GREP: "",
-    PRIMARY_SCOPE: primaryTarget,
-    PRIMARY_SCOPE_KEY: primaryTarget,
-    CHARACTERIZATION_APPLICABLE: char ? "true" : "false",
+    PRIMARY_SCOPE: "all",
+    PRIMARY_SCOPE_KEY: "all",
+    CHARACTERIZATION_APPLICABLE: characterize ? "true" : "false",
     CHARACTERIZATION_COUNT: String(charCount),
     CHARACTERIZATION_TARGET: "exact-set",
     CHARACTERIZATION_SCOPE: "characterization:local:fixture",
-    CHARACTERIZATION_SCOPE_KEY: "char-local-fixture",
+    CHARACTERIZATION_SCOPE_KEY: "characterization-local-fixture",
   };
 }
 
-if (TARGETED_CHARACTERIZATION_PACKET_SIZE !== 5) throw new Error("post-merge targeted packet size must remain 5");
-if (MERGE_VALIDATION_CHARACTERIZATION_COUNT !== 10) throw new Error("merge validation characterization count must remain 10");
-if (packetSizeForProbe({ mode: "characterization", iteration_count: 10, target: "exact-set" }) !== 10) {
-  throw new Error("merge-queue 10-iteration characterization must use one prepared ten-repetition packet");
+if (packetSizeForProbe({ mode: "characterization", iteration_count: MERGE_QUEUE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== MERGE_QUEUE_CHARACTERIZATION_COUNT) {
+  throw new Error("merge-queue characterization must use one prepared packet");
 }
-if (packetSizeForProbe({ mode: "characterization", iteration_count: 50, target: "exact-set" }) !== 5) {
-  throw new Error("post-merge 50-iteration characterization must use five-repetition packets");
+if (packetSizeForProbe({ mode: "characterization", iteration_count: POST_MERGE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== TARGETED_CHARACTERIZATION_PACKET_SIZE) {
+  throw new Error("post-merge characterization must use bounded repeated packets");
 }
-for (const count of [1, 10, 50]) {
-  if (packetSizeForProbe({ mode: count === 1 ? "merge-validation" : "baseline", iteration_count: count, target: "all" }) !== 1) {
+for (const count of [MERGE_QUEUE_PROBE_COUNT, POST_MERGE_PROBE_COUNT, POST_MERGE_CHARACTERIZATION_COUNT]) {
+  if (packetSizeForProbe({ mode: "baseline", iteration_count: count, target: "all" }) !== 1) {
     throw new Error(`broad all ${count}-iteration probe must remain one execution per job`);
   }
 }
 
-const mergeChar = buildProbeMatrix(env({ primaryCount: 1, char: true, charCount: 10 })).include;
-if (mergeChar.length !== 2) throw new Error(`merge queue must schedule one broad packet + one ten-repeat characterization packet; saw ${mergeChar.length}`);
-const mergePrimary = mergeChar.find((packet) => packet.mode === "merge-validation");
-const mergeCharacterization = mergeChar.find((packet) => packet.mode === "characterization");
-if (mergePrimary?.repetitions !== 1 || mergePrimary?.iteration_count !== 1) throw new Error("merge broad packet lost exactly-one execution semantics");
-if (mergeCharacterization?.repetitions !== 10 || mergeCharacterization?.start_iteration !== 1 || mergeCharacterization?.end_iteration !== 10) {
-  throw new Error("merge characterization must cover repetitions 1-10 inside one prepared packet");
+const mergePackets = buildProbeMatrix(matrixEnv({
+  primaryCount: MERGE_QUEUE_PROBE_COUNT,
+  primaryMode: "merge-validation",
+  charCount: MERGE_QUEUE_CHARACTERIZATION_COUNT,
+  characterize: true,
+})).include;
+if (mergePackets.length !== 2) throw new Error(`merge queue must schedule two packets; saw ${mergePackets.length}`);
+const mergePrimary = mergePackets.find((packet) => packet.mode === "merge-validation");
+const mergeCharacterization = mergePackets.find((packet) => packet.mode === "characterization");
+if (mergePrimary?.repetitions !== MERGE_QUEUE_PROBE_COUNT) throw new Error("merge broad packet lost one-execution semantics");
+if (mergeCharacterization?.repetitions !== MERGE_QUEUE_CHARACTERIZATION_COUNT || mergeCharacterization?.start_iteration !== 1 || mergeCharacterization?.end_iteration !== MERGE_QUEUE_CHARACTERIZATION_COUNT) {
+  throw new Error("merge characterization must cover its full iteration range in one prepared packet");
 }
 
-const postMerge = buildProbeMatrix(env({ primaryCount: 10, primaryMode: "baseline", char: true, charCount: 50 })).include;
-const broad = postMerge.filter((packet) => packet.mode === "baseline");
-const char = postMerge.filter((packet) => packet.mode === "characterization");
-if (broad.length !== 10 || broad.some((packet) => packet.repetitions !== 1)) {
-  throw new Error("post-merge baseline must schedule ten independent broad observations");
+const postMergePackets = buildProbeMatrix(matrixEnv({
+  primaryCount: POST_MERGE_PROBE_COUNT,
+  primaryMode: "baseline",
+  charCount: POST_MERGE_CHARACTERIZATION_COUNT,
+  characterize: true,
+})).include;
+const broadPackets = postMergePackets.filter((packet) => packet.mode === "baseline");
+const characterizationPackets = postMergePackets.filter((packet) => packet.mode === "characterization");
+const expectedCharacterizationPackets = POST_MERGE_CHARACTERIZATION_COUNT / TARGETED_CHARACTERIZATION_PACKET_SIZE;
+if (broadPackets.length !== POST_MERGE_PROBE_COUNT || broadPackets.some((packet) => packet.repetitions !== 1)) {
+  throw new Error("post-merge broad probes must remain independent observations");
 }
-if (char.length !== 10 || char.some((packet) => packet.repetitions !== 5)) {
-  throw new Error("post-merge characterization must schedule ten five-repetition packets");
+if (characterizationPackets.length !== expectedCharacterizationPackets || characterizationPackets.some((packet) => packet.repetitions !== TARGETED_CHARACTERIZATION_PACKET_SIZE)) {
+  throw new Error("post-merge characterization packetization no longer matches policy");
 }
-const covered = char.flatMap((packet) => Array.from({ length: packet.repetitions }, (_, index) => packet.start_iteration + index));
-if (covered.join(",") !== Array.from({ length: 50 }, (_, index) => index + 1).join(",")) {
-  throw new Error("post-merge characterization packets must cover iterations 1-50 exactly once");
+const coveredIterations = characterizationPackets.flatMap((packet) =>
+  Array.from({ length: packet.repetitions }, (_, index) => packet.start_iteration + index),
+);
+if (coveredIterations.join(",") !== Array.from({ length: POST_MERGE_CHARACTERIZATION_COUNT }, (_, index) => index + 1).join(",")) {
+  throw new Error("post-merge characterization packets must cover every iteration exactly once");
 }
 
-for (const resetFile of [persistenceProbeFile, savedGameProbeFile]) {
-  if (!PERSISTENT_STATE_RESET_FILES.has(resetFile)) throw new Error(`known state-mutating probe must require reset: ${resetFile}`);
+for (const resetFile of PERSISTENT_STATE_RESET_FILES) {
+  const isolation = isolationForProbe({ target: "exact", testFile: resetFile });
+  if (isolation.mode !== "reinstall" || !isolation.resetFiles.includes(resetFile)) {
+    throw new Error(`registered state-mutating acceptance lost reinstall isolation: ${resetFile}`);
+  }
 }
-if (isolationForProbe({ target: "exact", testFile: persistenceProbeFile }).mode !== "reinstall") throw new Error("persistence characterization lost reinstall isolation");
-if (isolationForProbe({ target: "exact", testFile: reuseProbeFile }).mode !== "reuse") throw new Error("ordinary characterization should reuse prepared deployment");
-if (isolationForProbe({ target: "saved-preview" }).mode !== "reinstall") throw new Error("saved-preview must retain reinstall isolation");
+if (isolationForProbe({ target: "exact", testFile: reusableProbeFile }).mode !== "reuse") {
+  throw new Error("ordinary Specialist characterization should reuse the prepared deployment");
+}
+if (isolationForProbe({ target: "saved-preview" }).mode !== "reinstall") {
+  throw new Error("saved-preview must retain reinstall isolation");
+}
 
 for (const fragment of [
   "node test/ci/build-plasmon-flake-probe-matrix.mjs --github-output \"$GITHUB_OUTPUT\"",
@@ -99,8 +114,8 @@ for (const fragment of [
   "bash test/e2e/run-plasmon-playwright-packet.sh --",
   "bash test/ci/run-plasmon-flake-probe-iteration.sh",
   "max-parallel: 10",
-]) requireFragment(workflow, fragment, "staged flake workflow");
-forbidFragment(workflow, "--repeat-each", "staged flake workflow");
+]) requireFragment(workflow, fragment, "flake workflow packet orchestration");
+forbidFragment(workflow, "--repeat-each", "flake workflow packet orchestration");
 
 for (const fragment of [
   "npm ci",
@@ -118,15 +133,11 @@ for (const singleton of ["npm ci", "npm run plasmon:local:prepare", "npm run pla
   if (occurrenceCount(packetRunner, singleton) !== 1) throw new Error(`packet lifecycle must pay ${singleton} setup exactly once`);
 }
 
-for (const fragment of [
-  "iteration=$iteration",
-  "iteration_count=$iteration_count",
-  "outcome=$outcome",
-  "sha=$probe_sha",
-  "run_attempt=$run_attempt",
-]) requireFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
+for (const fragment of ["iteration=$iteration", "iteration_count=$iteration_count", "outcome=$outcome", "sha=$probe_sha", "run_attempt=$run_attempt"]) {
+  requireFragment(iterationRunner, fragment, "per-iteration evidence wrapper");
+}
 for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine"]) {
   requireFragment(flakeRunner, fragment, "flake runner");
 }
 
-console.log("Playwright packet lifecycle verified for staged CI: merge queue uses 1 broad execution + one prepared 10-repeat characterization packet; post-merge uses 10 broad executions + ten 5-repeat characterization packets; setup reuse, explicit state reset, retries=0, workers=1, and quarantine exclusion are preserved");
+console.log("Playwright packet lifecycle verified from shared policy and inventory: merge queue uses one broad execution plus one prepared characterization packet; post-merge uses independent broad observations plus bounded repeated characterization packets; setup reuse, state reset, retries=0, workers=1, and quarantine exclusion are preserved");
