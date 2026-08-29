@@ -1,12 +1,11 @@
 # Plasmon OS architecture
 
-
 `apps/plasmon/src/os/` is the canonical shared desktop-OS layer for Plasmon. It composes filesystem, associations, process/window management, desktop/FileManager, Shell, Neutron integration, Sharing, and shared presentation while leaving Kernel authority with Neutron.
 
 ## Architectural boundaries
 
 - `contracts/**` defines the shared vocabulary between subsystems.
-- `api/**` defines the dependency-light production `OsApi` semantic capability contract and the Plasmon adapter that delegates those capabilities to the owning production authorities. It is the shared high-level automation seam for deterministic tests and future scripting consumers, not a second policy implementation.
+- `api/**` defines the dependency-light production OS API semantic capability contract (`OsApi`) and the Plasmon adapter that delegates those capabilities to the owning production authorities. It is the shared high-level automation seam for deterministic tests and future scripting consumers, not a second policy implementation.
 - `fs/**` is the filesystem semantics/persistence boundary; UI surfaces consume it rather than becoming storage authorities.
 - `hiddenVisibility.ts` owns the filesystem-backed OS-wide hidden-resource visibility preference. Settings is the mutation surface; Search and Start consume only that global value plus canonical filesystem/target hiddenness, while Explorer composes it with the independent FileManager-local preference as `global || local` without overwriting local state. `integration/**` wires the shared authority but does not duplicate its policy.
 - `associations/**` owns generic handler matching and defaults.
@@ -26,7 +25,7 @@ Stable identifiers are intentional boundaries. A filesystem node, logical Atom, 
 Shared interfaces and identifiers. Contract changes are cross-subsystem changes and require an implementer/consumer audit.
 
 ### `api/`
-Production semantic OS capabilities and stable DTOs. `contracts.ts` is intentionally free of concrete Plasmon implementation and test dependencies; `createPlasmonOsApi()` binds that contract to the real service composition. High-level deterministic tests consume the same API as `env.os`. Test-only powers such as fake failures, global settlement, clocks, impossible-state construction, transport controls, and assertions remain outside this boundary. See [`api/README.md`](api/README.md).
+Production semantic OS capabilities and stable DTOs. `contracts.ts` is intentionally free of concrete Plasmon implementation and test dependencies; `createPlasmonOsApi()` binds the `OsApi` contract to the real service composition. High-level deterministic tests consume the same production API as `env.os`. Test-only powers such as fake failures, global settlement, clocks, impossible-state construction, transport controls, and assertions remain outside this boundary. See [`api/README.md`](api/README.md).
 
 ### `fs/`
 Filesystem service implementation, persistence/RPC boundary, bootstrap and reconciliation, protection/classification policy, projections, Trash/restore support, shortcuts, and filesystem-aware open dispatch.
@@ -66,7 +65,7 @@ Shared visual tokens, resource/app presentation, media/thumbnails, overlays, siz
 The OS should become easier to reason about by reducing orchestration inside large React surfaces and eliminating duplicate authorities. Prefer:
 
 - headless production models/services/controllers for deterministic actions;
-- production `OsApi` operations for high-level deterministic workflows that represent legitimate OS actions, while focused subsystem tests continue to call their subsystem directly;
+- production OS API operations for high-level deterministic workflows that represent legitimate OS actions, while focused subsystem tests continue to call their subsystem directly;
 - event/subscription boundaries that invalidate consumers without duplicating authoritative state;
 - one generic resource-opening path shared by Desktop, Explorer, Start, Search, and other consumers;
 - reusable interaction primitives for repeated desktop behaviors;
@@ -77,7 +76,7 @@ Feature-completeness work may use daedalOS as the inventory/reference, while Win
 
 ## Testing strategy
 
-Keep semantic tests close to the owning subsystem. Cross-subsystem deterministic workflows should exercise production composition and use `env.os` when the action is a legitimate OS capability. `env.os` is the production `OsApi`, not a test facade over service internals. Test-only controls for settlement, failures, time, transport, impossible state, or assertions belong beside that API in test support. Browser tests should concentrate on browser-only concerns such as DOM event routing, focus, pointer/drag behavior, iframe/media/runtime APIs, and packaged visible workflows. Package checks are required when the built Neutron artifact or installed asset graph is part of the change.
+Keep semantic tests close to the owning subsystem. Cross-subsystem deterministic workflows should exercise production composition and use `env.os` when the action is a legitimate OS capability. `env.os` exposes the production OS API (`OsApi`), not a test facade over service internals. Test-only controls for settlement, failures, time, transport, impossible state, or assertions belong beside that API in test support. Browser tests should concentrate on browser-only concerns such as DOM event routing, focus, pointer/drag behavior, iframe/media/runtime APIs, and packaged visible workflows. Package checks are required when the built Neutron artifact or installed asset graph is part of the change.
 
 Manual review remains part of acceptance for visual polish and interaction feel.
 
