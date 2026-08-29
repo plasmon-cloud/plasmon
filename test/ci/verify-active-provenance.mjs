@@ -7,16 +7,16 @@ const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const guardPath = "test/ci/verify-active-provenance.mjs";
 
 const activeInputs = Object.freeze([
+  "apps/plasmon/README.md",
+  "apps/plasmon/AGENTS.md",
+  "apps/plasmon/TESTING.md",
+  "apps/plasmon/docs",
   "apps/plasmon/src",
   "apps/plasmon/test",
   "test",
   ".github/workflows",
   "package.json",
   "apps/plasmon/package.json",
-]);
-
-const explicitHistoricalFiles = new Set([
-  "apps/plasmon/test/LUNA_POST_REFACTOR_RECONCILIATION.md",
 ]);
 
 const textExtensions = new Set([
@@ -64,12 +64,6 @@ function walkInput(input, root = repoRoot) {
   return files;
 }
 
-function isHistorical(path) {
-  return path.startsWith("docs/history/")
-    || path.includes("/docs/history/")
-    || explicitHistoricalFiles.has(path);
-}
-
 function isText(path) {
   return textExtensions.has(extname(path).toLowerCase());
 }
@@ -92,14 +86,6 @@ function allowedLine(path, line) {
   if (path === "test/ci/plasmon-quarantine.json" && /"repairIssue"\s*:\s*\d+/u.test(line)) {
     return true;
   }
-  // This test deliberately verifies migration from retired work-item-named docs into docs/history.
-  if (
-    path === "apps/plasmon/test/documentationBoundaries.test.ts"
-    && line.includes("apps/plasmon/docs/refactor/issue-")
-    && line.includes("apps/plasmon/docs/history/refactor-issue-")
-  ) {
-    return true;
-  }
   return false;
 }
 
@@ -119,7 +105,7 @@ function lineFailures(path, line) {
 export function scanActiveProvenance({ root = repoRoot, inputs = activeInputs } = {}) {
   const failures = [];
   const files = [...new Set(inputs.flatMap((input) => walkInput(input, root)))]
-    .filter((path) => path !== guardPath && !isHistorical(path))
+    .filter((path) => path !== guardPath)
     .sort((a, b) => a.localeCompare(b));
 
   for (const path of files) {
@@ -206,15 +192,6 @@ function selfTest() {
   }
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
     throw new Error("guard self-test lost the bounded quarantine repair-owner allowance");
-  }
-  if (!allowedLine(
-    "apps/plasmon/test/documentationBoundaries.test.ts",
-    '["apps/plasmon/docs/refactor/issue-191-red-packet.md", "apps/plasmon/docs/history/refactor-issue-191-red-packet.md"],',
-  )) {
-    throw new Error("guard self-test lost the bounded historical-document migration allowance");
-  }
-  if (!isHistorical("apps/plasmon/test/LUNA_POST_REFACTOR_RECONCILIATION.md")) {
-    throw new Error("guard self-test lost the explicit historical reconciliation boundary");
   }
 
   console.log("Active provenance guard self-test passed");
