@@ -1,0 +1,21 @@
+name: R2R3 #531 ready bridge
+
+on:
+  push:
+    branches:
+      - cleanup/r2r3-quarantine-model-v2
+    paths:
+      - .github/workflows/r2r3-531-ready.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ready:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark PR ready
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr ready 591 --repo "$GITHUB_REPOSITORY"
