@@ -41,10 +41,10 @@ jobs:
             npm ci
             node test/ci/verify-playwright-gate.mjs
 
-            # The named production Hackathon command owns the immutable
-            # competition artifact contract, including the actual archive-size
-            # and package-inventory gate. Keep these facts below Playwright.
-            npm --workspace neutron-plasmon run test:package:hackathon
+            # The named production Slim command owns the immutable constrained
+            # artifact contract, including the actual archive-size and package-
+            # inventory gate. Keep these facts below Playwright.
+            npm --workspace neutron-plasmon run test:package:slim
 
             npm run plasmon:local:prepare
             bun test apps/plasmon/test/package.test.ts
