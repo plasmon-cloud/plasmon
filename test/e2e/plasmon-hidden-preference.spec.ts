@@ -84,7 +84,7 @@ test("packaged Explorer persists Show hidden files through reopen and reload", a
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
-  const hiddenName = `.issue-110-hidden-${Date.now()}`;
+  const hiddenName = `.hidden-preference-${Date.now()}`;
 
   try {
     await page.goto(kernelUrl);
