@@ -117,7 +117,7 @@ The earlier GUI1/GUI2 visual analyses and design handoff are historical inputs u
 
 ### Atoms and collaboration
 
-Start with [`atoms/README.md`](atoms/README.md), which indexes the Atom design documents and states their relationship to current contracts and implementation.
+Start with [`atoms/README.md`](atoms/README.md) for the current Atom identity, revision, live-state/publication, and authorization model plus pointers to live contracts. Historical collaborative-Atom research and hackathon MVP scope are preserved under [`history/`](history/) as design provenance.
 
 For current Sharing implementation and its fail-closed MTN boundary, read [`../src/os/sharing/README.md`](../src/os/sharing/README.md).
 
