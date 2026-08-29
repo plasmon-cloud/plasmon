@@ -40,7 +40,7 @@ async function computed(locator: Locator, property: "backgroundColor" | "color" 
   return locator.evaluate((element, name) => getComputedStyle(element)[name], property);
 }
 
-test("#511 all six themes reach Shell, Desktop, Windowing, and representative native-app chrome", async ({ page }, testInfo) => {
+test("all six themes reach Shell, Desktop, Windowing, and representative native-app chrome", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -115,7 +115,7 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
     await expect(explorerAddress).toHaveValue("/Documents");
     await expect(explorer).toHaveAccessibleName("Documents");
 
-    const generatedName = `Issue 511 Theme Probe ${Date.now()}.md`;
+    const generatedName = `Theme Probe ${Date.now()}.md`;
     await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
     const generatedRename = explorer.locator('textarea[aria-label^="Rename New Markdown Document"]').last();
     await expect(generatedRename).toBeVisible();
@@ -215,7 +215,7 @@ test("#511 all six themes reach Shell, Desktop, Windowing, and representative na
 
       const scheme = await computed(shell, "colorScheme");
       expect(scheme).toContain(theme.scheme);
-      await testInfo.attach(`issue-511-${theme.id}.png`, {
+      await testInfo.attach(`theme-${theme.id}.png`, {
         body: await page.locator(appSelector).screenshot({ animations: "disabled" }),
         contentType: "image/png",
       });
