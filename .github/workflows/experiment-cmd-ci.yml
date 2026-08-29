@@ -1,0 +1,89 @@
+name: Experiment Cmd Run CI
+
+on:
+  push:
+    branches:
+      - experiment/cmd
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: experiment-cmd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout experiment
+        uses: actions/checkout@v6
+        with:
+          ref: experiment/cmd
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Apply pending experiment integration
+        if: ${{ hashFiles('tools/experiment_cmd_integrate.py') != '' }}
+        run: python3 tools/experiment_cmd_integrate.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Plasmon fast suite
+        run: npm --workspace neutron-plasmon test
+
+      - name: Build slim experiment
+        env:
+          PLASMON_PACKAGE_PROFILE: slim
+        run: npm --workspace neutron-plasmon run build
+
+      - name: Verify TypeScript worker is packaged
+        run: |
+          set -euxo pipefail
+          test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/editor.worker.js'
+          test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/ts.worker.js'
+          wc -c 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/editor.worker.js'
+          wc -c 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/ts.worker.js'
+
+      - name: Diff hygiene
+        run: git diff --check
+
+      - name: Commit verified integration
+        if: ${{ hashFiles('tools/experiment_cmd_integrate.py') != '' }}
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm tools/experiment_cmd_integrate.py
+          git add \
+            apps/plasmon/build.ts \
+            apps/plasmon/monacoWorkerTransport.ts \
+            apps/plasmon/src/native-apps/content-apps.ts \
+            apps/plasmon/src/native-apps/packaging.ts \
+            apps/plasmon/src/native-apps/shared/monaco/MonacoEditorHost.tsx \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.ts \
+            apps/plasmon/src/native-apps/terminal \
+            apps/plasmon/src/native-apps/text/TextEditor.tsx \
+            apps/plasmon/src/os/fs/resourcePolicy.ts \
+            apps/plasmon/src/os/integration/experimentalOsApi.ts \
+            apps/plasmon/src/os/integration/services.ts \
+            apps/plasmon/src/os/shell/preferences.ts \
+            apps/plasmon/src/os/visual/assets.ts \
+            apps/plasmon/src/scripting/run/monacoCompiler.ts \
+            apps/plasmon/src/scripting/run/monacoTypes.ts \
+            apps/plasmon/public/static/plasmon/icons/terminal.svg
+          git commit -m 'Experiment: integrate Terminal and run runtime'
+          git push origin HEAD:experiment/cmd
