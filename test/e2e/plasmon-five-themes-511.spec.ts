@@ -18,6 +18,9 @@ const THEMES = [
 // PocketIC and the installed app have an external startup boundary; all later
 // assertions synchronize on production DOM readiness or browser events.
 const EXTERNAL_STARTUP_TIMEOUT = 60_000;
+// Monaco's packaged editor worker loads after Shell readiness through the
+// Program Files runtime, so this is a worker-startup bound rather than a
+// routine surface wait.
 const MONACO_WORKER_TIMEOUT = 30_000;
 
 async function resolvedToken(locator: Locator, token: string): Promise<string> {
