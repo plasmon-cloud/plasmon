@@ -3,32 +3,31 @@ import { act, waitFor } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 /**
- * Adopted from Luna TDD-A's #191 RED packet. The sibling shared RTL guard
- * already covers click, Enter commit, context commands and activation. This
- * issue-scoped adapter characterization adds only Escape-cancellation wiring.
+ * The sibling shared RTL guard covers click, Enter commit, context commands,
+ * and activation. This adapter characterization adds Escape-cancellation wiring.
  */
 test("characterization wires Escape cancellation without mutating the NodeId resource", async () => {
   const app = await renderPlasmon();
   try {
     const desktop = await app.environment.node("/Desktop");
     if (!desktop || desktop.kind !== "directory") throw new Error("Desktop did not bootstrap");
-    const created = await act(async () => app.environment.services.fs.createFile(desktop.id, "Issue 191 Escape.txt", {
+    const created = await act(async () => app.environment.services.fs.createFile(desktop.id, "Escape Rename Fixture.txt", {
       mime: "text/plain",
     }));
 
-    const entry = await app.findByRole("option", { name: "Issue 191 Escape.txt" });
+    const entry = await app.findByRole("option", { name: "Escape Rename Fixture.txt" });
     await app.user.click(entry);
     expect(entry.getAttribute("aria-selected")).toBe("true");
     expect(entry.getAttribute("data-fm-node-id")).toBe(created.id);
 
     await app.user.keyboard("{F2}");
-    await app.findByRole("textbox", { name: "Rename Issue 191 Escape.txt" });
+    await app.findByRole("textbox", { name: "Rename Escape Rename Fixture.txt" });
     await app.user.keyboard("{Escape}");
-    await waitFor(() => expect(app.queryByRole("textbox", { name: "Rename Issue 191 Escape.txt" })).toBeNull());
+    await waitFor(() => expect(app.queryByRole("textbox", { name: "Rename Escape Rename Fixture.txt" })).toBeNull());
 
     const current = await app.environment.services.fs.stat(created.id);
     expect(current.id).toBe(created.id);
-    expect(current.name).toBe("Issue 191 Escape.txt");
+    expect(current.name).toBe("Escape Rename Fixture.txt");
   } finally {
     app.dispose();
   }
