@@ -406,12 +406,12 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   // preview/snap journey that flaked on the post-merge r2 release push. Keep
   // the preceding normalization proof and all following golden-path contracts
   // required. The isolated acceptance remains executable under
-  // @r2-quarantine/@issue-277 until deterministic restoration evidence exists.
+  // @quarantine/@issue-277 until deterministic restoration evidence exists.
 
   // Issue #244 tracks the quarantined snapped -> restore -> opposite-edge
   // right-snap journey. That acceptance is isolated in
   // plasmon-golden-path-right-snap.spec.ts and excluded only by the
-  // @r2-quarantine Specialist filter; the rest of this golden path remains
+  // @quarantine Specialist filter; the rest of this golden path remains
   // required.
 
   // Issue #42 visible boundary: create/open a real filesystem document through
@@ -459,7 +459,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   // Issue #251 tracks the quarantined repeated sibling-window lifetime cascade.
   // That acceptance is isolated in plasmon-golden-path-window-lifetime.spec.ts
-  // and excluded only by the @r2-quarantine Specialist filter; all preceding
+  // and excluded only by the @quarantine Specialist filter; all preceding
   // packaged golden-path contracts remain required.
 
   expect(pageErrors).toEqual([]);

@@ -186,5 +186,5 @@ for (const broadTarget of ["all", "specialist"]) {
 }
 
 console.log(
-  "Labeled 50-iteration exact-head dispatch, branch-transport/SHA-pin semantics, absolute quarantine exclusion, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
+  "Labeled 50-iteration exact-head dispatch, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
 );

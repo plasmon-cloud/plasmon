@@ -44,12 +44,12 @@ The selector records these as `unresolved_inputs`. Uncertainty **does not broade
 
 ## Quarantine is absolute
 
-`@r2-quarantine` means the acceptance is excluded from execution. Flake Probe does not use quarantine as an opt-in diagnostic lane.
+`@quarantine` means the acceptance is excluded from execution. Flake Probe does not use quarantine as an opt-in diagnostic lane.
 
-Automatic selection excludes changed or impacted acceptance files marked `@r2-quarantine`. In addition, every direct Playwright probe invocation applies:
+Automatic selection excludes changed or impacted acceptance files marked `@quarantine`. In addition, every direct Playwright probe invocation applies:
 
 ```text
---grep-invert @r2-quarantine
+--grep-invert @quarantine
 ```
 
 This is defense-in-depth: even if a quarantined test reaches a selected file unexpectedly, Playwright must not execute that test. The existing Specialist runner retains the same quarantine exclusion.
@@ -69,7 +69,7 @@ Target selection is deliberately narrow:
 3. Without an explicit directive, the label selector may reuse #409 selection only when exactly one Playwright file is resolved.
 4. If the target is absent or ambiguous, the label workflow fails closed and asks for an explicit target rather than launching fifty broad runs.
 
-`all` and `specialist` are rejected as label targets. Every exact or named direct target reaches the shared probe runner, which applies `--workers=1 --retries=0 --grep-invert @r2-quarantine`; therefore a quarantine tag remains an absolute execution exclusion even when the containing file or named boundary is requested.
+`all` and `specialist` are rejected as label targets. Every exact or named direct target reaches the shared probe runner, which applies `--workers=1 --retries=0 --grep-invert @quarantine`; therefore a quarantine tag remains an absolute execution exclusion even when the containing file or named boundary is requested.
 
 GitHub workflow dispatch requires a branch or tag as its transport ref. The label bridge therefore dispatches through the same-repository PR head branch while passing the immutable PR head SHA as the probe workflow's `ref` input. The probe checks out that exact SHA.
 
