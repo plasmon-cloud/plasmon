@@ -23,16 +23,16 @@ export interface CreatePlasmonOsApiOptions {
 }
 
 function requireAbsolutePath(path: string): void {
-  if (!path.startsWith("/")) throw new Error(`OsApi requires an absolute path: ${path}`);
+  if (!path.startsWith("/")) throw new Error(`OS API requires an absolute path: ${path}`);
 }
 
 function splitAbsolutePath(path: string): { parentPath: string; name: string } {
   if (!path.startsWith("/") || path === "/" || path.endsWith("/")) {
-    throw new Error(`OsApi requires an absolute non-root path: ${path}`);
+    throw new Error(`OS API requires an absolute non-root path: ${path}`);
   }
   const separator = path.lastIndexOf("/");
   const name = path.slice(separator + 1);
-  if (!name) throw new Error(`OsApi path has no resource name: ${path}`);
+  if (!name) throw new Error(`OS API path has no resource name: ${path}`);
   return {
     parentPath: separator === 0 ? "/" : path.slice(0, separator),
     name,
@@ -79,13 +79,13 @@ async function requireNode(services: PlasmonServices, path: string): Promise<FsN
   requireAbsolutePath(path);
   await services.filesystem.ready;
   const node = await services.fs.resolvePath(path);
-  if (!node) throw new Error(`OsApi path does not exist: ${path}`);
+  if (!node) throw new Error(`OS API path does not exist: ${path}`);
   return node;
 }
 
 async function requireDirectory(services: PlasmonServices, path: string): Promise<FsNode> {
   const node = await requireNode(services, path);
-  if (node.kind !== "directory") throw new Error(`OsApi path is not a directory: ${path}`);
+  if (node.kind !== "directory") throw new Error(`OS API path is not a directory: ${path}`);
   return node;
 }
 
@@ -98,17 +98,11 @@ async function requireParent(
   return { parent, name };
 }
 
-function openedProcess(
-  before: readonly ProcessRecord[],
-  after: readonly ProcessRecord[],
+function processForRequestedResource(
+  processes: readonly ProcessRecord[],
   requestedNodeId: string,
 ): ProcessRecord | undefined {
-  const beforeIds = new Set(before.map((process) => process.id));
-  return after.find(
-    (process) => !beforeIds.has(process.id) && process.target.nodeId === requestedNodeId,
-  ) ?? after.find(
-    (process) => !beforeIds.has(process.id),
-  ) ?? after.find(
+  return processes.find(
     (process) => process.target.nodeId === requestedNodeId && process.state !== "closing",
   );
 }
@@ -195,9 +189,8 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     open: async (path: string): Promise<OpenResult> => {
       const node = await requireNode(services, path);
       const resource = await toResource(services, node);
-      const before = services.process.list();
       await services.filesystem.open.openNode(node.id);
-      const process = openedProcess(before, services.process.list(), node.id);
+      const process = processForRequestedResource(services.process.list(), node.id);
       return {
         resource,
         ...(process ? {
