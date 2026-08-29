@@ -1,4 +1,7 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { plasmonBranchRole } from "./plasmon-ci-policy.mjs";
 import { selectLabeledProbe } from "./select-labeled-flake-probe.mjs";
 
@@ -29,6 +32,45 @@ function forbidFragment(source, fragment, label) {
   }
 }
 
+function workflowRunScript(source, stepName) {
+  const stepMarker = `      - name: ${stepName}\n`;
+  const stepStart = source.indexOf(stepMarker);
+  if (stepStart < 0) throw new Error(`Workflow lost step ${stepName}`);
+  const nextStep = source.indexOf("\n      - name:", stepStart + stepMarker.length);
+  const stepSource = source.slice(stepStart, nextStep < 0 ? source.length : nextStep);
+  const runMarker = "        run: |\n";
+  const runStart = stepSource.indexOf(runMarker);
+  if (runStart < 0) throw new Error(`Workflow step ${stepName} lost run block`);
+  return stepSource
+    .slice(runStart + runMarker.length)
+    .split(/\r?\n/u)
+    .map((line) => line.startsWith("          ") ? line.slice(10) : line)
+    .join("\n");
+}
+
+const scopeScript = workflowRunScript(labelWorkflow, "Check release integration scope");
+
+function runScopeScript(baseRef, headRepository = "plasmon-cloud/plasmon") {
+  const directory = mkdtempSync(join(tmpdir(), "plasmon-label-scope-"));
+  const outputPath = join(directory, "github-output");
+  try {
+    const result = spawnSync("bash", ["-c", scopeScript], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        BASE_REF: baseRef,
+        HEAD_REPOSITORY: headRepository,
+        GITHUB_REPOSITORY: "plasmon-cloud/plasmon",
+        GITHUB_OUTPUT: outputPath,
+      },
+    });
+    const output = existsSync(outputPath) ? readFileSync(outputPath, "utf8") : "";
+    return { status: result.status, stderr: result.stderr, output };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 for (const fragment of [
   "name: Plasmon Flake Probe Label Trigger",
   "types: [labeled, synchronize]",
@@ -39,8 +81,10 @@ for (const fragment of [
   "name: Check release integration scope",
   "HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}",
   'case "$BASE_REF" in',
+  "release/|release/*/*)",
   "release/*) ;;",
   "requires a same-repository PR",
+  "requires a single-segment release-role base branch",
   "requires a release-role base branch",
   "name: Checkout exact PR head for target selection",
   "ref: ${{ github.event.pull_request.head.sha }}",
@@ -80,11 +124,23 @@ for (const ref of ["release/candidate", "release/demo", "release/future"]) {
   if (plasmonBranchRole(ref) !== "release") {
     throw new Error(`Release-role policy rejected labeled-probe base ${ref}`);
   }
+  const result = runScopeScript(ref);
+  if (result.status !== 0 || !result.output.includes("eligible=true")) {
+    throw new Error(`Workflow release-role boundary rejected valid base ${ref}: ${result.stderr}`);
+  }
 }
 for (const ref of ["main", "feature/probe", "release/", "release/future/candidate"]) {
   if (plasmonBranchRole(ref) !== "unknown") {
     throw new Error(`Labeled-probe release policy must reject non-release base ${ref}`);
   }
+  const result = runScopeScript(ref);
+  if (result.status === 0 || result.output.includes("eligible=true")) {
+    throw new Error(`Workflow release-role boundary accepted invalid base ${ref}`);
+  }
+}
+const forkedHead = runScopeScript("release/candidate", "external/fork");
+if (forkedHead.status === 0 || forkedHead.output.includes("eligible=true")) {
+  throw new Error("Workflow same-repository boundary accepted a forked head");
 }
 
 for (const fragment of [
@@ -203,5 +259,5 @@ for (const broadTarget of ["all", "specialist"]) {
 }
 
 console.log(
-  "Labeled 50-iteration exact-head dispatch, release-role/same-repository eligibility, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
+  "Labeled 50-iteration exact-head dispatch, executable workflow release-role/same-repository eligibility, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
 );
