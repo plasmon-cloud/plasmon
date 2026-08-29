@@ -206,8 +206,8 @@ test("FileManager Download produces browser-owned bytes", async ({ page }) => {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
     const chooser = await importFiles(page, explorer);
-    const filename = `issue-107-download-${Date.now()}.txt`;
-    const expected = Buffer.from("Issue #107 browser download acceptance\n");
+    const filename = `download-acceptance-${Date.now()}.txt`;
+    const expected = Buffer.from("browser download acceptance\n");
     await chooser.setFiles({ name: filename, mimeType: "text/plain", buffer: expected });
 
     const files = explorer.getByRole("listbox", { name: "Files" });
@@ -240,8 +240,8 @@ test("visible Recycle Bin lifecycle restores one item and permanently deletes an
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
     const suffix = Date.now();
-    const restoreName = `Issue 107 Restore ${suffix}.txt`;
-    const deleteName = `Issue 107 Permanent ${suffix}.txt`;
+    const restoreName = `Recycle Restore ${suffix}.txt`;
+    const deleteName = `Recycle Permanent ${suffix}.txt`;
 
     const restoreSource = await createTextDocument(explorer, restoreName);
     await deleteEntry(restoreSource.toolbar, restoreSource.entry);
@@ -286,7 +286,7 @@ test("installed Video surfaces actionable native-codec failure for an invalid vi
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
     const chooser = await importFiles(page, explorer);
-    const filename = `issue-107-unsupported-${Date.now()}.webm`;
+    const filename = `unsupported-video-${Date.now()}.webm`;
     await chooser.setFiles({
       name: filename,
       mimeType: "video/webm",
