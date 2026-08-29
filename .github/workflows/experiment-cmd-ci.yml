@@ -39,6 +39,10 @@ jobs:
         if: ${{ hashFiles('tools/experiment_cmd_integrate.py') != '' }}
         run: python3 tools/experiment_cmd_integrate.py
 
+      - name: Apply experiment fixture fixes
+        if: ${{ hashFiles('tools/experiment_cmd_fix.py') != '' }}
+        run: python3 tools/experiment_cmd_fix.py
+
       - name: Install dependencies
         run: npm ci
 
@@ -67,14 +71,17 @@ jobs:
           set -euxo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm tools/experiment_cmd_integrate.py
+          git rm tools/experiment_cmd_integrate.py tools/experiment_cmd_fix.py
           git add \
             apps/plasmon/build.ts \
             apps/plasmon/monacoWorkerTransport.ts \
+            apps/plasmon/docs/documentation-boundaries.json \
             apps/plasmon/src/native-apps/content-apps.ts \
             apps/plasmon/src/native-apps/packaging.ts \
+            apps/plasmon/src/native-apps/packaging.test.ts \
             apps/plasmon/src/native-apps/shared/monaco/MonacoEditorHost.tsx \
             apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.ts \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts \
             apps/plasmon/src/native-apps/terminal \
             apps/plasmon/src/native-apps/text/TextEditor.tsx \
             apps/plasmon/src/os/fs/resourcePolicy.ts \
@@ -82,6 +89,7 @@ jobs:
             apps/plasmon/src/os/integration/services.ts \
             apps/plasmon/src/os/shell/preferences.ts \
             apps/plasmon/src/os/visual/assets.ts \
+            apps/plasmon/src/os/visual/visual.test.ts \
             apps/plasmon/src/scripting/run/monacoCompiler.ts \
             apps/plasmon/src/scripting/run/monacoTypes.ts \
             apps/plasmon/public/static/plasmon/icons/terminal.svg
