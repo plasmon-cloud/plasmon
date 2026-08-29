@@ -4,9 +4,9 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
-const FIXTURE = resolve(process.cwd(), "test/e2e/fixtures/thumbnail-94.webm");
+const FIXTURE = resolve(process.cwd(), "test/e2e/fixtures/video-thumbnail.webm");
 
-test("#94 — packaged FileManager extracts a bounded silent video frame and falls back on decode failure", async ({ page }) => {
+test("packaged FileManager extracts a bounded silent video frame and falls back on decode failure", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -16,7 +16,7 @@ test("#94 — packaged FileManager extracts a bounded silent video frame and fal
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #94; this gate exercises the real packaged FileManager video-thumbnail path",
+        reason: "Kernel-owned installed-app iframe warning is outside this video-thumbnail gate; it exercises the real packaged FileManager video-thumbnail path",
       },
     ],
   });
@@ -46,7 +46,7 @@ test("#94 — packaged FileManager extracts a bounded silent video frame and fal
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     await (await chooser).setFiles(FIXTURE);
 
-    const supported = explorer.locator("[data-fm-node-id]", { hasText: "thumbnail-94.webm" }).first();
+    const supported = explorer.locator("[data-fm-node-id]", { hasText: "video-thumbnail.webm" }).first();
     await expect(supported).toBeVisible({ timeout: 30_000 });
     await supported.scrollIntoViewIfNeeded();
     const thumbnail = supported.locator(".fm-entry__icon--video .plasmon-icon-frame--thumbnail img.plasmon-media-thumbnail");
@@ -63,12 +63,12 @@ test("#94 — packaged FileManager extracts a bounded silent video frame and fal
     const brokenChooser = page.waitForEvent("filechooser");
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     await (await brokenChooser).setFiles({
-      name: "thumbnail-94-broken.webm",
+      name: "video-thumbnail-broken.webm",
       mimeType: "video/webm",
       buffer: Buffer.from("not-a-video"),
     });
 
-    const broken = explorer.locator("[data-fm-node-id]", { hasText: "thumbnail-94-broken.webm" }).first();
+    const broken = explorer.locator("[data-fm-node-id]", { hasText: "video-thumbnail-broken.webm" }).first();
     await expect(broken).toBeVisible({ timeout: 30_000 });
     await broken.scrollIntoViewIfNeeded();
     await expect(broken.locator("img.plasmon-media-thumbnail")).toHaveCount(0, { timeout: 10_000 });
