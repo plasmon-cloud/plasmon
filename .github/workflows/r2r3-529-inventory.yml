@@ -1,6 +1,7 @@
-name: R2R3 #529 exact-head provenance inventory
+name: "R2R3 #529 exact-head provenance inventory"
 
 on:
+  pull_request:
   push:
     branches:
       - cleanup/r2r3-test-identities-v2
@@ -10,7 +11,6 @@ permissions:
 
 jobs:
   inventory:
-    if: github.event.head_commit.message == '#529 bootstrap exact-head provenance inventory'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +27,6 @@ jobs:
 
           roots = [Path('apps/plasmon/src'), Path('apps/plasmon/test'), Path('test')]
           text_suffixes = {'.ts','.tsx','.js','.mjs','.cjs','.json','.sh','.md','.yml','.yaml','.txt','.svg','.html','.css','.scss'}
-          test_file = re.compile(r'(?:^|/)(?:[^/]*(?:test|spec|characterization)[^/]*)$', re.I)
           path_issue = re.compile(r'(?i)(?:^|[/_.-])issue[-_]?\d+(?:[/_.-]|$)')
           path_pr = re.compile(r'(?i)(?:^|[/_.-])pr[-_]?\d+(?:[/_.-]|$)')
           numbered_spec = re.compile(r'-\d+\.spec\.(?:ts|tsx|js)$', re.I)
@@ -41,7 +40,6 @@ jobs:
               if not p.is_file():
                 continue
               s = p.as_posix()
-              # Filename/path candidates: executable tests plus test fixtures/evidence.
               if path_issue.search(s) or path_pr.search(s) or numbered_spec.search(s) or numbered_fixture.search(s):
                 paths.append(s)
           print('=== PATH CANDIDATES ===')
@@ -64,7 +62,6 @@ jobs:
               if not p.is_file() or p.suffix.lower() not in text_suffixes:
                 continue
               s = p.as_posix()
-              # #529 scans executable/source-test content and test artifacts, not ordinary production files/comments.
               active_testish = ('/test/' in '/' + s or '/test/' in s or '/test/e2e/' in '/' + s or p.name.endswith(('.test.ts','.test.tsx','.spec.ts','.spec.tsx','.test.js','.spec.js','.mjs','.sh')))
               if not active_testish:
                 continue
