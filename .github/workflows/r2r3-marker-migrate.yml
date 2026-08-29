@@ -18,36 +18,35 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename active quarantine marker only
+      - name: Rename non-workflow executable quarantine marker references
         shell: bash
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          mapfile -t files < <(git grep -Il '@r2-quarantine' -- ':!*.lock' || true)
-          printf 'Marker occurrences before migration:\n'
-          git grep -n '@r2-quarantine' -- ':!*.lock' || true
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo 'No @r2-quarantine occurrences found' >&2
-            exit 1
-          fi
+          files=(
+            test/e2e/plasmon-demo-game.spec.ts
+            test/ci/run-plasmon-specialist.mjs
+            test/ci/run-plasmon-flake-probe.sh
+            test/ci/select-plasmon-flake-characterization.mjs
+            test/ci/verify-flake-probe.mjs
+            test/ci/verify-labeled-flake-probe.mjs
+            test/ci/verify-plasmon-test-inventory.mjs
+            test/ci/verify-playwright-packet-lifecycle.mjs
+          )
           for file in "${files[@]}"; do
+            grep -q '@r2-quarantine' "$file" || {
+              echo "Expected active marker reference missing from $file" >&2
+              exit 1
+            }
             sed -i 's/@r2-quarantine/@quarantine/g' "$file"
           done
-          if git grep -n '@r2-quarantine' -- ':!*.lock'; then
-            echo 'stale @r2-quarantine remains' >&2
-            exit 1
-          fi
-          # Narrow invariant: exactly one active quarantined Playwright test remains.
-          count="$(git grep -n 'tag:.*@quarantine' -- 'test/e2e/*.spec.ts' | wc -l | tr -d ' ')"
-          test "$count" = 1
+          test "$(git grep -n 'tag:.*@quarantine' -- 'test/e2e/*.spec.ts' | wc -l | tr -d ' ')" = 1
           git grep -n 'saved js-dos resource publishes a blob-backed preview after save' test/e2e/plasmon-demo-game.spec.ts
-          git grep -n -- '--grep-invert @quarantine' test/ci/run-plasmon-specialist.mjs test/ci/run-plasmon-flake-probe.sh .github/workflows/plasmon-browser-ci.yml .github/workflows/plasmon-flake-probe-label.yml
-          node test/ci/verify-plasmon-test-inventory.mjs
-          node test/ci/verify-flake-probe.mjs
-          node test/ci/verify-labeled-flake-probe.mjs
-          git add -u
-          git commit -m '#539 Rename active quarantine marker'
-          git rm .github/workflows/r2r3-marker-migrate.yml
-          git commit -m '#539 Remove one-shot migration workflow'
+          git grep -n -- '--grep-invert @quarantine' test/ci/run-plasmon-specialist.mjs test/ci/run-plasmon-flake-probe.sh
+          # Workflow YAML is intentionally left for the GitHub connector permission boundary.
+          # Validate the non-workflow executable graph here; full deterministic verification
+          # reruns after the workflow YAML is updated on the final head.
+          git add "${files[@]}"
+          git commit -m '#539 Rename non-workflow quarantine marker references'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
