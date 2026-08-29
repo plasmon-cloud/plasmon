@@ -191,6 +191,11 @@
     padding: 8px 10px;
   }
   .plasmon-shell__grid > button:hover, .plasmon-shell__settings-panel > button:hover { background: var(--plasmon-control-hover); }
+  .plasmon-shell__grid > button[aria-pressed="true"], .plasmon-shell__settings-panel > button[aria-pressed="true"] {
+    background: var(--plasmon-selection);
+    border-color: var(--plasmon-selection-border);
+    color: var(--plasmon-text-primary);
+  }
   .plasmon-shell__start-panel .plasmon-shell__grid > button { align-items: center; display: flex; flex-direction: column; gap: 6px; min-height: 78px; }
 
   .plasmon-shell__list { display: grid; gap: 5px; }
