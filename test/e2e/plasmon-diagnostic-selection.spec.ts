@@ -38,9 +38,9 @@ test("diagnostic text selects without stealing FileEntry drag", async ({ page })
 
     // Keep the complete collision journey on the already-proven root Explorer
     // surface. `/Desktop` is a virtual desktop projection rather than a stable
-    // address-navigation boundary, so using it here would make #86 depend on an
-    // unrelated namespace contract. Capture generated names so retries remain
-    // independent of filesystem state left by an earlier attempt.
+    // address-navigation boundary, so using it here would couple this selection
+    // gate to an unrelated namespace contract. Capture generated names so retries
+    // remain independent of filesystem state left by an earlier attempt.
     const openFileManagerMenu = async () => {
       const position = await fileManager.evaluate((element) => {
         const rect = element.getBoundingClientRect();

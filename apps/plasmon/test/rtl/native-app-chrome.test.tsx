@@ -3,7 +3,7 @@ import { act } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 /**
- * Issue #112 is presentation convergence, not a new application framework.
+ * Presentation convergence is not a new application framework.
  * Exercise the real native-app/process composition and require representative
  * editor, media, and utility/system surfaces to consume the shared Visual
  * content-chrome vocabulary while retaining their own semantic controls.

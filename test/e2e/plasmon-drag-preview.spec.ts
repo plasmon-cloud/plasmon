@@ -86,10 +86,10 @@ test("active multi-selection drag preview is above windows and transparent to hi
     await expect(files.locator(".is-dragging")).toHaveCount(0);
 
     // The preview must not corrupt the existing directory-drop contract. Keep
-    // this proof inside one FileManager: cross-FileManager drag/drop is not part
-    // of #66 and would require a separate shared drag authority. Create a normal
-    // root document through Explorer, then move it into the existing Documents
-    // directory using that same Explorer FileManager's canonical pointer path.
+    // this proof inside one FileManager: cross-FileManager drag/drop would
+    // require a separate shared drag authority. Create a normal root document
+    // through Explorer, then move it into the existing Documents directory using
+    // that same Explorer FileManager's canonical pointer path.
     const explorerFiles = explorerWindow.getByRole("listbox", { name: "Files" });
     const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
     await commandBar.getByRole("button", { name: "New Text Document" }).click();

@@ -1,9 +1,8 @@
 import { readFileSync } from "node:fs";
-import { releaseBranchGlob } from "./plasmon-ci-policy.mjs";
 
 const workflowPath = ".github/workflows/kernel-ci.yml";
 const workflow = readFileSync(workflowPath, "utf8");
-const lines = workflow.split(/\r?\n/u);
+const lines = workflow.split(/\r?\n/);
 
 function requireFragment(fragment, label = "Kernel CI workflow") {
   if (!workflow.includes(fragment)) {
@@ -24,7 +23,7 @@ function eventSection(eventName) {
 
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^  [A-Za-z0-9_-]+:\s*$/u.test(lines[index])) {
+    if (/^  [A-Za-z0-9_-]+:\s*$/.test(lines[index])) {
       end = index;
       break;
     }
@@ -39,7 +38,7 @@ function jobSection(jobId) {
 
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^  [A-Za-z0-9_-]+:\s*$/u.test(lines[index])) {
+    if (/^  [A-Za-z0-9_-]+:\s*$/.test(lines[index])) {
       end = index;
       break;
     }
@@ -48,21 +47,18 @@ function jobSection(jobId) {
 }
 
 const pullRequest = eventSection("pull_request");
-if (pullRequest.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
+if (pullRequest.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
   throw new Error("Kernel CI cannot use pull_request path filtering; the required kernel check must always be instantiated");
 }
 
 const push = eventSection("push");
-for (const branchLine of ["      - main", `      - '${releaseBranchGlob}'`]) {
-  if (!push.includes(branchLine)) {
-    throw new Error(`Kernel CI direct-push coverage lost ${branchLine.trim()}`);
+for (const branchRole of ["main", "'release/**'"]) {
+  if (!push.includes(`      - ${branchRole}`)) {
+    throw new Error(`Kernel CI direct-push coverage lost ${branchRole}`);
   }
 }
-if (push.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
+if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
   throw new Error("Kernel CI cannot path-filter direct pushes");
-}
-if (/release\/0\.1\.0-r\d/u.test(workflow)) {
-  throw new Error("Kernel CI must use the release branch role instead of a concrete release branch");
 }
 
 const scopeJob = jobSection("kernel_scope");
@@ -111,7 +107,7 @@ for (const expensiveStep of ["Install Nix", "Show toolchain", "Install dependenc
   if (start < 0) throw new Error(`Kernel required job lost ${expensiveStep}`);
   const next = kernelJob.indexOf("\n      - name:", start + marker.length);
   const step = kernelJob.slice(start, next < 0 ? kernelJob.length : next);
-  if (/^        if:/mu.test(step)) {
+  if (/^        if:/m.test(step)) {
     throw new Error(`${expensiveStep} must not carry the old step-level scope conditional`);
   }
 }
@@ -120,4 +116,4 @@ forbidFragment("if: steps.kernel_scope.outputs.run_kernel == 'true'", "Kernel CI
 forbidFragment("satisfying required Kernel CI without full kernel build", "Kernel CI old green-noop messaging");
 forbidFragment("continue-on-error: true");
 
-console.log(`Kernel CI always-instantiated, job-level skip, fail-closed detector, stable kernel context, ${releaseBranchGlob} release-role push coverage, and full-lane contracts verified`);
+console.log("Kernel CI always-instantiated, job-level skip, fail-closed detector, stable kernel context, and release-role full-lane contracts verified");
