@@ -1,6 +1,5 @@
 # Games
 
-
 `src/games/` contains Plasmon-owned game content and bootstrap glue. It is not a parallel launcher, emulator shell, or resource-dispatch architecture.
 
 ## Architecture
@@ -65,12 +64,16 @@ Deterministic game metadata, bootstrap, association, save-state, and routing log
 
 A generated asset existing in build output is package evidence, not proof that the installed application serves or executes it correctly.
 
-## Deeper design
+## Current related authority
 
-See:
+- [`../native-apps/README.md`](../native-apps/README.md)
+- [`../native-apps/emulatorjs/README.md`](../native-apps/emulatorjs/README.md)
+- [`../native-apps/jsdos/README.md`](../native-apps/jsdos/README.md)
+- [`../os/fs/README.md`](../os/fs/README.md)
 
-- `../../docs/GAMES_DAEDALOS_ARCHITECTURE.md`
-- `../../docs/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md`
-- `../native-apps/emulatorjs/README.md`
-- `../native-apps/jsdos/README.md`
-- `../os/fs/README.md`
+## Historical design provenance
+
+The earlier daedalOS games research and the games correction to the original filesystem design are preserved as historical inputs, not current authority:
+
+- [`../../docs/history/GAMES_DAEDALOS_ARCHITECTURE.md`](../../docs/history/GAMES_DAEDALOS_ARCHITECTURE.md)
+- [`../../docs/history/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md`](../../docs/history/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md)

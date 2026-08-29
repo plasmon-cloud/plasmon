@@ -80,4 +80,4 @@ Specific regressions, compatibility exceptions, file-format minutiae, and active
 
 ## Further reading
 
-Read the nearest subsystem `README.md` and `AGENTS.md` before modifying it. Accepted design/history lives under `apps/plasmon/docs/`; repository Neutron behavior is documented under `/doc/`.
+Read the nearest subsystem `README.md` and `AGENTS.md` before modifying it. Current cross-subsystem Plasmon authority is indexed by `apps/plasmon/docs/README.md`; preserved release/refactor/design provenance is under `apps/plasmon/docs/history/`. Repository Neutron behavior is documented under `/doc/`.

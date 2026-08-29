@@ -34,7 +34,7 @@ It does **not** inspect filesystem resource semantics, choose handlers, classify
 
 Keep `Desktop.tsx` thin. When Desktop and FileManager diverge, prefer improving their shared presentation/model layer while keeping desktop-only concerns limited to workspace placement, background behavior, and desktop-specific interaction conventions.
 
-Do not add another per-surface resource presentation resolver or semantic resource authority while working on placement. The #191 pilot established that deterministic policy extraction is useful only when it preserves and consumes canonical domain seams.
+Do not add another per-surface resource presentation resolver or semantic resource authority while working on placement. Deterministic policy extraction is useful only when it preserves and consumes canonical domain seams.
 
 ## Testing
 
