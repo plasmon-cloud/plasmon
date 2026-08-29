@@ -37,7 +37,7 @@ function tokenValue(block: string, token: string): string {
   return block.match(new RegExp(`${escaped}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
 }
 
-test("#513 all six themes define distinct complete icon palettes", () => {
+test("all six themes define distinct complete icon palettes", () => {
   for (const themeId of themeIds) {
     const block = themeBlock(themeId);
     expect(block).not.toBe("");
@@ -50,7 +50,7 @@ test("#513 all six themes define distinct complete icon palettes", () => {
   }
 });
 
-test("#513 active icon palette reaches body-portaled owned artwork such as drag previews", () => {
+test("active icon palette reaches body-portaled owned artwork such as drag previews", () => {
   for (const themeId of themeIds) {
     expect(iconTokens).toContain(
       `:root:has(.plasmon-shell[data-plasmon-theme="${themeId}"])`,
@@ -58,14 +58,14 @@ test("#513 active icon palette reaches body-portaled owned artwork such as drag 
   }
 });
 
-test("#513 Graphite keeps grayscale icon structure with a colored accent", () => {
+test("Graphite keeps grayscale icon structure with a colored accent", () => {
   const graphite = themeBlock("plasmon-graphite");
   expect(tokenValue(graphite, "--plasmon-icon-primary")).toBe("#2c3137");
   expect(tokenValue(graphite, "--plasmon-icon-secondary")).toBe("#747b84");
   expect(tokenValue(graphite, "--plasmon-icon-accent")).toBe("#62c5e8");
 });
 
-test("#513 canonical Plasmon asset references resolve to owned semantic artwork", () => {
+test("canonical Plasmon asset references resolve to owned semantic artwork", () => {
   expect(plasmonOwnedAssetPresentation(FILE_TYPE_ICON_ASSETS.folder)).toEqual({
     kind: "file-type",
     icon: "folder",
@@ -77,7 +77,7 @@ test("#513 canonical Plasmon asset references resolve to owned semantic artwork"
   expect(plasmonOwnedAssetPresentation("/apps/example/custom-icon.svg")).toBeNull();
 });
 
-test("#513 first-party native identity stays owned while unknown/authored identity stays external", () => {
+test("first-party native identity stays owned while unknown/authored identity stays external", () => {
   expect(nativeHandlerResourcePresentation("native:explorer", SYSTEM_ICON_ASSETS["file-manager"])).toEqual({
     kind: "system",
     icon: "file-manager",
@@ -93,7 +93,7 @@ test("#513 first-party native identity stays owned while unknown/authored identi
   });
 });
 
-test("#513 production primitives inline owned SVG but preserve authored images", () => {
+test("production primitives inline owned SVG but preserve authored images", () => {
   expect(primitives).toContain("<OwnedSystemIcon icon={icon}");
   expect(primitives).toContain("<OwnedFileTypeIcon icon={icon}");
   expect(primitives).toContain("<OwnedShortcutOverlay");
