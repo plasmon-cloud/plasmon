@@ -12,7 +12,7 @@ export interface PlasmonOSProps {
 }
 
 /**
- * Integration-owned Wave 2 composition root. Native applications render in
+ * Integration-owned OS composition root. Native applications render in
  * Plasmon-managed windows; real Neutron Elements are only opened through the
  * Shell/NeutronBridge and remain Kernel-owned sibling tiles.
  */
