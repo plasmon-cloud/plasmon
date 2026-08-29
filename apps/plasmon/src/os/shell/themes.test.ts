@@ -57,7 +57,7 @@ function tokenValue(block: string, token: string): string {
   return block.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
 }
 
-test("#511 exposes exactly six stable, individually named Shell themes with Graphite as default", () => {
+test("exposes exactly six stable, individually named Shell themes with Graphite as default", () => {
   expect(SHELL_THEME_IDS).toEqual([
     "plasmon-graphite",
     "plasmon-verdant",
@@ -74,7 +74,7 @@ test("#511 exposes exactly six stable, individually named Shell themes with Grap
   expect(settingsSurface).toContain("SHELL_THEME_LABELS[themeId]");
 });
 
-test("#511 all six theme IDs remain valid filesystem-backed Shell preference values", () => {
+test("all six theme IDs remain valid filesystem-backed Shell preference values", () => {
   for (const themeId of SHELL_THEME_IDS) {
     expect(validateShellPreferences({
       version: 1,
@@ -96,7 +96,7 @@ test("#511 all six theme IDs remain valid filesystem-backed Shell preference val
   })?.themeId).toBe("plasmon-verdant");
 });
 
-test("#511 every theme overrides the complete shared color and elevation palette", () => {
+test("every theme overrides the complete shared color and elevation palette", () => {
   for (const themeId of SHELL_THEME_IDS) {
     const block = themeBlock(themeId);
     expect(block).not.toBe("");
@@ -109,7 +109,7 @@ test("#511 every theme overrides the complete shared color and elevation palette
   }
 });
 
-test("#511 Graphite is grayscale-led with a distinct colored accent", () => {
+test("Graphite is grayscale-led with a distinct colored accent", () => {
   const graphite = themeBlock("plasmon-graphite");
   expect(tokenValue(graphite, "--plasmon-window-background:")).toBe("#15171a");
   expect(tokenValue(graphite, "--plasmon-window-titlebar:")).toBe("#24272c");
@@ -117,7 +117,7 @@ test("#511 Graphite is grayscale-led with a distinct colored accent", () => {
   expect(tokenValue(graphite, "--plasmon-accent:")).toBe("#62c5e8");
 });
 
-test("#511 major assembled-surface colors are intentionally distinct across all six themes", () => {
+test("major assembled-surface colors are intentionally distinct across all six themes", () => {
   for (const token of [
     "--plasmon-desktop-background:",
     "--plasmon-window-background:",
@@ -132,7 +132,7 @@ test("#511 major assembled-surface colors are intentionally distinct across all 
   }
 });
 
-test("#511 FileManager and Explorer consume the shared theme palette rather than a fixed dark palette", () => {
+test("FileManager and Explorer consume the shared theme palette rather than a fixed dark palette", () => {
   for (const token of [
     "var(--plasmon-desktop-background)",
     "var(--plasmon-window-background)",
@@ -165,7 +165,7 @@ test("#511 FileManager and Explorer consume the shared theme palette rather than
   );
 });
 
-test("#511 Windowing consumes explicit native-window titlebar and content theme semantics", () => {
+test("Windowing consumes explicit native-window titlebar and content theme semantics", () => {
   for (const token of [
     "var(--plasmon-window-background)",
     "var(--plasmon-window-titlebar)",
