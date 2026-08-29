@@ -66,7 +66,6 @@ for (const fragment of [
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
 for (const fragment of [
-  "release/0.1.0-r2",
   "Check r2 scope",
   "target: 'all'",
   "target: 'specialist'",
@@ -77,12 +76,12 @@ for (const fragment of [
   forbidFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
 
-for (const ref of ["release/0.1.0-r2r3", "release/demo", "release/future/candidate"]) {
+for (const ref of ["release/candidate", "release/demo", "release/future"]) {
   if (plasmonBranchRole(ref) !== "release") {
     throw new Error(`Release-role policy rejected labeled-probe base ${ref}`);
   }
 }
-for (const ref of ["main", "feature/probe", "release/"]) {
+for (const ref of ["main", "feature/probe", "release/", "release/future/candidate"]) {
   if (plasmonBranchRole(ref) !== "unknown") {
     throw new Error(`Labeled-probe release policy must reject non-release base ${ref}`);
   }
