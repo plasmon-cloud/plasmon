@@ -125,7 +125,7 @@ Do not add broad Desktop/FileManager/Start/Search scripts merely because Playwri
 
 ### Real-browser persistence boundary
 
-`test/e2e/plasmon-persistence.spec.ts` is the browser-owned filesystem durability gate for #186. It deliberately stays above the headless repository tests because the contract depends on the lifetime of the real packaged resident background and browser profile.
+`test/e2e/plasmon-persistence.spec.ts` is the browser-owned filesystem durability gate. It deliberately stays above the headless repository tests because the contract depends on the lifetime of the real packaged resident background and browser profile.
 
 The supported automated journey is:
 
