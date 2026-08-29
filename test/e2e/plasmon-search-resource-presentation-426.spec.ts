@@ -124,7 +124,7 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   await expect(mediaRows).toHaveCount(3);
   const unavailableRow = mediaRows.filter({ hasText: "issue426-unavailable.png" });
   await expect(unavailableRow.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
-  await expect(unavailableRow.locator("img.plasmon-icon-art:not(.plasmon-media-thumbnail)")).toBeVisible();
+  await expect(unavailableRow.locator('[data-plasmon-owned-icon="file-type:image"]')).toBeVisible();
 
   const documentsTab = panel.getByRole("tab", { name: "Documents", exact: true });
   await documentsTab.click();
@@ -134,7 +134,7 @@ test("#426 Search keeps sparse rows compact and renders real resource thumbnails
   if (!documentBox) throw new Error("Document row geometry unavailable");
   expect(documentBox.height).toBeLessThanOrEqual(60);
   expect(documentBox.y - baselineResults.y).toBeLessThanOrEqual(2);
-  await expect(documentRows.first().locator(".plasmon-icon-frame--bare img.plasmon-icon-art")).toBeVisible();
+  await expect(documentRows.first().locator('.plasmon-icon-frame--bare [data-plasmon-owned-icon="file-type:text"]')).toBeVisible();
 
   for (const category of ["All", "Apps", "Documents", "Media", "Atoms"] as const) {
     const tab = panel.getByRole("tab", { name: category, exact: true });

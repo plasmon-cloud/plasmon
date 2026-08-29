@@ -1,33 +1,27 @@
 import type { ExternalElement } from "../contracts/index.ts";
 import { SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
-import { PinIcon } from "../visual/primitives.tsx";
+import { PinIcon, SystemIcon } from "../visual/primitives.tsx";
 import type { CalendarMonth } from "./calendar.ts";
 import { ShellIcon } from "./icon.tsx";
 import { nativeTaskContextProcessId } from "./interactions.ts";
 import type { PresentedTaskbarEntry, TrayEntry } from "./model.ts";
 import {
+  effectiveShellWallpaper,
   SHELL_TASKBAR_ALIGNMENTS,
   SHELL_THEME_IDS,
+  SHELL_THEME_LABELS,
+  SHELL_WALLPAPER_IDS,
+  SHELL_WALLPAPER_LABELS,
   type ShellPreferences,
   type ShellTaskbarAlignment,
   type ShellThemeId,
+  type ShellWallpaperPreference,
 } from "./preferences.ts";
 import type { ShellContextMenuState, ShellFlyout } from "./shell-coordination.ts";
 import { taskbarGroupChooserId } from "./TaskbarGroupChooser.tsx";
 
-function StartMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 32 32" aria-hidden="true">
-    <ellipse cx="16" cy="16" rx="13" ry="5" />
-    <ellipse cx="16" cy="16" rx="13" ry="5" transform="rotate(60 16 16)" />
-    <ellipse cx="16" cy="16" rx="13" ry="5" transform="rotate(120 16 16)" />
-    <circle cx="16" cy="16" r="2.3" className="plasmon-shell__system-icon-fill" />
-  </svg>;
-}
-
 export function SearchMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" />
-  </svg>;
+  return <SystemIcon icon="search" className="plasmon-shell__system-icon" />;
 }
 
 function TrayMark() {
@@ -119,23 +113,51 @@ export function SettingsSurface({
   preferences,
   preferencesReady,
   onSelectTheme,
-  onToggleWallpaper,
+  onSelectWallpaper,
+  onSetBrandWatermark,
   onSelectTaskbarAlignment,
 }: {
   preferences: ShellPreferences;
   preferencesReady: boolean;
   onSelectTheme(themeId: ShellThemeId): void;
-  onToggleWallpaper(): void;
+  onSelectWallpaper(wallpaper: ShellWallpaperPreference): void;
+  onSetBrandWatermark(visible: boolean): void;
   onSelectTaskbarAlignment(alignment: ShellTaskbarAlignment): void;
 }) {
+  const brandWatermarkVisible = preferences.showBrandWatermark !== false;
+  const selectedWallpaperId = effectiveShellWallpaper(preferences.themeId, preferences.wallpaper);
   return <section className="plasmon-shell__panel plasmon-shell__settings-panel" data-shell-owned-surface data-shell-flyout aria-label="Shell settings">
     <header><span>Plasmon storage</span><h2>Settings</h2></header>
     <h3>Theme</h3>
     <div className="plasmon-shell__grid">
-      {SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={preferences.themeId === themeId} onClick={() => onSelectTheme(themeId)}>{themeId === "plasmon-dark" ? "Plasmon Dark" : "Midnight"}</button>)}
+      {SHELL_THEME_IDS.map((themeId) => <button key={themeId} type="button" disabled={!preferencesReady} aria-pressed={preferences.themeId === themeId} onClick={() => onSelectTheme(themeId)}>{SHELL_THEME_LABELS[themeId]}</button>)}
     </div>
     <h3>Wallpaper</h3>
-    <button type="button" disabled={!preferencesReady} aria-pressed={preferences.wallpaper === "aurora"} onClick={onToggleWallpaper}>Aurora background: {preferences.wallpaper === "aurora" ? "On" : "Off"}</button>
+    <div className="plasmon-shell__grid plasmon-shell__wallpaper-grid">
+      <button
+        type="button"
+        disabled={!preferencesReady || preferences.wallpaper.mode === "follow-theme"}
+        aria-pressed={preferences.wallpaper.mode === "follow-theme"}
+        onClick={() => onSelectWallpaper({ mode: "follow-theme" })}
+      >Follow theme</button>
+      {SHELL_WALLPAPER_IDS.map((wallpaperId) => <button
+        key={wallpaperId}
+        type="button"
+        disabled={!preferencesReady || selectedWallpaperId === wallpaperId}
+        aria-pressed={preferences.wallpaper.mode === "pinned" && preferences.wallpaper.id === wallpaperId}
+        onClick={() => onSelectWallpaper({ mode: "pinned", id: wallpaperId })}
+      >{SHELL_WALLPAPER_LABELS[wallpaperId]}</button>)}
+    </div>
+    <p>Follow theme uses each theme&apos;s corresponding wallpaper. Choosing a wallpaper pins it across later theme changes.</p>
+    <h3>Desktop overlay</h3>
+    <button
+      type="button"
+      disabled={!preferencesReady}
+      aria-label="Show Plasmon watermark"
+      aria-pressed={brandWatermarkVisible}
+      onClick={() => onSetBrandWatermark(!brandWatermarkVisible)}
+    >Plasmon watermark: {brandWatermarkVisible ? "On" : "Off"}</button>
+    <p>The Plasmon SVG watermark is layered over every generated or raster wallpaper and can be hidden independently.</p>
     <h3>Taskbar alignment</h3>
     <div className="plasmon-shell__grid">
       {SHELL_TASKBAR_ALIGNMENTS.map((alignment) => <button key={alignment} type="button" disabled={!preferencesReady} aria-pressed={preferences.taskbarAlignment === alignment} onClick={() => onSelectTaskbarAlignment(alignment)}>{alignment === "center" ? "Center" : "Left"}</button>)}
@@ -217,7 +239,7 @@ export function TaskbarSurface({
 }) {
   return <nav className="plasmon-shell__taskbar" data-shell-owned-surface data-shell-taskbar data-taskbar-alignment={taskbarAlignment} aria-label="Taskbar">
     <div className="plasmon-shell__taskbar-main" data-shell-taskbar-main>
-      <button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => onToggleFlyout("start")}><StartMark /></button>
+      <button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Start" aria-expanded={flyout === "start"} onClick={() => onToggleFlyout("start")}><SystemIcon icon="start" className="plasmon-shell__system-icon" /></button>
       <button type="button" data-shell-flyout-toggle className="plasmon-shell__task-button" aria-label="Search" aria-expanded={flyout === "search"} onClick={() => onToggleFlyout("search")}><SearchMark /></button>
       <div className="plasmon-shell__tasks">{taskbarEntries.map((entry) => {
         const task = entry.presentation;

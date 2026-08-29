@@ -1,0 +1,14 @@
+/*
+ * Wallpaper is rendered by Shell beneath the workspace. The Desktop is a
+ * FileManager surface layered above it, so its outer canvas must stay
+ * transparent or it completely occludes the selected wallpaper while leaving
+ * only taskbar/theme chrome visibly changed.
+ *
+ * Keep this rule unlayered: FileManager's `.plasmon-desktop` background is
+ * also unlayered, while the generated wallpaper artwork itself lives in the
+ * `plasmon-shell` cascade layer.
+ */
+.plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-desktop,
+.plasmon-shell[class*="plasmon-shell--wallpaper-"] .fm-root--desktop {
+  background: transparent;
+}
