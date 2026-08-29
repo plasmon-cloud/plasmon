@@ -2,7 +2,8 @@ import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const TARGETED_PACKET_SIZE = 5;
+export const TARGETED_CHARACTERIZATION_PACKET_SIZE = 5;
+export const MERGE_VALIDATION_CHARACTERIZATION_COUNT = 10;
 
 const targetedPlaywrightTargets = new Set([
   "exact",
@@ -15,10 +16,13 @@ const targetedPlaywrightTargets = new Set([
   "saved-preview",
 ]);
 
-export function packetSizeForProbe({ iteration_count, target }) {
-  return iteration_count === 50 && targetedPlaywrightTargets.has(target)
-    ? TARGETED_PACKET_SIZE
-    : 1;
+export function packetSizeForProbe({ iteration_count, target, mode }) {
+  if (!targetedPlaywrightTargets.has(target)) return 1;
+  if (mode === "characterization" && iteration_count === MERGE_VALIDATION_CHARACTERIZATION_COUNT) {
+    return MERGE_VALIDATION_CHARACTERIZATION_COUNT;
+  }
+  if (iteration_count === 50) return TARGETED_CHARACTERIZATION_PACKET_SIZE;
+  return 1;
 }
 
 export function addProbePackets(include, config) {
@@ -62,10 +66,7 @@ export function buildProbeMatrix(env = process.env) {
     });
   }
 
-  if (
-    env.EVENT_NAME === "pull_request" &&
-    env.CHARACTERIZATION_APPLICABLE === "true"
-  ) {
+  if (env.CHARACTERIZATION_APPLICABLE === "true") {
     addProbePackets(include, {
       mode: "characterization",
       automatic_characterization: true,
