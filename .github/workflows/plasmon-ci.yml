@@ -38,6 +38,7 @@ jobs:
           set -euxo pipefail
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
+          node test/ci/verify-plasmon-quarantine.mjs
 
       - name: Verify flake-probe workflow contract
         run: |
