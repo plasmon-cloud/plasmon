@@ -1,0 +1,86 @@
+name: R2R3 #529 exact-head provenance inventory
+
+on:
+  push:
+    branches:
+      - cleanup/r2r3-test-identities-v2
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.event.head_commit.message == '#529 bootstrap exact-head provenance inventory'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/r2r3-test-identities-v2
+          fetch-depth: 1
+      - name: Scan active executable and test-artifact identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path('apps/plasmon/src'), Path('apps/plasmon/test'), Path('test')]
+          text_suffixes = {'.ts','.tsx','.js','.mjs','.cjs','.json','.sh','.md','.yml','.yaml','.txt','.svg','.html','.css','.scss'}
+          test_file = re.compile(r'(?:^|/)(?:[^/]*(?:test|spec|characterization)[^/]*)$', re.I)
+          path_issue = re.compile(r'(?i)(?:^|[/_.-])issue[-_]?\d+(?:[/_.-]|$)')
+          path_pr = re.compile(r'(?i)(?:^|[/_.-])pr[-_]?\d+(?:[/_.-]|$)')
+          numbered_spec = re.compile(r'-\d+\.spec\.(?:ts|tsx|js)$', re.I)
+          numbered_fixture = re.compile(r'(?i)(?:issue|pr)[-_]?\d+|[-_]\d+[-_].*\.(?:png|jpg|jpeg|webp|svg|webm|json|txt)$')
+
+          paths = []
+          for root in roots:
+            if not root.exists():
+              continue
+            for p in root.rglob('*'):
+              if not p.is_file():
+                continue
+              s = p.as_posix()
+              # Filename/path candidates: executable tests plus test fixtures/evidence.
+              if path_issue.search(s) or path_pr.search(s) or numbered_spec.search(s) or numbered_fixture.search(s):
+                paths.append(s)
+          print('=== PATH CANDIDATES ===')
+          for s in sorted(set(paths)):
+            print(s)
+
+          patterns = [
+            ('issue-tag', re.compile(r'@issue-\d+\b', re.I)),
+            ('pr-tag', re.compile(r'@pr-\d+\b', re.I)),
+            ('release-tag', re.compile(r'@r[23](?:[-_][A-Za-z0-9_-]+)?\b', re.I)),
+            ('numbered-test-title', re.compile(r'(?m)\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["\'`]#\d+\b')),
+            ('issue-resource', re.compile(r'(?i)\bissue[-_ ]\d+\b')),
+            ('pr-resource', re.compile(r'(?i)\bpr[-_ ]\d+\b')),
+          ]
+          print('=== CONTENT CANDIDATES ===')
+          for root in roots:
+            if not root.exists():
+              continue
+            for p in sorted(root.rglob('*')):
+              if not p.is_file() or p.suffix.lower() not in text_suffixes:
+                continue
+              s = p.as_posix()
+              # #529 scans executable/source-test content and test artifacts, not ordinary production files/comments.
+              active_testish = ('/test/' in '/' + s or '/test/' in s or '/test/e2e/' in '/' + s or p.name.endswith(('.test.ts','.test.tsx','.spec.ts','.spec.tsx','.test.js','.spec.js','.mjs','.sh')))
+              if not active_testish:
+                continue
+              try:
+                lines = p.read_text(errors='replace').splitlines()
+              except Exception:
+                continue
+              for i,line in enumerate(lines,1):
+                hits = [name for name,rx in patterns if rx.search(line)]
+                if hits:
+                  print(f'{s}:{i}:{",".join(hits)}:{line.strip()}')
+
+          pkg = Path('package.json')
+          if pkg.exists():
+            print('=== PACKAGE SCRIPT CANDIDATES ===')
+            for i,line in enumerate(pkg.read_text(errors='replace').splitlines(),1):
+              if re.search(r'(?i)(issue[-_ ]?\d+|@issue-\d+|pr[-_ ]?\d+|@pr-\d+|plasmon-[^" ]+-\d+\.spec)', line):
+                print(f'package.json:{i}:{line.strip()}')
+          PY
