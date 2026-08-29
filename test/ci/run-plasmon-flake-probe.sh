@@ -5,6 +5,7 @@ target="${1:-specialist}"
 test_file="${2:-}"
 test_grep="${3:-}"
 test_files_json="${4:-[]}"
+quarantine_marker="$(node test/ci/plasmon-quarantine.mjs --marker)"
 exact_files=()
 
 validate_exact_file() {
@@ -170,7 +171,7 @@ run_one() {
     npx playwright test \
       --workers=1 \
       --retries=0 \
-      --grep-invert @quarantine \
+      --grep-invert "$quarantine_marker" \
       "$@"
 }
 
