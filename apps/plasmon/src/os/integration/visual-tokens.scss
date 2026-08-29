@@ -17,6 +17,8 @@
     --plasmon-font-size-small: 11.5px;
     --plasmon-font-size-caption: 10.5px;
     --plasmon-font-size-title: 12px;
+    --plasmon-font-size-heading: 18px;
+    --plasmon-font-size-display: 24px;
     --plasmon-line-height-ui: 1.35;
 
     /* Core surfaces */
@@ -26,6 +28,8 @@
     --plasmon-window-background: #111820;
     --plasmon-window-titlebar: #18242b;
     --plasmon-taskbar-background: rgba(13, 24, 30, 0.91);
+    --plasmon-control-background: rgba(255, 255, 255, 0.055);
+    --plasmon-control-hover: rgba(255, 255, 255, 0.095);
 
     /* Borders */
     --plasmon-border-subtle: rgba(255, 255, 255, 0.11);
@@ -34,6 +38,7 @@
     /* Text */
     --plasmon-text-primary: #f5faf7;
     --plasmon-text-secondary: #a7b7b1;
+    --plasmon-text-subtle: #7f8b9c;
     --plasmon-text-disabled: #6f807a;
 
     /* State */
@@ -91,6 +96,22 @@
     --plasmon-surface-elevated: var(--plasmon-panel-elevated);
     --plasmon-text: var(--plasmon-text-primary);
     --plasmon-text-muted: var(--plasmon-text-secondary);
+  }
+
+  /* Theme variants override the same shared semantic vocabulary for every descendant surface. */
+  .plasmon-shell[data-plasmon-theme="plasmon-midnight"] {
+    --plasmon-desktop-background: #080a13;
+    --plasmon-panel-background: rgba(17, 17, 30, 0.95);
+    --plasmon-panel-elevated: #171725;
+    --plasmon-window-background: #10101b;
+    --plasmon-window-titlebar: #171725;
+    --plasmon-taskbar-background: rgba(11, 12, 23, 0.84);
+    --plasmon-accent: #b9abff;
+    --plasmon-accent-hover: #c8beff;
+    --plasmon-accent-ink: #15102b;
+    --plasmon-selection: rgba(185, 171, 255, 0.16);
+    --plasmon-selection-border: rgba(200, 190, 255, 0.34);
+    --plasmon-focus-ring: #d6d0ff;
   }
 
   html,
