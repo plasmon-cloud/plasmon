@@ -3,9 +3,9 @@
 // package builds explicitly disable those handlers. Unbundled tests retain the
 // full service graph through the fallback values below.
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
-const HACKATHON_PROFILE_DEFINE: boolean | undefined = typeof __PLASMON_HACKATHON_PROFILE__ === "undefined"
+const SLIM_PROFILE_DEFINE: boolean | undefined = typeof __PLASMON_SLIM_PROFILE__ === "undefined"
   ? undefined
-  : __PLASMON_HACKATHON_PROFILE__;
+  : __PLASMON_SLIM_PROFILE__;
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
 const GAME_RUNTIME_DEFINE: boolean | undefined = typeof __PLASMON_GAME_RUNTIME__ === "undefined"
   ? undefined
@@ -19,7 +19,7 @@ const DEMO_DEFINE: boolean | undefined = typeof __PLASMON_DEMO__ === "undefined"
   ? undefined
   : __PLASMON_DEMO__;
 
-export const isHackathonProfile = HACKATHON_PROFILE_DEFINE ?? false;
+export const isSlimProfile = SLIM_PROFILE_DEFINE ?? false;
 /**
  * @deprecated The accidental editor-less core package is no longer a supported
  * profile. Retain this consumer seam as false until downstream imports migrate.
