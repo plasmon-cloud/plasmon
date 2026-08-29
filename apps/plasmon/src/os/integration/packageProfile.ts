@@ -3,9 +3,9 @@
 // explicitly disable those handlers. Unbundled tests retain the full service
 // graph through the fallback values below.
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
-const CORE_PROFILE_DEFINE: boolean | undefined = typeof __PLASMON_CORE_PROFILE__ === "undefined"
+const HACKATHON_CORE_DEFINE: boolean | undefined = typeof __PLASMON_HACKATHON_CORE__ === "undefined"
   ? undefined
-  : __PLASMON_CORE_PROFILE__;
+  : __PLASMON_HACKATHON_CORE__;
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
 const GAME_RUNTIME_DEFINE: boolean | undefined = typeof __PLASMON_GAME_RUNTIME__ === "undefined"
   ? undefined
@@ -19,7 +19,7 @@ const DEMO_DEFINE: boolean | undefined = typeof __PLASMON_DEMO__ === "undefined"
   ? undefined
   : __PLASMON_DEMO__;
 
-export const isCoreProfile = CORE_PROFILE_DEFINE ?? false;
+export const isCoreProfile = HACKATHON_CORE_DEFINE ?? false;
 export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? !isCoreProfile;
 export const isSlimMonacoProfile = MONACO_SLIM_DEFINE ?? false;
 export const isDemoProfile = DEMO_DEFINE ?? false;

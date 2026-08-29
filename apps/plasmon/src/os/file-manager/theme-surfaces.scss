@@ -1,6 +1,6 @@
 // Theme-owned FileManager chrome that historically lived in polish.scss with
 // fixed dark/blue literals. Keep file-type artwork color out of this layer;
-// Plasmon-owned icon palette authority belongs to Visual (#513).
+// Visual owns the Plasmon-controlled icon palette.
 
 [data-plasmon-theme] .fm-entry__thumbnail {
   background: color-mix(in srgb, var(--plasmon-text-primary) 6%, transparent);
