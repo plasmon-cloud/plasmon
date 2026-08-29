@@ -105,7 +105,7 @@ describe(".cmd v1 command surface", () => {
     }
   });
 
-  test("transpiler emits readable factories for the frozen v1 commands", async () => {
+  test("transpiler emits readable factories and fail-fast checks for frozen v1 commands", async () => {
     const program = await new SimpleCmdParser().parse(
       "cp source.txt /Documents\ncat source.txt | head -n 1 | tee first.txt\nexit 3",
     );
@@ -114,5 +114,7 @@ describe(".cmd v1 command surface", () => {
     expect(run).toContain('commands.head(["-n","1"])');
     expect(run).toContain('commands.tee(["first.txt"])');
     expect(run).toContain('commands.exit(["3"])');
+    expect(run).toContain("if (__cmdResult0.exitCode !== 0)");
+    expect(run).toContain("commands.exit([String(__cmdResult0.exitCode)])");
   });
 });

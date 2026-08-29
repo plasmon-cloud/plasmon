@@ -26,6 +26,7 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [running, setRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const sessionRef = useRef<ScriptingSession | null>(null);
 
   const append = (tone: TerminalLine["tone"], text: string) => {
@@ -48,8 +49,11 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
     if (element) element.scrollTop = element.scrollHeight;
   }, [lines]);
 
-  const submit = async () => {
-    const source = input.trim();
+  const submit = async (sourceValue?: string) => {
+    // Use the element's live value when submission came directly from a key or
+    // form event. This avoids depending on a controlled-input render completing
+    // between a browser input event and an immediately following Enter event.
+    const source = (sourceValue ?? input).trim();
     if (!source || running) return;
     append("input", `${session.cwd}> ${source}`);
     setHistory((current) => [...current, source]);
@@ -68,7 +72,7 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
   const commandKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      void submit();
+      void submit(event.currentTarget.value);
       return;
     }
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
@@ -109,11 +113,12 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
         style={styles.prompt}
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
-          void submit();
+          void submit(inputRef.current?.value);
         }}
       >
         <span style={styles.cwd}>{session.cwd}&gt;</span>
         <input
+          ref={inputRef}
           autoFocus
           aria-label="Terminal command"
           value={input}

@@ -21,14 +21,20 @@ function commandExpression(command: CmdInvocation): string {
 export function transpileCmdToRun(program: CmdProgram): string {
   const lines: string[] = [
     "// Generated from .cmd. Ordinary TypeScript executes with an implicit RunContext.",
+    "// .cmd v1 is fail-fast: any non-zero pipeline status ends the script.",
   ];
 
+  let pipelineIndex = 0;
   for (const pipeline of program.pipelines) {
-    lines.push("await shell.pipeline([");
+    const resultName = `__cmdResult${pipelineIndex++}`;
+    lines.push(`const ${resultName} = await shell.pipeline([`);
     for (const command of pipeline.commands) lines.push(`  ${commandExpression(command)},`);
     lines.push(pipeline.stdoutPath
       ? `]).writeTo(${JSON.stringify(pipeline.stdoutPath)});`
       : "]).run();");
+    lines.push(`if (${resultName}.exitCode !== 0) {`);
+    lines.push(`  await shell.pipeline([commands.exit([String(${resultName}.exitCode)])]).run();`);
+    lines.push("}");
   }
 
   return `${lines.join("\n")}\n`;
