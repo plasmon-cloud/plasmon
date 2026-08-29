@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { resolvePackageProfile } from "./packageProfilePolicy.ts";
 
 const ALL_MONACO_WORKERS = [
   ["editor.worker.js", "monaco-editor/esm/vs/editor/editor.worker.js"],
@@ -9,8 +10,8 @@ const ALL_MONACO_WORKERS = [
   ["html.worker.js", "monaco-editor/esm/vs/language/html/html.worker.js"],
   ["ts.worker.js", "monaco-editor/esm/vs/language/typescript/ts.worker.js"],
 ] as const;
-const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
-const MONACO_WORKERS = packageProfile === "slim" || packageProfile === "demo"
+const packagePolicy = resolvePackageProfile();
+const MONACO_WORKERS = packagePolicy.monacoProfile === "slim"
   ? ALL_MONACO_WORKERS.slice(0, 1)
   : ALL_MONACO_WORKERS;
 
