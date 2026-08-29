@@ -22,7 +22,7 @@
     "test:e2e:package-updates:fresh": "npm run local:deploy && NEUTRON_E2E_WITH_II=1 npm run test:e2e:package-updates",
     "test:e2e:plasmon": "npm run test:e2e:plasmon:smoke && npm run test:e2e:plasmon:specialist",
     "test:e2e:plasmon:smoke": "node test/ci/run-plasmon-browser-lane.mjs smoke",
-    "test:e2e:plasmon:specialist": "node test/ci/run-plasmon-browser-lane.mjs specialist",
+    "test:e2e:plasmon:specialist": "node test/ci/run-plasmon-specialist.mjs",
     "test:e2e:plasmon:demo": "node test/ci/run-plasmon-browser-lane.mjs demo",
     "test:e2e:plasmon:persistence": "node test/ci/run-plasmon-browser-lane.mjs persistence",
     "test:e2e:plasmon:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon",
