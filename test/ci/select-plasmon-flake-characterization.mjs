@@ -247,23 +247,22 @@ export async function selectCharacterization({
   const ordinaryTargets = [...exactTargets].filter((path) =>
     !optionalCoreBrowserTests.includes(path),
   );
-  // The packet harness provisions one deployment per characterization. Keep a
-  // mixed changed-test set on the local profile so ordinary tests retain their
-  // strict BrowserHealth boundary; profile-specific tests are covered by the
-  // dedicated demo acceptance lane rather than silently run against local.
-  const deferredProfileTests = ordinaryTargets.length > 0
-    ? profileSpecificTargets.sort()
-    : [];
-  const files = (ordinaryTargets.length > 0 ? ordinaryTargets : profileSpecificTargets).sort();
+  // Profile-specific acceptances are owned by their dedicated package lane.
+  // Automatic characterization must not execute them against the slim/local
+  // package where optional game/emulator/full-profile payloads are absent.
+  const deferredProfileTests = profileSpecificTargets.sort();
+  const files = ordinaryTargets.sort();
   const unresolved = [...unresolvedInputs].sort();
   const excluded = [...excludedQuarantinedTests].sort();
 
   if (files.length === 0) {
-    const reason = excluded.length > 0 && unresolved.length === 0
-      ? "only-quarantined-playwright-changes"
-      : unresolved.length > 0
-        ? "no-deterministic-playwright-target"
-        : "no-relevant-playwright-change";
+    const reason = deferredProfileTests.length > 0 && unresolved.length === 0
+      ? "only-profile-specific-playwright-changes"
+      : excluded.length > 0 && unresolved.length === 0
+        ? "only-quarantined-playwright-changes"
+        : unresolved.length > 0
+          ? "no-deterministic-playwright-target"
+          : "no-relevant-playwright-change";
     return {
       applicable: false,
       reason,
