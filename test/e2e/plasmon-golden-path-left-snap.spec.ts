@@ -11,6 +11,7 @@ const TILE_ID = "main";
 
 test(
   "packaged Plasmon previews and commits left snap",
+  { tag: "@left-snap" },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
