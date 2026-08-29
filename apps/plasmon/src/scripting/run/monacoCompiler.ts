@@ -1,6 +1,6 @@
 import { installMonacoEnvironment } from "../../native-apps/shared/monaco/monacoEnvironment.ts";
-import { RUN_CONTEXT_DECLARATIONS } from "../os-api/declarations.ts";
 import type { RunCompileResult, RunCompiler } from "./compiler.ts";
+import { ensureRunContextTypes } from "./monacoTypes.ts";
 
 type DiagnosticLike = {
   code?: number;
@@ -30,11 +30,8 @@ export class MonacoRunCompiler implements RunCompiler {
     installMonacoEnvironment();
     const monaco = await import("monaco-editor");
     const defaults = monaco.languages.typescript.typescriptDefaults;
+    ensureRunContextTypes(monaco);
     if (!configured) {
-      declarationsDisposable = defaults.addExtraLib(
-        RUN_CONTEXT_DECLARATIONS,
-        "inmemory://plasmon-run/run-context.d.ts",
-      );
       defaults.setCompilerOptions({
         ...defaults.getCompilerOptions(),
         allowNonTsExtensions: true,
@@ -45,7 +42,6 @@ export class MonacoRunCompiler implements RunCompiler {
       });
       configured = true;
     }
-    void declarationsDisposable;
 
     const safeName = encodeURIComponent(filename.replace(/\.run$/u, ""));
     const uri = monaco.Uri.parse(`inmemory://plasmon-run/${++nextModelId}/${safeName}.ts`);

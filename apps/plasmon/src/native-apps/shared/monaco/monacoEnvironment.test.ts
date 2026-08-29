@@ -5,24 +5,27 @@ import {
   monacoWorkerPath,
 } from "./monacoEnvironment.ts";
 
-test("#391 slim Monaco maps language-service labels to the packaged editor worker", () => {
-  for (const label of ["editorWorkerService", "typescript", "javascript", "json", "css", "html"]) {
+test("slim Monaco packages TypeScript services for .run while other labels stay editor-only", () => {
+  for (const label of ["typescript", "javascript"]) {
+    expect(monacoWorkerFile(label, true)).toBe("ts.worker.js");
+  }
+  for (const label of ["editorWorkerService", "json", "css", "html"]) {
     expect(monacoWorkerFile(label, true)).toBe("editor.worker.js");
   }
 
   expect(monacoWorkerPath("typescript", true)).toBe(
-    "./System/Program Files/MonacoEditor/editor.worker.js",
+    "./System/Program Files/MonacoEditor/ts.worker.js",
   );
   expect(monacoWorkerBootstrapSource(
     "javascript",
-    { "editor.worker.js": "packaged editor worker bytes" },
+    { "ts.worker.js": "packaged TypeScript worker bytes" },
     true,
-  )).toBe("packaged editor worker bytes");
+  )).toBe("packaged TypeScript worker bytes");
 });
 
-test("#391 slim Monaco fails closed when its packaged editor worker source is absent", () => {
+test("slim Monaco fails closed when its packaged TypeScript worker source is absent", () => {
   expect(() => monacoWorkerBootstrapSource("typescript", {}, true)).toThrow(
-    "Missing packaged Monaco worker source: editor.worker.js",
+    "Missing packaged Monaco worker source: ts.worker.js",
   );
 });
 

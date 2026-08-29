@@ -98,7 +98,7 @@ test("required visual assets are present without inventing DOS or emulator syste
     "atom", "audio", "dos-changes", "emulator-save-state", "file", "folder", "game-save", "image", "jsdos", "markdown", "rom-game", "text", "video",
   ]);
   expect(Object.keys(SYSTEM_ICON_ASSETS).sort()).toEqual([
-    "application", "browser", "file-manager", "photos", "pin", "properties", "recycle-bin", "search", "settings", "start",
+    "application", "browser", "file-manager", "photos", "pin", "properties", "recycle-bin", "search", "settings", "start", "terminal",
   ]);
   expect("dos" in SYSTEM_ICON_ASSETS).toBe(false);
   expect("emulator" in SYSTEM_ICON_ASSETS).toBe(false);

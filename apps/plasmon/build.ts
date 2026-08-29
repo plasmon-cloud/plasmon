@@ -82,7 +82,7 @@ const config: BuildOptions = {
     ...(isHackathonCoreProfile
       ? []
       : isSlimMonacoProfile
-        ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
+        ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker") || out.endsWith("/ts.worker"))
         : monacoEntryPoints),
   ],
   outdir: "./dist/web",

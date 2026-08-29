@@ -24,7 +24,7 @@ export const externalUrlHandler: HandlerDefinition = { id: "external:url", kind:
 
 export const textAssociationRules: AssociationRule[] = [
   { id: "native:text:txt", handlerId: "native:text", extensions: [".txt"], mimeTypes: ["text/plain"], priority: 200 },
-  { id: "native:text:source", handlerId: "native:text", extensions: [".json", ".js", ".ts", ".tsx", ".jsx", ".css", ".html", ".htm", ".xml", ".yaml", ".yml", ".toml", ".md", ".markdown"], mimeTypes: ["text/*", "application/json", "application/xml", "application/javascript"], priority: 40 },
+  { id: "native:text:source", handlerId: "native:text", extensions: [".json", ".js", ".ts", ".tsx", ".jsx", ".run", ".cmd", ".css", ".html", ".htm", ".xml", ".yaml", ".yml", ".toml", ".md", ".markdown"], mimeTypes: ["text/*", "application/json", "application/xml", "application/javascript"], priority: 40 },
   { id: "text:wildcard", handlerId: "native:text", mimeTypes: ["*/*"], priority: -1_000_000 },
 ];
 export const markdownAssociationRules: AssociationRule[] = [

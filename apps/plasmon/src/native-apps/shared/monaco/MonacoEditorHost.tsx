@@ -13,6 +13,7 @@ import {
 } from "./editorModel.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
+import { ensureRunContextTypes } from "../../../scripting/run/monacoTypes.ts";
 import { PLASMON_MONACO_THEME_NAME, plasmonMonacoThemeData } from "./monacoTheme.ts";
 
 export const MONACO_ENGINE_NAME = "Monaco";
@@ -46,6 +47,7 @@ export interface MonacoEditorHostProps {
   ariaLabel: string;
   minimap?: boolean;
   wordWrap?: boolean;
+  runContextTypes?: boolean;
   onChange: (value: string) => void;
   onCursorChange?: (state: MonacoCursorState) => void;
   onReadyChange?: (ready: boolean) => void;
@@ -94,6 +96,7 @@ export function MonacoEditorHost({
   ariaLabel,
   minimap = false,
   wordWrap = false,
+  runContextTypes = false,
   onChange,
   onCursorChange,
   onReadyChange,
@@ -143,6 +146,7 @@ export function MonacoEditorHost({
         const container = containerRef.current;
         monacoRef.current = monaco;
         configureSlimLanguageServices(monaco);
+        if (runContextTypes) ensureRunContextTypes(monaco);
 
         const applyVisualTheme = () => {
           monaco.editor.defineTheme(
@@ -244,7 +248,7 @@ export function MonacoEditorHost({
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === ownedModel?.model) modelRef.current = null;
     };
-  }, [modelKey]);
+  }, [modelKey, runContextTypes]);
 
   useEffect(() => {
     const model = modelRef.current;

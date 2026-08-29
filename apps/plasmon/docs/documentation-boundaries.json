@@ -11,7 +11,8 @@
       "path": "apps/plasmon/src/native-apps",
       "children": "directories",
       "nonBoundaryChildren": [
-        "shared"
+        "shared",
+        "terminal"
       ]
     }
   ],

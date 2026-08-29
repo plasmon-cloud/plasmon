@@ -73,7 +73,14 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile } from "./packageProfile.ts";
+import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
+import { createExperimentalPlasmonOsApi } from "./experimentalOsApi.ts";
+import type { OsApi } from "../../scripting/os-api/types.ts";
+import { ScriptingService } from "../../scripting/service.ts";
+import {
+  createTerminalNativeLoader,
+  terminalAppDefinition,
+} from "../../native-apps/terminal/index.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -90,6 +97,8 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  os: OsApi;
+  scripting: ScriptingService;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -296,6 +305,7 @@ export function createPlasmonServices(
     fileClipboard,
     hiddenVisibility,
   );
+  if (!isCoreProfile) nativeApps.register(terminalAppDefinition);
 
   filesystem = createFilesystemCore({
     fs: rawFs,
@@ -307,6 +317,11 @@ export function createPlasmonServices(
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
+  const os = createExperimentalPlasmonOsApi({ fs, filesystem, process, windows });
+  const scripting = new ScriptingService({ os });
+  if (!isCoreProfile) {
+    nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
+  }
   nativeApps.setLoader(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
@@ -328,5 +343,7 @@ export function createPlasmonServices(
     fileClipboard,
     startMenu,
     hiddenVisibility,
+    os,
+    scripting,
   };
 }
