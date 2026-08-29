@@ -20,8 +20,11 @@ const DEMO_DEFINE: boolean | undefined = typeof __PLASMON_DEMO__ === "undefined"
   : __PLASMON_DEMO__;
 
 export const isHackathonProfile = HACKATHON_PROFILE_DEFINE ?? false;
-/** @deprecated Compatibility alias. New code should use isHackathonProfile. */
-export const isCoreProfile = isHackathonProfile;
-export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? !isHackathonProfile;
+/**
+ * @deprecated The accidental editor-less core package is no longer a supported
+ * profile. Retain this consumer seam as false until downstream imports migrate.
+ */
+export const isCoreProfile = false;
+export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? true;
 export const isSlimMonacoProfile = MONACO_SLIM_DEFINE ?? false;
 export const isDemoProfile = DEMO_DEFINE ?? false;
