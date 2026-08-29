@@ -15,6 +15,12 @@ import {
 } from './plasmon-quarantine.mjs';
 
 const args = new Set(process.argv.slice(2));
+const legacyQuarantineMarker = `@${['r2', 'quarantine'].join('-')}`;
+const quarantineGuidancePaths = [
+  '.github/workflows/README.md',
+  '.github/workflows/PLASMON_FLAKE_PROBE.md',
+  'test/ci/QUARANTINED_BROWSER_TESTS.md',
+];
 
 function sameSet(actual, expected) {
   return actual.length === expected.length && actual.every((value, index) => value === expected[index]);
@@ -112,6 +118,10 @@ async function verify(inventory) {
   const plasmonBrowserTests = inventory.filter((test) => test.layer === 'browser' || test.layer === 'browser-optional');
   for (const test of plasmonBrowserTests) {
     const source = await readFile(resolve(repoRoot, test.path), 'utf8');
+    assert(
+      !source.includes(legacyQuarantineMarker),
+      `${test.path} must not reference the release-numbered quarantine marker`,
+    );
     const quarantineTags = quarantineTagBlocks(source);
     const expected = activeQuarantines.filter((entry) => entry.path === test.path);
     assert(
@@ -153,6 +163,15 @@ async function verify(inventory) {
   assert(quarantineDoc.includes('saved-jsdos-preview-publication'), 'Quarantine documentation must describe the active semantic debt');
   assert(quarantineDoc.includes('#304'), 'Quarantine documentation must retain the current repair owner');
   assert(!/run [`#]?\d{8,}/i.test(quarantineDoc), 'Current quarantine documentation must not embed historical workflow-run identities');
+
+  for (const guidancePath of quarantineGuidancePaths) {
+    const guidance = await readFile(resolve(repoRoot, guidancePath), 'utf8');
+    assert(
+      !guidance.includes(legacyQuarantineMarker),
+      `${guidancePath} must not reference the release-numbered quarantine marker`,
+    );
+    assert(guidance.includes('@quarantine'), `${guidancePath} must use the fixed release-neutral @quarantine marker`);
+  }
 
   const fastWorkflow = await readFile(resolve(repoRoot, '.github/workflows/plasmon-ci.yml'), 'utf8');
   assertAlwaysRunPrWorkflow(fastWorkflow, 'Fast Bun tests');
