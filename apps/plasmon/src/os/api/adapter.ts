@@ -11,6 +11,17 @@ import type {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
+export interface CreatePlasmonOsApiOptions {
+  /**
+   * Production authority composition backing this API instance. The current
+   * service facades already enforce their owning policy (for example protected
+   * filesystem mutation). A future script-specific authority belongs on this
+   * construction context only when a real production authorization contract
+   * exists; do not invent a test-only capability token here.
+   */
+  services: PlasmonServices;
+}
+
 function splitAbsolutePath(path: string): { parentPath: string; name: string } {
   if (!path.startsWith("/") || path === "/" || path.endsWith("/")) {
     throw new Error(`OsApi requires an absolute non-root path: ${path}`);
@@ -100,7 +111,8 @@ function openedProcess(
  * filesystem protection, associations, opening, process lifecycle and windows;
  * this adapter does not recreate those policies.
  */
-export function createPlasmonOsApi(services: PlasmonServices): OsApi {
+export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
+  const { services } = options;
   const fs = {
     stat: async (path: string): Promise<OsResource | null> => {
       await services.filesystem.ready;
