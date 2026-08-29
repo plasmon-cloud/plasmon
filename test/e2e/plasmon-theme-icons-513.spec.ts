@@ -35,7 +35,7 @@ async function computedFill(locator: Locator): Promise<string> {
   return locator.evaluate((element) => getComputedStyle(element).fill);
 }
 
-test("#513 visible, native-window, and dragged owned icons actually recolor across all six themes", async ({ page }) => {
+test("#513 visible, native-window, and dragged owned icons actually recolor across all six themes", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -155,6 +155,10 @@ test("#513 visible, native-window, and dragged owned icons actually recolor acro
       await expect(previewPrimary).toHaveCount(1);
       await expect.poll(() => computedFill(previewPrimary)).toBe(expectedPrimary);
       observedDragFills.add(await computedFill(previewPrimary));
+      await testInfo.attach(`issue-513-${theme.id}.png`, {
+        body: await page.locator(appSelector).screenshot({ animations: "disabled" }),
+        contentType: "image/png",
+      });
 
       await page.keyboard.press("Escape");
       await expect(preview).toHaveCount(0);
