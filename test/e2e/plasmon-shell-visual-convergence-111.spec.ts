@@ -41,7 +41,7 @@ async function resolvedBorder(surface: Locator, token: string): Promise<string> 
   }, token);
 }
 
-test("#111 — packaged Shell and native content inherit one shared visual theme", async ({ page }) => {
+test("#111 — packaged Shell and native content inherit one shared visual theme", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -155,6 +155,10 @@ test("#111 — packaged Shell and native content inherit one shared visual theme
     await expectSemanticBackground(contextMenu, "--plasmon-panel-elevated");
     await expect(contextMenu).toHaveCSS("border-color", await resolvedBorder(contextMenu, "--plasmon-border-strong"));
 
+    await testInfo.attach("issue-111-shell-visual-review.png", {
+      body: await page.locator(PLASMON_FRAME).screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    });
     health.assertClean();
   } finally {
     health.dispose();
