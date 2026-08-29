@@ -1,6 +1,5 @@
 # Plasmon demo deployment content
 
-
 This directory owns non-game content enabled by the Plasmon `demo` package profile.
 
 ## Demo content
@@ -25,4 +24,4 @@ The Markdown file contains representative headings, lists, a task list, a table,
 
 All three assets are authored directly in this repository for the Plasmon demo environment and require no external download or license grant.
 
-Game/demo-runtime fixtures are deliberately not owned here. Issue #121 retains separate game/runtime fixture ownership.
+Game and emulator runtime fixtures are deliberately owned by their runtime/demo-game subsystem rather than this non-game content directory.
