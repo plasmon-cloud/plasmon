@@ -184,6 +184,7 @@ for (const fragment of [
   "iteration_count: 50",
   "files_json",
   "no-deterministic-playwright-target",
+  "only-profile-specific-playwright-changes",
   "only-quarantined-playwright-changes",
   "no-relevant-playwright-change",
 ]) {
@@ -251,7 +252,6 @@ for (const fragment of [
   "does not broaden",
   "Flake characterization summary",
   "not proof that the target cannot flake",
-  "#448",
 ]) {
   requireFragment(probeDoc, fragment, "flake-probe characterization documentation");
 }
@@ -276,9 +276,9 @@ function assertNoFullyQuarantinedFiles(selection, label) {
 }
 
 async function verifyCharacterizationSelection() {
-  const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
+  const first = "test/e2e/plasmon-start-inventory.spec.ts";
   const second = "test/e2e/plasmon-neutron-icon.spec.ts";
-  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome-112.spec.ts";
+  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome.spec.ts";
 
   const oneChanged = await selectCharacterization({ changedFiles: [first] });
   if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
@@ -310,6 +310,16 @@ async function verifyCharacterizationSelection() {
     throw new Error("mixed profile changes must characterize ordinary tests locally and defer profile-specific tests");
   }
   assertNoFullyQuarantinedFiles(mixedProfiles, "mixed profile selection");
+
+  const profileOnly = await selectCharacterization({ changedFiles: [profileSpecific] });
+  if (
+    profileOnly.applicable ||
+    profileOnly.reason !== "only-profile-specific-playwright-changes" ||
+    profileOnly.files.length !== 0 ||
+    !profileOnly.deferred_profile_tests.includes(profileSpecific)
+  ) {
+    throw new Error("profile-only changes must defer to the dedicated profile lane without local characterization");
+  }
 
   const syntheticPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";
   const syntheticSource = [
@@ -625,5 +635,5 @@ verifyLegacyResultCompatibility();
 verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec preservation, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec preservation, profile-lane deferral, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );
