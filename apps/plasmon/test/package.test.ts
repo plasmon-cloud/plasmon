@@ -8,7 +8,7 @@ import {
 import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
-import { DEMO_PAYLOAD_MARKERS, HACKATHON_MAX_BYTES } from "../hackathonPackageGate.ts";
+import { DEMO_PAYLOAD_MARKERS, SLIM_MAX_BYTES } from "../slimPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
 const manifestUrl = new URL("../neutron.json", import.meta.url);
@@ -68,10 +68,10 @@ test("plasmon package output matches the source manifest archive identity", asyn
     .sort();
 
   expect(archives).toEqual([expectedArchive]);
-  if (packagePolicy.isHackathon) {
+  if (packagePolicy.isSlim) {
     const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
-    console.log(`Hackathon package test size: ${archiveStats.size} bytes`);
-    expect(archiveStats.size).toBeLessThan(HACKATHON_MAX_BYTES);
+    console.log(`Slim package test size: ${archiveStats.size} bytes`);
+    expect(archiveStats.size).toBeLessThan(SLIM_MAX_BYTES);
   }
 });
 
@@ -139,7 +139,7 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   const sources = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string>;
   expect(Object.keys(sources).sort()).toEqual([...monacoWorkers].sort());
 
-  if (packagePolicy.isHackathon) {
+  if (packagePolicy.isSlim) {
     expect(packagePolicy.isDemo).toBe(false);
     const mainBundle = await readFile(mainBundleUrl, "utf8");
     for (const marker of DEMO_PAYLOAD_MARKERS) {
