@@ -118,6 +118,9 @@ async function verify(inventory) {
       quarantineTags.length === expected.length,
       `${test.path} has ${quarantineTags.length} @quarantine tag(s), but active quarantine inventory authorizes ${expected.length}`,
     );
+    for (const block of quarantineTags) {
+      assert(!/@issue-\d+/.test(block), `${test.path} active @quarantine tag block must use semantic tags, not Issue-number tags`);
+    }
     for (const entry of expected) {
       assert(source.includes(`"${entry.selectorTag}"`) || source.includes(`'${entry.selectorTag}'`), `${entry.id} semantic selector ${entry.selectorTag} is missing from ${entry.path}`);
     }
