@@ -1,15 +1,14 @@
 # Shared Monaco browser-runtime host
 
-
 This directory is the single Monaco browser adapter consumed by the first-party Text and Markdown document applications.
 
 - `MonacoEditorHost.tsx` owns the concrete browser/editor lifecycle: Monaco import/create/dispose, per-live-surface model ownership, loading/ready/error presentation, focus/layout, value synchronization, and language updates.
 - `editorModel.ts` owns deterministic model ownership/URI and canonical resource-to-Monaco language policy.
-- `monacoEnvironment.ts` consumes the #89 packaged worker transport. `/System/Program Files/MonacoEditor` remains the logical worker-runtime authority; the opaque-origin transport adapter does not become a second authority.
+- `monacoEnvironment.ts` consumes the packaged worker transport. `/System/Program Files/MonacoEditor` remains the logical worker-runtime authority; the opaque-origin transport adapter does not become a second authority.
 
-The r2 slim package intentionally ships only `editor.worker.js`. Every Monaco worker label, including TypeScript/JavaScript language-service labels, resolves to that Program Files editor-worker source in slim mode, while the opaque Neutron frame receives byte-identical preloaded bytes through the `blob:` compatibility transport. The packaged browser acceptance compares the URL-safe HTTP mirror and opaque preload with the package's Program Files output on disk. The URL-safe mirror is the supported R2 browser transport; direct certified HTTP exposure of the space-containing path is deferred to R3 issue #546 and its Kernel contract #545. JavaScript language classification and syntax tokenization remain required editor behavior even though the heavyweight `ts.worker.js` language-service payload is omitted.
+The slim package intentionally ships only `editor.worker.js`. Every Monaco worker label, including TypeScript/JavaScript language-service labels, resolves to that Program Files editor-worker source in slim mode, while the opaque Neutron frame receives byte-identical preloaded bytes through the `blob:` compatibility transport. Packaged browser acceptance compares the URL-safe HTTP mirror and opaque preload with the package's Program Files output on disk. The URL-safe mirror is the current browser compatibility transport. JavaScript language classification and syntax tokenization remain required editor behavior even when the heavyweight `ts.worker.js` language-service payload is omitted.
 
-The historical #89 requirement for dedicated full TypeScript/JavaScript language-service workers is therefore **FUTURE/SUPERSEDED for r2**. Product parity is owned by #527 and is blocked by the #526 profile/size guarantee; #370 owns only the later heavyweight/on-demand runtime-delivery architecture. Full-profile worker mapping remains supported as profile-specific policy and must not be restored to the slim artifact merely to satisfy the obsolete acceptance.
+Dedicated full TypeScript/JavaScript language-service workers belong to the full-profile policy rather than the slim artifact. Full-profile worker mapping remains supported as profile-specific policy and must not be restored to the slim package merely to satisfy a capability that profile intentionally omits. Any future heavyweight or on-demand worker-delivery mechanism must preserve Program Files as the logical runtime authority rather than creating a second configuration source.
 
 The host does **not** own filesystem/document persistence, dirty/conflict state, Save/Save As/autosave, Process close negotiation, Text/Markdown commands, Markdown preview, or application chrome. Those remain with the document applications and their existing canonical services.
 
