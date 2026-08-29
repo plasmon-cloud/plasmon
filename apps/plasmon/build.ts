@@ -96,7 +96,7 @@ const config: BuildOptions = {
   outExtension: { ".css": ".bundle.css" },
   platform: "browser",
   define: {
-    __PLASMON_HACKATHON_PROFILE__: JSON.stringify(packagePolicy.isHackathon),
+    __PLASMON_SLIM_PROFILE__: JSON.stringify(packagePolicy.isSlim),
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
