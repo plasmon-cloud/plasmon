@@ -49,7 +49,7 @@ test("Explorer activates the standard Documents directory", async ({ page }) => 
 
   // Create the observed resource in the destination, proving that the
   // directory is live and user-editable.
-  const fileName = `Issue 405 ${Date.now()}.txt`;
+  const fileName = `Explorer Documents ${Date.now()}.txt`;
   await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
   const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
   await expect(rename).toBeVisible();
