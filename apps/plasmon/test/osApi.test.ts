@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
 
-describe("production OsApi in headless composition", () => {
+describe("production OS API in headless composition", () => {
   test("creates, replaces, reads, stats, and lists user resources through filesystem policy", async () => {
     const env = createHeadlessPlasmonEnvironment();
 
@@ -54,6 +54,54 @@ describe("production OsApi in headless composition", () => {
     }
   });
 
+  test("copies, moves, and removes resources through canonical filesystem authorities", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      const source = await env.os.fs.writeText("/Desktop/transfer.txt", "transfer value");
+      const moveTarget = await env.os.fs.createDirectory("/Desktop/Move Target");
+
+      const copied = await env.os.fs.copy(source.path, "/Documents");
+      expect(copied.id).not.toBe(source.id);
+      expect(copied.path).toBe("/Documents/transfer.txt");
+      expect(await env.os.fs.readText(copied.path)).toBe("transfer value");
+      expect(await env.os.fs.exists(source.path)).toBe(true);
+
+      const moved = await env.os.fs.move(source.path, moveTarget.path);
+      expect(moved.id).toBe(source.id);
+      expect(moved.path).toBe(`${moveTarget.path}/transfer.txt`);
+      expect(await env.os.fs.exists(source.path)).toBe(false);
+      expect(await env.os.fs.readText(moved.path)).toBe("transfer value");
+
+      await env.os.fs.remove(moved.path);
+      expect(await env.os.fs.exists(moved.path)).toBe(false);
+      const trashEntries = await env.services.filesystem.trash.list();
+      expect(trashEntries.some(
+        (entry) => entry.node.id === moved.id && entry.originalPath === moved.path,
+      )).toBe(true);
+    } finally {
+      env.dispose();
+    }
+  });
+
+  test("filesystem mutations do not bypass protected product policy", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      await expect(
+        env.os.fs.writeText("/System/forbidden.txt", "must not be created"),
+      ).rejects.toThrow("system-managed");
+      expect(await env.os.fs.exists("/System/forbidden.txt")).toBe(false);
+
+      await expect(env.os.fs.remove("/System/FileManager.sys")).rejects.toThrow("protected");
+      expect(await env.os.fs.exists("/System/FileManager.sys")).toBe(true);
+    } finally {
+      env.dispose();
+    }
+  });
+
   test("opens a resource through canonical dispatch and reports native process/window outcomes", async () => {
     const env = createHeadlessPlasmonEnvironment();
 
@@ -85,20 +133,6 @@ describe("production OsApi in headless composition", () => {
         minimized: false,
         maximized: false,
       });
-    } finally {
-      env.dispose();
-    }
-  });
-
-  test("does not bypass protected filesystem policy", async () => {
-    const env = createHeadlessPlasmonEnvironment();
-
-    try {
-      await env.ready;
-      await expect(
-        env.os.fs.writeText("/System/forbidden.txt", "must not be created"),
-      ).rejects.toThrow("system-managed");
-      expect(await env.os.fs.exists("/System/forbidden.txt")).toBe(false);
     } finally {
       env.dispose();
     }
