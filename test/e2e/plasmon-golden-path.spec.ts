@@ -65,10 +65,9 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(app.getByRole("button", { name: "Start" })).toBeVisible();
   await expect(app.getByRole("button", { name: "Search" })).toBeVisible();
 
-  // Issues #95/#361 browser boundary: normal Desktop names remain compact;
-  // selected/focused names keep the pointer-inert overlay ownership from #95
-  // but are now horizontally bounded to the owning tile and wrap vertically.
-  // Neither state may change the icon entry's fixed collision geometry.
+  // Normal Desktop names remain compact; selected/focused names keep their
+  // pointer-inert overlay while remaining horizontally bounded to the owning
+  // tile and wrapping vertically. Neither state may change fixed collision geometry.
   const desktopFiles = app.locator(".fm-root--desktop").first();
   await expect(desktopFiles).toBeVisible({ timeout: 30_000 });
   const desktopBounds = await desktopFiles.boundingBox();
@@ -161,8 +160,8 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(rightExpandedBox.x).toBeGreaterThanOrEqual(desktopBounds.x - 1);
   expect(rightExpandedBox.x + rightExpandedBox.width).toBeLessThanOrEqual(desktopBounds.x + desktopBounds.width + 1);
 
-  // Issue #45 visible boundary: use the real packaged Shell/native process path
-  // to launch Recycle Bin and prove its first-class native surface renders.
+  // Use the real packaged Shell/native process path to launch Recycle Bin and
+  // prove its first-class native surface renders.
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByLabel("Search Plasmon");
   await expect(search).toBeVisible();
@@ -257,10 +256,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
     await expect.poll(async () => Boolean(await exposedWindowSurface(target))).toBe(true);
   };
 
-  // Issue #199 packaged browser boundary: explicit focus remains WindowManager
-  // state while chrome renders a real active/inactive distinction. If normal
-  // placement fully covers the older window, first move Explorer through the
-  // real titlebar adapter, then use genuinely exposed browser hit targets.
+  // Explicit focus remains WindowManager state while chrome renders a real
+  // active/inactive distinction. If normal placement fully covers the older
+  // window, move Explorer through the real titlebar adapter before using an
+  // exposed browser hit target.
   await expect(dialog).toHaveClass(/plasmon-window--active/);
   const activeBorderColor = await dialog.evaluate((element) => getComputedStyle(element).borderColor);
   await exposeWindowBehind(dialog, recycleBin);
@@ -273,8 +272,8 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(dialog).toHaveClass(/plasmon-window--active/);
   await expect(recycleBin).not.toHaveClass(/plasmon-window--active/);
 
-  // Issue #108 visible boundary: folder activation and toolbar Back/Forward must
-  // reach the same production navigation model in the real packaged Explorer.
+  // Folder activation and toolbar Back/Forward must reach the same production
+  // navigation model in the real packaged Explorer.
   const explorerAddress = dialog.getByRole("textbox", { name: "Address" });
   await expect(explorerAddress).toHaveValue("/");
   const documentsEntry = dialog.locator("[data-fm-node-id]", { hasText: "Documents" }).first();
@@ -293,9 +292,9 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await back.click();
   await expect(explorerAddress).toHaveValue("/");
 
-  // Issue #199 real resize boundary: use the rendered southeast handle, not a
-  // test-only manager call, and prove the final authoritative rectangle shrinks
-  // while respecting Explorer's production minimum dimensions.
+  // Use the rendered southeast resize handle, not a test-only manager call,
+  // and prove the final authoritative rectangle shrinks while respecting
+  // Explorer's production minimum dimensions.
   const resizeHandle = dialog.locator(".plasmon-window__resize--se");
   await expect(resizeHandle).toBeVisible();
   const beforeResize = await dialog.boundingBox();
@@ -319,9 +318,9 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(afterResize.height).toBeGreaterThanOrEqual(420);
   expect(afterResize.height).toBeLessThan(beforeResize.height - 30);
 
-  // Issue #199 small-workspace boundary: when Explorer cannot fit horizontally,
-  // active drag may pan through manager-compatible reachability bounds so the
-  // right-side controls can be brought on-screen and remain genuinely clickable.
+  // When Explorer cannot fit horizontally, active drag may pan through
+  // manager-compatible reachability bounds so right-side controls can be
+  // brought on-screen and remain genuinely clickable.
   const normalViewport = page.viewportSize();
   if (!normalViewport) throw new Error("Playwright project has no viewport size");
   await page.setViewportSize({ width: 520, height: 720 });
@@ -360,11 +359,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
 
   const workspace = await windowLayer.boundingBox();
   if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
-  // #268 residual recurrence: the probe trace showed that a titlebar-relative
-  // hit point sampled before Playwright's actionability check can become stale
-  // while post-viewport ResizeObserver geometry is still settling. First let a
-  // positionless hover establish a stable, receives-events titlebar; only then
-  // derive the concrete exposed non-control point from that settled geometry.
+  // A titlebar-relative hit point sampled before Playwright's actionability
+  // check can become stale while post-viewport ResizeObserver geometry settles.
+  // First let a positionless hover establish a stable, receives-events titlebar;
+  // only then derive the concrete exposed non-control point.
   await titlebar.hover();
 
   const normalDragPoint = await titlebar.evaluate((element) => {
@@ -402,22 +400,14 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   expect(normalizedBounds.x).toBeGreaterThanOrEqual(workspace.x - 1);
   expect(normalizedBounds.x + normalizedBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
 
-  // Issue #277 temporarily quarantines only the shared #43 left-edge
-  // preview/snap journey that flaked on the post-merge r2 release push. Keep
-  // the preceding normalization proof and all following golden-path contracts
-  // required. The isolated acceptance remains executable under
-  // @r2-quarantine/@issue-277 until deterministic restoration evidence exists.
+  // Edge-snap and snapped-window lifetime journeys are isolated in dedicated
+  // acceptance specs where their exact behavioral selectors and quarantine
+  // state can be managed without weakening this required golden path.
 
-  // Issue #244 tracks the quarantined snapped -> restore -> opposite-edge
-  // right-snap journey. That acceptance is isolated in
-  // plasmon-golden-path-right-snap.spec.ts and excluded only by the
-  // @r2-quarantine Specialist filter; the rest of this golden path remains
-  // required.
-
-  // Issue #42 visible boundary: create/open a real filesystem document through
-  // Explorer, dirty the packaged Monaco editor, and use the real native Close
-  // control. Save/discard/failure semantics stay in deterministic Native Apps
-  // tests; Playwright protects only the rendered close-request interaction.
+  // Create/open a real filesystem document through Explorer, dirty the packaged
+  // Monaco editor, and use the real native Close control. Save/discard/failure
+  // semantics stay in deterministic Native Apps tests; Playwright protects only
+  // the rendered close-request interaction.
   await dialog.getByRole("button", { name: "New Text Document" }).click();
   const renameDocument = dialog.getByRole("textbox", { name: "Rename New Text Document.txt" });
   await expect(renameDocument).toBeVisible();
@@ -456,11 +446,6 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   await expect(closePrompt).toBeVisible({ timeout: 5_000 });
   await closePrompt.getByRole("button", { name: "Discard" }).click();
   await expect(app.getByRole("dialog", { name: "New Text Document.txt" })).toHaveCount(0, { timeout: 10_000 });
-
-  // Issue #251 tracks the quarantined repeated sibling-window lifetime cascade.
-  // That acceptance is isolated in plasmon-golden-path-window-lifetime.spec.ts
-  // and excluded only by the @r2-quarantine Specialist filter; all preceding
-  // packaged golden-path contracts remain required.
 
   expect(pageErrors).toEqual([]);
 });
