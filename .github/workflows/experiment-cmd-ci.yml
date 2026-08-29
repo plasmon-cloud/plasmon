@@ -100,8 +100,8 @@ jobs:
           set -euxo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm tools/experiment_cmd_polish.py
-          if [ -f tools/prepare_experiment_cmd_polish.py ]; then git rm tools/prepare_experiment_cmd_polish.py; fi
+          git rm -f tools/experiment_cmd_polish.py
+          if [ -f tools/prepare_experiment_cmd_polish.py ]; then git rm -f tools/prepare_experiment_cmd_polish.py; fi
           git add -A
           git commit -m 'Experiment: polish terminal and script workflows'
           git push origin HEAD:experiment/cmd
