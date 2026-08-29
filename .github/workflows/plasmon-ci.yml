@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - version-0.1.0-os
-      - release/0.1.0-r2
+      - 'release/**'
   pull_request:
   workflow_dispatch:
 
