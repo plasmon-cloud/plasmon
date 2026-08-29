@@ -1,6 +1,6 @@
 # Required CI browser quarantine
 
-The executable quarantine authority is [`plasmon-quarantine.json`](./plasmon-quarantine.json). Required browser CI and Flake Probe must read the stable `@quarantine` marker from that inventory rather than defining a release-specific selector of their own.
+Required browser CI and Flake Probe use the fixed Playwright tag `@quarantine`. [`plasmon-quarantine.json`](./plasmon-quarantine.json) records which exact semantic acceptances are authorized debt; it does not configure the quarantine tag itself.
 
 Quarantine is exact-test debt. It does not delete a spec, skip a suite, add retries, inflate timeouts, weaken assertions, or permit unknown failures. Non-quarantined failures, environment loss, and unlisted BrowserHealth diagnostics remain hard failures.
 
@@ -8,7 +8,7 @@ Quarantine is exact-test debt. It does not delete a spec, skip a suite, add retr
 
 | Semantic acceptance | Classification | Current repair owner | Exit requirement |
 | --- | --- | --- | --- |
-| `saved-jsdos-preview-publication` — `saved js-dos resource publishes a blob-backed preview after save` | known flaky | #304 | Remove `@quarantine` before proof, run with `retries=0`, and satisfy #304's fresh exact-head restoration evidence while preserving the required blob-backed saved-preview assertion. |
+| `saved-jsdos-preview-publication` / `@saved-preview` — `saved js-dos resource publishes a blob-backed preview after save` | known flaky | #304 | Remove `@quarantine` before proof, run with `retries=0`, and satisfy #304's fresh exact-head restoration evidence while preserving the required blob-backed saved-preview assertion. |
 
 The surrounding packaged js-dos open/save/reopen acceptance remains required. Static package artwork is not an accepted substitute for a successfully published saved preview.
 

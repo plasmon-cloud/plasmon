@@ -8,13 +8,10 @@ const inventoryPath = resolve(here, 'plasmon-quarantine.json');
 export function loadQuarantineInventory(path = inventoryPath) {
   const inventory = JSON.parse(readFileSync(path, 'utf8'));
   if (inventory?.schemaVersion !== 1) throw new Error('Unsupported Plasmon quarantine inventory schema');
-  if (typeof inventory.marker !== 'string' || !/^@[a-z][a-z0-9-]*$/.test(inventory.marker)) {
-    throw new Error('Quarantine marker must be a stable Playwright tag');
-  }
-  if (/^@r\d/i.test(inventory.marker)) throw new Error('Quarantine marker must not encode a release');
   if (!Array.isArray(inventory.entries)) throw new Error('Quarantine entries must be an array');
 
   const ids = new Set();
+  const selectorTags = new Set();
   for (const entry of inventory.entries) {
     if (!entry || typeof entry !== 'object') throw new Error('Quarantine entry must be an object');
     if (typeof entry.id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(entry.id)) {
@@ -25,8 +22,16 @@ export function loadQuarantineInventory(path = inventoryPath) {
     if (typeof entry.path !== 'string' || !entry.path.startsWith('test/e2e/')) {
       throw new Error(`Invalid quarantine path for ${entry.id}`);
     }
+    if (typeof entry.selectorTag !== 'string' || !/^@[a-z][a-z0-9-]*$/.test(entry.selectorTag)) {
+      throw new Error(`Invalid semantic selector tag for ${entry.id}`);
+    }
+    if (entry.selectorTag === '@quarantine' || /^@(issue|pr|r\d)/i.test(entry.selectorTag)) {
+      throw new Error(`Quarantine selector for ${entry.id} must be behavioral, not provenance or quarantine state`);
+    }
+    if (selectorTags.has(entry.selectorTag)) throw new Error(`Duplicate quarantine selector: ${entry.selectorTag}`);
+    selectorTags.add(entry.selectorTag);
     if (typeof entry.title !== 'string' || entry.title.trim().length === 0) {
-      throw new Error(`Missing semantic test title for ${entry.id}`);
+      throw new Error(`Missing descriptive test title for ${entry.id}`);
     }
     if (typeof entry.active !== 'boolean') throw new Error(`Missing active state for ${entry.id}`);
     if (typeof entry.classification !== 'string' || entry.classification.trim().length === 0) {
@@ -46,25 +51,30 @@ export function loadQuarantineInventory(path = inventoryPath) {
 }
 
 export const quarantineInventory = loadQuarantineInventory();
-export const quarantineMarker = quarantineInventory.marker;
 export const activeQuarantines = Object.freeze(quarantineInventory.entries.filter((entry) => entry.active));
 
 export function activeQuarantinesForPath(path, entries = activeQuarantines) {
   return entries.filter((entry) => entry.path === path && entry.active !== false);
 }
 
+function countQuarantineTags(source) {
+  return (String(source).match(/tag:\s*\[[^\]]*\]/g) ?? [])
+    .filter((block) => block.includes('"@quarantine"') || block.includes("'@quarantine'"))
+    .length;
+}
+
 export function isFullyQuarantinedSource(path, source, entries = activeQuarantines) {
   const pathEntries = activeQuarantinesForPath(path, entries);
   if (pathEntries.length === 0) return false;
-  const titles = [...String(source).matchAll(/\btest(?:\.[A-Za-z]+)*\s*\(\s*["'`]([^"'`]+)["'`]/g)]
-    .map((match) => match[1]);
-  if (titles.length === 0) return false;
-  const quarantinedTitles = new Set(pathEntries.map((entry) => entry.title));
-  return titles.every((title) => quarantinedTitles.has(title));
+  const text = String(source);
+  const testCount = [...text.matchAll(/\btest(?:\.(?:skip|fixme|only|fail|slow))?\s*\(/g)].length;
+  if (testCount === 0 || pathEntries.length !== testCount || countQuarantineTags(text) !== testCount) return false;
+  return pathEntries.every((entry) =>
+    text.includes(`"${entry.selectorTag}"`) || text.includes(`'${entry.selectorTag}'`),
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv.includes('--marker')) process.stdout.write(`${quarantineMarker}\n`);
-  else if (process.argv.includes('--active-json')) process.stdout.write(`${JSON.stringify(activeQuarantines)}\n`);
-  else throw new Error('usage: node test/ci/plasmon-quarantine.mjs --marker|--active-json');
+  if (process.argv.includes('--active-json')) process.stdout.write(`${JSON.stringify(activeQuarantines)}\n`);
+  else throw new Error('usage: node test/ci/plasmon-quarantine.mjs --active-json');
 }

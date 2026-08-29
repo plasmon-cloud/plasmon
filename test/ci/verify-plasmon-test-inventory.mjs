@@ -12,7 +12,6 @@ import {
 } from './plasmon-test-inventory.mjs';
 import {
   activeQuarantines,
-  quarantineMarker,
 } from './plasmon-quarantine.mjs';
 
 const args = new Set(process.argv.slice(2));
@@ -72,7 +71,7 @@ function verifyBrowserScript(scripts, scriptName, expectedPaths) {
 
 function quarantineTagBlocks(source) {
   return (source.match(/tag:\s*\[[^\]]*\]/g) ?? [])
-    .filter((block) => block.includes(`"${quarantineMarker}"`) || block.includes(`'${quarantineMarker}'`));
+    .filter((block) => block.includes('"@quarantine"') || block.includes("'@quarantine'"));
 }
 
 async function verify(inventory) {
@@ -108,7 +107,7 @@ async function verify(inventory) {
   assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
   assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistRunner.includes('quarantineMarker'), 'Specialist acceptance must read the shared quarantine marker authority');
+  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@quarantine'), 'Specialist acceptance must exclude exactly the fixed @quarantine tag');
 
   const plasmonBrowserTests = inventory.filter((test) => test.layer === 'browser' || test.layer === 'browser-optional');
   for (const test of plasmonBrowserTests) {
@@ -117,10 +116,10 @@ async function verify(inventory) {
     const expected = activeQuarantines.filter((entry) => entry.path === test.path);
     assert(
       quarantineTags.length === expected.length,
-      `${test.path} has ${quarantineTags.length} ${quarantineMarker} tag(s), but active quarantine inventory authorizes ${expected.length}`,
+      `${test.path} has ${quarantineTags.length} @quarantine tag(s), but active quarantine inventory authorizes ${expected.length}`,
     );
     for (const entry of expected) {
-      assert(source.includes(`"${entry.title}"`) || source.includes(`'${entry.title}'`), `${entry.id} title is missing from ${entry.path}`);
+      assert(source.includes(`"${entry.selectorTag}"`) || source.includes(`'${entry.selectorTag}'`), `${entry.id} semantic selector ${entry.selectorTag} is missing from ${entry.path}`);
     }
   }
   for (const entry of activeQuarantines) {
@@ -171,7 +170,7 @@ async function verify(inventory) {
   }
   assert(smokeWorkflow.includes('npm run test:e2e:plasmon:smoke'), 'Required Smoke CI must execute the complete smoke browser lane');
   assert(browserWorkflow.includes('npm run test:e2e:plasmon:specialist'), 'Required Specialist CI must execute the complete specialist browser lane');
-  assert(browserWorkflow.includes('plasmon-quarantine.mjs --marker'), 'Required demo CI must read the shared quarantine marker authority');
+  assert(browserWorkflow.includes('--grep-invert @quarantine'), 'Required demo CI must exclude exactly the fixed @quarantine tag');
   for (const path of browserLanes.persistence) {
     assert(persistenceWorkflow.includes(path), `Required Persistence CI must execute ${path}`);
   }

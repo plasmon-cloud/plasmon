@@ -236,10 +236,9 @@ for (const fragment of [
   "PLASMON_PLAYWRIGHT_ENV_READY:-0",
   "npm run plasmon:local:prepare",
   "npm run plasmon:local:serve",
-  "quarantine_marker=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
   "--workers=1",
   "--retries=0",
-  "--grep-invert \"$quarantine_marker\"",
+  "--grep-invert @quarantine",
 ]) {
   requireFragment(flakeRunner, fragment, "prepared-compatible flake runner");
 }

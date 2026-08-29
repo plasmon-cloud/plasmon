@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "marker": "@quarantine",
   "entries": [
     {
       "id": "saved-jsdos-preview-publication",
       "path": "test/e2e/plasmon-demo-game.spec.ts",
+      "selectorTag": "@saved-preview",
       "title": "saved js-dos resource publishes a blob-backed preview after save",
       "active": true,
       "classification": "known-flaky",
