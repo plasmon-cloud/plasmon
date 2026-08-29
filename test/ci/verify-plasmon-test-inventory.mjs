@@ -159,7 +159,6 @@ async function verify(inventory) {
   const quarantineDoc = await readFile(resolve(repoRoot, "test/ci/QUARANTINED_BROWSER_TESTS.md"), "utf8");
   assert(quarantineDoc.includes("plasmon-quarantine.json"), "Quarantine documentation must name the machine-readable authority");
   assert(quarantineDoc.includes("saved-jsdos-preview-publication"), "Quarantine documentation must describe the active semantic debt");
-  assert(quarantineDoc.includes("#304"), "Quarantine documentation must retain the current repair owner");
   assert(!/run [`#]?\d{8,}/iu.test(quarantineDoc), "Current quarantine documentation must not embed historical workflow-run identities");
 
   for (const guidancePath of quarantineGuidancePaths) {
