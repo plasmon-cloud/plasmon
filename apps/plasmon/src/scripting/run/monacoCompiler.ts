@@ -7,9 +7,9 @@ type DiagnosticLike = {
   messageText?: unknown;
 };
 
+const COMPILER_STAGE_TIMEOUT_MS = 10_000;
 let nextModelId = 0;
 let configured = false;
-let declarationsDisposable: { dispose(): void } | null = null;
 
 function diagnosticMessage(value: unknown): string {
   if (typeof value === "string") return value;
@@ -24,11 +24,28 @@ function formatDiagnostic(diagnostic: DiagnosticLike): string {
   return `${prefix}: ${diagnosticMessage(diagnostic.messageText)}`;
 }
 
+async function withCompilerStageTimeout<T>(stage: string, operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`.run TypeScript compiler timed out during ${stage}`)),
+          COMPILER_STAGE_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 /** Browser compiler adapter reusing the already-packaged Monaco TypeScript worker. */
 export class MonacoRunCompiler implements RunCompiler {
   async compile(source: string, filename = "script.run"): Promise<RunCompileResult> {
     installMonacoEnvironment();
-    const monaco = await import("monaco-editor");
+    const monaco = await withCompilerStageTimeout("Monaco module load", import("monaco-editor"));
     const defaults = monaco.languages.typescript.typescriptDefaults;
     ensureRunContextTypes(monaco);
     if (!configured) {
@@ -47,13 +64,22 @@ export class MonacoRunCompiler implements RunCompiler {
     const uri = monaco.Uri.parse(`inmemory://plasmon-run/${++nextModelId}/${safeName}.ts`);
     const model = monaco.editor.createModel(source, "typescript", uri);
     try {
-      const workerAccessor = await monaco.languages.typescript.getTypeScriptWorker();
-      const worker = await workerAccessor(uri);
-      const [syntactic, semantic, emit] = await Promise.all([
-        worker.getSyntacticDiagnostics(uri.toString()),
-        worker.getSemanticDiagnostics(uri.toString()),
-        worker.getEmitOutput(uri.toString()),
-      ]);
+      const workerAccessor = await withCompilerStageTimeout(
+        "TypeScript worker accessor startup",
+        monaco.languages.typescript.getTypeScriptWorker(),
+      );
+      const worker = await withCompilerStageTimeout(
+        "TypeScript worker connection",
+        workerAccessor(uri),
+      );
+      const [syntactic, semantic, emit] = await withCompilerStageTimeout(
+        "TypeScript diagnostics and emit",
+        Promise.all([
+          worker.getSyntacticDiagnostics(uri.toString()),
+          worker.getSemanticDiagnostics(uri.toString()),
+          worker.getEmitOutput(uri.toString()),
+        ]),
+      );
       const diagnostics = [...syntactic, ...semantic].map(formatDiagnostic);
       const javascript = emit.outputFiles.find((output) => output.name.endsWith(".js"))?.text ?? "";
       if (!javascript && diagnostics.length === 0) diagnostics.push("TypeScript worker emitted no JavaScript");
