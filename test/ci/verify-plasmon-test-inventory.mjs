@@ -102,19 +102,19 @@ async function verify(inventory) {
   assert(specialistRunner.includes('discoverPlasmonTests'), 'Specialist runner must discover the inventory at runtime');
   assert(specialistRunner.includes("lane === 'specialist'"), 'Specialist runner must select the Specialist inventory lane');
   assert(specialistRunner.includes('--workers=1'), 'Specialist acceptance must serialize its shared installed Plasmon state with --workers=1');
-  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@r2-quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
+  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');
 
   for (const path of browserLanes.specialist) {
     const source = await readFile(resolve(repoRoot, path), 'utf8');
-    const quarantineTags = source.match(/tag:\s*\[[^\]]*"@r2-quarantine"[^\]]*\]/g) ?? [];
+    const quarantineTags = source.match(/tag:\s*\[[^\]]*"@quarantine"[^\]]*\]/g) ?? [];
     const expected = activeQuarantines[path];
     if (expected) {
-      assert(quarantineTags.length === expected.count, `${path} must contain exactly ${expected.count} active @r2-quarantine test(s)`);
+      assert(quarantineTags.length === expected.count, `${path} must contain exactly ${expected.count} active @quarantine test(s)`);
       for (const issue of expected.issues) {
         assert(quarantineTags.some((tag) => tag.includes(issue)), `${path} active quarantine must remain linked to ${issue}`);
       }
     } else {
-      assert(quarantineTags.length === 0, `${path} must remain required; no @r2-quarantine tag is authorized`);
+      assert(quarantineTags.length === 0, `${path} must remain required; no @quarantine tag is authorized`);
     }
   }
 
@@ -126,10 +126,10 @@ async function verify(inventory) {
   const demoGame = await readFile(resolve(repoRoot, 'test/e2e/plasmon-demo-game.spec.ts'), 'utf8');
   assert(
     demoGame.includes('{ tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] }'),
-    'Broad demo-game acceptance must remain required for #250/#123/#202/#64 without @r2-quarantine',
+    'Broad demo-game acceptance must remain required for #250/#123/#202/#64 without @quarantine',
   );
   assert(
-    demoGame.includes('{ tag: ["@r2-quarantine", "@issue-124", "@issue-304"] }'),
+    demoGame.includes('{ tag: ["@quarantine", "@issue-124", "@issue-304"] }'),
     '#304 quarantine must remain isolated to the dedicated #124 saved-preview acceptance',
   );
   assert(
