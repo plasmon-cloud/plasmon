@@ -91,7 +91,7 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     version: 1,
     pinnedNative: [],
     pinnedElements: [],
-    themeId: "plasmon-dark",
+    themeId: "plasmon-graphite",
     wallpaper: "aurora",
     taskbarAlignment: "center",
     ...patch,
