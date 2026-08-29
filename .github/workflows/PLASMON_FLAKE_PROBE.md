@@ -1,6 +1,6 @@
 # Plasmon Flake Probe configuration
 
-`plasmon-flake-probe.yml` is diagnostic CI. It does not replace or weaken the required r2 release gates.
+`plasmon-flake-probe.yml` is diagnostic CI. It does not replace or weaken the required release gates.
 
 ## Probe modes
 

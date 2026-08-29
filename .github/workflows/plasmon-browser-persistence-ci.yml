@@ -3,7 +3,7 @@ name: Plasmon Browser Persistence CI
 on:
   push:
     branches:
-      - release/0.1.0-r2
+      - 'release/**'
   pull_request:
   workflow_dispatch:
 
@@ -69,5 +69,5 @@ jobs:
             # browser restart is modeled only by closing/relaunching Chromium against
             # the same profile while this PocketIC process and installation remain live.
             npm run plasmon:local:reinstall
-            NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json npx --no-install playwright test test/e2e/plasmon-persistence.spec.ts
+            npm run test:e2e:plasmon:persistence
           '
