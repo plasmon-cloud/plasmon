@@ -47,7 +47,7 @@ const PACKAGED_ASSET_PATHS = new Set([
   WATERMARK_ASSET,
 ]);
 
-test("#512 six wallpapers are visible, follow themes, pin independently, and share a toggleable SVG watermark", async ({ page, request }) => {
+test("#512 six wallpapers are visible, follow themes, pin independently, and share a toggleable SVG watermark", async ({ page, request }, testInfo) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -190,6 +190,10 @@ test("#512 six wallpapers are visible, follow themes, pin independently, and sha
       }
       expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
         .toBe("rgba(0, 0, 0, 0)");
+      await testInfo.attach(`issue-512-${themeId}.png`, {
+        body: await page.locator(appSelector).screenshot({ animations: "disabled" }),
+        contentType: "image/png",
+      });
     }
     expect(generatedBackgrounds.size).toBe(5);
     await expect.poll(() => [...PACKAGED_ASSET_PATHS].every((path) => loadedPackagedAssets.has(path))).toBe(true);
