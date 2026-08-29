@@ -12,7 +12,6 @@ import { selectCharacterization } from "./select-plasmon-flake-characterization.
 import {
   activeQuarantines,
   isFullyQuarantinedSource,
-  quarantineMarker,
 } from "./plasmon-quarantine.mjs";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
@@ -130,10 +129,9 @@ for (const fragment of [
   "npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &",
   "npm run plasmon:local:status",
   "npm run plasmon:local:reinstall",
-  "quarantine_marker=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
   "--workers=1",
   "--retries=0",
-  "--grep-invert \"$quarantine_marker\"",
+  "--grep-invert @quarantine",
   "npm run test:e2e:plasmon:specialist -- --retries=0",
   "exact)",
   "exact-set)",
@@ -144,7 +142,7 @@ for (const fragment of [
   "run_one \"${exact_files[@]}\"",
   "run_one \"$test_file\" --grep \"$test_grep\"",
   "run_one \"$test_file\"",
-  "saved js-dos resource publishes a blob-backed preview after save",
+  "--grep @saved-preview",
 ]) {
   requireFragment(executableRunner, fragment, "flake-probe executable runner");
 }
@@ -168,8 +166,7 @@ for (const fragment of [
   "lane === 'specialist'",
   "--workers=1",
   "--grep-invert",
-  "quarantineMarker",
-  "./plasmon-quarantine.mjs",
+  "@quarantine",
 ]) {
   requireFragment(specialistRunner, fragment, "automatic Specialist runner");
 }
@@ -279,9 +276,9 @@ function assertNoFullyQuarantinedFiles(selection, label) {
 }
 
 async function verifyCharacterizationSelection() {
-  const first = "test/e2e/plasmon-start-inventory.spec.ts";
+  const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
   const second = "test/e2e/plasmon-neutron-icon.spec.ts";
-  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome.spec.ts";
+  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome-112.spec.ts";
 
   const oneChanged = await selectCharacterization({ changedFiles: [first] });
   if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
@@ -318,12 +315,13 @@ async function verifyCharacterizationSelection() {
   const syntheticSource = [
     'import { test } from "@playwright/test";',
     "",
-    `test("synthetic quarantine fixture", async () => {});`,
+    `test("synthetic quarantine fixture", { tag: ["@quarantine", "@synthetic-quarantine"] }, async () => {});`,
     "",
   ].join("\n");
   const syntheticEntries = [{
     id: "synthetic-quarantine-fixture",
     path: syntheticPath,
+    selectorTag: "@synthetic-quarantine",
     title: "synthetic quarantine fixture",
     active: true,
     classification: "known-flaky",

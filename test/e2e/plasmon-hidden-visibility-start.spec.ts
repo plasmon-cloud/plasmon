@@ -53,16 +53,16 @@ async function expectStartFixture(plasmon: FrameLocator, visible: boolean): Prom
   const fixture = start.getByText(START_FIXTURE_NAME, { exact: true });
   if (visible) {
     await expect(fixture).toBeVisible({ timeout: 20_000 });
-    // Let the shared icon request settle before hiding the row again; otherwise
-    // removing the image while it is loading creates a false BrowserHealth
-    // failure for this otherwise self-contained acceptance.
-    const icon = fixture.locator("xpath=ancestor::button[1]").locator("img").first();
-    await expect.poll(() => icon.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+    // Plasmon-owned icons are inline SVG, so assert the rendered icon contract
+    // directly rather than waiting for a removed image request to settle.
+    await expect(
+      fixture.locator("xpath=ancestor::button[1]").locator("[data-plasmon-owned-icon]").first(),
+    ).toBeVisible();
   } else await expect(fixture).toHaveCount(0);
   await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
 }
 
-test("— packaged Start follows global visibility for an existing hidden target", async ({ page }) => {
+test("#429 — packaged Start follows global visibility for an existing hidden target", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

@@ -20,4 +20,4 @@ This directory is a browser/editor adapter boundary, not a document authority.
 - Markdown preview/rendering
 - a second worker/package path or application catalog
 
-Consume canonical resource classification and the #89 Program Files worker runtime. Keep real sandbox/worker claims in packaged browser acceptance.
+Consume canonical resource classification and the canonical Program Files worker runtime. Keep real sandbox/worker claims in packaged browser acceptance.

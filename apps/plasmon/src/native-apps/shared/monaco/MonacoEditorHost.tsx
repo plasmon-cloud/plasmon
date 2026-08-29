@@ -13,6 +13,7 @@ import {
 } from "./editorModel.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
+import { PLASMON_MONACO_THEME_NAME, plasmonMonacoThemeData } from "./monacoTheme.ts";
 
 export const MONACO_ENGINE_NAME = "Monaco";
 export function monacoEngineStatus(ready: boolean): string {
@@ -125,6 +126,7 @@ export function MonacoEditorHost({
     let cancelled = false;
     let editor: MonacoEditor | null = null;
     let ownedModel: OwnedEditorModel<MonacoModel> | null = null;
+    let themeObserver: MutationObserver | null = null;
     const disposables: MonacoDisposable[] = [];
     setLoading(true);
     setError(null);
@@ -138,18 +140,38 @@ export function MonacoEditorHost({
     void import("monaco-editor")
       .then((monaco) => {
         if (cancelled || !containerRef.current) return;
+        const container = containerRef.current;
         monacoRef.current = monaco;
         configureSlimLanguageServices(monaco);
+
+        const applyVisualTheme = () => {
+          monaco.editor.defineTheme(
+            PLASMON_MONACO_THEME_NAME,
+            plasmonMonacoThemeData(getComputedStyle(container)),
+          );
+          monaco.editor.setTheme(PLASMON_MONACO_THEME_NAME);
+        };
+        applyVisualTheme();
+
+        const themeHost = container.closest("[data-plasmon-theme]");
+        if (themeHost && typeof MutationObserver !== "undefined") {
+          themeObserver = new MutationObserver(() => applyVisualTheme());
+          themeObserver.observe(themeHost, {
+            attributes: true,
+            attributeFilter: ["data-plasmon-theme"],
+          });
+        }
+
         const created = createEditorSurfaceModelOwner(
           modelKey,
           (uri) => monaco.editor.createModel(value, languageRef.current, monaco.Uri.parse(uri)),
         );
         const createdModel = created.model;
         createdModel.updateOptions({ tabSize: 2, insertSpaces: true, trimAutoWhitespace: false });
-        const createdEditor: MonacoEditor = monaco.editor.create(containerRef.current, {
+        const createdEditor: MonacoEditor = monaco.editor.create(container, {
           model: createdModel,
           automaticLayout: true,
-          theme: "vs-dark",
+          theme: PLASMON_MONACO_THEME_NAME,
           readOnly,
           ariaLabel,
           fontSize: 14,
@@ -213,6 +235,7 @@ export function MonacoEditorHost({
 
     return () => {
       cancelled = true;
+      themeObserver?.disconnect();
       onReadyChangeRef.current?.(false);
       onCommandApiChangeRef.current?.(null);
       for (const disposable of disposables) disposable.dispose();
@@ -277,8 +300,29 @@ export function MonacoEditorHost({
 }
 
 const styles: Record<string, CSSProperties> = {
-  root: { position: "relative", width: "100%", height: "100%", minWidth: 0, minHeight: 0, background: "#1e1e1e" },
+  root: {
+    position: "relative",
+    width: "100%",
+    height: "100%",
+    minWidth: 0,
+    minHeight: 0,
+    background: "var(--plasmon-window-background)",
+  },
   editor: { position: "absolute", inset: 0 },
-  overlay: { position: "absolute", inset: 0, display: "grid", placeItems: "center", zIndex: 2, background: "#1e1e1e", color: "#c8cdd4", font: "13px/1.4 system-ui, sans-serif" },
-  error: { color: "#ffd8dc", background: "#35171b", padding: 20, textAlign: "center" },
+  overlay: {
+    position: "absolute",
+    inset: 0,
+    display: "grid",
+    placeItems: "center",
+    zIndex: 2,
+    background: "var(--plasmon-window-background)",
+    color: "var(--plasmon-text-secondary)",
+    font: "13px/1.4 system-ui, sans-serif",
+  },
+  error: {
+    color: "var(--plasmon-danger)",
+    background: "color-mix(in srgb, var(--plasmon-danger) 10%, var(--plasmon-window-background))",
+    padding: 20,
+    textAlign: "center",
+  },
 };

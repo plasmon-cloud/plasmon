@@ -15,13 +15,12 @@ async function pinPresentation(action: Locator): Promise<{
 
   const pressed = await action.getAttribute("aria-pressed") === "true";
   const icon = action.locator(".plasmon-pin-icon");
-  const art = icon.locator("img");
+  const art = icon.locator('[data-plasmon-owned-icon="system:pin"]');
   const marker = icon.locator(".plasmon-pin-icon__state");
 
   await expect(action).toHaveAttribute("title", label);
   await expect(icon).toHaveAttribute("data-pin-state", pressed ? "pinned" : "unpinned");
-  await expect(art).toHaveAttribute("src", "static/plasmon/icons/pin.svg");
-  expect(await art.evaluate((image: HTMLImageElement) => image.naturalWidth), "packaged pin artwork loads").toBeGreaterThan(0);
+  await expect(art).toBeVisible();
 
   return {
     label,
@@ -38,7 +37,7 @@ async function pinPresentation(action: Locator): Promise<{
  * missing artwork, inaccessible state, or CSS that collapses pinned/unpinned
  * into color-only presentation cannot regress unnoticed.
  */
-test("— packaged Start and taskbar context share the canonical pin affordance", async ({ page }) => {
+test("#109 — packaged Start and taskbar context share the canonical pin affordance", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -122,11 +121,10 @@ test("— packaged Start and taskbar context share the canonical pin affordance"
     await expect(contextAction).toBeVisible();
 
     const contextIcon = contextAction.locator(".plasmon-pin-icon");
-    const contextArt = contextIcon.locator("img");
+    const contextArt = contextIcon.locator('[data-plasmon-owned-icon="system:pin"]');
     await expect(contextAction).toHaveAttribute("aria-label", "Unpin from taskbar");
     await expect(contextAction).toHaveAttribute("title", "Unpin from taskbar");
-    await expect(contextArt).toHaveAttribute("src", "static/plasmon/icons/pin.svg");
-    expect(await contextArt.evaluate((image: HTMLImageElement) => image.naturalWidth), "taskbar context pin artwork loads").toBeGreaterThan(0);
+    await expect(contextArt).toBeVisible();
     expect(await contextAction.textContent()).not.toContain("📌");
     await expect(contextIcon).toHaveAttribute("data-pin-state", "pinned");
 

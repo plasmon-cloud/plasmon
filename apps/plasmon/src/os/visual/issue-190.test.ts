@@ -78,10 +78,14 @@ test("one Visual resolver maps already-classified file and application identitie
   });
 });
 
-test("registered native artwork overrides the shared handler fallback without changing handler authority", () => {
+test("known first-party native identity stays semantic while unknown native artwork stays authored", () => {
   expect(nativeHandlerResourcePresentation("native:explorer", "/apps/explorer/icon.svg")).toEqual({
+    kind: "system",
+    icon: "file-manager",
+  });
+  expect(nativeHandlerResourcePresentation("native:unknown", "/apps/example/icon.svg")).toEqual({
     kind: "application",
-    src: "/apps/explorer/icon.svg",
+    src: "/apps/example/icon.svg",
   });
   expect(nativeHandlerResourcePresentation("native:unknown")).toEqual({
     kind: "application",

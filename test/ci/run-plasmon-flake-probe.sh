@@ -5,7 +5,6 @@ target="${1:-specialist}"
 test_file="${2:-}"
 test_grep="${3:-}"
 test_files_json="${4:-[]}"
-quarantine_marker="$(node test/ci/plasmon-quarantine.mjs --marker)"
 exact_files=()
 
 validate_exact_file() {
@@ -171,7 +170,7 @@ run_one() {
     npx playwright test \
       --workers=1 \
       --retries=0 \
-      --grep-invert "$quarantine_marker" \
+      --grep-invert @quarantine \
       "$@"
 }
 
@@ -211,6 +210,6 @@ case "$target" in
     run_one test/e2e/plasmon-emulatorjs-proof.spec.ts
     ;;
   saved-preview)
-    run_one test/e2e/plasmon-demo-game.spec.ts --grep "saved js-dos resource publishes a blob-backed preview after save"
+    run_one test/e2e/plasmon-demo-game.spec.ts --grep @saved-preview
     ;;
 esac

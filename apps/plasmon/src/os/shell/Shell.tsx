@@ -19,7 +19,7 @@ import type {
   WindowManager,
 } from "../contracts/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
-import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
+import { FILE_TYPE_ICON_ASSETS, PLASMON_VISUAL_ASSET_ROOT, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import {
   activateSearchFilesystemResult,
   activateStartFilesystemNode,
@@ -45,8 +45,10 @@ import {
 import {
   cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
+  effectiveShellWallpaper,
   saveShellPreferencesNonDestructive,
   ShellPreferenceStore,
+  SHELL_WALLPAPER_IDS,
   togglePinned,
   type ShellPreferences,
   type ShellTaskbarAlignment,
@@ -96,6 +98,10 @@ function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const WALLPAPER_ASSET_PATHS = SHELL_WALLPAPER_IDS.map((wallpaperId) =>
+  `${PLASMON_VISUAL_ASSET_ROOT}/wallpapers/${wallpaperId}.${wallpaperId === "graphite-sand" ? "jpg" : "svg"}`,
+);
+
 export function Shell({
   process,
   windows,
@@ -126,7 +132,20 @@ export function Shell({
   const { processes, windowStates, focusedWindowId } = useNativeShellSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElementSnapshot(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
+  const effectiveWallpaperId = effectiveShellWallpaper(effectivePreferences.themeId, effectivePreferences.wallpaper);
   const preferencesReady = preferences !== null;
+
+  useEffect(() => {
+    if (typeof Image === "undefined") return;
+    const preloadedWallpapers = WALLPAPER_ASSET_PATHS.map((src) => {
+      const image = new Image();
+      image.src = src;
+      return image;
+    });
+    return () => {
+      for (const image of preloadedWallpapers) image.src = "";
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -479,8 +498,10 @@ export function Shell({
       : null;
 
   return <div
-    className={`plasmon-shell plasmon-shell--wallpaper-${effectivePreferences.wallpaper}`}
+    className={`plasmon-shell plasmon-shell--wallpaper-${effectiveWallpaperId}`}
     data-plasmon-theme={effectivePreferences.themeId}
+    data-plasmon-wallpaper={effectiveWallpaperId}
+    data-plasmon-brand-watermark={effectivePreferences.showBrandWatermark === false ? "hidden" : "visible"}
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
@@ -543,10 +564,8 @@ export function Shell({
       preferences={effectivePreferences}
       preferencesReady={preferencesReady}
       onSelectTheme={selectTheme}
-      onToggleWallpaper={() => persistPreferences({
-        ...effectivePreferences,
-        wallpaper: effectivePreferences.wallpaper === "aurora" ? "plain" : "aurora",
-      })}
+      onSelectWallpaper={(wallpaper) => persistPreferences({ ...effectivePreferences, wallpaper })}
+      onSetBrandWatermark={(showBrandWatermark) => persistPreferences({ ...effectivePreferences, showBrandWatermark })}
       onSelectTaskbarAlignment={selectTaskbarAlignment}
     /> : null}
 

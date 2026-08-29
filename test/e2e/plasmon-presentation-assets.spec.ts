@@ -5,32 +5,30 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
 const ICON_PREFIX = `/app/${PLASMON_APP_ID}/static/plasmon/icons/`;
-const START_NATIVE_IDENTITY_ASSETS = [
+const PACKAGED_ICON_ASSETS = [
+  "file.svg",
+  "folder.svg",
+  "recycle-bin.svg",
+  "shortcut-overlay.svg",
   "text.svg",
   "markdown.svg",
   "photos.svg",
   "video.svg",
   "browser.svg",
+  "settings.svg",
 ] as const;
-const NATIVE_IDENTITY_ASSETS = [...START_NATIVE_IDENTITY_ASSETS, "settings.svg"] as const;
 
-function pathname(value: string): string {
-  return new URL(value).pathname;
-}
-
-test("#190/#96 installed assets and #171 bounded Element icon probing use canonical package resources", async ({ page }) => {
+/**
+ * #190 keeps the canonical icon resources package-local, but #513 deliberately
+ * no longer uses those SVG files as external <img> documents for Plasmon-owned
+ * artwork. The live surface must use inline owned SVG so theme custom properties
+ * can reach its fills/strokes. Authored application/media artwork remains image
+ * based through the separate ResourceIcon application/thumbnail paths.
+ */
+test("#190/#96/#513 packaged icon resources exist while live Plasmon-owned artwork is inline", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
-  const iconRequests: string[] = [];
-  const iconResponses = new Map<string, number>();
-  page.on("request", (request) => {
-    const path = pathname(request.url());
-    if (path.includes("/static/plasmon/icons/")) iconRequests.push(path);
-  });
-  page.on("response", (response) => {
-    const path = pathname(response.url());
-    if (path.includes("/static/plasmon/icons/")) iconResponses.set(path, response.status());
-  });
+
   await page.goto(kernelUrl);
   await page.waitForFunction(() => typeof window.__NEUTRON_PLAYWRIGHT_LOGIN_AS__ === "function");
   const principal = await page.evaluate(
@@ -48,24 +46,25 @@ test("#190/#96 installed assets and #171 bounded Element icon probing use canoni
   await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
   await expect(plasmon.getByRole("listbox", { name: "Files" }).first()).toBeVisible();
 
-  await expect.poll(() => new Set(iconRequests).size, { timeout: 15_000 }).toBeGreaterThanOrEqual(4);
-
-  let requested = [...new Set(iconRequests)];
-  expect(requested.every((path) => path.startsWith(ICON_PREFIX)), `shared icon requests: ${requested.join(", ")}`).toBe(true);
-
-  for (const name of ["file.svg", "folder.svg", "recycle-bin.svg", "shortcut-overlay.svg"] as const) {
-    const path = `${ICON_PREFIX}${name}`;
-    expect(requested, `${path} should be requested by the real installed surface`).toContain(path);
-    await expect.poll(
-      () => iconResponses.get(path),
-      { timeout: 15_000, message: `${path} should load successfully` },
-    ).toBe(200);
+  // The package contract remains explicit even though these resources are now
+  // reference/fallback assets rather than the live theming mechanism.
+  for (const name of PACKAGED_ICON_ASSETS) {
+    const response = await page.request.get(new URL(`${ICON_PREFIX}${name}`, kernelUrl).href);
+    expect(response.status(), `${name} should remain package-local and available`).toBe(200);
   }
 
-  // #96: exercise the canonical filesystem-backed Start projection rather than
-  // inventing a presentation-only app catalog. #428 intentionally removes the
-  // managed Settings Start shortcut, so Start proves the remaining first-party
-  // application identities while native Search proves Settings below.
+  const folder = plasmon.locator('[data-plasmon-owned-icon="file-type:folder"]').first();
+  const recycleBin = plasmon.locator('[data-plasmon-owned-icon="system:recycle-bin"]').first();
+  const shortcutOverlay = plasmon.locator('[data-plasmon-owned-icon="shortcut-overlay"]').first();
+  await expect(folder).toBeVisible();
+  await expect(recycleBin).toBeVisible();
+  await expect(shortcutOverlay).toBeVisible();
+  await expect(plasmon.locator('img[src*="/static/plasmon/icons/folder.svg"]')).toHaveCount(0);
+  await expect(plasmon.locator('img[src*="/static/plasmon/icons/recycle-bin.svg"]')).toHaveCount(0);
+
+  // #96: exercise the canonical filesystem-backed Start projection. Its
+  // first-party identities must also use the owned inline artwork rather than
+  // silently falling back to fixed-color packaged <img> elements.
   await plasmon.getByRole("button", { name: "Start" }).click();
   const start = plasmon.getByRole("region", { name: "Start menu" });
   await expect(start).toBeVisible();
@@ -74,32 +73,23 @@ test("#190/#96 installed assets and #171 bounded Element icon probing use canoni
   for (const name of ["Text Editor", "Markdown", "Photos", "Video Player", "Browser"] as const) {
     await expect(start.getByRole("button", { name: new RegExp(name, "u") }).first()).toBeVisible();
   }
+  for (const ownedName of [
+    "file-type:text",
+    "file-type:markdown",
+    "system:photos",
+    "file-type:video",
+    "system:browser",
+  ] as const) {
+    await expect(start.locator(`[data-plasmon-owned-icon="${ownedName}"]`).first()).toBeVisible();
+  }
 
-  await expect.poll(
-    () => START_NATIVE_IDENTITY_ASSETS.filter((name) => iconResponses.get(`${ICON_PREFIX}${name}`) === 200).length,
-    { timeout: 15_000, message: "all Start-projected native identity assets should load from the installed package" },
-  ).toBe(START_NATIVE_IDENTITY_ASSETS.length);
-
-  // Settings remains a canonical native application even though it is no longer
-  // a managed Start default. Search is an existing canonical metadata consumer,
-  // so use it to prove the packaged Settings identity without recreating a Start
-  // shortcut solely for presentation coverage.
   await plasmon.getByRole("button", { name: "Search", exact: true }).click();
   const search = plasmon.getByRole("region", { name: "Search" });
   await expect(search).toBeVisible();
   await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Settings");
-  await expect(search.locator("[data-search-result]").filter({ hasText: "Settings" }).first()).toBeVisible({ timeout: 15_000 });
-  await expect.poll(
-    () => iconResponses.get(`${ICON_PREFIX}settings.svg`),
-    { timeout: 15_000, message: "Settings canonical identity asset should load through native Search" },
-  ).toBe(200);
-
-  requested = [...new Set(iconRequests)];
-  for (const name of NATIVE_IDENTITY_ASSETS) {
-    const path = `${ICON_PREFIX}${name}`;
-    expect(requested, `${path} should be requested by canonical Shell presentation`).toContain(path);
-    expect(iconResponses.get(path), `${path} should stay offline/package-local and load successfully`).toBe(200);
-  }
+  const settingsResult = search.locator("[data-search-result]").filter({ hasText: "Settings" }).first();
+  await expect(settingsResult).toBeVisible({ timeout: 15_000 });
+  await expect(settingsResult.locator('[data-plasmon-owned-icon="system:settings"]')).toBeVisible();
 });
 
 declare global {

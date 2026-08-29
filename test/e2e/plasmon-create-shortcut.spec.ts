@@ -73,10 +73,7 @@ async function expectResolvedDirectoryShortcut(shortcut: Locator) {
   // authoritative target NodeId. Waiting for the folder art proves the visible
   // shortcut has completed that resolution before another filesystem command is
   // issued, instead of overlapping the presentation fs.stat with the next write.
-  await expect(shortcut.locator(".plasmon-icon-art")).toHaveAttribute(
-    "src",
-    /(?:^|\/)folder\.svg$/,
-  );
+  await expect(shortcut.locator('[data-plasmon-owned-icon="file-type:folder"]')).toBeVisible();
   await expect(shortcut.locator(".plasmon-shortcut-overlay")).toBeVisible();
 }
 
@@ -86,7 +83,7 @@ async function expectResolvedDirectoryShortcut(shortcut: Locator) {
  * the remaining user-visible boundary through the real toolbar/context-menu
  * commands and canonical open dispatcher.
  */
-test("— packaged FileManager exposes and activates Create Shortcut", async ({ page }) => {
+test("#44 — packaged FileManager exposes and activates Create Shortcut", async ({ page }) => {
   const { app, health } = await launchPlasmon(page);
   try {
     const { explorer, files } = await openExplorer(app);

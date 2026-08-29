@@ -14,9 +14,9 @@ interface ThumbnailExpectation {
 
 const FIXTURE_ROOT = resolve(process.cwd(), "test/e2e/fixtures");
 const FIXTURES: readonly ThumbnailExpectation[] = [
-  { name: "portrait.svg", fixture: "thumbnail-portrait.svg", width: 40, height: 100 },
-  { name: "landscape.svg", fixture: "thumbnail-landscape.svg", width: 120, height: 50 },
-  { name: "square.svg", fixture: "thumbnail-square.svg", width: 72, height: 72 },
+  { name: "portrait.svg", fixture: "thumbnail-93-portrait.svg", width: 40, height: 100 },
+  { name: "landscape.svg", fixture: "thumbnail-93-landscape.svg", width: 120, height: 50 },
+  { name: "square.svg", fixture: "thumbnail-93-square.svg", width: 72, height: 72 },
 ] as const;
 
 async function assertContainedThumbnail(entry: Locator, expected: ThumbnailExpectation): Promise<void> {
@@ -58,7 +58,7 @@ async function assertContainedThumbnail(entry: Locator, expected: ThumbnailExpec
   expect(geometry.frameBackground).not.toBe("rgba(0, 0, 0, 0)");
 }
 
-test("— packaged FileManager thumbnails contain portrait, landscape, and square images", async ({ page }, testInfo) => {
+test("#93 — packaged FileManager thumbnails contain portrait, landscape, and square images", async ({ page }, testInfo) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -114,7 +114,7 @@ test("— packaged FileManager thumbnails contain portrait, landscape, and squar
 
     const brokenName = `${suffix}-broken.png`;
     const brokenPath = resolve(uploadDir, brokenName);
-    await copyFile(resolve(FIXTURE_ROOT, "thumbnail-broken.png"), brokenPath);
+    await copyFile(resolve(FIXTURE_ROOT, "thumbnail-93-broken.png"), brokenPath);
     const brokenChooserPromise = page.waitForEvent("filechooser");
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     await (await brokenChooserPromise).setFiles(brokenPath);
@@ -122,7 +122,7 @@ test("— packaged FileManager thumbnails contain portrait, landscape, and squar
     await expect(brokenEntry).toBeVisible({ timeout: 30_000 });
     await brokenEntry.scrollIntoViewIfNeeded();
     await expect(brokenEntry).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
-    await expect(brokenEntry.locator(".fm-entry__icon--image img.plasmon-icon-art:not(.plasmon-media-thumbnail)"))
+    await expect(brokenEntry.locator('.fm-entry__icon--image [data-plasmon-owned-icon="file-type:image"]'))
       .toBeVisible({ timeout: 20_000 });
     await expect(brokenEntry.locator("img.plasmon-media-thumbnail")).toHaveCount(0);
     health.assertClean();

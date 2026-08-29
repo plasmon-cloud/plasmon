@@ -1,0 +1,68 @@
+@layer app {
+  // Graphite is the neutral dark default: grayscale structure with restrained
+  // icy-cyan interaction highlights. Keep this root fallback aligned with the
+  // default Shell preference to avoid a Verdant flash before preferences load.
+  :root,
+  .plasmon-shell[data-plasmon-theme="plasmon-graphite"] {
+    color-scheme: dark;
+    --plasmon-desktop-background: #0d0e10;
+    --plasmon-panel-background: rgba(25, 27, 30, 0.95);
+    --plasmon-panel-elevated: #202327;
+    --plasmon-window-background: #15171a;
+    --plasmon-window-titlebar: #24272c;
+    --plasmon-taskbar-background: rgba(18, 20, 23, 0.94);
+    --plasmon-control-background: rgba(255, 255, 255, 0.06);
+    --plasmon-control-hover: rgba(255, 255, 255, 0.105);
+    --plasmon-border-subtle: rgba(255, 255, 255, 0.12);
+    --plasmon-border-strong: rgba(255, 255, 255, 0.21);
+    --plasmon-text-primary: #f6f7f8;
+    --plasmon-text-secondary: #b7bbc0;
+    --plasmon-text-subtle: #858b93;
+    --plasmon-text-disabled: #686d74;
+    --plasmon-accent: #62c5e8;
+    --plasmon-accent-hover: #83d4ef;
+    --plasmon-accent-ink: #071d25;
+    --plasmon-selection: rgba(98, 197, 232, 0.17);
+    --plasmon-selection-border: rgba(131, 212, 239, 0.38);
+    --plasmon-focus-ring: #9edff4;
+    --plasmon-danger: #ff929a;
+    --plasmon-warning: #e5c478;
+    --plasmon-success: #77d5b0;
+    --plasmon-shadow-window: 0 28px 76px rgba(0, 0, 0, 0.56), 0 1px 0 rgba(255, 255, 255, 0.055) inset;
+    --plasmon-shadow-panel: 0 30px 86px rgba(0, 0, 0, 0.56);
+    --plasmon-shadow-icon: 0 6px 17px rgba(0, 0, 0, 0.27);
+  }
+
+  // Verdant is the renamed original Plasmon Dark palette. Its visual identity
+  // is intentionally preserved; only the user-facing/stored theme identity is
+  // changing so Graphite can become the default neutral theme.
+  .plasmon-shell[data-plasmon-theme="plasmon-verdant"] {
+    color-scheme: dark;
+    --plasmon-desktop-background: #07131a;
+    --plasmon-panel-background: rgba(18, 28, 35, 0.94);
+    --plasmon-panel-elevated: #17242c;
+    --plasmon-window-background: #111820;
+    --plasmon-window-titlebar: #18242b;
+    --plasmon-taskbar-background: rgba(13, 24, 30, 0.91);
+    --plasmon-control-background: rgba(255, 255, 255, 0.055);
+    --plasmon-control-hover: rgba(255, 255, 255, 0.095);
+    --plasmon-border-subtle: rgba(255, 255, 255, 0.11);
+    --plasmon-border-strong: rgba(255, 255, 255, 0.18);
+    --plasmon-text-primary: #f5faf7;
+    --plasmon-text-secondary: #a7b7b1;
+    --plasmon-text-subtle: #7f8b9c;
+    --plasmon-text-disabled: #6f807a;
+    --plasmon-accent: #84e3b0;
+    --plasmon-accent-hover: #9ce9c0;
+    --plasmon-accent-ink: #082419;
+    --plasmon-selection: rgba(132, 227, 176, 0.16);
+    --plasmon-selection-border: rgba(156, 233, 192, 0.34);
+    --plasmon-focus-ring: #a7edc7;
+    --plasmon-danger: #ff9a9f;
+    --plasmon-warning: #f0c878;
+    --plasmon-success: #84e3b0;
+    --plasmon-shadow-window: 0 26px 70px rgba(0, 0, 0, 0.46), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    --plasmon-shadow-panel: 0 28px 80px rgba(0, 0, 0, 0.5);
+    --plasmon-shadow-icon: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+}

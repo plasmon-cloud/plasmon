@@ -43,7 +43,7 @@ Durable placement uses the same filesystem-backed `FsService` persistence bounda
 
 The stable durable key is the native application's `NativeAppDefinition.id`, not a `ProcessId` or `WindowId`. Only the first live window for a given app id owns that durable primary slot; concurrent sibling windows retain normal WindowManager cascade behavior and are not serialized as a session layout. On reopen, the saved rectangle is reapplied through WindowManager mutation methods, so current viewport and minimum-size constraints clamp stale/out-of-range records. Missing or corrupt records leave the manager-created default placement unchanged.
 
-Default/session placement and durable application placement are intentionally separate authorities within Windowing: #177 chooses a bounded manager default for a newly created window, while the #117 persistence controller may subsequently reapply an accepted durable normal rectangle through the same manager. Neither Shell nor React stores a competing placement model.
+Default/session placement and durable application placement are intentionally separate authorities within Windowing: the manager chooses a bounded default for a newly created window, while the persistence controller may subsequently reapply an accepted durable normal rectangle through the same manager. Neither Shell nor React stores a competing placement model.
 
 This slice remains intentionally bounded to one normal/restorable rectangle per native app plus existing left/right snap behavior. Quarter snapping, tiling policy, multi-monitor/workspace placement, persisted snap/maximize/minimize/focus state, and Shell-owned geometry are outside this subsystem behavior.
 

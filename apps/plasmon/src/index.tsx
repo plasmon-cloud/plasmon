@@ -9,6 +9,7 @@ import { createPlasmonServices } from "./os/integration/services.ts";
 import { isDemoProfile } from "./os/integration/packageProfile.ts";
 import "./style.scss";
 import "./os/integration/visual-tokens.scss";
+import "./os/integration/theme-graphite.scss";
 
 installAppIconFallbacks();
 

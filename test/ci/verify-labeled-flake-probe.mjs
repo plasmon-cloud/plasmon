@@ -56,8 +56,7 @@ for (const fragment of [
   "inputs.test_file = selectedTestFile",
   "inputs.test_grep = selectedTestGrep",
   "Quarantine: always excluded",
-  "QUARANTINE_MARKER=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
-  "--workers=1 --retries=0 --grep-invert $QUARANTINE_MARKER",
+  "--workers=1 --retries=0 --grep-invert @quarantine",
 ]) {
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
@@ -92,8 +91,7 @@ for (const fragment of ["include_quarantined: true", "shared-support-fallback"])
 for (const fragment of [
   "--workers=1",
   "--retries=0",
-  "quarantine_marker=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
-  "--grep-invert \"$quarantine_marker\"",
+  "--grep-invert @quarantine",
 ]) {
   requireFragment(probeRunner, fragment, "flake-probe runner quarantine boundary");
 }

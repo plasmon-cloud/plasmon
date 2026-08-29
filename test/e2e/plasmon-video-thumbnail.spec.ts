@@ -4,9 +4,9 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
-const FIXTURE = resolve(process.cwd(), "test/e2e/fixtures/video-thumbnail.webm");
+const FIXTURE = resolve(process.cwd(), "test/e2e/fixtures/thumbnail-94.webm");
 
-test("— packaged FileManager extracts a bounded silent video frame and falls back on decode failure", async ({ page }) => {
+test("#94 — packaged FileManager extracts a bounded silent video frame and falls back on decode failure", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -46,7 +46,7 @@ test("— packaged FileManager extracts a bounded silent video frame and falls b
     await explorer.getByRole("button", { name: "Import Files…" }).click();
     await (await chooser).setFiles(FIXTURE);
 
-    const supported = explorer.locator("[data-fm-node-id]", { hasText: "video-thumbnail.webm" }).first();
+    const supported = explorer.locator("[data-fm-node-id]", { hasText: "thumbnail-94.webm" }).first();
     await expect(supported).toBeVisible({ timeout: 30_000 });
     await supported.scrollIntoViewIfNeeded();
     const thumbnail = supported.locator(".fm-entry__icon--video .plasmon-icon-frame--thumbnail img.plasmon-media-thumbnail");
@@ -72,7 +72,7 @@ test("— packaged FileManager extracts a bounded silent video frame and falls b
     await expect(broken).toBeVisible({ timeout: 30_000 });
     await broken.scrollIntoViewIfNeeded();
     await expect(broken.locator("img.plasmon-media-thumbnail")).toHaveCount(0, { timeout: 10_000 });
-    await expect(broken.locator(".fm-entry__icon--video img.plasmon-icon-art:not(.plasmon-media-thumbnail)"))
+    await expect(broken.locator('.fm-entry__icon--video [data-plasmon-owned-icon="file-type:video"]'))
       .toBeVisible({ timeout: 20_000 });
 
     health.assertClean();
