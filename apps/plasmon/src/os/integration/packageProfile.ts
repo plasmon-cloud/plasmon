@@ -1,11 +1,11 @@
 // Package builds replace these identifiers with explicit profile values.
-// Game/emulator payloads are not shipped by any profile, so package builds
-// explicitly disable those handlers. Unbundled tests retain the full service
-// graph through the fallback values below.
+// Game/emulator payloads are not shipped by any current package profile, so
+// package builds explicitly disable those handlers. Unbundled tests retain the
+// full service graph through the fallback values below.
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
-const HACKATHON_CORE_DEFINE: boolean | undefined = typeof __PLASMON_HACKATHON_CORE__ === "undefined"
+const HACKATHON_PROFILE_DEFINE: boolean | undefined = typeof __PLASMON_HACKATHON_PROFILE__ === "undefined"
   ? undefined
-  : __PLASMON_HACKATHON_CORE__;
+  : __PLASMON_HACKATHON_PROFILE__;
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
 const GAME_RUNTIME_DEFINE: boolean | undefined = typeof __PLASMON_GAME_RUNTIME__ === "undefined"
   ? undefined
@@ -19,7 +19,9 @@ const DEMO_DEFINE: boolean | undefined = typeof __PLASMON_DEMO__ === "undefined"
   ? undefined
   : __PLASMON_DEMO__;
 
-export const isCoreProfile = HACKATHON_CORE_DEFINE ?? false;
-export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? !isCoreProfile;
+export const isHackathonProfile = HACKATHON_PROFILE_DEFINE ?? false;
+/** @deprecated Compatibility alias. New code should use isHackathonProfile. */
+export const isCoreProfile = isHackathonProfile;
+export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? !isHackathonProfile;
 export const isSlimMonacoProfile = MONACO_SLIM_DEFINE ?? false;
 export const isDemoProfile = DEMO_DEFINE ?? false;
