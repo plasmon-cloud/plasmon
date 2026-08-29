@@ -32,12 +32,12 @@ async function pinPresentation(action: Locator): Promise<{
 }
 
 /**
- * #109 already has deterministic shared-primitive coverage. This packaged proof
- * exercises the actual Start and taskbar-context consumers so platform emoji,
- * missing artwork, inaccessible state, or CSS that collapses pinned/unpinned
- * into color-only presentation cannot regress unnoticed.
+ * Deterministic shared-primitive coverage already owns the canonical pin
+ * presentation. This packaged proof exercises the actual Start and taskbar-
+ * context consumers so platform emoji, missing artwork, inaccessible state, or
+ * CSS that collapses pinned/unpinned into color-only presentation cannot regress.
  */
-test("#109 — packaged Start and taskbar context share the canonical pin affordance", async ({ page }) => {
+test("packaged Start and taskbar context share the canonical pin affordance", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -47,7 +47,7 @@ test("#109 — packaged Start and taskbar context share the canonical pin afford
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #109; this test exercises the real packaged Shell",
+        reason: "Kernel-owned installed-app iframe warning is outside this pin-affordance acceptance; this test exercises the real packaged Shell",
       },
     ],
   });
