@@ -4,9 +4,11 @@
 
 Applies to `apps/plasmon/test/**`. Also follow `apps/plasmon/AGENTS.md`, [`../TESTING.md`](../TESTING.md), and the nearest subsystem instructions for the behavior under test.
 
-`createHeadlessPlasmonEnvironment()` is the canonical deterministic cross-system composition. It uses the real production `PlasmonServices` graph and replaces only true environment boundaries. Do not create feature-specific fake filesystem, association, open, Process, Windowing, Shell, Desktop, native-app, or runtime implementations in this directory.
+`createHeadlessPlasmonEnvironment()` is the canonical deterministic cross-system composition. It uses the real production `PlasmonServices` graph and replaces only true environment boundaries. For **new high-level deterministic workflows representing legitimate OS operations**, use the production semantic API exposed as `env.os` rather than adding new raw `environment.services` choreography or using the legacy convenience helpers. Do not create feature-specific fake filesystem, association, open, Process, Windowing, Shell, Desktop, native-app, or runtime implementations in this directory.
 
-`renderPlasmon()` is the bounded React adapter around that same headless composition. It is not a second OS model and must not grow into a Page Object Model.
+`renderPlasmon()` is the bounded React adapter around that same headless composition. It exposes the same `environment.os` for legitimate setup and resulting-state inspection. It is not a second OS model and must not grow into a Page Object Model.
+
+The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain only to avoid a broad R3 migration. Do not use them in new high-level tests when `env.os` expresses the operation. Focused subsystem/unit tests are different: they should continue calling the owning production model/service/controller/command directly rather than being forced through `OsApi`.
 
 ## Required lanes
 
@@ -32,19 +34,23 @@ If Bun is unavailable locally, push the Issue branch and use **Plasmon Fast CI**
 
 Classify a missing test capability before adding infrastructure:
 
-- **A — existing production seam:** the owning production model/service/controller/command is already callable. Use it directly through focused tests or `createHeadlessPlasmonEnvironment()`; do not add a helper just to rename the call.
-- **B — missing test adapter/helper:** production composition is sufficient but repeated deterministic setup or inspection needs a small reusable builder/adapter. Keep it behavior-free.
-- **C — missing RTL composition:** the claim belongs to React/DOM adapter behavior and needs `renderPlasmon()`, Happy DOM setup, or a small semantic DOM helper. Do not move OS policy into this layer.
-- **D — deterministic production behavior trapped in React:** extract the smallest behavior into the owning production controller/model/command, preserve behavior, and add focused coverage there before exercising the thin React adapter.
-- **E — genuine browser/package boundary:** the claim depends on installed archives, Neutron installation/runtime, iframe/sandbox behavior, real layout/hit-testing, workers, Monaco/runtime initialization, media, fullscreen/download/file-picker, or another browser-owned facility. Keep the Playwright proof minimal and do not re-prove deterministic OS semantics there.
+- **A — existing production seam:** if the behavior is a focused subsystem claim, call the owning production model/service/controller/command directly. If it is a high-level cross-system workflow and `env.os` already expresses the legitimate OS operation, use `env.os`. Do not add a helper merely to rename either call.
+- **B — missing legitimate OsApi capability:** the workflow is deterministic, cross-system, and represents an OS operation a normal authorized automation caller could reasonably perform, but `env.os` cannot express it. Treat this as a candidate production `OsApi` gap and extend the dependency-light contract/adapter only when the capability is genuinely durable; do not encode the workflow as raw service choreography, a test-only business-semantic helper, or Playwright clicks.
+- **C — missing test adapter/helper:** production behavior is sufficient but repeated deterministic setup, settlement, external-effect control, or inspection needs a small reusable test-only builder/adapter. Keep it behavior-free and beside `env.os`; do not put test superpowers on `OsApi`.
+- **D — missing RTL composition:** the claim belongs to React/DOM adapter behavior and needs `renderPlasmon()`, Happy DOM setup, or a small semantic DOM helper. Do not move OS policy into this layer.
+- **E — deterministic production behavior trapped in React:** extract the smallest behavior into the owning production controller/model/command, preserve behavior, and add focused coverage there before exercising the thin React adapter.
+- **F — genuine browser/package boundary:** the claim depends on installed archives, Neutron installation/runtime, iframe/sandbox behavior, real layout/hit-testing, workers, Monaco/runtime initialization, media, fullscreen/download/file-picker, or another browser-owned facility. Keep the Playwright proof minimal and do not re-prove deterministic OS semantics there.
 
-Testing / Integration owns shared A-D harness repairs. Domain implementors should raise a `HARNESS GAP` instead of inventing local infrastructure. E remains an explicit packaged/browser boundary.
+Testing / Integration owns shared B-E harness/API repairs. Domain implementors should raise a `HARNESS GAP` instead of inventing local infrastructure. F remains an explicit packaged/browser boundary.
 
 ## Testing rules
 
 - Test the authority that owns the behavior; do not preserve obsolete architecture merely because source text is easy to assert.
 - Prefer executable production behavior over broad source-string assertions.
 - Put testable user-action semantics in real production models/services/controllers/commands. Tests should invoke the same logic as React adapters.
+- New high-level deterministic OS workflows should use `env.os` when the required legitimate capability exists; do not add new direct service-graph choreography as the permanent test language for those workflows.
+- If `env.os` lacks a legitimate durable OS operation, evaluate it as an `OsApi` gap before adding browser automation or a feature-specific helper.
+- Keep test-only powers such as global settlement, programmable failures/defer, fake call recording, clock control, transport faults, and impossible-state construction outside `OsApi`.
 - When several UI surfaces expose one operation, add cross-surface tests against the shared authority rather than duplicating semantics in each surface.
 - Use `renderPlasmon()` only when React/browser-adapter behavior itself matters. Prefer accessible role/name/state queries and `userEvent`; `data-testid` is exceptional.
 - Keep setup/builders small and domain-neutral. Repeated use must justify shared helpers.
