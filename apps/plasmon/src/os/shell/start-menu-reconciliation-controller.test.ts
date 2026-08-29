@@ -30,7 +30,7 @@ async function settleUntil(predicate: () => boolean): Promise<void> {
   if (!predicate()) throw new Error("controller did not settle");
 }
 
-test("#194 service controller reconciles native defaults before Element discovery and skips runtime-only churn", async () => {
+test("service controller reconciles native defaults before Element discovery and skips runtime-only churn", async () => {
   const native = [{ handlerId: "native:text", id: "text", name: "Text" }] as NativeAppDefinition[];
   const registry = { list: () => native } as NativeAppRegistry;
   let discovered = [element("review", "Review", "no")];
@@ -74,7 +74,7 @@ test("#194 service controller reconciles native defaults before Element discover
   controller.dispose();
 });
 
-test("#194 reconciliation failures are observable and retried because failed identity is not accepted", async () => {
+test("reconciliation failures are observable and retried because failed identity is not accepted", async () => {
   const registry = { list: () => [] } as unknown as NativeAppRegistry;
   const listeners = new Set<() => void>();
   const neutron: NeutronBridge = {

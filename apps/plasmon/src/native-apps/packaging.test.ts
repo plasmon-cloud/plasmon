@@ -96,7 +96,7 @@ test("package guard accepts the slim Monaco worker profile", () => {
   );
 });
 
-test("#89 package guard requires canonical Monaco Program Files worker outputs", () => {
+test("package guard requires canonical Monaco Program Files worker outputs", () => {
   const broken = goodMetafile();
   delete broken.outputs["dist/web/System/Program Files/MonacoEditor/ts.worker.js"];
   expect(() => assertMatureNativeAppBundle(broken)).toThrow(
@@ -104,7 +104,7 @@ test("#89 package guard requires canonical Monaco Program Files worker outputs",
   );
 });
 
-test("#89 package guard rejects the retired top-level Monaco worker path", () => {
+test("package guard rejects the retired top-level Monaco worker path", () => {
   const broken = goodMetafile();
   broken.outputs["dist/web/monaco-workers/editor.worker.js"] = { inputs: {} };
   expect(() => assertMatureNativeAppBundle(broken)).toThrow("legacy top-level Monaco worker path");

@@ -113,7 +113,7 @@ for (const fragment of [
 const explicit = await selectLabeledProbe({
   body: [
     "Flake-Probe-Target: test/e2e/plasmon-golden-path-left-snap.spec.ts",
-    "Flake-Probe-Grep: @issue-277",
+    "Flake-Probe-Grep: @left-snap",
   ].join("\n"),
   changedFiles: [],
 });
@@ -122,7 +122,7 @@ if (
   explicit.iterations !== 50 ||
   explicit.target !== "exact" ||
   explicit.test_file !== "test/e2e/plasmon-golden-path-left-snap.spec.ts" ||
-  explicit.test_grep !== "@issue-277" ||
+  explicit.test_grep !== "@left-snap" ||
   explicit.quarantine_excluded !== true
 ) {
   throw new Error("explicit labeled target must remain a direct 50-iteration probe with quarantine excluded");

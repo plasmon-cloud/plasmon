@@ -14,7 +14,7 @@ function node(id: string, name: string, kind: "file" | "directory" = "file"): Fs
   } as FsNode;
 }
 
-test("#194 Start projection keeps canonical trail identity and filters only the visible snapshot", () => {
+test("Start projection keeps canonical trail identity and filters only the visible snapshot", () => {
   const root = { id: "start-root", name: "Start Menu" };
   const accessories = { id: "accessories", name: "Accessories" };
   const calculator = node("calculator", "Calculator.url");
@@ -37,7 +37,7 @@ test("#194 Start projection keeps canonical trail identity and filters only the 
   expect(view.status).toEqual({ loading: false, empty: false, error: null });
 });
 
-test("#194 Start projection preserves the last filesystem snapshot while loading", () => {
+test("Start projection preserves the last filesystem snapshot while loading", () => {
   const stale = node("stale", "Existing shortcut.url");
   const view = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],
@@ -51,7 +51,7 @@ test("#194 Start projection preserves the last filesystem snapshot while loading
   expect(view.status).toEqual({ loading: true, empty: false, error: null });
 });
 
-test("#194 Start projection preserves independent error, loading, and empty presentation", () => {
+test("Start projection preserves independent error, loading, and empty presentation", () => {
   const stale = node("stale", "Existing shortcut.url");
   const erroredLoading = projectStartSurfaceView({
     trail: [{ id: "start-root", name: "Start Menu" }],

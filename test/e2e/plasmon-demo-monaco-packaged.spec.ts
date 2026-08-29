@@ -13,7 +13,7 @@ type BrowserPageError = {
 
 test(
   "[demo profile] packaged Text and Markdown edit save and reopen through real Monaco",
-  { tag: ["@demo-profile", "@issue-67", "@issue-285"] },
+  { tag: ["@demo-profile"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

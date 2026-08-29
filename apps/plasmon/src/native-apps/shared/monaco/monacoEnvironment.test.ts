@@ -5,7 +5,7 @@ import {
   monacoWorkerPath,
 } from "./monacoEnvironment.ts";
 
-test("#391 slim Monaco maps language-service labels to the packaged editor worker", () => {
+test("slim Monaco maps language-service labels to the packaged editor worker", () => {
   for (const label of ["editorWorkerService", "typescript", "javascript", "json", "css", "html"]) {
     expect(monacoWorkerFile(label, true)).toBe("editor.worker.js");
   }
@@ -20,7 +20,7 @@ test("#391 slim Monaco maps language-service labels to the packaged editor worke
   )).toBe("packaged editor worker bytes");
 });
 
-test("#391 slim Monaco fails closed when its packaged editor worker source is absent", () => {
+test("slim Monaco fails closed when its packaged editor worker source is absent", () => {
   expect(() => monacoWorkerBootstrapSource("typescript", {}, true)).toThrow(
     "Missing packaged Monaco worker source: editor.worker.js",
   );

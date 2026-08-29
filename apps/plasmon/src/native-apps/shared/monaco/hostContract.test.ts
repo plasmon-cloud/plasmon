@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 const appRoot = resolve(import.meta.dir, "../../../../");
 const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), "utf8");
 
-test("#200 Text and Markdown consume one shared Monaco host", () => {
+test("Text and Markdown consume one shared Monaco host", () => {
   const text = read("src/native-apps/text/TextEditor.tsx");
   const markdown = read("src/native-apps/markdown/MarkdownEditor.tsx");
   expect(text).toContain("../shared/monaco/MonacoEditorHost.tsx");
@@ -14,7 +14,7 @@ test("#200 Text and Markdown consume one shared Monaco host", () => {
   expect(markdown).not.toContain("../text/MonacoEditorSurface");
 });
 
-test("#200 shared Monaco host does not absorb document or Process authority", () => {
+test("shared Monaco host does not absorb document or Process authority", () => {
   const host = read("src/native-apps/shared/monaco/MonacoEditorHost.tsx");
   expect(host).not.toContain("FsService");
   expect(host).not.toContain("ProcessController");
@@ -22,13 +22,13 @@ test("#200 shared Monaco host does not absorb document or Process authority", ()
   expect(host).not.toContain("saveAs(");
 });
 
-test("#415 Text keeps one Monaco surface while Save As rebinds filesystem identity", () => {
+test("Text keeps one Monaco surface while Save As rebinds filesystem identity", () => {
   const text = read("src/native-apps/text/TextEditor.tsx");
   expect(text).toContain('modelKey={`text:${processId}`}');
   expect(text).not.toContain("snapshot.nodeId ?? target.nodeId");
 });
 
-test("#415 shared Monaco host exposes the actual live model language and identity", () => {
+test("shared Monaco host exposes the actual live model language and identity", () => {
   const host = read("src/native-apps/shared/monaco/MonacoEditorHost.tsx");
   expect(host).toContain('data-editor-language={modelLanguage ?? ""}');
   expect(host).toContain('data-editor-model-uri={modelUri ?? ""}');

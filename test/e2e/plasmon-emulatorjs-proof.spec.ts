@@ -265,7 +265,6 @@ test("packaged Plasmon loads EmulatorJS from local assets without external runti
 // after the packaged child reports the real EmulatorJS EJS_onGameStart event.
 test(
   "packaged Plasmon imports a legal NES fixture and initializes EmulatorJS from local assets",
-  { tag: ["@issue-245"] },
   async ({ page }) => {
     // Keep the existing overall safety bound. Readiness itself is event-driven
     // so a renderer-blocking cold core start cannot lose a just-arrived start

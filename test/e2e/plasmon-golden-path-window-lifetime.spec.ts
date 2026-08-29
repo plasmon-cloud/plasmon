@@ -67,7 +67,6 @@ async function activateSelectedDesktopRoot(
 // evidence remains independently owned.
 test(
   "packaged Plasmon repeatedly opens and closes reachable Explorer siblings",
-  { tag: ["@issue-251"] },
   async ({ page }) => {
     const { app } = await openInstalledPlasmon(page);
     const windowLayer = app.locator(".plasmon-window-layer").first();
@@ -96,8 +95,7 @@ test(
 );
 
 test(
-  "#63 packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
-  { tag: ["@issue-63", "@issue-308"] },
+  "packaged Alt-Tab consumes Windowing MRU through the real keyboard boundary",
   async ({ page }) => {
     const { app, kernelUrl } = await openInstalledPlasmon(page);
     const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });

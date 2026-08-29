@@ -35,7 +35,7 @@ test("presents only truthful running import and paste operation state", () => {
   }))).toEqual({ running: true, message: "Importing 2 of 3: notes.md" });
 });
 
-test("#92/#377 presents truthful move progress and failures without successful completion text", () => {
+test("presents truthful move progress and failures without successful completion text", () => {
   expect(presentFileOperation(snapshot({
     status: "running",
     kind: "move",
