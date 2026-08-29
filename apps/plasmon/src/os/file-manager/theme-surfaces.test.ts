@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-test("#511 FileManager transient chrome follows the active Visual palette", () => {
+test("FileManager transient chrome follows the active Visual palette", () => {
   const themeSurfaces = readFileSync(new URL("./theme-surfaces.scss", import.meta.url), "utf8");
   const rootStyle = readFileSync(new URL("../../style.scss", import.meta.url), "utf8");
 
