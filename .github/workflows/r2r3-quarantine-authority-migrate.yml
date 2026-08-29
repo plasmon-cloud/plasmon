@@ -1,0 +1,163 @@
+name: R2R3 quarantine authority migration
+
+on:
+  pull_request:
+    branches: [release/0.1.0-r2r3]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.pull_request.head.ref == 'cleanup/r2r3-quarantine-authority'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wire non-workflow consumers to quarantine authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path_name, old, new):
+              path = Path(path_name)
+              text = path.read_text()
+              if text.count(old) != 1:
+                  raise AssertionError(f'{path_name}: expected exactly one occurrence of {old!r}, found {text.count(old)}')
+              path.write_text(text.replace(old, new, 1))
+
+          # Specialist consumes the marker from the single inventory authority.
+          path = Path('test/ci/run-plasmon-specialist.mjs')
+          text = path.read_text()
+          anchor = "} from './plasmon-test-inventory.mjs';\n"
+          if "from './plasmon-quarantine.mjs'" not in text:
+              if text.count(anchor) != 1: raise AssertionError('specialist inventory import anchor changed')
+              text = text.replace(anchor, anchor + "import { quarantineMarker } from './plasmon-quarantine.mjs';\n", 1)
+          if text.count("    '@quarantine',") != 1: raise AssertionError('specialist marker literal changed')
+          text = text.replace("    '@quarantine',", "    quarantineMarker,", 1)
+          path.write_text(text)
+
+          # Targeted Flake Probe consumes the same marker dynamically.
+          path = Path('test/ci/run-plasmon-flake-probe.sh')
+          text = path.read_text()
+          anchor = 'test_files_json="${PROBE_TEST_FILES_JSON:-[]}"\n'
+          marker_line = 'quarantine_marker="$(node test/ci/plasmon-quarantine.mjs --marker)"\n'
+          if marker_line not in text:
+              if text.count(anchor) != 1: raise AssertionError('flake runner env anchor changed')
+              text = text.replace(anchor, anchor + marker_line, 1)
+          if text.count('--grep-invert @quarantine') != 1: raise AssertionError('flake runner marker literal changed')
+          text = text.replace('--grep-invert @quarantine', '--grep-invert "$quarantine_marker"', 1)
+          path.write_text(text)
+
+          # Automatic characterization only drops a file when every test in it is active debt.
+          path = Path('test/ci/select-plasmon-flake-characterization.mjs')
+          text = path.read_text()
+          anchor = '} from "./plasmon-test-inventory.mjs";\n'
+          if 'from "./plasmon-quarantine.mjs"' not in text:
+              if text.count(anchor) != 1: raise AssertionError('characterization import anchor changed')
+              text = text.replace(anchor, anchor + 'import { isFullyQuarantinedSource } from "./plasmon-quarantine.mjs";\n', 1)
+          old = '''function isQuarantinedAcceptance(path, sources) {\n  return (sources.get(path) ?? "").includes("@quarantine");\n}\n'''
+          new = '''function isQuarantinedAcceptance(path, sources) {\n  return isFullyQuarantinedSource(path, sources.get(path) ?? "");\n}\n'''
+          if text.count(old) != 1: raise AssertionError('characterization quarantine function changed')
+          path.write_text(text.replace(old, new, 1))
+
+          # Inventory verification derives exact active debt from JSON, not Issue tags.
+          path = Path('test/ci/verify-plasmon-test-inventory.mjs')
+          text = path.read_text()
+          anchor = "} from './plasmon-test-inventory.mjs';\n"
+          if "from './plasmon-quarantine.mjs'" not in text:
+              if text.count(anchor) != 1: raise AssertionError('inventory verifier import anchor changed')
+              text = text.replace(anchor, anchor + "import { activeQuarantines as activeQuarantineEntries, quarantineMarker } from './plasmon-quarantine.mjs';\n", 1)
+          text, count = re.subn(
+              r"const activeQuarantines = Object\.freeze\(\{[\s\S]*?\n\}\);\n",
+              "const activeQuarantines = Object.freeze(Object.fromEntries(\n  [...new Set(activeQuarantineEntries.map((entry) => entry.path))].map((path) => [\n    path,\n    { count: activeQuarantineEntries.filter((entry) => entry.path === path).length },\n  ]),\n));\n",
+              text,
+              count=1,
+          )
+          if count != 1: raise AssertionError('activeQuarantines verifier block changed')
+          old = "  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('@quarantine'), 'Specialist acceptance must exclude only explicitly tagged r2 quarantines with Playwright filtering');"
+          new = "  assert(specialistRunner.includes('--grep-invert') && specialistRunner.includes('quarantineMarker') && specialistRunner.includes('plasmon-quarantine.mjs'), 'Specialist acceptance must consume the shared quarantine marker authority');"
+          if text.count(old) != 1: raise AssertionError('specialist verifier assertion changed')
+          text = text.replace(old, new, 1)
+          text, count = re.subn(
+              r"\n      for \(const issue of expected\.issues\) \{\n        assert\(quarantineTags\.some\(\(tag\) => tag\.includes\(issue\)\), `\$\{path\} active quarantine must remain linked to \$\{issue\}`\);\n      \}",
+              "",
+              text,
+              count=1,
+          )
+          if count != 1: raise AssertionError('Issue-tag quarantine verifier block changed')
+          text, count = re.subn(
+              r"  const quarantineDoc = await readFile\(resolve\(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS\.md'\), 'utf8'\);[\s\S]*?\n\n  const fastWorkflow",
+              "  const quarantineDoc = await readFile(resolve(repoRoot, 'test/ci/QUARANTINED_BROWSER_TESTS.md'), 'utf8');\n  assert(quarantineDoc.includes('plasmon-quarantine.json'), 'Quarantine documentation must point to the machine-readable authority');\n  assert(quarantineDoc.includes(quarantineMarker), 'Quarantine documentation must name the stable marker');\n  assert(!quarantineDoc.includes('@r2-quarantine') && !quarantineDoc.includes('@r3-quarantine'), 'Current quarantine documentation must not define release-numbered active markers');\n  assert(activeQuarantineEntries.length === 1, 'Current executable quarantine debt must remain exactly one acceptance during this migration');\n  assert(activeQuarantineEntries[0].title === 'saved js-dos resource publishes a blob-backed preview after save', 'Saved-preview debt identity must remain unchanged');\n\n  const fastWorkflow",
+              text,
+              count=1,
+          )
+          if count != 1: raise AssertionError('historical quarantine doc verifier block changed')
+          path.write_text(text)
+
+          # Flake verifier checks dynamic marker ownership and keeps exact exclusion fail-closed.
+          path = Path('test/ci/verify-flake-probe.mjs')
+          text = path.read_text()
+          first_import = 'import { readFileSync } from "node:fs";\n'
+          if 'from "./plasmon-quarantine.mjs"' not in text:
+              if text.count(first_import) != 1: raise AssertionError('flake verifier import anchor changed')
+              text = text.replace(first_import, first_import + 'import { quarantineMarker } from "./plasmon-quarantine.mjs";\n', 1)
+          text = text.replace('  "--grep-invert @quarantine",\n', '  "--grep-invert \\\"$quarantine_marker\\\"",\n', 1)
+          old = '''for (const fragment of [\n  "discoverPlasmonTests",\n  "lane === 'specialist'",\n  "--workers=1",\n  "--grep-invert",\n  "@quarantine",\n]) {\n'''
+          new = '''for (const fragment of [\n  "discoverPlasmonTests",\n  "lane === 'specialist'",\n  "--workers=1",\n  "--grep-invert",\n  "quarantineMarker",\n  "plasmon-quarantine.mjs",\n]) {\n'''
+          if text.count(old) != 1: raise AssertionError('specialist verifier fragment block changed')
+          text = text.replace(old, new, 1)
+          # The current real demo-game file is mixed: ordinary acceptance + one exact quarantine.
+          # It must remain characterizable, with execution filtering the exact marker.
+          start = text.find('  const quarantineFixtureRoot = mkdtempSync')
+          end = text.find('\n  const helper = await selectCharacterization', start)
+          if start == -1 or end == -1: raise AssertionError('synthetic quarantine fixture block changed')
+          replacement = '''  const mixedQuarantine = await selectCharacterization({\n    changedFiles: ["test/e2e/plasmon-demo-game.spec.ts"],\n  });\n  if (!mixedQuarantine.applicable || !mixedQuarantine.files.includes("test/e2e/plasmon-demo-game.spec.ts")) {\n    throw new Error("mixed file with one exact quarantine must retain its non-quarantined browser acceptance");\n  }\n  if (mixedQuarantine.excluded_quarantined_tests.includes("test/e2e/plasmon-demo-game.spec.ts")) {\n    throw new Error("exact-test quarantine must not suppress the surrounding demo-game spec");\n  }\n'''
+          text = text[:start] + replacement + text[end:]
+          # Keep the marker value itself asserted from the authority.
+          marker_assert = 'if (quarantineMarker !== "@quarantine") throw new Error("Stable quarantine marker authority changed");\n\n'
+          insert = text.find('function requireFragment')
+          if insert == -1: raise AssertionError('flake verifier function anchor changed')
+          text = text[:insert] + marker_assert + text[insert:]
+          path.write_text(text)
+
+          # Labeled-probe verifier expects the dynamic runner boundary; workflow summary remains non-authoritative prose.
+          path = Path('test/ci/verify-labeled-flake-probe.mjs')
+          text = path.read_text()
+          text = text.replace('  "--grep-invert @quarantine",\n]) {\n  requireFragment(probeRunner, fragment, "flake-probe runner quarantine boundary");', '  "test/ci/plasmon-quarantine.mjs --marker",\n  "--grep-invert \\\"$quarantine_marker\\\"",\n]) {\n  requireFragment(probeRunner, fragment, "flake-probe runner quarantine boundary");', 1)
+          path.write_text(text)
+
+          # Packet verifier follows the same dynamic Flake Probe boundary.
+          path = Path('test/ci/verify-playwright-packet-lifecycle.mjs')
+          text = path.read_text()
+          text = text.replace('  "--grep-invert @quarantine",\n]) {\n  requireFragment(flakeRunner, fragment, "prepared-compatible flake runner");', '  "test/ci/plasmon-quarantine.mjs --marker",\n  "--grep-invert \\\"$quarantine_marker\\\"",\n]) {\n  requireFragment(flakeRunner, fragment, "prepared-compatible flake runner");', 1)
+          path.write_text(text)
+          PY
+
+          node test/ci/plasmon-quarantine.mjs --marker | grep -qx '@quarantine'
+          node test/ci/verify-plasmon-test-inventory.mjs
+          node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
+          node test/ci/verify-playwright-packet-lifecycle.mjs
+
+          git add \
+            test/ci/run-plasmon-specialist.mjs \
+            test/ci/run-plasmon-flake-probe.sh \
+            test/ci/select-plasmon-flake-characterization.mjs \
+            test/ci/verify-plasmon-test-inventory.mjs \
+            test/ci/verify-flake-probe.mjs \
+            test/ci/verify-labeled-flake-probe.mjs \
+            test/ci/verify-playwright-packet-lifecycle.mjs
+          git commit -m '#531 Consume one active quarantine authority'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
