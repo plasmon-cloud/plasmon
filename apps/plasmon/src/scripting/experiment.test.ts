@@ -30,7 +30,6 @@ test("production OsApi and command session provide deterministic filesystem/open
   const env = createHeadlessPlasmonEnvironment();
   try {
     await env.ready;
-    await env.services.os.fs.createDirectory("/Documents");
     const output: string[] = [];
     const errors: string[] = [];
     const command = new CommandSession(env.services.os, {
@@ -65,7 +64,6 @@ test("transpileCmdFile creates a sibling .run without overwriting existing outpu
   const env = createHeadlessPlasmonEnvironment();
   try {
     await env.ready;
-    await env.services.os.fs.createDirectory("/Documents");
     await env.services.os.fs.writeText("/Documents/demo.cmd", "echo Hello");
     const destination = await env.services.scripting.transpileCmdFile("/Documents/demo.cmd");
     expect(destination).toBe("/Documents/demo.run");
