@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 84" role="img" aria-label="Plasmon">
+  <g transform="translate(6 10) rotate(45 32 32)" fill="none" stroke="#fff" stroke-width="2.4">
+    <rect x="15" y="15" width="34" height="34"/>
+    <rect x="27" y="7" width="10" height="50" opacity=".55"/>
+    <rect x="7" y="27" width="50" height="10" opacity=".55"/>
+    <rect x="22" y="22" width="20" height="20" opacity=".45"/>
+  </g>
+  <rect x="35" y="39" width="6" height="6" transform="rotate(45 38 42)" fill="#fff"/>
+  <text x="88" y="52" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" letter-spacing="8">PLASMON</text>
+</svg>

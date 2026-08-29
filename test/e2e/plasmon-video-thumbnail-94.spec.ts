@@ -72,7 +72,7 @@ test("#94 — packaged FileManager extracts a bounded silent video frame and fal
     await expect(broken).toBeVisible({ timeout: 30_000 });
     await broken.scrollIntoViewIfNeeded();
     await expect(broken.locator("img.plasmon-media-thumbnail")).toHaveCount(0, { timeout: 10_000 });
-    await expect(broken.locator(".fm-entry__icon--video img.plasmon-icon-art:not(.plasmon-media-thumbnail)"))
+    await expect(broken.locator('.fm-entry__icon--video [data-plasmon-owned-icon="file-type:video"]'))
       .toBeVisible({ timeout: 20_000 });
 
     health.assertClean();

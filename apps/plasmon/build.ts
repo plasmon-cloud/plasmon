@@ -18,7 +18,7 @@ const devMode = args[0] === "dev";
 // profile is retained for the complete local comparison build.
 const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
 const isEditorProfile = packageProfile === "slim" || packageProfile === "full" || packageProfile === "demo";
-const isCoreProfile = !isEditorProfile;
+const isHackathonCoreProfile = !isEditorProfile;
 const isSlimMonacoProfile = packageProfile === "slim" || packageProfile === "demo";
 const isDemoProfile = packageProfile === "demo";
 
@@ -79,7 +79,7 @@ const config: BuildOptions = {
   entryPoints: [
     { in: "./src/index.tsx", out: "main" },
     { in: "./src/os/fs/background.ts", out: "service" },
-    ...(isCoreProfile
+    ...(isHackathonCoreProfile
       ? []
       : isSlimMonacoProfile
         ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
@@ -89,16 +89,23 @@ const config: BuildOptions = {
   bundle: true,
   minify: !devMode,
   sourcemap: devMode ? "inline" : false,
-  external: isCoreProfile
-    ? ["monaco-editor", "monaco-editor/*", "./text/*", "./markdown/*"]
-    : [],
+  // Public assets are copied verbatim into dist/web. Keep root-relative
+  // /static URLs external so Sass/esbuild does not try to resolve them as
+  // source-module imports before the public tree is copied.
+  external: [
+    "/static/*",
+    "static/*",
+    ...(isHackathonCoreProfile
+      ? ["monaco-editor", "monaco-editor/*", "./text/*", "./markdown/*"]
+      : []),
+  ],
   format: "esm",
   jsx: "automatic",
   loader: { ".ts": "ts", ".tsx": "tsx", ".ttf": "file" },
   outExtension: { ".css": ".bundle.css" },
   platform: "browser",
   define: {
-    __PLASMON_CORE_PROFILE__: JSON.stringify(isCoreProfile),
+    __PLASMON_HACKATHON_CORE__: JSON.stringify(isHackathonCoreProfile),
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
@@ -128,7 +135,7 @@ const config: BuildOptions = {
             monacoProfile: isEditorProfile ? (isSlimMonacoProfile ? "slim" : "full") : undefined,
           });
           await mergeApplicationStyles();
-          if (isCoreProfile) {
+          if (isHackathonCoreProfile) {
             const html = await readFile(outputIndex, "utf8");
             await writeFile(outputIndex, html.replace(/\s*<script src="\.\/runtime\/monaco\/worker-sources\.js"><\/script>/u, ""));
           }
@@ -141,7 +148,7 @@ const config: BuildOptions = {
 };
 
 await rm("./dist/web", { recursive: true, force: true });
-if (isCoreProfile) {
+if (isHackathonCoreProfile) {
   await Promise.all([
     rm("./public/runtime/monaco", { recursive: true, force: true }),
     rm("./public/System/Program Files/MonacoEditor", { recursive: true, force: true }),

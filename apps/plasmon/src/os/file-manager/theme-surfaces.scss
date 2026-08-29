@@ -1,0 +1,64 @@
+// Theme-owned FileManager chrome that historically lived in polish.scss with
+// fixed dark/blue literals. Keep file-type artwork color out of this layer;
+// Visual owns the Plasmon-controlled icon palette.
+
+[data-plasmon-theme] .fm-entry__thumbnail {
+  background: color-mix(in srgb, var(--plasmon-text-primary) 6%, transparent);
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--plasmon-text-primary) 24%, transparent);
+}
+
+[data-plasmon-theme] .fm-entry.is-renaming .fm-entry__name textarea {
+  border-color: var(--plasmon-selection-border);
+  background: var(--plasmon-control-background);
+  color: var(--plasmon-text-primary);
+}
+
+[data-plasmon-theme] .fm-entry--desktop .fm-entry__expanded-name {
+  border-color: var(--plasmon-selection-border);
+  background: var(--plasmon-panel-elevated);
+  box-shadow: var(--plasmon-shadow-panel);
+  color: var(--plasmon-text-primary);
+}
+
+[data-plasmon-theme] .fm-entry.is-drop-target {
+  background: color-mix(in srgb, var(--plasmon-accent) 18%, transparent);
+  border-color: var(--plasmon-accent);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--plasmon-accent) 38%, transparent),
+    0 0 18px color-mix(in srgb, var(--plasmon-accent) 24%, transparent);
+}
+
+[data-plasmon-theme] .fm-entries.is-drop-target {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--plasmon-accent) 52%, transparent);
+  background: color-mix(in srgb, var(--plasmon-accent) 8%, transparent);
+}
+
+[data-plasmon-theme] .fm-drag-preview {
+  filter: drop-shadow(0 8px 13px color-mix(in srgb, var(--plasmon-text-primary) 28%, transparent));
+}
+
+[data-plasmon-theme] .fm-drag-preview__count {
+  border-color: color-mix(in srgb, var(--plasmon-accent-ink) 72%, transparent);
+  background: var(--plasmon-accent);
+  color: var(--plasmon-accent-ink);
+  box-shadow: var(--plasmon-shadow-panel);
+}
+
+[data-plasmon-theme] .fm-drag-preview__feedback {
+  border-color: var(--plasmon-border-strong);
+  background: var(--plasmon-panel-elevated);
+  box-shadow: var(--plasmon-shadow-panel);
+  color: var(--plasmon-text-primary);
+}
+
+[data-plasmon-theme] .fm-error-banner__actions button,
+[data-plasmon-theme] .fm-error-banner > button {
+  border-color: var(--plasmon-border-strong);
+  background: var(--plasmon-control-background);
+  color: inherit;
+}
+
+[data-plasmon-theme] .explorer-app__address input[aria-invalid="true"] {
+  border-color: var(--plasmon-danger);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--plasmon-danger) 22%, transparent);
+}

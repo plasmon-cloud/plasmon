@@ -91,14 +91,15 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     version: 1,
     pinnedNative: [],
     pinnedElements: [],
-    themeId: "plasmon-dark",
-    wallpaper: "aurora",
+    themeId: "plasmon-graphite",
+    wallpaper: { mode: "follow-theme" },
+    showBrandWatermark: true,
     taskbarAlignment: "center",
     ...patch,
   };
 }
 
-test("legacy v1 Shell preferences preserve existing values and default taskbar alignment to center", async () => {
+test("legacy v1 Shell preferences preserve existing values and migrate wallpaper to Follow theme", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -112,9 +113,37 @@ test("legacy v1 Shell preferences preserve existing values and default taskbar a
     pinnedNative: ["native:text"],
     pinnedElements: ["mail"],
     themeId: "plasmon-midnight",
-    wallpaper: "plain",
-    taskbarAlignment: "center",
   }));
+});
+
+test("preview Plasmon Dark and Aurora values migrate to Verdant and Plasmon Lattice", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    version: 1,
+    pinnedNative: ["native:text"],
+    pinnedElements: [],
+    themeId: "plasmon-dark",
+    wallpaper: { mode: "pinned", id: "plasmon-aurora" },
+    taskbarAlignment: "center",
+  };
+
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.themeId).toBe("plasmon-verdant");
+  expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "plasmon-lattice" });
+  expect(loaded.showBrandWatermark).toBe(true);
+});
+
+test("preview Digital Dusk selection migrates to Graphite Sand", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    version: 1,
+    pinnedNative: [],
+    pinnedElements: [],
+    themeId: "plasmon-graphite",
+    wallpaper: { mode: "pinned", id: "digital-dusk" },
+  };
+  expect((await new ShellPreferenceStore(fs).load()).wallpaper)
+    .toEqual({ mode: "pinned", id: "graphite-sand" });
 });
 
 test("pinned native application persists through a new ShellPreferenceStore session", async () => {
@@ -135,10 +164,23 @@ test("theme persists through FsService root metadata", async () => {
   expect((await new ShellPreferenceStore(fs).load()).themeId).toBe("plasmon-midnight");
 });
 
-test("wallpaper persists through FsService root metadata", async () => {
+test("pinned generated wallpaper persists through FsService root metadata", async () => {
   const fs = new PreferenceFs();
-  await new ShellPreferenceStore(fs).save(preferences({ wallpaper: "plain" }));
-  expect((await new ShellPreferenceStore(fs).load()).wallpaper).toBe("plain");
+  await new ShellPreferenceStore(fs).save(preferences({ wallpaper: { mode: "pinned", id: "ember-horizon" } }));
+  expect((await new ShellPreferenceStore(fs).load()).wallpaper).toEqual({ mode: "pinned", id: "ember-horizon" });
+});
+
+test("pinned Graphite Sand JPG wallpaper persists through FsService root metadata", async () => {
+  const fs = new PreferenceFs();
+  await new ShellPreferenceStore(fs).save(preferences({ wallpaper: { mode: "pinned", id: "graphite-sand" } }));
+  expect((await new ShellPreferenceStore(fs).load()).wallpaper).toEqual({ mode: "pinned", id: "graphite-sand" });
+});
+
+test("Plasmon watermark visibility persists through FsService root metadata", async () => {
+  const fs = new PreferenceFs();
+  await new ShellPreferenceStore(fs).save(preferences({ showBrandWatermark: false }));
+  expect((await new ShellPreferenceStore(fs).load()).showBrandWatermark).toBe(false);
+  expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ showBrandWatermark: false }));
 });
 
 test("taskbar alignment persists through FsService root metadata", async () => {
@@ -149,7 +191,7 @@ test("taskbar alignment persists through FsService root metadata", async () => {
   expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ taskbarAlignment: "left" }));
 });
 
-test("corrupt preference root metadata falls back to deterministic defaults", async () => {
+test("corrupt preference root metadata falls back to deterministic Graphite defaults", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -161,12 +203,30 @@ test("corrupt preference root metadata falls back to deterministic defaults", as
   expect(await new ShellPreferenceStore(fs).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
 });
 
-test("invalid explicit taskbar alignment does not partially accept corrupt preferences", async () => {
+test("invalid wallpaper falls back only that dimension without discarding valid Shell preferences", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
     pinnedNative: ["native:text"],
     pinnedElements: ["mail"],
+    themeId: "plasmon-rosewood",
+    wallpaper: { mode: "pinned", id: "not-a-wallpaper" },
+    taskbarAlignment: "left",
+  };
+  expect(await new ShellPreferenceStore(fs).load()).toEqual(preferences({
+    pinnedNative: ["native:text"],
+    pinnedElements: ["mail"],
+    themeId: "plasmon-rosewood",
+    taskbarAlignment: "left",
+  }));
+});
+
+test("invalid explicit taskbar alignment does not partially accept corrupt preferences", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    version: 1,
+    pinnedNative: ["native:text"],
+    pinnedElements: [],
     themeId: "plasmon-midnight",
     wallpaper: "plain",
     taskbarAlignment: "right",
@@ -177,7 +237,11 @@ test("invalid explicit taskbar alignment does not partially accept corrupt prefe
 test("write failure keeps the selected in-memory preference outcome", async () => {
   const fs = new PreferenceFs();
   fs.failWrites = true;
-  const selected = preferences({ pinnedElements: ["mail"], wallpaper: "plain", taskbarAlignment: "left" });
+  const selected = preferences({
+    pinnedElements: ["mail"],
+    wallpaper: { mode: "pinned", id: "glacier-prism" },
+    taskbarAlignment: "left",
+  });
   const outcome = await saveShellPreferencesNonDestructive(new ShellPreferenceStore(fs), selected);
   expect(outcome.saved).toBe(false);
   expect(outcome.error).toBeInstanceOf(Error);

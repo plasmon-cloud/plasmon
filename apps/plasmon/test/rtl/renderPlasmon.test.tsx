@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { act, waitFor, within } from "@testing-library/react";
 import type { ExternalElement, FsNode } from "../../src/os/contracts/index.ts";
-import { SYSTEM_ICON_ASSETS } from "../../src/os/visual/assets.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 const reviewElement: ExternalElement = {
@@ -201,7 +200,9 @@ describe("renderPlasmon", () => {
       const result = description.closest("button");
       if (!result) throw new Error("Iconless Review Search result did not render as a result button");
 
-      expect(result.querySelector("img")?.getAttribute("src")).toBe(SYSTEM_ICON_ASSETS.application);
+      const fallback = result.querySelector<SVGElement>('[data-plasmon-owned-icon="system:application"]');
+      expect(fallback).not.toBeNull();
+      expect(result.querySelector("img")).toBeNull();
     } finally {
       app.dispose();
     }

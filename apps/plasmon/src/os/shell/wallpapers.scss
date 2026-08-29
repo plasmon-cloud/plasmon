@@ -1,0 +1,32 @@
+@layer plasmon-shell {
+  // Every wallpaper is a packaged image. Graphite uses the supplied JPG;
+  // the other theme companions are authored SVG artwork. The watermark is a
+  // separate Shell overlay so it can be toggled without changing the artwork.
+  .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
+  }
+
+  .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/plasmon-lattice.svg") center / cover no-repeat;
+  }
+
+  .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/midnight-orbit.svg") center / cover no-repeat;
+  }
+
+  .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/ember-horizon.svg") center / cover no-repeat;
+  }
+
+  .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/glacier-prism.svg") center / cover no-repeat;
+  }
+
+  .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__wallpaper {
+    background: url("static/plasmon/wallpapers/rosewood-bloom.svg") center / cover no-repeat;
+  }
+
+  .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora {
+    display: none;
+  }
+}
