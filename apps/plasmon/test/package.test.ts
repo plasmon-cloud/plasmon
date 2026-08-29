@@ -8,7 +8,7 @@ import {
 import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
-import { HACKATHON_MAX_BYTES } from "../hackathonPackageGate.ts";
+import { DEMO_PAYLOAD_MARKERS, HACKATHON_MAX_BYTES } from "../hackathonPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
 const manifestUrl = new URL("../neutron.json", import.meta.url);
@@ -140,9 +140,10 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   expect(Object.keys(sources).sort()).toEqual([...monacoWorkers].sort());
 
   if (packagePolicy.isHackathon) {
+    expect(packagePolicy.isDemo).toBe(false);
     const mainBundle = await readFile(mainBundleUrl, "utf8");
-    expect(mainBundle).not.toContain("Demo Notes.txt");
-    expect(mainBundle).not.toContain("Demo Guide.md");
-    expect(mainBundle).not.toContain("Demo Artwork.svg");
+    for (const marker of DEMO_PAYLOAD_MARKERS) {
+      expect(mainBundle).not.toContain(marker);
+    }
   }
 });
