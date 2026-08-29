@@ -27,7 +27,7 @@ export async function createGeneratedFolder(
  * The generated filename is the type authority for these blank documents. Do
  * not persist the filename-derived MIME as explicit metadata: FileManager
  * immediately offers inline rename, and a later `.txt -> .js` / `.md -> .js`
- * rename must remain eligible for canonical #189 filename classification.
+ * rename must remain eligible for canonical filename-derived classification.
  */
 export async function createDocument(
   fs: FsService,

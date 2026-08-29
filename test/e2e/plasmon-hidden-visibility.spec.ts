@@ -114,7 +114,7 @@ test("— packaged hidden visibility composes global Settings with Explorer-loca
     const address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue("/");
 
-    // Use the same production folder-activation adapter as the packaged #108
+    // Use the same production folder-activation adapter as the packaged
     // navigation regression instead of racing controlled address-form state.
     const systemEntry = files.locator("[data-fm-node-id]", { hasText: "System" }).first();
     await expect(systemEntry).toBeVisible({ timeout: 20_000 });
@@ -155,7 +155,7 @@ test("— packaged hidden visibility composes global Settings with Explorer-loca
 
     await plasmon.getByRole("button", { name: "Start", exact: true }).click();
     await expect(start).toBeVisible();
-    // #428 retired the managed Properties Start default. Global visibility
+    // The managed Properties Start default is retired. Global visibility
     // exposes existing hidden resources; it does not resurrect retired seeds.
     await expect(start.getByText("Properties", { exact: true })).toHaveCount(0);
     await start.getByRole("textbox", { name: "Search Start" }).press("Escape");
