@@ -24,5 +24,7 @@ Historical files are intentionally preserved with their original Issue, PR, bran
 - [`GAMES_DAEDALOS_ARCHITECTURE.md`](GAMES_DAEDALOS_ARCHITECTURE.md) — 2026-08-11 daedalOS games/runtime research and hackathon design handoff.
 - [`FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md`](FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md) — historical correction packet for the games/runtime portion of the filesystem design; current game/runtime rules live with the Games, Native Apps, filesystem, and runtime documentation.
 - [`VISUAL_SYSTEM_THEME.md`](VISUAL_SYSTEM_THEME.md) — historical GUI1 visual-system analysis and design handoff; current visual-system authority lives under `src/os/visual/` and its consumers.
+- [`FIRST_COLLABORATIVE_ATOM_DESIGN.md`](FIRST_COLLABORATIVE_ATOM_DESIGN.md) — branch/SHA-bound collaborative Review/Atom research and design exploration.
+- [`FIRST_COLLABORATIVE_ATOM_MVP.md`](FIRST_COLLABORATIVE_ATOM_MVP.md) — narrowed hackathon Review/Atom MVP scope and acceptance-design follow-up.
 
 The presence of a record here does not imply that its named Issue, PR, quarantine, CI lane, release branch, package profile, or implementation terminology is still current.
