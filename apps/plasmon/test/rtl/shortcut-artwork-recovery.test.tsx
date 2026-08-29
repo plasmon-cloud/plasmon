@@ -45,15 +45,15 @@ test("keeps last resolved shortcut artwork through transient target lookup failu
     fs.stat = async (id) => {
       if (injectedFailurePending && id === shortcut.target.nodeId) {
         injectedFailurePending = false;
-        throw new Error("Issue 420 transient shortcut target lookup failure");
+        throw new Error("transient shortcut target lookup failure");
       }
       return originalStat.call(fs, id);
     };
 
     await act(async () => {
-      await fs.createFile(desktop.id, "Issue 420 refresh.txt", { mime: "text/plain" });
+      await fs.createFile(desktop.id, "Refresh Recovery Fixture.txt", { mime: "text/plain" });
     });
-    await app.findByRole("option", { name: "Issue 420 refresh.txt" });
+    await app.findByRole("option", { name: "Refresh Recovery Fixture.txt" });
     await waitFor(() => expect(injectedFailurePending).toBe(false));
     await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
 
@@ -62,9 +62,9 @@ test("keeps last resolved shortcut artwork through transient target lookup failu
     // enrichment without ever publishing the generic file artwork in between.
     fs.stat = originalStat;
     await act(async () => {
-      await fs.createFile(desktop.id, "Issue 420 recovery.txt", { mime: "text/plain" });
+      await fs.createFile(desktop.id, "Post-Recovery Fixture.txt", { mime: "text/plain" });
     });
-    await app.findByRole("option", { name: "Issue 420 recovery.txt" });
+    await app.findByRole("option", { name: "Post-Recovery Fixture.txt" });
     await waitFor(() => expect(renderedIconIdentity()).toBe(FOLDER_ICON_ID));
     await act(async () => { await Promise.resolve(); });
     observer.disconnect();
