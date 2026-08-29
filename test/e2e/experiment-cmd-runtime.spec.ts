@@ -43,7 +43,7 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   await terminalInput.fill("pwd");
   await terminalInput.press("Enter");
   await expect(
-    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: /^\/$/ }).first(),
+    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: /^\/\n?$/ }).first(),
   ).toBeVisible({ timeout: 15_000 });
 
   await plasmon.getByRole("button", { name: "Search" }).click();
