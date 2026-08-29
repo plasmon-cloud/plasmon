@@ -20,21 +20,19 @@ jobs:
     name: Dispatch targeted 50-iteration flake probe
     runs-on: ubuntu-latest
     steps:
-      - name: Check r2 scope
+      - name: Check release integration scope
         id: scope
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -euo pipefail
-          eligible=false
-          if [ "$HEAD_REPOSITORY" = "$GITHUB_REPOSITORY" ] && [ "$BASE_REF" = "release/0.1.0-r2" ]; then
-            eligible=true
+          if [ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]; then
+            echo "ci:flake-probe requires a same-repository PR; head_repository=$HEAD_REPOSITORY repository=$GITHUB_REPOSITORY" >&2
+            exit 1
           fi
-          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
-          if [ "$eligible" != true ]; then
-            echo "ci:flake-probe dispatch requires a same-repository PR targeting release/0.1.0-r2; base=$BASE_REF head_repository=$HEAD_REPOSITORY" >&2
-          fi
+          node test/ci/plasmon-ci-policy.mjs "$BASE_REF" release
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
 
       - name: Checkout exact PR head for target selection
         if: steps.scope.outputs.eligible == 'true'
