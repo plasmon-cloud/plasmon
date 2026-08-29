@@ -80,6 +80,7 @@ export interface FileManagerProps {
   ) => void | Promise<void>;
   onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
+  onTranspileCmd?: (node: FsNode) => void | Promise<void>;
   onSnapshot?: (snapshot: FileManagerSnapshot) => void;
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
   className?: string;
@@ -103,6 +104,7 @@ export function FileManager({
   onDesktopReposition,
   onIncomingDropPlacement,
   onOpenDirectory,
+  onTranspileCmd,
   onSnapshot,
   confirmDelete,
   className,
@@ -231,6 +233,12 @@ export function FileManager({
   );
   const operationPresentation = presentFileOperation(operation);
   const canPaste = Boolean(clipboard.snapshot());
+  const canTranspileCmd = Boolean(
+    contextNode
+      && contextNode.kind === "file"
+      && contextNode.name.toLowerCase().endsWith(".cmd")
+      && onTranspileCmd,
+  );
 
   const menuAction = (action: FileManagerContextMenuAction) => {
     if (action === "newFolder") {
@@ -275,6 +283,14 @@ export function FileManager({
     }
     if (action === "download") {
       void commands.downloadNode(contextNode);
+      return;
+    }
+    if (action === "transpileRun") {
+      closeContextMenu();
+      if (!onTranspileCmd || !canTranspileCmd) return;
+      void Promise.resolve(onTranspileCmd(contextNode))
+        .then(() => directory.refresh())
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
       return;
     }
     if (action === "cut") {
@@ -441,6 +457,7 @@ export function FileManager({
           node={contextNode}
           canOpenWith={canOpenWith}
           canDownload={contextNode?.kind === "file" && commands.isDownloadReady(contextNode)}
+          canTranspileCmd={canTranspileCmd}
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}

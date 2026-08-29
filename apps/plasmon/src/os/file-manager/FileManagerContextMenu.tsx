@@ -10,6 +10,7 @@ export type FileManagerContextMenuAction =
   | "open"
   | "openWith"
   | "download"
+  | "transpileRun"
   | "cut"
   | "copy"
   | "createShortcut"
@@ -34,6 +35,7 @@ interface FileManagerContextMenuProps {
   node: FsNode | null;
   canOpenWith: boolean;
   canDownload: boolean;
+  canTranspileCmd: boolean;
   canCreateShortcut: boolean;
   operationRunning: boolean;
   canPaste: boolean;
@@ -95,6 +97,11 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               onClick={() => props.onAction("download")}
             >
               Download
+            </button>
+          ) : null}
+          {props.canTranspileCmd ? (
+            <button type="button" role="menuitem" onClick={() => props.onAction("transpileRun")}>
+              Transpile to .run
             </button>
           ) : null}
           <div className="fm-menu-separator" role="separator" />

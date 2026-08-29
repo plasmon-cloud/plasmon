@@ -3,6 +3,7 @@ import type {
   AssociationRegistry,
   FsEventSource,
   NativeAppDefinition,
+  NodeId,
   OpenService,
 } from "../../os/contracts/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
@@ -35,6 +36,7 @@ export interface ExplorerNativeDependencies {
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  transpileCmdFile?: (nodeId: NodeId) => Promise<void>;
 }
 
 export function createExplorerNativeLoader(dependencies: ExplorerNativeDependencies): NativeAppLoader {
@@ -49,6 +51,7 @@ export function createExplorerNativeLoader(dependencies: ExplorerNativeDependenc
       hiddenVisibility: dependencies.hiddenVisibility,
       ...(dependencies.fsEvents ? { fsEvents: dependencies.fsEvents } : {}),
       ...(dependencies.clipboard ? { clipboard: dependencies.clipboard } : {}),
+      ...(dependencies.transpileCmdFile ? { transpileCmdFile: dependencies.transpileCmdFile } : {}),
     });
     return { default: Component };
   };

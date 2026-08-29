@@ -49,6 +49,7 @@ export interface ExplorerAppProps {
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  transpileCmdFile?: (nodeId: NodeId) => Promise<void>;
 }
 
 function labelForPath(path: string): string {
@@ -90,6 +91,7 @@ export function ExplorerApp({
   trashAuthority,
   clipboard: providedClipboard,
   hiddenVisibility,
+  transpileCmdFile,
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const preferenceStore = useMemo(() => new FileManagerPreferenceStore(fs), [fs]);
@@ -384,6 +386,7 @@ export function ExplorerApp({
               sort={sort}
               filterQuery={query}
               onOpenDirectory={(node) => navigate(node.id)}
+              {...(transpileCmdFile ? { onTranspileCmd: (node: FsNode) => transpileCmdFile(node.id) } : {})}
               onSnapshot={handleSnapshot}
             />
           ) : <p className="fm-empty">Loading folder…</p>}

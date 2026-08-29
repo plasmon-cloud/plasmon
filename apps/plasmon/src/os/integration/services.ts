@@ -319,6 +319,19 @@ export function createPlasmonServices(
   const fs = filesystem.fs;
   const os = createExperimentalPlasmonOsApi({ fs, filesystem, process, windows });
   const scripting = new ScriptingService({ os });
+  nativeApps.setLoader(
+    explorerAppDefinition.id,
+    createExplorerNativeLoader({
+      fsEvents: fs,
+      associations,
+      openService,
+      openAuthority: fileManagerOpenAuthority,
+      trashAuthority: fileManagerTrashAuthority,
+      clipboard: fileClipboard,
+      hiddenVisibility,
+      transpileCmdFile: async (nodeId) => scripting.transpileCmdFile(await fs.pathOf(nodeId)),
+    }),
+  );
   if (!isCoreProfile) {
     nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
   }
