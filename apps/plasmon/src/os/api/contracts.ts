@@ -13,11 +13,11 @@ export interface OsResource {
 /** Semantic result of opening one filesystem resource through the canonical dispatcher. */
 export interface OpenResult {
   readonly resource: OsResource;
-  /** Present when the open operation resolves to a Plasmon-native process. */
+  /** Present when the requested resource is directly owned by a Plasmon-native process. */
   readonly handlerId?: string;
-  /** Present when the operation launches or reuses a Plasmon-native process. */
+  /** Present when the requested resource is directly targeted by a Plasmon-native process. */
   readonly processId?: string;
-  /** Present when the resulting Plasmon-native process owns a window. */
+  /** Present when that directly-targeted Plasmon-native process owns a window. */
   readonly windowId?: string;
 }
 
