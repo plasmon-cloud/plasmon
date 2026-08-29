@@ -7,6 +7,8 @@ const repoRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const guardPath = "test/ci/verify-active-provenance.mjs";
 
 const activeInputs = Object.freeze([
+  "README.md",
+  "AGENTS.md",
   "apps/plasmon/README.md",
   "apps/plasmon/AGENTS.md",
   "apps/plasmon/TESTING.md",
