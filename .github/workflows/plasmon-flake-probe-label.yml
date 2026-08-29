@@ -136,6 +136,7 @@ jobs:
           SOURCE: ${{ steps.select.outputs.selection_source }}
         run: |
           set -euo pipefail
+          QUARANTINE_MARKER="$(node test/ci/plasmon-quarantine.mjs --marker)"
           {
             echo "## ci:flake-probe dispatch"
             echo
@@ -151,5 +152,5 @@ jobs:
             echo "- Quarantine: always excluded"
             echo
             echo "The branch ref only transports workflow_dispatch. The dispatched workflow receives the immutable SHA as its \`ref\` input and checks out that exact commit."
-            echo "Direct labeled targets run with \`--workers=1 --retries=0 --grep-invert @quarantine\`."
+            echo "Direct labeled targets run with \`--workers=1 --retries=0 --grep-invert $QUARANTINE_MARKER\`."
           } | tee -a "$GITHUB_STEP_SUMMARY"

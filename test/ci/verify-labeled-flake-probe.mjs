@@ -56,7 +56,8 @@ for (const fragment of [
   "inputs.test_file = selectedTestFile",
   "inputs.test_grep = selectedTestGrep",
   "Quarantine: always excluded",
-  "--workers=1 --retries=0 --grep-invert @quarantine",
+  "QUARANTINE_MARKER=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
+  "--workers=1 --retries=0 --grep-invert $QUARANTINE_MARKER",
 ]) {
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
@@ -91,7 +92,8 @@ for (const fragment of ["include_quarantined: true", "shared-support-fallback"])
 for (const fragment of [
   "--workers=1",
   "--retries=0",
-  "--grep-invert @quarantine",
+  "quarantine_marker=\"$(node test/ci/plasmon-quarantine.mjs --marker)\"",
+  "--grep-invert \"$quarantine_marker\"",
 ]) {
   requireFragment(probeRunner, fragment, "flake-probe runner quarantine boundary");
 }
@@ -186,5 +188,5 @@ for (const broadTarget of ["all", "specialist"]) {
 }
 
 console.log(
-  "Labeled 50-iteration exact-head dispatch, branch-transport/SHA-pin semantics, absolute quarantine exclusion, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
+  "Labeled 50-iteration exact-head dispatch, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
 );

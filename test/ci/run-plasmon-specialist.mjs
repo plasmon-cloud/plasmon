@@ -3,6 +3,7 @@ import {
   discoverPlasmonTests,
   repoRoot,
 } from './plasmon-test-inventory.mjs';
+import { quarantineMarker } from './plasmon-quarantine.mjs';
 
 const inventory = await discoverPlasmonTests();
 const tests = inventory
@@ -22,7 +23,7 @@ const result = spawnSync(
     'test',
     '--workers=1',
     '--grep-invert',
-    '@quarantine',
+    quarantineMarker,
     ...tests,
     ...process.argv.slice(2),
   ],
