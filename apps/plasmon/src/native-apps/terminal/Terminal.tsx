@@ -64,7 +64,12 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
     }
   };
 
-  const historyKey = (event: KeyboardEvent<HTMLInputElement>) => {
+  const commandKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void submit();
+      return;
+    }
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     if (history.length === 0) return;
@@ -112,7 +117,7 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
           value={input}
           disabled={running}
           onChange={(event) => setInput(event.currentTarget.value)}
-          onKeyDown={historyKey}
+          onKeyDown={commandKey}
           spellCheck={false}
           autoComplete="off"
           style={styles.input}
