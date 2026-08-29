@@ -95,6 +95,7 @@ export function TerminalApp({ scripting }: TerminalAppProps) {
         {lines.map((line) => (
           <pre
             key={line.id}
+            data-terminal-tone={line.tone}
             style={{
               ...styles.line,
               ...(line.tone === "stderr" ? styles.stderr : {}),

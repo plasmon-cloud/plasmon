@@ -37,10 +37,14 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const terminalInput = terminalWindow.getByLabel("Terminal command");
   await terminalInput.fill('echo "Hello from cmd"');
   await terminalInput.press("Enter");
-  await expect(terminalWindow.getByRole("log")).toContainText("Hello from cmd", { timeout: 30_000 });
+  await expect(
+    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: "Hello from cmd" }).first(),
+  ).toBeVisible({ timeout: 30_000 });
   await terminalInput.fill("pwd");
   await terminalInput.press("Enter");
-  await expect(terminalWindow.getByRole("log")).toContainText("/", { timeout: 15_000 });
+  await expect(
+    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: /^\/$/ }).first(),
+  ).toBeVisible({ timeout: 15_000 });
 
   await plasmon.getByRole("button", { name: "Search" }).click();
   await plasmon.getByLabel("Search Plasmon").fill("Files");
@@ -74,7 +78,15 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   await transpile.click();
 
   const runEntry = fileList.locator('[data-fm-node-id]', { hasText: "Experiment Smoke.run" }).first();
-  await expect(runEntry).toBeVisible({ timeout: 15_000 });
+  try {
+    await expect(runEntry).toBeVisible({ timeout: 15_000 });
+  } catch (cause) {
+    const alerts = await explorer.getByRole("alert").allTextContents();
+    const visibleNames = await fileList.locator('[data-fm-node-id]').allTextContents();
+    throw new Error(
+      `Explorer did not project the generated .run. alerts=${JSON.stringify(alerts)} visibleNames=${JSON.stringify(visibleNames)}; ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
   await runEntry.dblclick();
 
   const editorWindow = plasmon.getByRole("dialog", { name: "Experiment Smoke.run" }).last();
