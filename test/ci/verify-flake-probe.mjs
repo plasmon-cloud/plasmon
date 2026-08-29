@@ -184,6 +184,7 @@ for (const fragment of [
   "iteration_count: 50",
   "files_json",
   "no-deterministic-playwright-target",
+  "only-profile-specific-playwright-changes",
   "only-quarantined-playwright-changes",
   "no-relevant-playwright-change",
 ]) {
@@ -311,6 +312,16 @@ async function verifyCharacterizationSelection() {
   }
   assertNoFullyQuarantinedFiles(mixedProfiles, "mixed profile selection");
 
+  const profileOnly = await selectCharacterization({ changedFiles: [profileSpecific] });
+  if (
+    profileOnly.applicable ||
+    profileOnly.reason !== "only-profile-specific-playwright-changes" ||
+    profileOnly.files.length !== 0 ||
+    !profileOnly.deferred_profile_tests.includes(profileSpecific)
+  ) {
+    throw new Error("profile-specific changes must defer automatic characterization to their dedicated package lane");
+  }
+
   const syntheticPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";
   const syntheticSource = [
     'import { test } from "@playwright/test";',
@@ -341,8 +352,12 @@ async function verifyCharacterizationSelection() {
   }
   const activeMixedPath = activeQuarantines[0].path;
   const mixedQuarantine = await selectCharacterization({ changedFiles: [activeMixedPath] });
-  if (!mixedQuarantine.applicable || !mixedQuarantine.files.includes(activeMixedPath)) {
-    throw new Error("a changed mixed required/quarantined spec must remain characterizable");
+  if (
+    mixedQuarantine.applicable ||
+    mixedQuarantine.reason !== "only-profile-specific-playwright-changes" ||
+    !mixedQuarantine.deferred_profile_tests.includes(activeMixedPath)
+  ) {
+    throw new Error("a changed profile-specific mixed required/quarantined spec must defer automatic characterization");
   }
   if (mixedQuarantine.excluded_quarantined_tests.includes(activeMixedPath)) {
     throw new Error("a mixed spec must not be excluded merely because one exact test is quarantined");
@@ -625,5 +640,5 @@ verifyLegacyResultCompatibility();
 verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec preservation, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec preservation, profile-specific deferral, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );
