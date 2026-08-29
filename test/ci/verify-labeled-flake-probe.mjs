@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { plasmonBranchRole } from "./plasmon-ci-policy.mjs";
 import { selectLabeledProbe } from "./select-labeled-flake-probe.mjs";
 
 const labelWorkflow = readFileSync(
@@ -35,8 +36,12 @@ for (const fragment of [
   "pull-requests: read",
   "github.event.label.name == 'ci:flake-probe'",
   "contains(github.event.pull_request.labels.*.name, 'ci:flake-probe')",
+  "name: Check release integration scope",
   "HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}",
-  "release/0.1.0-r2",
+  'case "$BASE_REF" in',
+  "release/*) ;;",
+  "requires a same-repository PR",
+  "requires a release-role base branch",
   "name: Checkout exact PR head for target selection",
   "ref: ${{ github.event.pull_request.head.sha }}",
   "git diff --name-only \"$BASE_SHA\" \"$HEAD_SHA\"",
@@ -61,6 +66,8 @@ for (const fragment of [
   requireFragment(labelWorkflow, fragment, "flake-probe label bridge");
 }
 for (const fragment of [
+  "release/0.1.0-r2",
+  "Check r2 scope",
   "target: 'all'",
   "target: 'specialist'",
   "pull_request_target",
@@ -68,6 +75,17 @@ for (const fragment of [
   "--retries=1",
 ]) {
   forbidFragment(labelWorkflow, fragment, "flake-probe label bridge");
+}
+
+for (const ref of ["release/0.1.0-r2r3", "release/demo", "release/future/candidate"]) {
+  if (plasmonBranchRole(ref) !== "release") {
+    throw new Error(`Release-role policy rejected labeled-probe base ${ref}`);
+  }
+}
+for (const ref of ["main", "feature/probe", "release/"]) {
+  if (plasmonBranchRole(ref) !== "unknown") {
+    throw new Error(`Labeled-probe release policy must reject non-release base ${ref}`);
+  }
 }
 
 for (const fragment of [
@@ -186,5 +204,5 @@ for (const broadTarget of ["all", "specialist"]) {
 }
 
 console.log(
-  "Labeled 50-iteration exact-head dispatch, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
+  "Labeled 50-iteration exact-head dispatch, release-role/same-repository eligibility, branch-transport/SHA-pin semantics, shared quarantine authority, single-file inference, unresolved-helper fail-closed behavior, broad-target rejection, and label synchronize/removal contract verified",
 );
