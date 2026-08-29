@@ -6,7 +6,7 @@ import {
   type IncomingDropPlacementRequest,
 } from "./drop-placement.ts";
 
-test("#371 incoming placement preserves the translated ghost top-left in target coordinates", () => {
+test("incoming placement preserves the translated ghost top-left in target coordinates", () => {
   const intent = incomingDropPlacementIntent([
     { id: "file-a", left: 420, top: 180, width: 128, height: 94 },
   ], { dx: 215, dy: 307 }, {
@@ -22,7 +22,7 @@ test("#371 incoming placement preserves the translated ghost top-left in target 
   });
 });
 
-test("#371 grouped incoming placement keeps each stable NodeId and relative source geometry", () => {
+test("grouped incoming placement keeps each stable NodeId and relative source geometry", () => {
   const intent = incomingDropPlacementIntent([
     { id: "a", left: 300, top: 100, width: 104, height: 94 },
     { id: "b", left: 300, top: 204, width: 104, height: 94 },
@@ -39,7 +39,7 @@ test("#371 grouped incoming placement keeps each stable NodeId and relative sour
   ]);
 });
 
-test("#371 target placement is only committed when the successful move invokes its deferred commit", async () => {
+test("target placement is only committed when the successful move invokes its deferred commit", async () => {
   const intent = incomingDropPlacementIntent([
     { id: "file-a", left: 100, top: 80, width: 92, height: 88 },
   ], { dx: 40, dy: 50 }, {

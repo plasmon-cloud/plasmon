@@ -6,7 +6,7 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
 const FOLDER_ICON = "static/plasmon/icons/folder.svg";
 const FALLBACK_FILE_ICON = "static/plasmon/icons/file.svg";
 
-test("#420 keeps last resolved shortcut artwork through transient target lookup failure", async () => {
+test("keeps last resolved shortcut artwork through transient target lookup failure", async () => {
   const app = await renderPlasmon();
   const fs = app.environment.services.fs;
   const originalStat = fs.stat;

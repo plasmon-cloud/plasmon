@@ -12,7 +12,7 @@ async function directory(environment: ReturnType<typeof createHeadlessPlasmonEnv
   return node;
 }
 
-test("#51 RED — selected FileManager resources expose Send to Desktop and create a NodeId shortcut", async () => {
+test("RED — selected FileManager resources expose Send to Desktop and create a NodeId shortcut", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   const user = userEvent.setup();
   try {

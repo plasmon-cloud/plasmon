@@ -13,7 +13,7 @@ function api(overrides: Partial<VanillaNeutronApi> = {}): VanillaNeutronApi {
   };
 }
 
-test("#171 concurrent unchanged Element discovery coalesces descriptor and icon work", async () => {
+test("concurrent unchanged Element discovery coalesces descriptor and icon work", async () => {
   let lists = 0;
   let describes = 0;
   let resolutions = 0;

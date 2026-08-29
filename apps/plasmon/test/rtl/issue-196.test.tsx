@@ -4,7 +4,7 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
 
 const strategySeamName = /^Issue 196 Strategy Seam\.txt/;
 
-test("#196 Grid, List and Details render one shared NodeId selection through explicit view strategies", async () => {
+test("Grid, List and Details render one shared NodeId selection through explicit view strategies", async () => {
   const app = await renderPlasmon();
   try {
     const documents = await app.environment.node("/Documents");

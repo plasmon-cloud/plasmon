@@ -36,7 +36,7 @@ function controller(results: SearchSurfaceController["view"]["results"]): Search
   };
 }
 
-test("#90 SearchSurface renders canonical Neutron application presentation without runtime/package tokens", () => {
+test("SearchSurface renders canonical Neutron application presentation without runtime/package tokens", () => {
   const node = projectionNode();
   const projection: NeutronProjectionSearchResult = {
     kind: "neutron-projection",
@@ -74,7 +74,7 @@ test("#90 SearchSurface renders canonical Neutron application presentation witho
   }
 });
 
-test("#90 SearchSurface keeps direct Element and projection presentation consistent without runtime state", () => {
+test("SearchSurface keeps direct Element and projection presentation consistent without runtime state", () => {
   const element: ExternalElement = {
     id: "mail",
     name: "Mail",

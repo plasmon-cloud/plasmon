@@ -5,7 +5,7 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
 const FOLDER_ICON = "static/plasmon/icons/folder.svg";
 const FALLBACK_FILE_ICON = "static/plasmon/icons/file.svg";
 
-test("#217 keeps resolved shortcut artwork stable across authoritative Desktop refreshes", async () => {
+test("keeps resolved shortcut artwork stable across authoritative Desktop refreshes", async () => {
   const app = await renderPlasmon();
   try {
     const desktop = await app.environment.node("/Desktop");

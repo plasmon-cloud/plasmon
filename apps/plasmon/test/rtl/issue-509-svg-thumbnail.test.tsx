@@ -22,7 +22,7 @@ function expectSvgThumbnail(option: HTMLElement): void {
   expect(src.startsWith("blob:") || src.startsWith("data:image/svg+xml;base64,")).toBe(true);
 }
 
-test("#509 the same SVG thumbnails directly in Pictures and through its Desktop shortcut", async () => {
+test("the same SVG thumbnails directly in Pictures and through its Desktop shortcut", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;

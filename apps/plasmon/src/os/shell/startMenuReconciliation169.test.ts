@@ -34,7 +34,7 @@ function seededIdentities(metadata: Record<string, unknown>): string[] {
     : [];
 }
 
-test("#169 malformed managed category is bounded, idempotent, and recoverable", async () => {
+test("malformed managed category is bounded, idempotent, and recoverable", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;

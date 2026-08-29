@@ -8,18 +8,18 @@ export const browserLanes = Object.freeze({
   smoke: Object.freeze([
     'test/e2e/plasmon-refactor-smoke.spec.ts',
     'test/e2e/plasmon-presentation-assets.spec.ts',
-    'test/e2e/plasmon-desktop-placement-192.spec.ts',
-    'test/e2e/plasmon-list-layout-173.spec.ts',
-    'test/e2e/plasmon-file-entry-191.spec.ts',
+    'test/e2e/plasmon-desktop-placement.spec.ts',
+    'test/e2e/plasmon-list-layout.spec.ts',
+    'test/e2e/plasmon-file-entry.spec.ts',
   ]),
   specialist: Object.freeze([
     'test/e2e/plasmon-golden-path-left-snap.spec.ts',
     'test/e2e/plasmon-golden-path-right-snap.spec.ts',
     'test/e2e/plasmon-golden-path-window-lifetime.spec.ts',
-    'test/e2e/plasmon-monaco-workers-89.spec.ts',
-    'test/e2e/plasmon-context-menu-176.spec.ts',
-    'test/e2e/plasmon-drag-preview-66.spec.ts',
-    'test/e2e/plasmon-taskbar-context-menu-402.spec.ts',
+    'test/e2e/plasmon-packaged-monaco-worker.spec.ts',
+    'test/e2e/plasmon-file-context-menu.spec.ts',
+    'test/e2e/plasmon-drag-preview.spec.ts',
+    'test/e2e/plasmon-taskbar-context-menu.spec.ts',
   ]),
   persistence: Object.freeze([
     'test/e2e/plasmon-persistence.spec.ts',
@@ -36,11 +36,11 @@ export const optionalCoreBrowserTests = Object.freeze([
   'test/e2e/plasmon-demo-monaco-packaged.spec.ts',
   'test/e2e/plasmon-emulatorjs-proof.spec.ts',
   'test/e2e/plasmon-demo-game.spec.ts',
-  'test/e2e/plasmon-demo-markdown-commands-114.spec.ts',
-  'test/e2e/plasmon-demo-native-app-chrome-112.spec.ts',
-  'test/e2e/plasmon-demo-photos-expand-180.spec.ts',
+  'test/e2e/plasmon-demo-markdown-commands.spec.ts',
+  'test/e2e/plasmon-demo-native-app-chrome.spec.ts',
+  'test/e2e/plasmon-demo-photos-expand.spec.ts',
   'test/e2e/plasmon-demo-text-language-transition.spec.ts',
-  'test/e2e/plasmon-demo-text-parity-344.spec.ts',
+  'test/e2e/plasmon-demo-text-parity.spec.ts',
 ]);
 
 export const nonPlasmonBrowserSpecs = Object.freeze({

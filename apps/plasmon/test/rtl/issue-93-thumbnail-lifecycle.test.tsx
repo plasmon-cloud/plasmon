@@ -25,7 +25,7 @@ function ThumbnailHarness({ fs, node }: { fs: FsService; node: FsNode }) {
   return <div ref={entryRef} data-thumbnail={thumbnail ?? ""} />;
 }
 
-test("#93 thumbnail lifecycle stays lazy and revokes loaded URLs on replacement/unmount", async () => {
+test("thumbnail lifecycle stays lazy and revokes loaded URLs on replacement/unmount", async () => {
   const originalIntersectionObserver = globalThis.IntersectionObserver;
   const originalCreateObjectURL = URL.createObjectURL;
   const originalRevokeObjectURL = URL.revokeObjectURL;

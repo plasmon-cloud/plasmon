@@ -26,14 +26,14 @@ function classification(
   };
 }
 
-test("#190 shared presentation retains stable fallback and shortcut identity", () => {
+test("shared presentation retains stable fallback and shortcut identity", () => {
   const target = { kind: "native", src: "/app/plasmon/apps/mail/static/icon.svg" } as const;
   expect(composeShortcutPresentation(target)).toEqual({ target, shortcut: true });
   expect(resolveImagePresentation(target.src, target.src)).toEqual({ kind: "fallback" });
   expect(resolveImagePresentation(null, null)).toEqual({ kind: "fallback" });
 });
 
-test("#190 shared asset vocabulary is package-relative and includes canonical resource classes", () => {
+test("shared asset vocabulary is package-relative and includes canonical resource classes", () => {
   for (const path of [
     FILE_TYPE_ICON_ASSETS.folder,
     FILE_TYPE_ICON_ASSETS.file,
@@ -46,7 +46,7 @@ test("#190 shared asset vocabulary is package-relative and includes canonical re
   expect(SHORTCUT_OVERLAY_ASSET).toEndWith("static/plasmon/icons/shortcut-overlay.svg");
 });
 
-test("#190 one Visual resolver maps already-classified file and application identities", () => {
+test("one Visual resolver maps already-classified file and application identities", () => {
   expect(resourcePresentationForClassification(classification("directory"))).toEqual({
     kind: "file-type",
     icon: "folder",
@@ -78,7 +78,7 @@ test("#190 one Visual resolver maps already-classified file and application iden
   });
 });
 
-test("#190 registered native artwork overrides the shared handler fallback without changing handler authority", () => {
+test("registered native artwork overrides the shared handler fallback without changing handler authority", () => {
   expect(nativeHandlerResourcePresentation("native:explorer", "/apps/explorer/icon.svg")).toEqual({
     kind: "application",
     src: "/apps/explorer/icon.svg",

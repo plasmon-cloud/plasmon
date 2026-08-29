@@ -23,7 +23,7 @@ function node(id: string, parentId: string, name = id): FsNode {
   };
 }
 
-test("#195 keeps displayed-directory refresh relevance at the filesystem event boundary", () => {
+test("keeps displayed-directory refresh relevance at the filesystem event boundary", () => {
   const directoryId = "directory";
   const child = node("child", directoryId);
   const unrelated = node("unrelated", "other-directory");
@@ -60,7 +60,7 @@ test("#195 keeps displayed-directory refresh relevance at the filesystem event b
   ).toBe(false);
 });
 
-test("#195 reconciles selection by stable NodeId after authoritative refresh", () => {
+test("reconciles selection by stable NodeId after authoritative refresh", () => {
   const current: SelectionState = {
     ids: new Set(["kept", "removed"]),
     anchor: "kept",

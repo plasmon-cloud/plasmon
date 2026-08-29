@@ -279,9 +279,9 @@ function assertNoFullyQuarantinedFiles(selection, label) {
 }
 
 async function verifyCharacterizationSelection() {
-  const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
+  const first = "test/e2e/plasmon-start-inventory.spec.ts";
   const second = "test/e2e/plasmon-neutron-icon.spec.ts";
-  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome-112.spec.ts";
+  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome.spec.ts";
 
   const oneChanged = await selectCharacterization({ changedFiles: [first] });
   if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
@@ -318,7 +318,7 @@ async function verifyCharacterizationSelection() {
   const syntheticSource = [
     'import { test } from "@playwright/test";',
     "",
-    `test("synthetic quarantine fixture", { tag: ["${quarantineMarker}"] }, async () => {});`,
+    `test("synthetic quarantine fixture", async () => {});`,
     "",
   ].join("\n");
   const syntheticEntries = [{

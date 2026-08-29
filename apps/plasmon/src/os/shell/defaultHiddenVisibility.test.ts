@@ -6,7 +6,7 @@ import { createHeadlessPlasmonEnvironment } from "../../../test/headlessEnvironm
 import { searchShellVisibleByDefault } from "./searchVisibility.ts";
 import { listVisibleStartMenuFolder } from "./startVisibility.ts";
 
-test("#466 Search applies canonical default hidden state to resources, native projections, and shortcut targets", async () => {
+test("Search applies canonical default hidden state to resources, native projections, and shortcut targets", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
@@ -66,7 +66,7 @@ test("#466 Search applies canonical default hidden state to resources, native pr
   }
 });
 
-test("#429 global hidden visibility widens Search without regressing #466 projection filtering", async () => {
+test("global hidden visibility widens Search without regressing #466 projection filtering", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
@@ -106,7 +106,7 @@ test("#429 global hidden visibility widens Search without regressing #466 projec
   }
 });
 
-test("#466 Start hides canonical hidden targets without deleting or rewriting shortcuts", async () => {
+test("Start hides canonical hidden targets without deleting or rewriting shortcuts", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
@@ -149,7 +149,7 @@ test("#466 Start hides canonical hidden targets without deleting or rewriting sh
   }
 });
 
-test("#466 Explorer-local Show hidden files does not change Search or Start default visibility", async () => {
+test("Explorer-local Show hidden files does not change Search or Start default visibility", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {

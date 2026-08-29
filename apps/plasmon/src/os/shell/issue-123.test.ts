@@ -32,7 +32,7 @@ function result(node: FsNode): FileSearchResult {
   };
 }
 
-test("#123 Search consumes the same shared thumbnail presentation as resource surfaces", () => {
+test("Search consumes the same shared thumbnail presentation as resource surfaces", () => {
   expect(searchApplicationIcon(result(gameNode(true)))).toEqual({
     kind: "thumbnail",
     src: "static/plasmon/artwork/plasmon-demo.svg",
@@ -40,7 +40,7 @@ test("#123 Search consumes the same shared thumbnail presentation as resource su
   });
 });
 
-test("#123 Search preserves the canonical file fallback when artwork is absent", () => {
+test("Search preserves the canonical file fallback when artwork is absent", () => {
   expect(searchApplicationIcon(result(gameNode(false)))).toEqual({
     kind: "file-type",
     icon: "file",

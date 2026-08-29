@@ -144,7 +144,7 @@ test("#92/#377 multi-item drag move exposes running state without persistent suc
   }
 });
 
-test("#377 single-item Desktop drag removes operation status after successful completion", async () => {
+test("single-item Desktop drag removes operation status after successful completion", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -200,7 +200,7 @@ test("#377 single-item Desktop drag removes operation status after successful co
   }
 });
 
-test("#92 multi-item drag move surfaces partial success and failure", async () => {
+test("multi-item drag move surfaces partial success and failure", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let targetElement: HTMLElement | null = null;
   let moves = 0;
@@ -253,7 +253,7 @@ test("#92 multi-item drag move surfaces partial success and failure", async () =
   }
 });
 
-test("#92 drag move refuses to start while another FileManager operation is active", async () => {
+test("drag move refuses to start while another FileManager operation is active", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   let targetElement: HTMLElement | null = null;
   let moves = 0;

@@ -11,7 +11,7 @@ function node(id: NodeId): Pick<FsNode, "id"> {
   return { id };
 }
 
-test("#115 Open command preserves stable identity and caller-owned directory presentation", async () => {
+test("Open command preserves stable identity and caller-owned directory presentation", async () => {
   const calls: Array<{ nodeId: NodeId; hasDirectoryHandler: boolean }> = [];
   const onOpenDirectory = async () => {};
   const authority: ResourceOpenCommandAuthority = {
@@ -30,7 +30,7 @@ test("#115 Open command preserves stable identity and caller-owned directory pre
   ]);
 });
 
-test("#115 Open command reports canonical authority failure without replacing it", async () => {
+test("Open command reports canonical authority failure without replacing it", async () => {
   const failure = new Error("canonical opener rejected resource");
   const authority: ResourceOpenCommandAuthority = {
     async openNode() {

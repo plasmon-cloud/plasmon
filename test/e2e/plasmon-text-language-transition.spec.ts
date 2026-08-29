@@ -21,7 +21,7 @@ async function expectJavaScriptTokenization(window: Locator, message: string): P
   ).toBeGreaterThan(1);
 }
 
-test("#415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@issue-415", "@issue-505"] }, async ({ page }) => {
+test("Text classifies FileManager rename and Save As language transitions in live Monaco", async ({ page }) => {
   test.setTimeout(180_000);
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

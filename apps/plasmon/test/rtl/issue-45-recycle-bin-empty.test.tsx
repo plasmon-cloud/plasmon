@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { act, waitFor, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
-test("#45 non-empty Recycle Bin confirms in-app and empties canonical Trash", async () => {
+test("non-empty Recycle Bin confirms in-app and empties canonical Trash", async () => {
   const app = await renderPlasmon();
   const originalConfirm = window.confirm;
   try {
@@ -51,7 +51,7 @@ test("#45 non-empty Recycle Bin confirms in-app and empties canonical Trash", as
   }
 });
 
-test("#45 selected permanent delete confirms in-app and cancellation is non-destructive", async () => {
+test("selected permanent delete confirms in-app and cancellation is non-destructive", async () => {
   const app = await renderPlasmon();
   const originalConfirm = window.confirm;
   try {

@@ -13,7 +13,7 @@ const artwork = () => resourceArtworkMetadata({
   byteSize: 1193,
 });
 
-test("#123 artwork metadata rejects non-local, mismatched, and oversized declarations", () => {
+test("artwork metadata rejects non-local, mismatched, and oversized declarations", () => {
   expect(() => resourceArtworkMetadata({
     src: "https://covers.invalid/game.svg",
     mime: "image/svg+xml",
@@ -31,7 +31,7 @@ test("#123 artwork metadata rejects non-local, mismatched, and oversized declara
   })).toThrow();
 });
 
-test("#123 artwork follows ordinary filesystem copy and stable-metadata semantics", async () => {
+test("artwork follows ordinary filesystem copy and stable-metadata semantics", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   const root = await fs.resolvePath("/");
   const desktop = await fs.resolvePath("/Desktop");

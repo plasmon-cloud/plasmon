@@ -13,7 +13,7 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
  * no-target error path rather than mounting a media element. Those engines keep
  * their existing browser/package coverage.
  */
-test("#112 representative native apps consume shared content chrome", async () => {
+test("representative native apps consume shared content chrome", async () => {
   const app = await renderPlasmon();
   try {
     await act(async () => {

@@ -16,7 +16,7 @@ function gameNode(metadata: Record<string, JsonValue> = {}) {
   };
 }
 
-test("#123 characterization: game resources without artwork use the canonical shared fallback", () => {
+test("characterization: game resources without artwork use the canonical shared fallback", () => {
   const classification = classifyResource(gameNode());
 
   expect(classification.kind).toBe("ordinary-file");
@@ -26,7 +26,7 @@ test("#123 characterization: game resources without artwork use the canonical sh
   });
 });
 
-test("#123 validated package-local artwork maps through the shared thumbnail vocabulary", () => {
+test("validated package-local artwork maps through the shared thumbnail vocabulary", () => {
   const node = gameNode(resourceArtworkMetadata({
     src: "static/plasmon/artwork/plasmon-demo.svg",
     mime: "image/svg+xml",
@@ -49,7 +49,7 @@ test("#123 validated package-local artwork maps through the shared thumbnail voc
   });
 });
 
-test("#123 invalid artwork metadata is ignored and preserves the canonical fallback", () => {
+test("invalid artwork metadata is ignored and preserves the canonical fallback", () => {
   const node = gameNode({
     "plasmon.resourceArtwork": {
       format: "plasmon.resource-artwork",

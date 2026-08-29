@@ -5,7 +5,7 @@ import {
   inlineRenameStyleVariables,
 } from "./rename-presentation.ts";
 
-test("#361 Desktop rename grows from measured content width to the bounded tile width", () => {
+test("Desktop rename grows from measured content width to the bounded tile width", () => {
   const presentation = inlineRenamePresentation("desktop");
   expect(presentation).toEqual({
     rows: 1,
@@ -27,7 +27,7 @@ test("#361 Desktop rename grows from measured content width to the bounded tile 
   expect(boundedInlineRenameWidth(180, 2, 36, 90)).toBe(90);
 });
 
-test("#361 Grid rename uses the same content-sized wrapped policy without widening its tile", () => {
+test("Grid rename uses the same content-sized wrapped policy without widening its tile", () => {
   const presentation = inlineRenamePresentation("grid");
   expect(presentation.wrap).toBe("soft");
   expect(presentation.autoGrow).toBe(true);
@@ -42,7 +42,7 @@ test("#361 Grid rename uses the same content-sized wrapped policy without wideni
   });
 });
 
-test("#361 List and Details rename remain single-line editors", () => {
+test("List and Details rename remain single-line editors", () => {
   for (const surface of ["list", "details"] as const) {
     const presentation = inlineRenamePresentation(surface);
     expect(presentation.rows).toBe(1);

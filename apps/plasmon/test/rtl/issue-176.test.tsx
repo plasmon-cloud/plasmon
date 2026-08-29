@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { act, waitFor, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
-test("#176 editable FileManager rename controls retain intentional context-menu text behavior", async () => {
+test("editable FileManager rename controls retain intentional context-menu text behavior", async () => {
   const app = await renderPlasmon();
   try {
     const desktop = await app.environment.node("/Desktop");
@@ -24,7 +24,7 @@ test("#176 editable FileManager rename controls retain intentional context-menu 
   }
 });
 
-test("#176 Shell-owned context is claimed while a foreign child remains unclaimed", async () => {
+test("Shell-owned context is claimed while a foreign child remains unclaimed", async () => {
   const app = await renderPlasmon();
   try {
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
@@ -48,7 +48,7 @@ test("#176 Shell-owned context is claimed while a foreign child remains unclaime
   }
 });
 
-test("#176 native app hosts claim first-party content while Browser edit and iframe boundaries remain unclaimed", async () => {
+test("native app hosts claim first-party content while Browser edit and iframe boundaries remain unclaimed", async () => {
   const app = await renderPlasmon();
   try {
     await act(async () => {
@@ -87,7 +87,7 @@ test("#176 native app hosts claim first-party content while Browser edit and ifr
   }
 });
 
-test("#176 Explorer sidebar uses the native fallback while specialized FileManager context remains authoritative", async () => {
+test("Explorer sidebar uses the native fallback while specialized FileManager context remains authoritative", async () => {
   const app = await renderPlasmon();
   try {
     await act(async () => {

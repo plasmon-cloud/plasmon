@@ -34,7 +34,7 @@ async function expectReviewArtwork(locator: Locator): Promise<void> {
   ).toBe(true);
 }
 
-test("#425 authoritative installed Review artwork reaches Files, Search, taskbar, and shortcut composition", async ({ page, request }) => {
+test("authoritative installed Review artwork reaches Files, Search, taskbar, and shortcut composition", async ({ page, request }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {

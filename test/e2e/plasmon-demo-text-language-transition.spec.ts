@@ -28,7 +28,7 @@ async function expectMonacoReady(surface: Locator): Promise<void> {
   await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: READY_TIMEOUT_MS });
 }
 
-test("[demo profile] #415 Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile", "@issue-415"] }, async ({ page }) => {
+test("[demo profile] Text classifies FileManager rename and Save As language transitions in live Monaco", { tag: ["@demo-profile"] }, async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {

@@ -52,7 +52,7 @@ function renderEntry(options: {
   }));
 }
 
-test("#191 characterization keeps FileEntry selection and rename state keyed to NodeId", () => {
+test("characterization keeps FileEntry selection and rename state keyed to NodeId", () => {
   const selected = renderEntry({ selected: true, focused: true });
   expect(selected).toContain('role="option"');
   expect(selected).toContain('aria-selected="true"');

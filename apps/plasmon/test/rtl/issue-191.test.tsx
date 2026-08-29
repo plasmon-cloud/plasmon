@@ -7,7 +7,7 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
  * already covers click, Enter commit, context commands and activation. This
  * issue-scoped adapter characterization adds only Escape-cancellation wiring.
  */
-test("#191 characterization wires Escape cancellation without mutating the NodeId resource", async () => {
+test("characterization wires Escape cancellation without mutating the NodeId resource", async () => {
   const app = await renderPlasmon();
   try {
     const desktop = await app.environment.node("/Desktop");

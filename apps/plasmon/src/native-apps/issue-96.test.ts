@@ -20,7 +20,7 @@ function packageAssetPath(reference: string): string {
   return fileURLToPath(new URL(`../../public/${relative}`, import.meta.url));
 }
 
-test("#96 first-party application identities are packaged metadata, not generated glyph data URIs", () => {
+test("first-party application identities are packaged metadata, not generated glyph data URIs", () => {
   const apps = contentAppDefinitions.filter((app) =>
     FIRST_PARTY_APPS.includes(app.id as (typeof FIRST_PARTY_APPS)[number]),
   );

@@ -29,7 +29,7 @@ function presentation(item: FsNode): StartItemPresentation {
   };
 }
 
-test("#194 focused Start surface keeps loading, error, and the filesystem snapshot visible together", () => {
+test("focused Start surface keeps loading, error, and the filesystem snapshot visible together", () => {
   const existing = node("existing", "Existing.url");
   const screen = render(<StartSurface
     view={projectStartSurfaceView({
@@ -55,7 +55,7 @@ test("#194 focused Start surface keeps loading, error, and the filesystem snapsh
   expect(screen.getByRole("button", { name: /Existing\.url/ })).toBeTruthy();
 });
 
-test("#194 focused Start surface translates query, navigation, activation, pin, settings, and keyboard intent", () => {
+test("focused Start surface translates query, navigation, activation, pin, settings, and keyboard intent", () => {
   const folder = node("folder", "Accessories", "directory");
   const shortcut = node("shortcut", "Text.url");
   const calls: string[] = [];

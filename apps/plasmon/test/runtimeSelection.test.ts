@@ -8,7 +8,7 @@ function emulatorFixture(): Uint8Array {
   return bytes;
 }
 
-test("#83 canonical associations select js-dos and EmulatorJS through the shared headless runtime path", async () => {
+test("canonical associations select js-dos and EmulatorJS through the shared headless runtime path", async () => {
   const environment = createHeadlessPlasmonEnvironment();
 
   try {

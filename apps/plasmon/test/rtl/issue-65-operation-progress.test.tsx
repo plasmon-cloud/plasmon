@@ -87,7 +87,7 @@ async function directory(fs: FsService, path: string): Promise<FsNode> {
   return node;
 }
 
-test("#65 RED — multi-file import exposes truthful accessible running state while writes are pending", async () => {
+test("RED — multi-file import exposes truthful accessible running state while writes are pending", async () => {
   const baseFs = operationFs();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });
@@ -129,7 +129,7 @@ test("#65 RED — multi-file import exposes truthful accessible running state wh
   }
 });
 
-test("#65 paste exposes truthful running state while the filesystem copy is pending", async () => {
+test("paste exposes truthful running state while the filesystem copy is pending", async () => {
   const baseFs = operationFs();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => { release = resolve; });

@@ -9,7 +9,7 @@ import { reconcileDesktopPositions } from "./layout.ts";
 
 const workspace = { width: 640, height: 480 };
 
-test("#192 RED — restored/new resources avoid an occupied persisted Desktop slot", () => {
+test("RED — restored/new resources avoid an occupied persisted Desktop slot", () => {
   const positions = {
     existing: { x: 16, y: 16 },
     restored: { x: 16, y: 16 },
@@ -21,7 +21,7 @@ test("#192 RED — restored/new resources avoid an occupied persisted Desktop sl
   expect(reconciled.restored).not.toEqual(reconciled.existing);
 });
 
-test("#192 RED — invalid persisted Desktop coordinates are repaired into the usable workspace", () => {
+test("RED — invalid persisted Desktop coordinates are repaired into the usable workspace", () => {
   const positions = { outside: { x: -40, y: -12 } };
 
   const reconciled = reconcileDesktopPositions(positions, ["outside"], workspace);
@@ -30,7 +30,7 @@ test("#192 RED — invalid persisted Desktop coordinates are repaired into the u
   expect(reconciled.outside.y).toBeGreaterThanOrEqual(0);
 });
 
-test("#192 RED — a restore collision does not move an unrelated valid resource", () => {
+test("RED — a restore collision does not move an unrelated valid resource", () => {
   const positions = {
     unrelated: { x: 120, y: 16 },
     restored: { x: 120, y: 16 },

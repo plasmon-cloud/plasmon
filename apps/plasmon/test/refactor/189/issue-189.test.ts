@@ -21,7 +21,7 @@ const node = (name: string, input: Partial<FsNode> = {}): FsNode => ({
   ...input,
 });
 
-test("#189 RED — explicit MIME metadata outranks extension guesses across FileManager classification", () => {
+test("RED — explicit MIME metadata outranks extension guesses across FileManager classification", () => {
   const markdownNameWithPlainMime = node("notes.md", { mime: "text/plain" });
   const plainNameWithMarkdownMime = node("notes.txt", { mime: "text/markdown" });
 
@@ -29,7 +29,7 @@ test("#189 RED — explicit MIME metadata outranks extension guesses across File
   expect(fileVisualKind(plainNameWithMarkdownMime), "an explicit MIME must classify markdown regardless of suffix").toBe("markdown");
 });
 
-test("#189 RED — canonical system resource semantics reach Search rather than the generic documents bucket", () => {
+test("RED — canonical system resource semantics reach Search rather than the generic documents bucket", () => {
   const system = node("Text.sys", {
     mime: SYSTEM_APP_MIME,
     metadata: systemAppMetadata("text", "native:text"),
@@ -45,7 +45,7 @@ test("#189 RED — canonical system resource semantics reach Search rather than 
   expect(categorizeFsNode(neutron)).toBe("apps");
 });
 
-test("#189 characterization — rename changes only derived classification while identity remains stable", () => {
+test("characterization — rename changes only derived classification while identity remains stable", () => {
   const before = node("guide.txt", { id: "stable-guide", mime: undefined });
   const after = { ...before, name: "guide.md" };
   expect(before.id).toBe(after.id);
@@ -53,7 +53,7 @@ test("#189 characterization — rename changes only derived classification while
   expect(classifyResource(after).type).toMatchObject({ mime: "text/markdown", contentKind: "markdown", source: "filename" });
 });
 
-test("#189 canonical classifier covers representative derived families and safe unknown fallback", () => {
+test("canonical classifier covers representative derived families and safe unknown fallback", () => {
   expect(classifyResource(node("notes.txt")).type).toMatchObject({ mime: "text/plain", contentKind: "text", source: "filename" });
   expect(classifyResource(node("app.ts")).type).toMatchObject({ mime: "text/typescript", contentKind: "source", language: "typescript" });
   expect(classifyResource(node("README.md")).type).toMatchObject({ mime: "text/markdown", contentKind: "markdown", language: "markdown" });
@@ -64,7 +64,7 @@ test("#189 canonical classifier covers representative derived families and safe 
   expect(classifyResource(node("folder", { kind: "directory" })).kind).toBe("directory");
 });
 
-test("#415 compatibility — generic text/plain is weaker than a known source filename, while specific MIME remains explicit", () => {
+test("compatibility — generic text/plain is weaker than a known source filename, while specific MIME remains explicit", () => {
   expect(classifyResource(node("script.js", { mime: "text/plain" })).type).toMatchObject({
     mime: "application/javascript",
     contentKind: "source",
@@ -89,7 +89,7 @@ test("#415 compatibility — generic text/plain is weaker than a known source fi
   });
 });
 
-test("#189 RED — Properties, Text, Photos, and Video consume the same explicit-over-derived type precedence", () => {
+test("RED — Properties, Text, Photos, and Video consume the same explicit-over-derived type precedence", () => {
   expect(friendlyKind(node("script.js"))).toBe("application/javascript");
   expect(friendlyKind(node("script.js", { mime: "text/plain" }))).toBe("application/javascript");
   expect(friendlyKind(node("script.js", { mime: "application/octet-stream" }))).toBe("application/octet-stream");
@@ -101,7 +101,7 @@ test("#189 RED — Properties, Text, Photos, and Video consume the same explicit
   expect(inferVideoMime("movie.mp4", "application/octet-stream")).toBe("application/octet-stream");
 });
 
-test("#189 AssociationRegistry remains an independent handler-matching authority", async () => {
+test("AssociationRegistry remains an independent handler-matching authority", async () => {
   const registry = new HandlerAssociationRegistry();
   const handler: HandlerDefinition = {
     id: "native:markdown",

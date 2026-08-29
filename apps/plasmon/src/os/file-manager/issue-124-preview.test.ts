@@ -22,7 +22,7 @@ async function fixture() {
   return { fs, save, preview, bytes };
 }
 
-test("#124 FileManager loads a filesystem preview reference through the shared thumbnail path", async () => {
+test("FileManager loads a filesystem preview reference through the shared thumbnail path", async () => {
   const { fs, save, bytes } = await fixture();
   const created: Blob[] = [];
   const revoked: string[] = [];
@@ -47,7 +47,7 @@ test("#124 FileManager loads a filesystem preview reference through the shared t
   expect(revoked).toEqual(["blob:save-preview"]);
 });
 
-test("#124 missing preview resource falls back instead of treating preview as save authority", async () => {
+test("missing preview resource falls back instead of treating preview as save authority", async () => {
   const { fs, save, preview } = await fixture();
   await fs.remove(preview.id);
 

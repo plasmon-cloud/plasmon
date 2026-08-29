@@ -21,7 +21,7 @@
     "test:e2e:package-updates": "playwright test test/e2e/package-updates.spec.ts",
     "test:e2e:package-updates:fresh": "npm run local:deploy && NEUTRON_E2E_WITH_II=1 npm run test:e2e:package-updates",
     "test:e2e:plasmon": "npm run test:e2e:plasmon:smoke && npm run test:e2e:plasmon:specialist",
-    "test:e2e:plasmon:smoke": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-refactor-smoke.spec.ts test/e2e/plasmon-presentation-assets.spec.ts test/e2e/plasmon-desktop-placement-192.spec.ts test/e2e/plasmon-list-layout-173.spec.ts test/e2e/plasmon-file-entry-191.spec.ts",
+    "test:e2e:plasmon:smoke": "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json playwright test test/e2e/plasmon-refactor-smoke.spec.ts test/e2e/plasmon-presentation-assets.spec.ts test/e2e/plasmon-desktop-placement.spec.ts test/e2e/plasmon-list-layout.spec.ts test/e2e/plasmon-file-entry.spec.ts",
     "test:e2e:plasmon:specialist": "node test/ci/run-plasmon-specialist.mjs",
     "test:e2e:plasmon:demo": "NEUTRON_NDEPLOY_CONFIG=plasmon.ndeploy.json playwright test test/e2e/plasmon-demo-content.spec.ts",
     "test:e2e:plasmon:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon",

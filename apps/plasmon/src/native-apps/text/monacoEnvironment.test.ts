@@ -8,7 +8,7 @@ import {
   monacoWorkerPath,
 } from "../shared/monaco/monacoEnvironment.ts";
 
-test("#89 Monaco workers are constructed from the canonical Program Files runtime path", () => {
+test("Monaco workers are constructed from the canonical Program Files runtime path", () => {
   const calls: Array<{ url: string; options?: WorkerOptions }> = [];
   class FakeWorker {
     constructor(url: string | URL, options?: WorkerOptions) { calls.push({ url: String(url), options }); }
@@ -45,7 +45,7 @@ test("#89 Monaco workers are constructed from the canonical Program Files runtim
   expect(monacoWorkerFile("typescript")).toBe("ts.worker.js");
 });
 
-test("#89 opaque-origin Monaco workers use the preloaded source through a classic blob Worker", () => {
+test("opaque-origin Monaco workers use the preloaded source through a classic blob Worker", () => {
   const calls: Array<{ url: string; options?: WorkerOptions }> = [];
   class FakeWorker {
     constructor(url: string | URL, options?: WorkerOptions) { calls.push({ url: String(url), options }); }
@@ -86,7 +86,7 @@ test("#89 opaque-origin Monaco workers use the preloaded source through a classi
   }]);
 });
 
-test("#89 Monaco keeps Program Files authority and uses one preloaded opaque-origin transport", () => {
+test("Monaco keeps Program Files authority and uses one preloaded opaque-origin transport", () => {
   expect(MONACO_PROGRAM_FILES_RUNTIME_ROOT).toBe("./System/Program Files/MonacoEditor");
   expect(MONACO_BROWSER_TRANSPORT_PATH).toBe("./runtime/monaco/worker-sources.js");
   expect(monacoWorkerPath("typescript")).toBe("./System/Program Files/MonacoEditor/ts.worker.js");

@@ -260,7 +260,7 @@ test("Search de-duplicates a projection against direct Element discovery while r
   expect(calendar?.subtitle).toBe("Canonical Neutron Calendar");
 });
 
-test("#366 canonical .sys Search emits one friendly native-app result without a raw duplicate", async () => {
+test("canonical .sys Search emits one friendly native-app result without a raw duplicate", async () => {
   const node = systemNode();
   const before = structuredClone(node);
 
@@ -278,7 +278,7 @@ test("#366 canonical .sys Search emits one friendly native-app result without a 
   expect(node).toEqual(before);
 });
 
-test("#366 hidden native resources stay hidden and system classification is stable across fixture state", async () => {
+test("hidden native resources stay hidden and system classification is stable across fixture state", async () => {
   const hidden = systemNode("system:properties", ".Properties.sys");
   const stopped = systemNode("system:stopped", "Browser.sys", 2);
   const running = systemNode("system:running", "Browser.sys", 3);
@@ -292,7 +292,7 @@ test("#366 hidden native resources stay hidden and system classification is stab
   expect(hiddenSearch.results).toHaveLength(0);
 });
 
-test("#366 native Search presentation preserves NodeId and filesystem activation opens the canonical node", async () => {
+test("native Search presentation preserves NodeId and filesystem activation opens the canonical node", async () => {
   const node = systemNode();
   const before = structuredClone(node);
 
