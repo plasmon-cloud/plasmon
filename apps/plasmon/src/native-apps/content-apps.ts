@@ -19,7 +19,7 @@ export const videoHandler: HandlerDefinition = { id: "native:video", kind: "nati
 export const browserHandler: HandlerDefinition = { id: "native:browser", kind: "native", name: "Browser", icon: SYSTEM_ICON_ASSETS.browser, capabilities: ["read", "url"] };
 export const settingsHandler: HandlerDefinition = { id: "native:settings", kind: "native", name: "Settings", icon: SYSTEM_ICON_ASSETS.settings, capabilities: [] };
 
-/** Metadata-only external routing target; OpenService owns external URL execution. */
+/** Metadata-only external routing target; Coordinator A owns OpenService execution. */
 export const externalUrlHandler: HandlerDefinition = { id: "external:url", kind: "external", name: "Open in browser tab", icon: browserHandler.icon, capabilities: ["url"] };
 
 export const textAssociationRules: AssociationRule[] = [

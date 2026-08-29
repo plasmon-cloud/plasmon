@@ -164,7 +164,7 @@ export function createAssociationDefaultStore(fs: FsService): AssociationDefault
   return new FsServiceAssociationDefaultStore(fs);
 }
 
-function registerNativeApplications(
+function registerWave2Applications(
   nativeApps: NativeApplicationRegistry,
   associations: HandlerAssociationRegistry,
   fsEvents: FsEventSource,
@@ -221,7 +221,7 @@ function registerNativeApplications(
 }
 
 /**
- * Plasmon OS composition root. In Neutron, filesystem calls are routed to the
+ * Wave 2 composition root. In Neutron, filesystem calls are routed to the
  * persistent Plasmon background surface through FsRpcClient; standalone
  * preview selects a browser-local repository with safe fallback. Association
  * user defaults and native-window placement persist through that same raw
@@ -286,7 +286,7 @@ export function createPlasmonServices(
     },
   };
 
-  registerNativeApplications(
+  registerWave2Applications(
     nativeApps,
     associations,
     rawFs,
