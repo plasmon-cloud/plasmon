@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "marker": "@quarantine",
+  "entries": [
+    {
+      "id": "saved-jsdos-preview-publication",
+      "path": "test/e2e/plasmon-demo-game.spec.ts",
+      "title": "saved js-dos resource publishes a blob-backed preview after save",
+      "active": true,
+      "classification": "known-flaky",
+      "repairIssue": 304,
+      "exitCriteria": "Remove @quarantine before retry-free proof; require at least 10/10 fresh exact-head first-attempt passes in a healthy environment with retries=0 while preserving the blob-backed saved-preview assertion."
+    }
+  ]
+}
