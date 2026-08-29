@@ -14,6 +14,7 @@ import {
   optionalCoreBrowserTests,
   repoRoot as defaultRepoRoot,
 } from "./plasmon-test-inventory.mjs";
+import { isFullyQuarantinedSource } from "./plasmon-quarantine.mjs";
 
 const playwrightTestPattern =
   /^test\/e2e\/.+\.(?:spec|test)\.[cm]?[jt]sx?$/;
@@ -178,7 +179,7 @@ function isRelevantPlaywrightTest(path, graph, sources, playwrightMemo) {
 }
 
 function isQuarantinedAcceptance(path, sources) {
-  return (sources.get(path) ?? "").includes("@quarantine");
+  return isFullyQuarantinedSource(path, sources.get(path) ?? "");
 }
 
 function unresolvedSupportInput(path, root, impactedCount) {
