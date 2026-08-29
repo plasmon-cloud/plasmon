@@ -357,7 +357,7 @@ async function verifyCharacterizationSelection() {
     mixedQuarantine.files.length !== 0 ||
     !mixedQuarantine.deferred_profile_tests.includes(activeMixedPath)
   ) {
-    throw new Error("a changed mixed required/quarantined profile spec must defer to its dedicated package lane");
+    throw new Error("a changed profile-specific mixed required/quarantined spec must defer to the dedicated profile lane");
   }
   if (mixedQuarantine.excluded_quarantined_tests.includes(activeMixedPath)) {
     throw new Error("a mixed spec must not be excluded merely because one exact test is quarantined");
@@ -640,5 +640,5 @@ verifyLegacyResultCompatibility();
 verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec profile deferral, profile-lane deferral, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec profile-lane deferral, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );

@@ -23,7 +23,7 @@ test("— packaged non-empty Recycle Bin confirms and empties canonical Trash", 
 
     // Create the test-owned Trash entry through File Explorer's deterministic
     // command surface. The Desktop background context-menu hit point is not part
-    // of #45 acceptance and can race desktop layout/readiness in packaged CI.
+    // of this empty-bin acceptance and can race desktop layout/readiness in packaged CI.
     await plasmon.getByRole("button", { name: "Search" }).click();
     const search = plasmon.getByRole("region", { name: "Search" });
     await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");

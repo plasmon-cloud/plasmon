@@ -12,7 +12,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 let resourceSequence = 0;
 
 function uniqueResourceName(kind: "file" | "directory"): string {
-  const stem = `issue360-${Date.now().toString(36)}-${resourceSequence++}`;
+  const stem = `drag-resource-${Date.now().toString(36)}-${resourceSequence++}`;
   return kind === "file" ? `${stem}.txt` : stem;
 }
 

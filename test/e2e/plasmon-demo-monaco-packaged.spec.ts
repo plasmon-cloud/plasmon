@@ -37,7 +37,7 @@ test(
     );
     expect(principal).toBe(runtime.developerIdentityPrincipal);
 
-    // #285 keeps this acceptance focused on the real Monaco/package boundary.
+    // Keep this acceptance focused on the real Monaco/package boundary.
     // The demo workflow supplies the repository-authored filesystem resources
     // through the packaged demo profile.
     await page.locator('[data-tid="launcher-open"]').click();
