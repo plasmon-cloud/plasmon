@@ -10,7 +10,7 @@ function style(values: Record<string, string>, colorScheme = "dark"): MonacoThem
   };
 }
 
-test("#511 Monaco projects active shared Visual colors instead of a fixed vs-dark canvas", () => {
+test("Monaco projects active shared Visual colors instead of a fixed vs-dark canvas", () => {
   const theme = plasmonMonacoThemeData(style({
     "--plasmon-window-background": "#f6fafc",
     "--plasmon-panel-elevated": "#ffffff",
@@ -33,7 +33,7 @@ test("#511 Monaco projects active shared Visual colors instead of a fixed vs-dar
   expect(theme.rules).toContainEqual({ token: "keyword", foreground: "087ea4" });
 });
 
-test("#511 Monaco theme projection fails safely to the Plasmon Dark palette", () => {
+test("Monaco theme projection fails safely to the Plasmon Dark palette", () => {
   const theme = plasmonMonacoThemeData(style({
     "--plasmon-window-background": "not-a-color",
   }));
@@ -42,7 +42,7 @@ test("#511 Monaco theme projection fails safely to the Plasmon Dark palette", ()
   expect(theme.colors["editor.foreground"]).toBe("#f5faf7");
 });
 
-test("#511 Monaco host reprojects the theme when the Shell theme attribute changes", () => {
+test("Monaco host reprojects the theme when the Shell theme attribute changes", () => {
   const host = readFileSync(new URL("./MonacoEditorHost.tsx", import.meta.url), "utf8");
   expect(host).toContain("plasmonMonacoThemeData(getComputedStyle(container))");
   expect(host).toContain('container.closest("[data-plasmon-theme]")');
