@@ -21,13 +21,13 @@ Do not use repository-root `npm test` as the normal Plasmon edit loop. It exerci
 Use the lowest layer that proves the acceptance claim:
 
 1. focused Bun tests for production models, services, controllers, commands, and pure helpers;
-2. `createHeadlessPlasmonEnvironment()` for deterministic cross-system production composition;
+2. `createHeadlessPlasmonEnvironment()` for deterministic cross-system production composition, using its production `env.os` semantic API when the workflow represents legitimate OS operations;
 3. React Testing Library + `@testing-library/user-event` + Happy DOM for React/browser adapters that do not require a real browser;
 4. package tests when generated/package output is part of the contract;
 5. Playwright only for genuine installed-package/browser/runtime boundaries;
 6. manual packaged review for visual/interaction details that are not stable automated contracts.
 
-Do not duplicate lower deterministic semantics in Playwright merely because a browser can exercise them.
+Do not duplicate lower deterministic semantics in Playwright merely because a browser can exercise them. Do not force focused subsystem tests through `OsApi` merely because that higher-level API exists.
 
 ## 1. Focused subsystem tests
 
@@ -61,9 +61,31 @@ The harness calls production `createPlasmonServices()` and replaces only true ex
 - `NativeWindowManager` uses deterministic IDs and a fixed headless viewport;
 - filesystem bootstrap/policy, associations, canonical opening, native-app registration, process lifecycle, and window semantics remain production implementations.
 
-The harness intentionally exposes the production service graph plus small inspection helpers. It must not acquire feature-specific business semantics. If a deterministic operation is trapped in React, move it into the owning production model/controller/command first, then exercise it through the shared environment.
+The harness exposes the production service graph for focused composition work and the production semantic `OsApi` as `env.os` for high-level deterministic workflows. `env.os` is created by `createPlasmonOsApi()` from the same production services; the test harness must not implement a second product-semantic facade over `environment.services`.
+
+Use `env.os` when the setup or behavior is a legitimate OS operation a normal authorized automation caller could reasonably perform. The initial R3 surface includes filesystem stat/existence/text read-write/directory creation, canonical resource opening, and process/window observation. Example:
+
+```ts
+const env = createHeadlessPlasmonEnvironment();
+await env.ready;
+
+await env.os.fs.writeText("/Desktop/example.txt", "hello");
+const opened = await env.os.open("/Desktop");
+
+expect(env.os.processes.list()).toContainEqual(
+  expect.objectContaining({ id: opened.processId }),
+);
+```
+
+The semantic API is a production contract under `src/os/api/`; it must delegate to the existing owning authorities rather than recreate filesystem protection, associations, open dispatch, process lifecycle, or window policy. Its public contracts/DTOs must remain dependency-light and must not depend on concrete service/controller classes or anything under `test/`.
+
+Keep test superpowers outside `OsApi`. Global deterministic settlement, programmable external success/failure/defer behavior, fake call recording, clock control, transport faults, impossible-state construction, policy bypasses, and assertions belong in test-only support beside `env.os`, not on the production API. Operation-specific completion/readiness belongs in production only when it represents a real named Product lifecycle boundary rather than a replacement for sleeps.
+
+The harness must not acquire feature-specific business semantics. If a deterministic operation is trapped in React, move it into the owning production model/controller/command first. If a high-level deterministic workflow needs a legitimate OS operation that is absent from `OsApi`, treat that as a candidate generalized production API gap instead of immediately encoding the workflow in Playwright.
 
 Pass an existing `MemoryFsRepository` through the `repository` option when a test must reconstruct production composition over the same persistence boundary.
+
+The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain during the bounded R3 transition so existing coverage does not need a migration campaign. New high-level deterministic tests should prefer `env.os`; systematic retroactive migration belongs to the deeper testing audit rather than this quick pass.
 
 `test/reviewInstalledIntegration.test.ts` is the representative independently-installed-app proof. It verifies that duplicate Kernel discovery for Review still reconciles to one `/Apps/Review.neutron` resource with canonical metadata and that opening the projected resource reaches exactly one `NeutronBridge.openElement("review")` call through the production filesystem/open dispatcher. It deliberately asserts that no fake Plasmon-native Review process/window is created because authenticated Neutron applications remain Kernel-owned sibling tiles.
 
@@ -77,6 +99,7 @@ Use `test/renderPlasmon.tsx` when a claim depends on the React adapter or semant
 - waits for production bootstrap readiness;
 - renders the real `PlasmonOS` root with those real `PlasmonServices`;
 - returns normal RTL queries plus the headless environment and a configured `userEvent` instance;
+- therefore exposes the same production `environment.os` for legitimate setup and post-action state inspection;
 - owns unmount/environment disposal through its `dispose()` helper.
 
 Happy DOM globals are installed by `test/setupHappyDom.ts` only for the RTL test process. They are an adapter boundary, not an OS implementation.
@@ -87,7 +110,7 @@ Run this layer alone with:
 npm --workspace neutron-plasmon run test:ui
 ```
 
-Prefer semantic queries and actions (`role`, accessible name, keyboard/user intent). Do not build a Page Object Model. Use this layer for React wiring, form/button/keyboard semantics, and focus behavior Happy DOM models reliably. Keep filesystem/open/process/window policy in production/headless tests. Keep iframe, worker, packaged-asset, real layout/hit-testing, fullscreen, download, and browser-runtime behavior in Playwright.
+Prefer semantic queries and actions (`role`, accessible name, keyboard/user intent). Do not build a Page Object Model. Use this layer for React wiring, form/button/keyboard semantics, and focus behavior Happy DOM models reliably. `environment.os` may establish legitimate user-reachable state or inspect the resulting production state, but actual React behavior should still be driven through RTL/user-event. Keep filesystem/open/process/window policy in production/headless tests. Keep iframe, worker, packaged-asset, real layout/hit-testing, fullscreen, download, and browser-runtime behavior in Playwright.
 
 The full fast lane remains:
 
@@ -234,9 +257,17 @@ browser event
 
 Tests must call the same production command/model/controller used by the UI. Use fake/in-memory implementations only at true environment boundaries such as persistence or Neutron RPC.
 
-Good lower-level seams include resource open/rename/copy/move/Trash/restore, FileManager selection/navigation/commands, Start/Search inventory/filtering, taskbar/process/window derivation, and cross-surface resource workflows.
+For high-level deterministic workflows, the preferred semantic route is:
 
-If the existing shared harness lacks only a reusable browser adapter or RTL composition, improve the shared testing seam. Do not teach each domain agent a new custom sequence of shell commands or local fakes.
+```text
+env.os
+  -> production createPlasmonOsApi()
+  -> production service/controller/command authorities
+```
+
+Good lower-level seams include resource open/rename/copy/move/Trash/restore, FileManager selection/navigation/commands, Start/Search inventory/filtering, taskbar/process/window derivation, and cross-surface resource workflows. Only the subset currently represented as legitimate durable `OsApi` capabilities belongs on that public semantic contract; the rest should remain with their owning subsystem until a real automation/testing need justifies expansion.
+
+If the existing shared harness lacks only reusable test settlement/effect/scenario support, improve test support beside `env.os`. If it lacks a legitimate user-automatable OS operation, consider expanding the production `OsApi`. Do not teach each domain agent a new custom sequence of shell commands, local fakes, or Playwright clicks for deterministic Product semantics.
 
 ## CI
 
@@ -268,12 +299,13 @@ For every implementation unit:
 
 1. identify the authority/model/service/controller that owns the behavior;
 2. establish or preserve the deterministic RED at the lowest reliable layer;
-3. implement the smallest GREEN change;
-4. run the smallest focused test while iterating;
-5. run `npm --workspace neutron-plasmon test` before handoff, locally or through CI;
-6. run `test:package` only when package/build output is part of the claim;
-7. run packaged/browser acceptance when the real install/browser boundary is part of the claim;
-8. preserve exact failure evidence and classify genuine external dependency failures rather than weakening tests.
+3. for a high-level deterministic workflow, use `env.os` when the action is a legitimate production OS capability rather than writing new browser automation;
+4. implement the smallest GREEN change;
+5. run the smallest focused test while iterating;
+6. run `npm --workspace neutron-plasmon test` before handoff, locally or through CI;
+7. run `test:package` only when package/build output is part of the claim;
+8. run packaged/browser acceptance when the real install/browser boundary is part of the claim;
+9. preserve exact failure evidence and classify genuine external dependency failures rather than weakening tests.
 
 ## Required handoff evidence
 
@@ -303,4 +335,4 @@ Failure interpretation:
 - browser/manual failure: still a real acceptance failure even when lower tests pass;
 - unrelated Kernel/Motoko failure: preserve and escalate the actual dependency rather than rewriting Plasmon behavior.
 
-The intended feedback loop is: **focused Bun in seconds → shared production composition → bounded RTL when React matters → full fast lane → package/install/browser only for the boundaries that require them.**
+The intended feedback loop is: **focused Bun in seconds → shared production composition/`env.os` for high-level OS behavior → bounded RTL when React matters → full fast lane → package/install/browser only for the boundaries that require them.**
