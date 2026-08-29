@@ -5,7 +5,7 @@ export const releaseBranchGlob = "release/**";
 
 export function plasmonBranchRole(ref) {
   if (typeof ref !== "string" || ref.length === 0) return "unknown";
-  if (/^release\/.+/u.test(ref)) return "release";
+  if (/^release\/[A-Za-z0-9._-]+$/u.test(ref)) return "release";
   return "unknown";
 }
 
@@ -17,6 +17,9 @@ export function requirePlasmonBranchRole(ref, expectedRole) {
   return role;
 }
 
+// Workflow YAML uses the glob because trigger evaluation happens before
+// repository code is available. Deterministic verifiers use the same semantic
+// role here and explicitly prove that unknown refs fail closed.
 function main() {
   const [ref, expectedRole = "release"] = process.argv.slice(2);
   if (!ref) {
