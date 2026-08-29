@@ -4,7 +4,8 @@ import type {
   ProcessRecord,
   WindowState,
 } from "../src/os/contracts/index.ts";
-import { createPlasmonOsApi, type OsApi } from "../src/os/api/index.ts";
+import type { OsApi } from "../src/os/api/index.ts";
+import { createPlasmonOsApi } from "../src/os/api/adapter.ts";
 import { MemoryFsRepository } from "../src/os/fs/index.ts";
 import {
   createPlasmonServices,
