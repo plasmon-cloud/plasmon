@@ -50,13 +50,43 @@ Prefer executable behavior over source-string assertions. If source inspection i
 - `NativeWindowManager` runs with deterministic IDs and a fixed headless viewport;
 - filesystem bootstrap/policy, associations, opening, native-app registration, process lifecycle, and window semantics remain production implementations.
 
-Use `createHeadlessPlasmonEnvironment()` when a workflow spans several Plasmon authorities and does not require React behavior. Pass an existing `MemoryFsRepository` through the `repository` option when a workflow must reconstruct production composition over the same persistence boundary. If a workflow needs a new semantic operation, add it to the owning production model/controller/command rather than implementing it in this harness.
+Use `createHeadlessPlasmonEnvironment()` when a workflow spans several Plasmon authorities and does not require React behavior. Pass an existing `MemoryFsRepository` through the `repository` option when a workflow must reconstruct production composition over the same persistence boundary.
+
+For new high-level deterministic workflows, prefer the production semantic API exposed as `environment.os` when the setup/action is a legitimate OS operation:
+
+```ts
+const env = createHeadlessPlasmonEnvironment();
+await env.ready;
+
+await env.os.fs.writeText("/Desktop/example.txt", "hello");
+const opened = await env.os.open("/Desktop");
+
+expect(env.os.processes.list()).toContainEqual(
+  expect.objectContaining({ id: opened.processId }),
+);
+```
+
+`environment.os` is created by production `createPlasmonOsApi()`; it is not a test wrapper around `environment.services`. Its contracts and DTOs live under `src/os/api/` and intentionally do not import test code or concrete service/controller classes.
+
+Use this distinction when adding coverage:
+
+- legitimate user/automation operations spanning production authorities -> `env.os`;
+- focused subsystem semantics -> call the owning subsystem directly;
+- React/DOM behavior -> RTL/user-event, optionally using `env.os` for legitimate setup or state inspection;
+- global deterministic settlement, fake failure/defer controls, clocks, impossible-state construction, transport manipulation, and assertions -> test-only support beside `env.os`, never methods on the production `OsApi`;
+- installed/browser/runtime/layout/worker/media/download behavior -> Playwright.
+
+If a high-level deterministic workflow needs a semantic operation that a normal authorized caller could reasonably automate, treat that as a candidate production `OsApi` gap rather than immediately encoding the workflow in Playwright. If a workflow needs a new Product rule, add it to the owning production model/controller/command first; the `OsApi` adapter must remain a thin delegate rather than a second implementation.
+
+The older `node()`, `open()`, `processes()`, and `windows()` headless helpers remain for existing coverage during the R3 quick pass. New high-level tests should prefer `env.os`; broad legacy migration is deferred to the deeper testing audit rather than being forced into this change.
 
 `reviewInstalledIntegration.test.ts` is the representative sibling-application proof: it verifies Review projection identity/uniqueness and canonical filesystem-open-to-Neutron-bridge activation without inventing a Plasmon-native Review process or window.
 
 ## Shared RTL adapter
 
 Use `renderPlasmon()` from `renderPlasmon.tsx` when a claim depends on the React adapter or semantic DOM interaction but not on browser-owned behavior. It wraps the same `createHeadlessPlasmonEnvironment()` production service graph and renders the real `PlasmonOS` root. `userEvent` is preconfigured for the Happy DOM document.
+
+The returned `environment` includes the same production `env.os` instance used by headless tests. It may be used for legitimate fixture setup and post-action state inspection; actual React behavior should still be exercised through semantic queries and `userEvent` rather than a Page Object Model.
 
 Run only this layer with:
 
@@ -125,7 +155,7 @@ Do not add broad Desktop/FileManager/Start/Search scripts merely because Playwri
 
 ### Real-browser persistence boundary
 
-`test/e2e/plasmon-persistence.spec.ts` is the browser-owned filesystem durability gate for #186. It deliberately stays above the headless repository tests because the contract depends on the lifetime of the real packaged resident background and browser profile.
+`test/e2e/plasmon-persistence.spec.ts` is the browser-owned filesystem durability gate. It deliberately stays above the headless repository tests because the contract depends on the lifetime of the real packaged resident background and browser profile.
 
 The supported automated journey is:
 

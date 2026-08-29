@@ -11,7 +11,6 @@ const TILE_ID = "main";
 // to an iframe edge; do not use sleeps, retries, or WindowManager test hooks.
 test(
   "packaged Plasmon restores a left-snapped native window and previews right snap",
-  { tag: ["@issue-244"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

@@ -2,14 +2,14 @@
 import { expect, test } from "bun:test";
 import { dragOperationFeedback, translatedDragPreviewRect } from "./drag-preview.ts";
 
-test("#360 drag preview preserves source size and applies the exact drag delta", () => {
+test("drag preview preserves source size and applies the exact drag delta", () => {
   expect(translatedDragPreviewRect(
     { left: 120, top: 80, width: 92, height: 88 },
     { dx: 137, dy: 64 },
   )).toEqual({ left: 257, top: 144, width: 92, height: 88 });
 });
 
-test("#360 drag preview keeps the same entry geometry for an off-center pointer grab", () => {
+test("drag preview keeps the same entry geometry for an off-center pointer grab", () => {
   const source = { left: 44, top: 71, width: 92, height: 88 };
   const pointerGrab = { x: 19, y: 23 };
   const delta = { dx: 51, dy: -17 };
@@ -25,13 +25,13 @@ test("#360 drag preview keeps the same entry geometry for an off-center pointer 
   expect(preview.height).toBe(source.height);
 });
 
-test("#360 drag feedback describes the canonical operation and destination", () => {
+test("drag feedback describes the canonical operation and destination", () => {
   expect(dragOperationFeedback("move", "New folder")).toBe("Move to New folder");
   expect(dragOperationFeedback("copy", "Archive")).toBe("Copy to Archive");
   expect(dragOperationFeedback("move", null)).toBeNull();
 });
 
-test("#360 drag feedback follows target changes and clears when no target is active", () => {
+test("drag feedback follows target changes and clears when no target is active", () => {
   const feedback = [
     dragOperationFeedback("move", "Documents"),
     dragOperationFeedback("move", "Games"),

@@ -86,7 +86,7 @@ const unreachableUrlApi: ThumbnailObjectUrlApi = {
   revokeObjectURL() {},
 };
 
-test("#426 resource thumbnails use canonical image classification without a private suffix table", async () => {
+test("resource thumbnails use canonical image classification without a private suffix table", async () => {
   const { fs, node } = await createImage();
 
   expect(imageThumbnailMime(node)).toBe("image/png");
@@ -111,7 +111,7 @@ test("#426 resource thumbnails use canonical image classification without a priv
   expect(revoked).toEqual(["blob:canonical-image"]);
 });
 
-test("#509 direct SVG resources preserve vector bytes and MIME in the bounded image loader", async () => {
+test("direct SVG resources preserve vector bytes and MIME in the bounded image loader", async () => {
   const { fs, node, content } = await createSvg();
 
   expect(node.mime).toBeUndefined();
@@ -153,36 +153,36 @@ test("#509 direct SVG resources preserve vector bytes and MIME in the bounded im
   expect(canLoadImageThumbnail(fileNode("large.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1))).toBe(false);
 });
 
-test("#509 missing shortcut thumbnail target fails closed", async () => {
+test("missing shortcut thumbnail target fails closed", async () => {
   const shortcut = shortcutNode("missing-shortcut", "node-gone");
   expect(await resolveResourceThumbnailNode(thumbnailFs([]), shortcut)).toBeNull();
 });
 
-test("#509 cyclic shortcut thumbnail targets fail closed", async () => {
+test("cyclic shortcut thumbnail targets fail closed", async () => {
   const cycleA = shortcutNode("cycle-a", "node-cycle-b");
   const cycleB = shortcutNode("cycle-b", cycleA.id);
   expect(await resolveResourceThumbnailNode(thumbnailFs([cycleA, cycleB]), cycleA)).toBeNull();
 });
 
-test("#509 unsupported shortcut thumbnail target fails closed", async () => {
+test("unsupported shortcut thumbnail target fails closed", async () => {
   const target = fileNode("notes.txt", 32, "text/plain");
   const shortcut = shortcutNode("unsupported-shortcut", target.id);
   expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
 });
 
-test("#509 empty SVG shortcut thumbnail target fails closed", async () => {
+test("empty SVG shortcut thumbnail target fails closed", async () => {
   const target = fileNode("empty.svg", 0);
   const shortcut = shortcutNode("empty-shortcut", target.id);
   expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
 });
 
-test("#509 over-limit SVG shortcut thumbnail target fails closed", async () => {
+test("over-limit SVG shortcut thumbnail target fails closed", async () => {
   const target = fileNode("over-limit.svg", MAX_IMAGE_THUMBNAIL_BYTES + 1);
   const shortcut = shortcutNode("over-limit-shortcut", target.id);
   expect(await resolveResourceThumbnailNode(thumbnailFs([target]), shortcut)).toBeNull();
 });
 
-test("#509 unreadable shortcut thumbnail target falls back without leaking loader errors", async () => {
+test("unreadable shortcut thumbnail target falls back without leaking loader errors", async () => {
   const target = fileNode("unreadable.svg", 64);
   const shortcut = shortcutNode("unreadable-shortcut", target.id);
   const fs = thumbnailFs([target], new Set([target.id]));
@@ -191,7 +191,7 @@ test("#509 unreadable shortcut thumbnail target falls back without leaking loade
   expect(await loadResolvedResourceThumbnail(fs, shortcut, unreachableUrlApi)).toBeNull();
 });
 
-test("#93 sandbox-null object URLs are revoked and replaced by a loadable data URL", async () => {
+test("sandbox-null object URLs are revoked and replaced by a loadable data URL", async () => {
   const { fs, node } = await createImage();
   const revoked: string[] = [];
   const loaded = await loadImageThumbnail(fs, node, {
@@ -209,12 +209,12 @@ test("#93 sandbox-null object URLs are revoked and replaced by a loadable data U
   expect(revoked).toEqual(["blob:null/thumbnail-93"]);
 });
 
-test("#426 direct image thumbnails retain the bounded byte guard", () => {
+test("direct image thumbnails retain the bounded byte guard", () => {
   const node = fileNode("large.jpg", MAX_IMAGE_THUMBNAIL_BYTES + 1, "image/jpeg");
   expect(canLoadImageThumbnail(node)).toBe(false);
 });
 
-test("#94 video thumbnail eligibility is canonical, conservative, and byte bounded", () => {
+test("video thumbnail eligibility is canonical, conservative, and byte bounded", () => {
   const webm = fileNode("clip.webm", 1024);
   const mp4 = fileNode("clip.mp4", 1024, "video/mp4");
   const ogg = fileNode("clip.ogv", 1024, "video/ogg");
@@ -231,7 +231,7 @@ test("#94 video thumbnail eligibility is canonical, conservative, and byte bound
   expect(canLoadVideoThumbnail(empty)).toBe(false);
 });
 
-test("#94 representative capture geometry and time stay bounded without upscaling", () => {
+test("representative capture geometry and time stay bounded without upscaling", () => {
   expect(videoThumbnailDimensions(1920, 1080)).toEqual({ width: 320, height: 180 });
   expect(videoThumbnailDimensions(160, 90)).toEqual({ width: 160, height: 90 });
   expect(videoThumbnailDimensions(90, 160)).toEqual({ width: 90, height: 160 });
@@ -243,7 +243,7 @@ test("#94 representative capture geometry and time stay bounded without upscalin
   expect(representativeVideoFrameTime(Number.POSITIVE_INFINITY)).toBeNull();
 });
 
-test("#94 video thumbnail cleanup runs every registered resource exactly once", () => {
+test("video thumbnail cleanup runs every registered resource exactly once", () => {
   const events: string[] = [];
   const cleanup = createVideoThumbnailCleanup();
   cleanup.add(() => events.push("source"));

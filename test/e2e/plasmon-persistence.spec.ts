@@ -195,7 +195,7 @@ test("packaged Plasmon preserves a user file and native window placement across 
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const userDataDir = testInfo.outputPath("persistent-browser-profile");
   const probeName = `Persistence Probe ${Date.now()}.txt`;
-  const probeContents = `issue-186-persistence-probe-${Date.now()}\n`;
+  const probeContents = `persistence-probe-${Date.now()}\n`;
 
   let context: BrowserContext | null = await launchPersistentProfile(userDataDir);
   try {

@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { applyIncomingDesktopDropPositions } from "./layout.ts";
 
-test("#371 free incoming Desktop drop keeps the proposed ghost position", () => {
+test("free incoming Desktop drop keeps the proposed ghost position", () => {
   const current = {
     incumbent: { x: 16, y: 16 },
   };
@@ -16,7 +16,7 @@ test("#371 free incoming Desktop drop keeps the proposed ghost position", () => 
   expect(next.incumbent).toEqual({ x: 16, y: 16 });
 });
 
-test("#371 incoming Desktop drop is clamped only by canonical workspace bounds", () => {
+test("incoming Desktop drop is clamped only by canonical workspace bounds", () => {
   const next = applyIncomingDesktopDropPositions(
     {},
     [],
@@ -27,7 +27,7 @@ test("#371 incoming Desktop drop is clamped only by canonical workspace bounds",
   expect(next.incoming).toEqual({ x: 708, y: 512 });
 });
 
-test("#371 incoming drop cannot steal an incumbent Desktop position", () => {
+test("incoming drop cannot steal an incumbent Desktop position", () => {
   const next = applyIncomingDesktopDropPositions(
     { incumbent: { x: 224, y: 224 } },
     ["incumbent"],

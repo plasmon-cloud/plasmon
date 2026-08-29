@@ -22,7 +22,7 @@ Neutron application -> Kernel-owned surface
 
 ## Operational coordination
 
-This directory intentionally does not maintain per-agent branch or ownership handoffs. Current work is routed through canonical GitHub Issues/Areas and current Coordinator assignments. Historical wave-era and branch-specific handoffs remain available in Git history only and must not be treated as active integration instructions.
+This directory intentionally does not maintain per-agent branch or ownership handoffs. Current work is routed through canonical GitHub Issues/Areas and repository assignment/ownership mechanisms. Historical wave-era and branch-specific handoffs remain available in Git history only and must not be treated as active integration instructions.
 
 ## Refactor direction
 

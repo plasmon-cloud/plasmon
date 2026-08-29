@@ -6,27 +6,27 @@ import { createHeadlessPlasmonEnvironment } from "../../../test/headlessEnvironm
 import { searchShellVisibleByDefault } from "./searchVisibility.ts";
 import { listVisibleStartMenuFolder } from "./startVisibility.ts";
 
-test("#466 Search applies canonical default hidden state to resources, native projections, and shortcut targets", async () => {
+test("Search applies canonical default hidden state to resources, native projections, and shortcut targets", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
     const root = await env.node("/");
     if (!root) throw new Error("Filesystem root is unavailable");
 
-    const visibleFile = await env.services.fs.createFile(root.id, "visible-466.txt", { mime: "text/plain" });
-    const hiddenFile = await env.services.fs.createFile(root.id, ".hidden-466.txt", { mime: "text/plain" });
-    const hiddenDirectory = await env.services.fs.mkdir(root.id, ".hidden-folder-466");
+    const visibleFile = await env.services.fs.createFile(root.id, "visible-default.txt", { mime: "text/plain" });
+    const hiddenFile = await env.services.fs.createFile(root.id, ".hidden-default.txt", { mime: "text/plain" });
+    const hiddenDirectory = await env.services.fs.mkdir(root.id, ".hidden-folder");
     const visibleShortcut = await createShortcut(
       env.services.fs,
       root.id,
       { kind: "node", nodeId: visibleFile.id },
-      { name: "Visible 466 target" },
+      { name: "Visible default target" },
     );
     const hiddenShortcut = await createShortcut(
       env.services.fs,
       root.id,
       { kind: "node", nodeId: hiddenFile.id },
-      { name: "Hidden 466 target" },
+      { name: "Hidden default target" },
     );
 
     const nativeApps = env.services.nativeApps.list();
@@ -38,7 +38,7 @@ test("#466 Search applies canonical default hidden state to resources, native pr
       "node" in result && result.node.name === ".Properties.sys"
     )).toBe(false);
 
-    const hidden = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "hidden-466");
+    const hidden = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "hidden-default");
     expect(hidden.results.some((result) => "node" in result && result.node.id === hiddenFile.id)).toBe(false);
     expect(hidden.results.some((result) => "node" in result && result.node.id === hiddenDirectory.id)).toBe(false);
 
@@ -46,7 +46,7 @@ test("#466 Search applies canonical default hidden state to resources, native pr
       env.services.fs,
       nativeApps,
       [],
-      "Hidden 466 target",
+      "Hidden default target",
     );
     expect(hiddenShortcutResults.results.some((result) =>
       result.kind === "start-shortcut" && result.node.id === hiddenShortcut.id
@@ -56,7 +56,7 @@ test("#466 Search applies canonical default hidden state to resources, native pr
       env.services.fs,
       nativeApps,
       [],
-      "Visible 466 target",
+      "Visible default target",
     );
     expect(visibleShortcutResults.results.some((result) =>
       result.kind === "start-shortcut" && result.node.id === visibleShortcut.id
@@ -66,19 +66,19 @@ test("#466 Search applies canonical default hidden state to resources, native pr
   }
 });
 
-test("#429 global hidden visibility widens Search without regressing #466 projection filtering", async () => {
+test("global hidden visibility widens Search without regressing projection filtering", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
     const root = await env.node("/");
     if (!root) throw new Error("Filesystem root is unavailable");
 
-    const hiddenFile = await env.services.fs.createFile(root.id, ".global-hidden-429.txt", { mime: "text/plain" });
+    const hiddenFile = await env.services.fs.createFile(root.id, ".global-hidden.txt", { mime: "text/plain" });
     const hiddenShortcut = await createShortcut(
       env.services.fs,
       root.id,
       { kind: "node", nodeId: hiddenFile.id },
-      { name: "Global Hidden 429 target" },
+      { name: "Global hidden target" },
     );
 
     await env.services.hiddenVisibility.setAlwaysShowHiddenFiles(true);
@@ -89,14 +89,14 @@ test("#429 global hidden visibility widens Search without regressing #466 projec
       result.kind === "native-app" && result.app.handlerId === "native:properties"
     )).toBe(true);
 
-    const hidden = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "global-hidden-429");
+    const hidden = await searchShellVisibleByDefault(env.services.fs, nativeApps, [], "global-hidden");
     expect(hidden.results.some((result) => "node" in result && result.node.id === hiddenFile.id)).toBe(true);
 
     const shortcut = await searchShellVisibleByDefault(
       env.services.fs,
       nativeApps,
       [],
-      "Global Hidden 429 target",
+      "Global hidden target",
     );
     expect(shortcut.results.some((result) =>
       result.kind === "start-shortcut" && result.node.id === hiddenShortcut.id
@@ -106,7 +106,7 @@ test("#429 global hidden visibility widens Search without regressing #466 projec
   }
 });
 
-test("#466 Start hides canonical hidden targets without deleting or rewriting shortcuts", async () => {
+test("Start hides canonical hidden targets without deleting or rewriting shortcuts", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {
@@ -114,25 +114,25 @@ test("#466 Start hides canonical hidden targets without deleting or rewriting sh
     const start = await env.node("/System/Start Menu");
     if (!root || !start) throw new Error("Start fixture roots are unavailable");
 
-    const visibleTarget = await env.services.fs.createFile(root.id, "visible-start-466.txt", { mime: "text/plain" });
-    const hiddenTarget = await env.services.fs.createFile(root.id, ".hidden-start-466.txt", { mime: "text/plain" });
+    const visibleTarget = await env.services.fs.createFile(root.id, "visible-start.txt", { mime: "text/plain" });
+    const hiddenTarget = await env.services.fs.createFile(root.id, ".hidden-start.txt", { mime: "text/plain" });
     const visibleShortcut = await createShortcut(
       env.services.fs,
       start.id,
       { kind: "node", nodeId: visibleTarget.id },
-      { name: "Visible Start 466" },
+      { name: "Visible Start target" },
     );
     const hiddenShortcut = await createShortcut(
       env.services.fs,
       start.id,
       { kind: "node", nodeId: hiddenTarget.id },
-      { name: "Hidden Start 466" },
+      { name: "Hidden Start target" },
     );
     const propertiesShortcut = await createShortcut(
       env.services.fs,
       start.id,
       { kind: "native", handlerId: "native:properties" },
-      { name: "Properties Start 466" },
+      { name: "Properties Start target" },
     );
 
     const visible = await listVisibleStartMenuFolder(env.services.fs, start.id);
@@ -149,7 +149,7 @@ test("#466 Start hides canonical hidden targets without deleting or rewriting sh
   }
 });
 
-test("#466 Explorer-local Show hidden files does not change Search or Start default visibility", async () => {
+test("Explorer-local Show hidden files does not change Search or Start default visibility", async () => {
   const env = createHeadlessPlasmonEnvironment();
   await env.ready;
   try {

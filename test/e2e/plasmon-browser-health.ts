@@ -39,7 +39,7 @@ const R2_KNOWN_BROWSER_HEALTH_ALLOW: readonly BrowserHealthAllowRule[] = Object.
   {
     kind: "console.warn",
     message: R2_KNOWN_CHROMIUM_SANDBOX_WARNING,
-    reason: "#305 exact Chromium sandbox diagnostic quarantine; unknown warnings remain failures",
+    reason: "exact Chromium sandbox diagnostic quarantine; unknown warnings remain failures",
   },
 ]);
 

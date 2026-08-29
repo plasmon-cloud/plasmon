@@ -13,7 +13,7 @@ import {
   monacoWorkerPath,
 } from "./monacoEnvironment.ts";
 
-describe("#200 shared Monaco editor-host policy", () => {
+describe("shared Monaco editor-host policy", () => {
   test("live surfaces get distinct model ownership even for one semantic document", () => {
     const disposed: string[] = [];
     const create = (uri: string) => ({ uri, dispose: () => disposed.push(uri) });

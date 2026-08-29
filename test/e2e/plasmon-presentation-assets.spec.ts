@@ -19,13 +19,12 @@ const PACKAGED_ICON_ASSETS = [
 ] as const;
 
 /**
- * #190 keeps the canonical icon resources package-local, but #513 deliberately
- * no longer uses those SVG files as external <img> documents for Plasmon-owned
- * artwork. The live surface must use inline owned SVG so theme custom properties
- * can reach its fills/strokes. Authored application/media artwork remains image
- * based through the separate ResourceIcon application/thumbnail paths.
+ * Canonical icon resources remain package-local, while Plasmon-owned live
+ * artwork uses inline owned SVG so theme custom properties can reach its
+ * fills/strokes. Authored application/media artwork remains image based
+ * through the separate ResourceIcon application/thumbnail paths.
  */
-test("#190/#96/#513 packaged icon resources exist while live Plasmon-owned artwork is inline", async ({ page }) => {
+test("packaged icon resources exist while live Plasmon-owned artwork is inline", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
 
@@ -62,9 +61,9 @@ test("#190/#96/#513 packaged icon resources exist while live Plasmon-owned artwo
   await expect(plasmon.locator('img[src*="/static/plasmon/icons/folder.svg"]')).toHaveCount(0);
   await expect(plasmon.locator('img[src*="/static/plasmon/icons/recycle-bin.svg"]')).toHaveCount(0);
 
-  // #96: exercise the canonical filesystem-backed Start projection. Its
-  // first-party identities must also use the owned inline artwork rather than
-  // silently falling back to fixed-color packaged <img> elements.
+  // Exercise the canonical filesystem-backed Start projection. Its first-party
+  // identities must also use owned inline artwork rather than silently falling
+  // back to fixed-color packaged <img> elements.
   await plasmon.getByRole("button", { name: "Start" }).click();
   const start = plasmon.getByRole("region", { name: "Start menu" });
   await expect(start).toBeVisible();

@@ -9,6 +9,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { selectCharacterization } from "./select-plasmon-flake-characterization.mjs";
+import {
+  activeQuarantines,
+  isFullyQuarantinedSource,
+} from "./plasmon-quarantine.mjs";
 
 const workflowPath = ".github/workflows/plasmon-flake-probe.yml";
 const workflowReadmePath = ".github/workflows/README.md";
@@ -138,6 +142,7 @@ for (const fragment of [
   "run_one \"${exact_files[@]}\"",
   "run_one \"$test_file\" --grep \"$test_grep\"",
   "run_one \"$test_file\"",
+  "--grep @saved-preview",
 ]) {
   requireFragment(executableRunner, fragment, "flake-probe executable runner");
 }
@@ -171,12 +176,15 @@ for (const fragment of [
   "dependsOn",
   "unresolvedSharedInputs",
   "isQuarantinedAcceptance",
+  "isFullyQuarantinedSource",
+  "plasmon-quarantine.json",
   "excluded_quarantined_tests",
   "unresolved_inputs",
   "target: \"exact-set\"",
   "iteration_count: 50",
   "files_json",
   "no-deterministic-playwright-target",
+  "only-profile-specific-playwright-changes",
   "only-quarantined-playwright-changes",
   "no-relevant-playwright-change",
 ]) {
@@ -244,7 +252,6 @@ for (const fragment of [
   "does not broaden",
   "Flake characterization summary",
   "not proof that the target cannot flake",
-  "#448",
 ]) {
   requireFragment(probeDoc, fragment, "flake-probe characterization documentation");
 }
@@ -260,18 +267,18 @@ if (workerOneCount < 2 || !specialistRunner.includes("--workers=1")) {
   throw new Error("flake-probe runner must serialize both targeted and Specialist probes");
 }
 
-function assertNoQuarantinedFiles(selection, label) {
+function assertNoFullyQuarantinedFiles(selection, label) {
   for (const file of selection.files) {
-    if (readFileSync(file, "utf8").includes("@quarantine")) {
-      throw new Error(`${label} selected quarantined acceptance: ${file}`);
+    if (isFullyQuarantinedSource(file, readFileSync(file, "utf8"))) {
+      throw new Error(`${label} selected a fully quarantined acceptance file: ${file}`);
     }
   }
 }
 
 async function verifyCharacterizationSelection() {
-  const first = "test/e2e/plasmon-start-inventory-428.spec.ts";
+  const first = "test/e2e/plasmon-start-inventory.spec.ts";
   const second = "test/e2e/plasmon-neutron-icon.spec.ts";
-  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome-112.spec.ts";
+  const profileSpecific = "test/e2e/plasmon-demo-native-app-chrome.spec.ts";
 
   const oneChanged = await selectCharacterization({ changedFiles: [first] });
   if (!oneChanged.applicable || oneChanged.target !== "exact-set") {
@@ -280,7 +287,7 @@ async function verifyCharacterizationSelection() {
   if (oneChanged.files.length !== 1 || oneChanged.files[0] !== first) {
     throw new Error("single changed Playwright spec must remain a one-file characterization target");
   }
-  assertNoQuarantinedFiles(oneChanged, "single changed spec");
+  assertNoFullyQuarantinedFiles(oneChanged, "single changed spec");
 
   const twoChanged = await selectCharacterization({ changedFiles: [second, first] });
   if (!twoChanged.applicable || twoChanged.files.length !== 2) {
@@ -289,7 +296,7 @@ async function verifyCharacterizationSelection() {
   if (!twoChanged.files.includes(first) || !twoChanged.files.includes(second)) {
     throw new Error("multiple changed Playwright specs lost an exact changed-file target");
   }
-  assertNoQuarantinedFiles(twoChanged, "multiple changed specs");
+  assertNoFullyQuarantinedFiles(twoChanged, "multiple changed specs");
 
   const mixedProfiles = await selectCharacterization({
     changedFiles: [profileSpecific, first],
@@ -302,33 +309,58 @@ async function verifyCharacterizationSelection() {
   ) {
     throw new Error("mixed profile changes must characterize ordinary tests locally and defer profile-specific tests");
   }
-  assertNoQuarantinedFiles(mixedProfiles, "mixed profile selection");
+  assertNoFullyQuarantinedFiles(mixedProfiles, "mixed profile selection");
 
-  const quarantineFixtureRoot = mkdtempSync(join(tmpdir(), "plasmon-flake-quarantine-selection-"));
-  const quarantinedPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";
-  try {
-    mkdirSync(join(quarantineFixtureRoot, "test/e2e"), { recursive: true });
-    writeFileSync(
-      join(quarantineFixtureRoot, quarantinedPath),
-      [
-        'import { test } from "@playwright/test";',
-        "",
-        'test("synthetic quarantine fixture", { tag: ["@quarantine"] }, async () => {});',
-        "",
-      ].join("\n"),
-    );
-    const quarantined = await selectCharacterization({
-      changedFiles: [quarantinedPath],
-      root: quarantineFixtureRoot,
-    });
-    if (quarantined.applicable || quarantined.reason !== "only-quarantined-playwright-changes") {
-      throw new Error("quarantined Playwright acceptance must not create an automatic 50-iteration workload");
-    }
-    if (!quarantined.excluded_quarantined_tests.includes(quarantinedPath)) {
-      throw new Error("quarantined changed acceptance must be reported as explicitly excluded");
-    }
-  } finally {
-    rmSync(quarantineFixtureRoot, { recursive: true, force: true });
+  const profileOnly = await selectCharacterization({ changedFiles: [profileSpecific] });
+  if (
+    profileOnly.applicable ||
+    profileOnly.reason !== "only-profile-specific-playwright-changes" ||
+    profileOnly.files.length !== 0 ||
+    !profileOnly.deferred_profile_tests.includes(profileSpecific)
+  ) {
+    throw new Error("profile-only changes must defer to the dedicated profile lane without local characterization");
+  }
+
+  const syntheticPath = "test/e2e/plasmon-quarantined-fixture.spec.ts";
+  const syntheticSource = [
+    'import { test } from "@playwright/test";',
+    "",
+    `test("synthetic quarantine fixture", { tag: ["@quarantine", "@synthetic-quarantine"] }, async () => {});`,
+    "",
+  ].join("\n");
+  const syntheticEntries = [{
+    id: "synthetic-quarantine-fixture",
+    path: syntheticPath,
+    selectorTag: "@synthetic-quarantine",
+    title: "synthetic quarantine fixture",
+    active: true,
+    classification: "known-flaky",
+    repairIssue: 1,
+    exitCriteria: "retries=0",
+  }];
+  if (!isFullyQuarantinedSource(syntheticPath, syntheticSource, syntheticEntries)) {
+    throw new Error("exact quarantine helper must identify a source whose every test is actively quarantined");
+  }
+  const mixedSyntheticSource = `${syntheticSource}\ntest("required neighbor", async () => {});\n`;
+  if (isFullyQuarantinedSource(syntheticPath, mixedSyntheticSource, syntheticEntries)) {
+    throw new Error("exact quarantine helper must not classify a mixed required/quarantined source as fully quarantined");
+  }
+
+  if (activeQuarantines.length !== 1) {
+    throw new Error(`expected exactly one active quarantine during migration, found ${activeQuarantines.length}`);
+  }
+  const activeMixedPath = activeQuarantines[0].path;
+  const mixedQuarantine = await selectCharacterization({ changedFiles: [activeMixedPath] });
+  if (
+    mixedQuarantine.applicable ||
+    mixedQuarantine.reason !== "only-profile-specific-playwright-changes" ||
+    mixedQuarantine.files.length !== 0 ||
+    !mixedQuarantine.deferred_profile_tests.includes(activeMixedPath)
+  ) {
+    throw new Error("a changed mixed required/quarantined profile spec must defer to its dedicated package lane");
+  }
+  if (mixedQuarantine.excluded_quarantined_tests.includes(activeMixedPath)) {
+    throw new Error("a mixed spec must not be excluded merely because one exact test is quarantined");
   }
 
   const helper = await selectCharacterization({
@@ -337,7 +369,7 @@ async function verifyCharacterizationSelection() {
   if (!helper.applicable || helper.files.length === 0) {
     throw new Error("modified helper with deterministic Plasmon consumers must select impacted tests");
   }
-  assertNoQuarantinedFiles(helper, "helper impact");
+  assertNoFullyQuarantinedFiles(helper, "helper impact");
 
   const unresolvedFixture = await selectCharacterization({
     changedFiles: ["test/e2e/permission-dialog.fixture.tsx"],
@@ -608,5 +640,5 @@ verifyLegacyResultCompatibility();
 verifyPriorIterationResultCompatibility();
 
 console.log(
-  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, quarantine exclusion, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
+  "Flake-probe configurable 10/50 count, exact/manual scope, exact changed-Playwright characterization, multiple changed-file targeting, deterministic helper impact, exact quarantine authority, mixed-spec profile deferral, profile-lane deferral, unresolved-support non-broadening, characterization-only execution gate, diagnostic characterization conclusion, immutable run-attempt artifacts, partial-rerun reconciliation, machine-readable evidence packets, retry-zero, worker-one, fresh local fixture, and both historical ten-iteration compatibility contracts verified",
 );

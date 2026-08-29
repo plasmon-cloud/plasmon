@@ -63,6 +63,8 @@ Place tests at the lowest layer that can prove the behavior through production c
 - package/installed checks when build output or Neutron packaging is part of the claim;
 - manual review for visual polish and interaction quality not meaningfully established by automation.
 
+For **new high-level deterministic workflows that represent legitimate OS operations**, prefer the production semantic API exposed by `createHeadlessPlasmonEnvironment()` as `env.os`. Do not add new raw `environment.services` choreography, legacy `node()/open()/processes()/windows()` helper usage, or Playwright clicks for a workflow that `env.os` can express. Focused subsystem tests should still call their owning model/service/controller/command directly; `OsApi` is not a mandatory wrapper for unit tests. If a legitimate deterministic OS operation is missing from `env.os`, treat that as a candidate production `OsApi` gap before inventing a test-only semantic helper or browser test. See `TESTING.md` and `src/os/api/README.md` for the boundary and exceptions.
+
 Use focused tests while iterating, then run:
 
 ```sh

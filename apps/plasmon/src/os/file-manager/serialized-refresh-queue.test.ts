@@ -9,7 +9,7 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-test("#371 refresh request during an active pass forces a serialized follow-up", async () => {
+test("refresh request during an active pass forces a serialized follow-up", async () => {
   const queue = new SerializedRefreshQueue();
   const firstPass = deferred();
   let passes = 0;
@@ -32,7 +32,7 @@ test("#371 refresh request during an active pass forces a serialized follow-up",
   expect(passes).toBe(2);
 });
 
-test("#371 refresh requests cannot be lost while the active runner settles", async () => {
+test("refresh requests cannot be lost while the active runner settles", async () => {
   const queue = new SerializedRefreshQueue();
   const firstPass = deferred();
   let passes = 0;
@@ -56,7 +56,7 @@ test("#371 refresh requests cannot be lost while the active runner settles", asy
   expect(passes).toBe(2);
 });
 
-test("#371 multiple refresh requests in one pass coalesce to one final read", async () => {
+test("multiple refresh requests in one pass coalesce to one final read", async () => {
   const queue = new SerializedRefreshQueue();
   const firstPass = deferred();
   let passes = 0;

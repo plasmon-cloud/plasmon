@@ -210,6 +210,6 @@ case "$target" in
     run_one test/e2e/plasmon-emulatorjs-proof.spec.ts
     ;;
   saved-preview)
-    run_one test/e2e/plasmon-demo-game.spec.ts --grep @issue-304
+    run_one test/e2e/plasmon-demo-game.spec.ts --grep @saved-preview
     ;;
 esac

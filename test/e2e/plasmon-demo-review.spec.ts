@@ -74,8 +74,8 @@ test("[demo profile] Plasmon demo discovers and opens the installed Review Eleme
 });
 
 test(
-  "[demo profile] #118 groups canonical Explorer processes and focuses individual members",
-  { tag: ["@demo-profile", "@issue-303"] },
+  "[demo profile] groups canonical Explorer processes and focuses individual members",
+  { tag: ["@demo-profile"] },
   async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

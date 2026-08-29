@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - version-0.1.0-os
-      - release/0.1.0-r2
+      - 'release/**'
   pull_request:
   workflow_dispatch:
 
@@ -38,6 +38,7 @@ jobs:
           set -euxo pipefail
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
+          node test/ci/verify-required-browser-gates.mjs
 
       - name: Verify flake-probe workflow contract
         run: |

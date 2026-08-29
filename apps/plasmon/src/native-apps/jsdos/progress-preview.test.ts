@@ -20,7 +20,7 @@ async function fixture() {
   return { fs, game, store, progress };
 }
 
-test("#124 preview metadata references one bounded filesystem image on the canonical save and visible game projection", async () => {
+test("preview metadata references one bounded filesystem image on the canonical save and visible game projection", async () => {
   const { fs, game, store } = await fixture();
   const first = await store.savePreview({
     bytes: Uint8Array.from([137, 80, 78, 71, 1, 2, 3]),
@@ -67,7 +67,7 @@ test("#124 preview metadata references one bounded filesystem image on the canon
   expect(await fs.resolvePath(jsDosProgressPreviewPath(game.id))).not.toBeNull();
 });
 
-test("#124 missing preview bytes never affect authoritative progress correctness", async () => {
+test("missing preview bytes never affect authoritative progress correctness", async () => {
   const { fs, game, store, progress } = await fixture();
   const preview = await store.savePreview({
     bytes: Uint8Array.from([137, 80, 78, 71, 1]),
@@ -86,7 +86,7 @@ test("#124 missing preview bytes never affect authoritative progress correctness
   expect(readResourcePreviewMetadata(await fs.stat(game.id))?.nodeId).toBe(preview.id);
 });
 
-test("#124 oversized preview capture is ignored without rewriting the save or visible game presentation", async () => {
+test("oversized preview capture is ignored without rewriting the save or visible game presentation", async () => {
   const { fs, game, store, progress } = await fixture();
   const result = await store.savePreview({
     bytes: new Uint8Array(RESOURCE_PREVIEW_MAX_BYTES + 1),

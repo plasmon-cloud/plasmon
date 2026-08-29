@@ -27,7 +27,7 @@ function failMoveFor(fs: FsService, failedId: NodeId): FsService {
   });
 }
 
-test("#92 canonical directory move reports ordered partial mutation truth", async () => {
+test("canonical directory move reports ordered partial mutation truth", async () => {
   const environment = createHeadlessPlasmonEnvironment();
   try {
     await environment.ready;

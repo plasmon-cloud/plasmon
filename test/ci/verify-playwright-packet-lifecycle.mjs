@@ -246,5 +246,5 @@ forbidFragment(flakeRunner, "include_quarantined", "prepared-compatible flake ru
 forbidFragment(packetRunner, "--repeat-each", "reusable Playwright packet lifecycle");
 
 console.log(
-  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; prepared deployment reuse is the default; only explicit persistent-state-mutating files pay per-repetition reinstall reset; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and quarantine exclusion are preserved",
+  "Playwright packet lifecycle verified: targeted 50-run probes use 10 five-execution packets; prepared deployment reuse is the default; only explicit persistent-state-mutating files pay per-repetition reinstall reset; broad/baseline scheduling, exact iteration evidence, retries=0, workers=1, and shared quarantine exclusion are preserved",
 );

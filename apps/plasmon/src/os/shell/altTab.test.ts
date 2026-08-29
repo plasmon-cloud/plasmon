@@ -20,7 +20,7 @@ const processes: ProcessRecord[] = [
   { id: "p3", appId: "a3", handlerId: "native:three", target: {}, title: "Three", icon: "three.svg", state: "running", windowId: "w3" },
 ];
 
-test("#63 begins from canonical Windowing MRU without selecting by z/process order", () => {
+test("begins from canonical Windowing MRU without selecting by z/process order", () => {
   const session = beginAltTabSession(snapshot, windows)!;
   expect(session.windowIds).toEqual(["w3", "w2", "w1"]);
   expect(session.selectedWindowId).toBe("w2");
@@ -28,7 +28,7 @@ test("#63 begins from canonical Windowing MRU without selecting by z/process ord
   expect(cycleAltTabSession(session, true).selectedWindowId).toBe("w3");
 });
 
-test("#63 keeps minimized members switchable and excludes windows that close while held", () => {
+test("keeps minimized members switchable and excludes windows that close while held", () => {
   const session = beginAltTabSession(snapshot, windows)!;
   const entries = deriveAltTabEntries(session, windows, processes);
   expect(entries.map((entry) => [entry.windowId, entry.minimized, entry.selected])).toEqual([
@@ -43,6 +43,6 @@ test("#63 keeps minimized members switchable and excludes windows that close whi
   expect(altTabCommitWindowId(afterClose, windows.filter((windowState) => windowState.id !== "w2"))).toBe("w3");
 });
 
-test("#63 refuses a switcher when fewer than two canonical windows are live", () => {
+test("refuses a switcher when fewer than two canonical windows are live", () => {
   expect(beginAltTabSession({ focusedId: "w1", mru: ["w1"] }, windows.slice(0, 1))).toBeNull();
 });

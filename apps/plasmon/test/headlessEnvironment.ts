@@ -4,6 +4,8 @@ import type {
   ProcessRecord,
   WindowState,
 } from "../src/os/contracts/index.ts";
+import type { OsApi } from "../src/os/api/index.ts";
+import { createPlasmonOsApi } from "../src/os/api/adapter.ts";
 import { MemoryFsRepository } from "../src/os/fs/index.ts";
 import {
   createPlasmonServices,
@@ -21,13 +23,19 @@ export interface HeadlessPlasmonEnvironmentOptions {
 
 export interface HeadlessPlasmonEnvironment {
   readonly services: PlasmonServices;
+  /** The same production semantic OS API intended for non-test automation consumers. */
+  readonly os: OsApi;
   readonly repository: MemoryFsRepository;
   readonly neutron: MockNeutronBridge;
   readonly neutronMessages: readonly string[];
   readonly ready: PlasmonServices["filesystem"]["ready"];
+  /** @deprecated Prefer env.os.fs.stat() for new high-level deterministic tests. */
   node(path: string): Promise<FsNode | null>;
+  /** @deprecated Prefer env.os.open() for new high-level deterministic tests. */
   open(path: string): Promise<void>;
+  /** @deprecated Prefer env.os.processes.list() for new high-level deterministic tests. */
   processes(): readonly ProcessRecord[];
+  /** @deprecated Prefer env.os.windows.list() for new high-level deterministic tests. */
   windows(): readonly WindowState[];
   dispose(): void;
 }
@@ -40,6 +48,10 @@ export interface HeadlessPlasmonEnvironment {
  * viewport are deterministic. Filesystem policy, bootstrap, associations,
  * opening, native app registration, process behavior, and window behavior all
  * come from the same production implementations used by PlasmonOS.
+ *
+ * The production createPlasmonOsApi() adapter is exposed as env.os. The
+ * headless harness does not implement a second semantic OS facade; test-only
+ * powers, if added later, belong beside env.os rather than inside it.
  *
  * Service construction assembles but does not launch the Start reconciliation
  * runtime. Pure/headless tests can therefore stage fixtures and invoke
@@ -66,20 +78,20 @@ export function createHeadlessPlasmonEnvironment(
     neutron,
     windows,
   });
+  const os = createPlasmonOsApi({ services });
 
   const node = (path: string): Promise<FsNode | null> => services.fs.resolvePath(path);
 
   return {
     services,
+    os,
     repository,
     neutron,
     neutronMessages,
     ready: services.filesystem.ready,
     node,
     open: async (path) => {
-      const target = await node(path);
-      if (!target) throw new Error(`Headless Plasmon path does not exist: ${path}`);
-      await services.filesystem.open.openNode(target.id);
+      await os.open(path);
     },
     processes: () => services.process.list(),
     windows: () => services.windows.list(),
