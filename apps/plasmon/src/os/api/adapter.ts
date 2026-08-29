@@ -99,12 +99,24 @@ async function requireParent(
 }
 
 function processForRequestedResource(
-  processes: readonly ProcessRecord[],
+  before: readonly ProcessRecord[],
+  after: readonly ProcessRecord[],
   requestedNodeId: string,
 ): ProcessRecord | undefined {
-  return processes.find(
+  const beforeIds = new Set(before.map((process) => process.id));
+  const newMatches = after.filter(
+    (process) =>
+      !beforeIds.has(process.id)
+      && process.target.nodeId === requestedNodeId
+      && process.state !== "closing",
+  );
+  if (newMatches.length === 1) return newMatches[0];
+  if (newMatches.length > 1) return undefined;
+
+  const activeMatches = after.filter(
     (process) => process.target.nodeId === requestedNodeId && process.state !== "closing",
   );
+  return activeMatches.length === 1 ? activeMatches[0] : undefined;
 }
 
 /**
@@ -189,8 +201,9 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     open: async (path: string): Promise<OpenResult> => {
       const node = await requireNode(services, path);
       const resource = await toResource(services, node);
+      const before = services.process.list();
       await services.filesystem.open.openNode(node.id);
-      const process = processForRequestedResource(services.process.list(), node.id);
+      const process = processForRequestedResource(before, services.process.list(), node.id);
       return {
         resource,
         ...(process ? {
