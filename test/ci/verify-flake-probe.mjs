@@ -146,9 +146,9 @@ verifySummaryFixture({ count: POST_MERGE_CHARACTERIZATION_COUNT, mode: "characte
 verifySummaryFixture({ count: POST_MERGE_PROBE_COUNT, mode: "merge-validation", shouldPass: false });
 
 for (const fragment of [
-  "pull-request head",
-  "merge queue",
-  "post-merge",
+  "### Pull-request head: review readiness",
+  "### Merge queue: required pre-merge validation",
+  "### Integrated release branch: post-merge stability evidence",
   "ci:flake-probe",
   "@quarantine",
 ]) requireFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
