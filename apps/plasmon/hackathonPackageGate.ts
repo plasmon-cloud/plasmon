@@ -6,6 +6,7 @@ import { resolvePackageProfile } from "./packageProfilePolicy.ts";
 export const HACKATHON_MAX_BYTES = 1_900_000;
 
 const appDirectoryUrl = new URL("./", import.meta.url);
+const distRootUrl = new URL("./dist/", import.meta.url);
 const distWebUrl = new URL("./dist/web/", import.meta.url);
 const manifestUrl = new URL("./neutron.json", import.meta.url);
 const mainBundleUrl = new URL("./dist/web/main.js", import.meta.url);
@@ -23,16 +24,16 @@ const FORBIDDEN_WORKERS = [
   "ts.worker.js",
 ] as const;
 
-const FORBIDDEN_RUNTIME_ROOTS = [
+const FORBIDDEN_ARCHIVE_ROOTS = [
   "module/emulatorjs/",
   "module/emulatorjs-shim/",
   "module/emulatorjs-runtime/",
   "module/native-apps/games/game-libraries/",
   "module/native-apps/games/game-runtime/",
-  "System/Program Files/js-dos/",
-  "System/Program Files/EmulatorJS/",
-  "runtime/jsdos/",
-  "runtime/emulatorjs/",
+  "web/System/Program Files/js-dos/",
+  "web/System/Program Files/EmulatorJS/",
+  "web/runtime/jsdos/",
+  "web/runtime/emulatorjs/",
 ] as const;
 
 const FORBIDDEN_GAME_EXTENSIONS = [".jsdos", ".dosz", ".nes", ".rom"] as const;
@@ -55,33 +56,37 @@ export async function verifyHackathonPackage(): Promise<{ archive: string; bytes
     fail(`${archive} is ${archiveStats.size} bytes; limit is strictly less than ${HACKATHON_MAX_BYTES}`);
   }
 
-  const files = (await readdir(distWebUrl, { recursive: true }))
+  // pack.ts archives the complete dist/ tree, so exclusions are checked against
+  // that exact input boundary rather than only against browser-facing dist/web.
+  const archiveFiles = (await readdir(distRootUrl, { recursive: true }))
     .map((file) => file.replaceAll("\\", "/"));
-  const fileSet = new Set(files);
+  const webFiles = (await readdir(distWebUrl, { recursive: true }))
+    .map((file) => file.replaceAll("\\", "/"));
+  const webFileSet = new Set(webFiles);
 
   for (const required of REQUIRED_WORKER_PATHS) {
-    if (!fileSet.has(required)) fail(`missing required Monaco transport member ${required}`);
+    if (!webFileSet.has(required)) fail(`missing required Monaco transport member ${required}`);
     const member = await stat(new URL(required, distWebUrl));
     if (member.size === 0) fail(`required Monaco transport member is empty: ${required}`);
   }
 
   for (const worker of FORBIDDEN_WORKERS) {
-    const matches = files.filter((file) =>
+    const matches = webFiles.filter((file) =>
       file === `System/Program Files/MonacoEditor/${worker}`
       || file === `runtime/monaco/${worker}`
     );
     if (matches.length > 0) fail(`forbidden dedicated Monaco worker present: ${matches.join(", ")}`);
   }
 
-  for (const root of FORBIDDEN_RUNTIME_ROOTS) {
-    const matches = files.filter((file) => file === root.slice(0, -1) || file.startsWith(root));
+  for (const root of FORBIDDEN_ARCHIVE_ROOTS) {
+    const matches = archiveFiles.filter((file) => file === root.slice(0, -1) || file.startsWith(root));
     if (matches.length > 0) fail(`heavyweight runtime root present: ${root}`);
   }
 
-  const gamePayloads = files.filter((file) =>
+  const gamePayloads = archiveFiles.filter((file) =>
     FORBIDDEN_GAME_EXTENSIONS.some((extension) => file.toLowerCase().endsWith(extension))
-    || file.startsWith("Games/")
-    || file.startsWith("fixtures/")
+    || file.startsWith("web/Games/")
+    || file.startsWith("web/fixtures/")
   );
   if (gamePayloads.length > 0) fail(`game/demo payloads present: ${gamePayloads.join(", ")}`);
 
@@ -93,7 +98,7 @@ export async function verifyHackathonPackage(): Promise<{ archive: string; bytes
 
   console.log(`Hackathon package: ${archive}`);
   console.log(`Hackathon package size: ${archiveStats.size} bytes (< ${HACKATHON_MAX_BYTES})`);
-  console.log(`Hackathon package inventory: ${files.length} dist/web entries verified`);
+  console.log(`Hackathon package inventory: ${archiveFiles.length} dist entries verified`);
   return { archive, bytes: archiveStats.size };
 }
 
