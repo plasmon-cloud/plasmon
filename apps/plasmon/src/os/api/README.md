@@ -34,6 +34,7 @@ os.fs.exists(path)
 os.fs.readText(path)
 os.fs.writeText(path, content)
 os.fs.createDirectory(path)
+os.fs.list(path)
 
 os.open(path)
 
@@ -41,7 +42,7 @@ os.processes.list()
 os.windows.list()
 ```
 
-`writeText()` creates or replaces a UTF-8 text file through the protected user-facing filesystem facade. `createDirectory()` creates one directory whose parent already exists. `open()` invokes the canonical filesystem open dispatcher and reports the requested resource plus native process/window identities when the operation creates or reuses them.
+`writeText()` creates or replaces a UTF-8 text file through the protected user-facing filesystem facade. `createDirectory()` creates one directory whose parent already exists. `list()` accepts an absolute directory path, delegates direct-child enumeration to the production filesystem authority, and returns stable `OsResource` DTOs without adding shell presentation semantics such as cwd, sorting flags, globbing, recursion, or formatting. `open()` invokes the canonical filesystem open dispatcher and reports the requested resource plus native process/window identities when the operation creates or reuses them.
 
 Broader scripting concerns are intentionally separate. A future executable runtime may provide a `RunContext` for args/stdin/stdout/stderr/cancellation, while shell commands may live in a `CommandRegistry` built above `OsApi`. Those concerns must not become miscellaneous `OsApi` methods merely because scripting needs them.
 
