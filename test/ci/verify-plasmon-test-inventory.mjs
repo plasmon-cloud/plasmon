@@ -13,6 +13,12 @@ import {
 import { activeQuarantines } from "./plasmon-quarantine.mjs";
 
 const args = new Set(process.argv.slice(2));
+const legacyQuarantineMarker = `@${["r2", "quarantine"].join("-")}`;
+const quarantineGuidancePaths = [
+  ".github/workflows/README.md",
+  ".github/workflows/PLASMON_FLAKE_PROBE.md",
+  "test/ci/QUARANTINED_BROWSER_TESTS.md",
+];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -114,6 +120,10 @@ async function verify(inventory) {
   const plasmonBrowserTests = inventory.filter((test) => test.layer === "browser" || test.layer === "browser-optional");
   for (const browserTest of plasmonBrowserTests) {
     const source = await readFile(resolve(repoRoot, browserTest.path), "utf8");
+    assert(
+      !source.includes(legacyQuarantineMarker),
+      `${browserTest.path} must not reference the release-numbered quarantine marker`,
+    );
     const quarantineTags = quarantineTagBlocks(source);
     const expected = activeQuarantines.filter((entry) => entry.path === browserTest.path);
     assert(
@@ -143,16 +153,24 @@ async function verify(inventory) {
   assert(demoGame.includes('toHaveAttribute("src", /^blob:/'), "Saved-preview executable debt must retain the required blob-backed preview assertion");
 
   const browserHealth = await readFile(resolve(repoRoot, "test/e2e/plasmon-browser-health.ts"), "utf8");
-  assert(browserHealth.includes("KNOWN_BROWSER_HEALTH_ALLOW"), "BrowserHealth exact warning quarantine must retain semantic policy identity");
-  assert(!browserHealth.includes("R2_KNOWN_BROWSER_HEALTH_ALLOW"), "BrowserHealth policy identity must not be release-numbered");
+  assert(browserHealth.includes("#305"), "BrowserHealth exact warning quarantine must remain linked to its current repair owner");
   assert(browserHealth.includes("An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing."), "BrowserHealth exact warning quarantine must remain exact-message bounded");
   assert(!browserHealth.includes('messageIncludes: "sandbox"'), "BrowserHealth must not broadly ignore sandbox warnings");
 
   const quarantineDoc = await readFile(resolve(repoRoot, "test/ci/QUARANTINED_BROWSER_TESTS.md"), "utf8");
   assert(quarantineDoc.includes("plasmon-quarantine.json"), "Quarantine documentation must name the machine-readable authority");
   assert(quarantineDoc.includes("saved-jsdos-preview-publication"), "Quarantine documentation must describe the active semantic debt");
-  assert(!/#\d{2,}\b/u.test(quarantineDoc), "Quarantine documentation must leave work-item ownership to the machine-readable repairIssue field and GitHub");
+  assert(quarantineDoc.includes("#304"), "Quarantine documentation must retain the current repair owner");
   assert(!/run [`#]?\d{8,}/iu.test(quarantineDoc), "Current quarantine documentation must not embed historical workflow-run identities");
+
+  for (const guidancePath of quarantineGuidancePaths) {
+    const guidance = await readFile(resolve(repoRoot, guidancePath), "utf8");
+    assert(
+      !guidance.includes(legacyQuarantineMarker),
+      `${guidancePath} must not reference the release-numbered quarantine marker`,
+    );
+    assert(guidance.includes("@quarantine"), `${guidancePath} must use the fixed release-neutral @quarantine marker`);
+  }
 
   const fastWorkflow = await readFile(resolve(repoRoot, ".github/workflows/plasmon-ci.yml"), "utf8");
   assertAlwaysRunPrWorkflow(fastWorkflow, "Fast Bun tests");
