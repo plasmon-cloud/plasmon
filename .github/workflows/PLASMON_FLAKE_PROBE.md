@@ -25,7 +25,7 @@ The automatic selector is deliberately narrow:
 - a changed helper/fixture may add only Plasmon Playwright specs whose dependency graph deterministically reaches that helper through static relative imports or exact repository-path references;
 - unrelated non-Plasmon browser specs are ignored;
 - Bun-only `test/e2e/**/*.test.*` files are ignored unless their dependency graph reaches `@playwright/test`;
-- uncertain configuration/runner/support changes are recorded as unresolved diagnostics and do not broaden the characterization to the full Specialist inventory;
+- uncertain configuration/runner/support changes are recorded as unresolved diagnostics; uncertainty does not broaden the characterization to the full Specialist inventory;
 - profile-specific acceptances are deferred to the package lane that can truthfully execute them rather than being characterized against the slim/local package.
 
 The selected internal `exact-set` passes every selected file directly to one Playwright invocation per fresh probe iteration with `--workers=1 --retries=0`.
@@ -118,4 +118,4 @@ The required `Flake probe summary` summarizes the normal baseline independently.
 
 Historical result shapes remain readable by the summarizer, but new output must use the current unambiguous fields.
 
-A clean probe is stability evidence for that exact SHA and selected scope, not mathematical proof that the target cannot flake. Any observed failure remains diagnostic evidence. Retries, sleeps, timeout inflation, broad skips, and weakened assertions are not part of characterization mode.
+A clean probe is stability evidence for that exact SHA and selected scope, not proof that the target cannot flake. Any observed failure remains diagnostic evidence. Retries, sleeps, timeout inflation, broad skips, and weakened assertions are not part of characterization mode.
