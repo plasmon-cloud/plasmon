@@ -7,22 +7,22 @@ describe("production OS API in headless composition", () => {
 
     try {
       await env.ready;
-      const folder = await env.os.fs.createDirectory("/Desktop/OsApi Folder");
-      expect(folder.path).toBe("/Desktop/OsApi Folder");
+      const folder = await env.os.fs.createDirectory("/Desktop/OS API Folder");
+      expect(folder.path).toBe("/Desktop/OS API Folder");
       expect(folder.kind).toBe("directory");
 
       const created = await env.os.fs.writeText(
-        "/Desktop/OsApi Folder/notes.txt",
+        "/Desktop/OS API Folder/notes.txt",
         "first value",
       );
-      expect(created.path).toBe("/Desktop/OsApi Folder/notes.txt");
+      expect(created.path).toBe("/Desktop/OS API Folder/notes.txt");
       expect(created.kind).toBe("file");
       expect(created.mimeType).toBe("text/plain");
       expect(await env.os.fs.exists(created.path)).toBe(true);
       expect(await env.os.fs.readText(created.path)).toBe("first value");
 
       const second = await env.os.fs.writeText(
-        "/Desktop/OsApi Folder/second.txt",
+        "/Desktop/OS API Folder/second.txt",
         "second value",
       );
       const listed = await env.os.fs.list(folder.path);
@@ -54,31 +54,56 @@ describe("production OS API in headless composition", () => {
     }
   });
 
-  test("copies, moves, and removes resources through canonical filesystem authorities", async () => {
+  test("copies resources through canonical filesystem semantics", async () => {
     const env = createHeadlessPlasmonEnvironment();
 
     try {
       await env.ready;
-      const source = await env.os.fs.writeText("/Desktop/transfer.txt", "transfer value");
-      const moveTarget = await env.os.fs.createDirectory("/Desktop/Move Target");
-
+      const source = await env.os.fs.writeText("/Desktop/copy-source.txt", "copy value");
       const copied = await env.os.fs.copy(source.path, "/Documents");
+
       expect(copied.id).not.toBe(source.id);
-      expect(copied.path).toBe("/Documents/transfer.txt");
-      expect(await env.os.fs.readText(copied.path)).toBe("transfer value");
+      expect(copied.path).toBe("/Documents/copy-source.txt");
+      expect(await env.os.fs.readText(copied.path)).toBe("copy value");
       expect(await env.os.fs.exists(source.path)).toBe(true);
+    } finally {
+      env.dispose();
+    }
+  });
 
-      const moved = await env.os.fs.move(source.path, moveTarget.path);
+  test("moves resources while preserving stable identity", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      const source = await env.os.fs.writeText("/Desktop/move-source.txt", "move value");
+      const destination = await env.os.fs.createDirectory("/Desktop/Move Target");
+      const moved = await env.os.fs.move(source.path, destination.path);
+
       expect(moved.id).toBe(source.id);
-      expect(moved.path).toBe(`${moveTarget.path}/transfer.txt`);
+      expect(moved.path).toBe(`${destination.path}/move-source.txt`);
       expect(await env.os.fs.exists(source.path)).toBe(false);
-      expect(await env.os.fs.readText(moved.path)).toBe("transfer value");
+      expect(await env.os.fs.readText(moved.path)).toBe("move value");
+    } finally {
+      env.dispose();
+    }
+  });
 
-      await env.os.fs.remove(moved.path);
-      expect(await env.os.fs.exists(moved.path)).toBe(false);
+  test("removes resources through the canonical Recycle Bin authority", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      const source = await env.os.fs.writeText("/Desktop/remove-source.txt", "remove value");
+      await env.os.fs.remove(source.path);
+
+      expect(await env.os.fs.exists(source.path)).toBe(false);
+
+      // This is an adapter-contract assertion, not workflow setup: inspect the
+      // owning production Trash authority to prove remove() delegated there.
       const trashEntries = await env.services.filesystem.trash.list();
       expect(trashEntries.some(
-        (entry) => entry.node.id === moved.id && entry.originalPath === moved.path,
+        (entry) => entry.node.id === source.id && entry.originalPath === source.path,
       )).toBe(true);
     } finally {
       env.dispose();
@@ -95,6 +120,9 @@ describe("production OS API in headless composition", () => {
       ).rejects.toThrow("system-managed");
       expect(await env.os.fs.exists("/System/forbidden.txt")).toBe(false);
 
+      await expect(env.os.fs.move("/System/FileManager.sys", "/Documents")).rejects.toThrow(
+        "protected",
+      );
       await expect(env.os.fs.remove("/System/FileManager.sys")).rejects.toThrow("protected");
       expect(await env.os.fs.exists("/System/FileManager.sys")).toBe(true);
     } finally {
@@ -102,12 +130,12 @@ describe("production OS API in headless composition", () => {
     }
   });
 
-  test("opens a resource through canonical dispatch and reports native process/window outcomes", async () => {
+  test("opens a directly-targeted resource and reports native process/window outcomes", async () => {
     const env = createHeadlessPlasmonEnvironment();
 
     try {
       await env.ready;
-      const folder = await env.os.fs.createDirectory("/Desktop/Opened Through OsApi");
+      const folder = await env.os.fs.createDirectory("/Desktop/Opened Through OS API");
       const opened = await env.os.open(folder.path);
 
       expect(opened.resource).toEqual(folder);
@@ -132,6 +160,30 @@ describe("production OS API in headless composition", () => {
         processId: opened.processId,
         minimized: false,
         maximized: false,
+      });
+    } finally {
+      env.dispose();
+    }
+  });
+
+  test("does not guess process attribution for indirect shortcut opens", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+
+    try {
+      await env.ready;
+      const opened = await env.os.open("/Desktop/Root");
+
+      expect(opened.resource.path).toBe("/Desktop/Root");
+      expect(opened.handlerId).toBeUndefined();
+      expect(opened.processId).toBeUndefined();
+      expect(opened.windowId).toBeUndefined();
+
+      const processes = env.os.processes.list();
+      expect(processes).toHaveLength(1);
+      expect(processes[0]).toMatchObject({
+        appId: "native:explorer",
+        handlerId: "native:explorer",
+        state: "running",
       });
     } finally {
       env.dispose();

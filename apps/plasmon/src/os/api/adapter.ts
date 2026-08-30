@@ -77,7 +77,6 @@ function toWindow(window: WindowState): OsWindow {
 
 async function requireNode(services: PlasmonServices, path: string): Promise<FsNode> {
   requireAbsolutePath(path);
-  await services.filesystem.ready;
   const node = await services.fs.resolvePath(path);
   if (!node) throw new Error(`OS API path does not exist: ${path}`);
   return node;
@@ -98,40 +97,44 @@ async function requireParent(
   return { parent, name };
 }
 
-function openedProcess(
+function processForRequestedResource(
   before: readonly ProcessRecord[],
   after: readonly ProcessRecord[],
   requestedNodeId: string,
 ): ProcessRecord | undefined {
   const beforeIds = new Set(before.map((process) => process.id));
-  return after.find(
-    (process) => !beforeIds.has(process.id) && process.target.nodeId === requestedNodeId,
-  ) ?? after.find(
-    (process) => !beforeIds.has(process.id),
-  ) ?? after.find(
+  const newMatches = after.filter(
+    (process) =>
+      !beforeIds.has(process.id)
+      && process.target.nodeId === requestedNodeId
+      && process.state !== "closing",
+  );
+  if (newMatches.length === 1) return newMatches[0];
+  if (newMatches.length > 1) return undefined;
+
+  const activeMatches = after.filter(
     (process) => process.target.nodeId === requestedNodeId && process.state !== "closing",
   );
+  return activeMatches.length === 1 ? activeMatches[0] : undefined;
 }
 
 /**
  * Bind the dependency-light OsApi contract to one concrete production Plasmon
  * service composition. The supplied services remain the authority for
- * filesystem protection, associations, opening, process lifecycle and windows;
- * this adapter does not recreate those policies.
+ * filesystem readiness/protection, associations, opening, process lifecycle,
+ * windows and Trash; this adapter does not recreate those policies.
  */
 export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
   const { services } = options;
   const fs = {
     stat: async (path: string): Promise<OsResource | null> => {
       requireAbsolutePath(path);
-      await services.filesystem.ready;
       const node = await services.fs.resolvePath(path);
       return node ? toResource(services, node) : null;
     },
 
     exists: async (path: string): Promise<boolean> => {
       requireAbsolutePath(path);
-      await services.filesystem.ready;
       return (await services.fs.resolvePath(path)) !== null;
     },
 
@@ -148,7 +151,6 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
 
     writeText: async (path: string, content: string): Promise<OsResource> => {
       requireAbsolutePath(path);
-      await services.filesystem.ready;
       let node = await services.fs.resolvePath(path);
       if (!node) {
         const { parent, name } = await requireParent(services, path);
@@ -202,7 +204,7 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       const resource = await toResource(services, node);
       const before = services.process.list();
       await services.filesystem.open.openNode(node.id);
-      const process = openedProcess(before, services.process.list(), node.id);
+      const process = processForRequestedResource(before, services.process.list(), node.id);
       return {
         resource,
         ...(process ? {

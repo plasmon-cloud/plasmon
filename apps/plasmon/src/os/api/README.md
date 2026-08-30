@@ -51,7 +51,7 @@ All filesystem paths are absolute. `writeText()` creates or replaces a UTF-8 tex
 
 `remove()` is the ordinary user-facing Plasmon removal operation. It delegates to the filesystem core Trash authority, so removable resources are moved to Recycle Bin with the existing metadata/stable-identity behavior and protected resources remain protected. It is not a permanent-delete primitive.
 
-`open()` invokes the canonical filesystem open dispatcher and reports the requested resource plus native process/window identities when the operation creates or reuses them.
+`open()` invokes the canonical filesystem open dispatcher and always returns the requested `OsResource`. Native `handlerId`/`processId`/`windowId` fields are reported only when the resulting Plasmon-native process is directly targeted at that requested resource. Indirect opens such as shortcuts or Kernel-owned Neutron applications may therefore omit those optional fields rather than guessing process attribution.
 
 ## Package/provisioning boundary
 

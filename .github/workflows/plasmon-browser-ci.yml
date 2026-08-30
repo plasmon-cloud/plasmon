@@ -6,6 +6,8 @@ on:
       - version-0.1.0-os
       - 'release/**'
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -30,12 +32,20 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs browser
 
+      - name: Report PR gate deferred to merge queue
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "Packaged Playwright specialist acceptance is deferred until the approved PR enters the merge queue."
+          echo "The required check is intentionally satisfied on the PR head; the real package/browser gate runs on merge_group."
+
       - name: Install Nix
+        if: ${{ github.event_name != 'pull_request' }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon specialist browser acceptance
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -71,7 +81,7 @@ jobs:
           '
 
       - name: Upload Specialist Playwright report
-        if: ${{ always() }}
+        if: ${{ always() && github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-specialist-report-${{ github.run_attempt }}
@@ -90,12 +100,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Report PR gate deferred to merge queue
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "Packaged Playwright demo acceptance is deferred until the approved PR enters the merge queue."
+          echo "The real full-profile package/browser gate runs on merge_group."
+
       - name: Install Nix
+        if: ${{ github.event_name != 'pull_request' }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon demo browser acceptance
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -132,7 +150,7 @@ jobs:
           '
 
       - name: Upload Demo Playwright report
-        if: ${{ always() }}
+        if: ${{ always() && github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-demo-report-${{ github.run_attempt }}

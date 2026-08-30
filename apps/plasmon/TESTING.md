@@ -179,7 +179,7 @@ npm run test:e2e:plasmon:fresh
 
 The fresh command packages only the artifacts declared by `plasmon-local.ndeploy.json`, performs a clean reinstall through `neutron-provision`, and runs the packaged Plasmon browser suite. Use `npm run test:e2e:plasmon` to rerun only browser specs against an already matching installation.
 
-Required Plasmon packaged CI and the flake probe use this `plasmon:local:*` family. They must not switch to `plasmon:demo:*`, because doing so would silently expand CI to the fuller demo deployment.
+Required Plasmon packaged CI and the ordinary broad flake boundary use this `plasmon:local:*` family. Targeted profile-specific characterization uses the truthful profile selected by the test inventory rather than forcing a demo/full acceptance against the slim/local package.
 
 ### Full Plasmon demo deployment
 
@@ -281,7 +281,20 @@ Direct-push applicability may retain its explicit branch/path filters; that does
 
 It installs the test dependencies but intentionally avoids Kernel packaging, Motoko/Nix, and Playwright. Fast CI also executes the focused deployment command/manifest regression so the `demo` and `local` namespaces cannot silently converge again.
 
-`.github/workflows/plasmon-browser-ci.yml`, `.github/workflows/plasmon-browser-smoke-ci.yml`, and `.github/workflows/plasmon-browser-persistence-ci.yml` are installed-package/browser gates. They consume the manifest-driven `plasmon:local:*` preparation/provision path because the bounded `plasmon-local.ndeploy.json` fixture is their explicit source of truth.
+### Staged review, merge-queue, and post-merge CI
+
+Expensive installed-package/browser validation is staged around review rather than paid on every intermediate PR revision. The detailed executable contract is documented in [`../../.github/workflows/PLASMON_STAGED_CI.md`](../../.github/workflows/PLASMON_STAGED_CI.md).
+
+The phase contract is:
+
+1. **ordinary PR head** — Fast Bun tests run as real readiness evidence; stable required packaged/browser and Flake Probe contexts report explicit deferred success without installing Nix, starting PocketIC, or launching Playwright;
+2. **approved merge queue** — required workflows run their real slow workloads against the exact `merge_group` SHA; Flake Probe adds exactly one broad retry-free `all` observation and, when relevant Playwright scope is selected, one prepared packet containing exactly 10 targeted retry-free repetitions;
+3. **integrated `release/**` push** — required release-push gates still run, and diagnostic Flake Probe adds exactly 10 broad observations plus conditional 50 targeted characterization observations; the 50 targeted observations remain packetized to reuse setup;
+4. **explicit diagnostic request** — `ci:flake-probe` remains the targeted exact-head 50-iteration diagnostic mechanism. `ci:flaky` is classification/debt metadata, not the heavy-probe trigger.
+
+Do not enable the repository merge queue until every required status context reports correctly for `merge_group: checks_requested`. A merge-group slow failure must block the queue entry. A post-merge diagnostic failure remains visible evidence but cannot retroactively undo the completed merge.
+
+Profile-specific Playwright characterization must use the package profile that can truthfully execute the selected acceptance. Never characterize a demo/full-profile acceptance against the slim/local package merely to reuse an environment.
 
 If an agent environment cannot run Bun locally, push the Issue branch and use Plasmon Fast CI as the feedback loop. `Tests not run` is not a complete handoff when CI is available.
 
