@@ -8,7 +8,11 @@ import {
 import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
-import { DEMO_PAYLOAD_MARKERS, SLIM_MAX_BYTES } from "../slimPackageGate.ts";
+import {
+  assertSlimRuntimePackagePath,
+  DEMO_PAYLOAD_MARKERS,
+  SLIM_MAX_BYTES,
+} from "../slimPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
 const SLIM_HEADROOM_TARGET_BYTES = 1_800_000;
@@ -108,6 +112,34 @@ test("plasmon bundles the shared design system stylesheet", async () => {
   expect(css).toContain(".nt-app");
   expect(css).toContain(".nt-button");
   expect(css).toContain("--nt-bg-panel");
+});
+
+test("Slim package input rejects repository-only artifacts and permits runtime assets", () => {
+  if (!packagePolicy.isSlim) return;
+
+  for (const rejectedPath of [
+    "README.md",
+    "web/main.js.map",
+    "src/app.ts",
+    "tests/app.test.js",
+    "web/docs/guide.html",
+  ]) {
+    expect(() => assertSlimRuntimePackagePath(rejectedPath)).toThrow(
+      "non-runtime package input is forbidden",
+    );
+  }
+
+  for (const runtimePath of [
+    "web/index.html",
+    "web/main.css",
+    "web/config.json",
+    "web/static/icon.svg",
+    "web/static/wallpaper.jpg",
+    "web/static/font.ttf",
+    "web/runtime/worker.wasm",
+  ]) {
+    expect(() => assertSlimRuntimePackagePath(runtimePath)).not.toThrow();
+  }
 });
 
 test("Base and Slim exclude heavyweight game/demo payloads and emit the exact requested Monaco worker set", async () => {
