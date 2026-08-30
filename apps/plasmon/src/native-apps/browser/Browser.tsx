@@ -11,7 +11,7 @@ import type {
   ProcessController,
   ProcessId,
 } from "../../os/contracts/index.ts";
-import { normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
+import { browserNavigationCommand, normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
 
 export interface BrowserProps {
   processId: ProcessId;
@@ -39,6 +39,12 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
     void resolveBrowserTarget(target, fs)
       .then((location) => {
         if (!active) return;
+        if (!location) {
+          setAddress("");
+          setState({ status: "ready", url: "", title: "Browser" });
+          process.setTitle(processId, "Browser");
+          return;
+        }
         setAddress(location.url);
         setState({ status: "loading", ...location });
         process.setTitle(processId, location.title || "Browser");
@@ -57,8 +63,8 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
 
   const navigate = (event: FormEvent) => {
     event.preventDefault();
-    const normalized = normalizeHttpUrl(address);
-    if (!normalized) {
+    const command = browserNavigationCommand(address);
+    if (!command) {
       setState({
         status: "error",
         message: "Enter a complete http:// or https:// URL",
@@ -66,7 +72,10 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
       });
       return;
     }
-    process.setTarget(processId, { url: normalized });
+    setAddress(command.location.url);
+    setState({ status: "loading", ...command.location });
+    process.setTitle(processId, command.location.title || "Browser");
+    process.setTarget(processId, command.target);
   };
 
   const external = () => {
@@ -126,7 +135,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
           />
         </div>
       ) : (
-        <div style={styles.empty}>No web address is available.</div>
+        <div style={styles.empty}>Enter an http:// or https:// address to browse.</div>
       )}
     </section>
   );
