@@ -29,13 +29,13 @@ async function launchPlasmon(
   const selector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(selector).first()).toBeAttached();
   const app = page.frameLocator(selector).first();
-  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 15_000 });
   return app;
 }
 
 async function waitForMonaco(window: Locator): Promise<Locator> {
   const surface = window.locator('[data-editor-engine="monaco"][aria-label="Text content"]').first();
-  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+  await expect(surface).toHaveAttribute("data-editor-ready", "true", { timeout: 15_000 });
   return surface;
 }
 
