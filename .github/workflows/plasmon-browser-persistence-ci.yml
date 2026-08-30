@@ -87,3 +87,23 @@ jobs:
             npm run plasmon:local:reinstall
             npm run test:e2e:plasmon:persistence
           '
+
+  approval-rerun-sync:
+    name: Sync approval reruns
+    needs: packaged-persistence
+    if: ${{ always() && github.event_name == 'pull_request_review' && github.event.review.state == 'approved' && github.run_attempt > 1 && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout trusted rerun coordinator
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - name: Propagate approval rerun to stale failed gates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node test/ci/rerun-stale-approval-gates.mjs
