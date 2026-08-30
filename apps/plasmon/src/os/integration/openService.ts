@@ -111,7 +111,7 @@ export class IntegratedOpenService implements OpenService {
         );
       }
 
-      await this.neutron.openElement(appId);
+      await this.neutron.openElement(appId, operation ? { operation } : undefined);
       log?.info("open.handler.completed", { handlerId, kind: "neutron" });
     } catch (error) {
       log?.error("open.handler.failed", { handlerId, error });
