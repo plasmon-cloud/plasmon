@@ -12,6 +12,10 @@ on:
     types: [checks_requested]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   kernel_scope:
     name: Determine Kernel CI applicability
@@ -29,6 +33,27 @@ jobs:
       - name: Verify Kernel CI skip contract
         run: node test/ci/verify-kernel-ci.mjs
 
+      - name: Detect retained approval
+        id: retained_approval
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner="${REPOSITORY%%/*}"
+          name="${REPOSITORY#*/}"
+          decision="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewDecision}}}' \
+            -F owner="$owner" -F name="$name" -F number="$PR_NUMBER" \
+            --jq '.data.repository.pullRequest.reviewDecision')"
+          if [ "$decision" = "APPROVED" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Detect kernel-relevant changes
         id: kernel_scope
         shell: bash
@@ -36,7 +61,15 @@ jobs:
           set -euo pipefail
 
           case "${{ github.event_name }}" in
-            pull_request|merge_group)
+            pull_request)
+              if [ "${{ steps.retained_approval.outputs.approved }}" = "true" ]; then
+                echo "run_kernel=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "run_kernel=false" >> "$GITHUB_OUTPUT"
+              fi
+              exit 0
+              ;;
+            merge_group)
               echo "run_kernel=false" >> "$GITHUB_OUTPUT"
               exit 0
               ;;
