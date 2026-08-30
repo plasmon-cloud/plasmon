@@ -199,3 +199,34 @@ test("paste failure logs error type without private error message", async () => 
     stop();
   }
 });
+
+test("background filesystem invalidation does not dismiss an actionable FileManager error", async () => {
+  const fs = operationFs() as PersistentFsService;
+  const root = await directory(fs, "/");
+  await fs.createFile(root.id, "open-fails.txt", { mime: "text/plain" });
+
+  const view = render(
+    <FileManager
+      directoryId={root.id}
+      fs={fs}
+      fsEvents={fs}
+      openAuthority={unusedOpenAuthority}
+      trashAuthority={unusedTrashAuthority}
+      clipboard={new FileOperationClipboard()}
+    />,
+  );
+
+  const source = await view.findByRole("option", { name: "open-fails.txt" });
+  fireEvent.doubleClick(source);
+  const alert = await view.findByRole("alert");
+  expect(alert.textContent).toContain("File opening is not exercised by diagnostics tests");
+
+  await act(async () => {
+    await fs.createFile(root.id, "background-change.txt", { mime: "text/plain" });
+  });
+  await view.findByRole("option", { name: "background-change.txt" });
+
+  expect(view.getByRole("alert").textContent).toContain(
+    "File opening is not exercised by diagnostics tests",
+  );
+});
