@@ -1,4 +1,5 @@
 import type { NeutronBridge } from "../contracts/neutron.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import { admittedVanillaNeutronApi } from "./frontend-call-admission.ts";
 import { MockNeutronBridge, type MockNeutronBridgeOptions } from "./mock.ts";
 import { VanillaNeutronBridge, type VanillaNeutronBridgeOptions } from "./vanilla.ts";
@@ -8,6 +9,7 @@ export interface CreateNeutronBridgeOptions {
   mode?: NeutronBridgeMode;
   preview?: MockNeutronBridgeOptions;
   vanilla?: VanillaNeutronBridgeOptions;
+  diagnostics?: DiagnosticService;
 }
 
 function detectedMode(): NeutronBridgeMode {
@@ -26,5 +28,6 @@ export function createNeutronBridge(options: CreateNeutronBridgeOptions = {}): N
   return new VanillaNeutronBridge({
     ...vanilla,
     api: vanilla.api ?? admittedVanillaNeutronApi,
+    diagnostics: vanilla.diagnostics ?? options.diagnostics,
   });
 }
