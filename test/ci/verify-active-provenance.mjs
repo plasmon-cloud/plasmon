@@ -64,13 +64,6 @@ const explicitClassifications = Object.freeze([
     reason: "The guard source deliberately constructs synthetic work-item and release-era specimens so its permanent negative tests can prove those identities are rejected. The file is never a product/test identity and is excluded from its own recursive scan to avoid self-matching.",
   }),
   Object.freeze({
-    id: "labeled-flake-probe-retired-scope-fixture",
-    path: "test/ci/verify-labeled-flake-probe.mjs",
-    kind: "ci-negative-fixture",
-    linePattern: /"Check r2 scope"/u,
-    reason: "This verifier names a retired release-era workflow step only in its forbidden-fragment list, proving that the current labeled flake-probe workflow cannot regress to the old release-specific scope check.",
-  }),
-  Object.freeze({
     id: "test-inventory-retired-quarantine-marker-fixture",
     path: "test/ci/verify-plasmon-test-inventory.mjs",
     kind: "ci-negative-fixture",
@@ -273,7 +266,7 @@ function selfTest() {
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
     throw new Error("guard self-test lost the bounded quarantine repair-owner classification");
   }
-  if (explicitClassifications.length !== 4) {
+  if (explicitClassifications.length !== 3) {
     throw new Error("guard self-test expected the complete explicit classification inventory to remain narrowly bounded");
   }
 
