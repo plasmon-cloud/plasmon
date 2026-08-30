@@ -1,0 +1,55 @@
+name: Experiment Cmd Sync Current 631
+
+on:
+  push:
+    branches: [experiment/cmd]
+    paths:
+      - .github/workflows/experiment-cmd-sync-631.yml
+
+permissions:
+  contents: write
+
+jobs:
+  merge-current-631:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/cmd
+          fetch-depth: 0
+      - name: Merge current #631 head with bounded conflict resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin work/issue-607-os-api
+
+          set +e
+          git merge --no-ff --no-edit origin/work/issue-607-os-api
+          merge_status=$?
+          set -e
+
+          if [[ $merge_status -ne 0 ]]; then
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+            printf 'Conflicts:\n%s\n' "${conflicts[*]}"
+            allowed=(
+              "apps/plasmon/src/os/api/adapter.ts"
+              "apps/plasmon/src/os/api/contracts.ts"
+            )
+            for path in "${conflicts[@]}"; do
+              permitted=false
+              for allowed_path in "${allowed[@]}"; do
+                if [[ "$path" == "$allowed_path" ]]; then permitted=true; fi
+              done
+              if [[ "$permitted" != true ]]; then
+                echo "Unexpected merge conflict: $path" >&2
+                exit 1
+              fi
+            done
+            git checkout --ours -- "${allowed[@]}"
+            git add -- "${allowed[@]}"
+            git commit --no-edit
+          fi
+
+          git push origin HEAD:experiment/cmd
