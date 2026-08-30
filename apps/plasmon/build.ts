@@ -25,6 +25,11 @@ const rollbarClientToken = process.env.PLASMON_ROLLBAR_CLIENT_TOKEN ?? "";
 const buildSha = process.env.PLASMON_BUILD_SHA ?? process.env.GITHUB_SHA ?? "";
 const packageManifest = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
+if (packagePolicy.isSlim && (remoteIncidentExperiment || remoteSourceMaps)) {
+  throw new Error(
+    "Slim package profile excludes remote incident reporting and remote source maps",
+  );
+}
 if (remoteSourceMaps && remoteSourcesContent !== "include" && remoteSourcesContent !== "omit") {
   throw new Error(
     "PLASMON_REMOTE_SOURCE_MAPS=1 requires an explicit PLASMON_REMOTE_SOURCES_CONTENT=include|omit policy",
