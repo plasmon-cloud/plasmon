@@ -43,6 +43,11 @@ describe("DiagnosticSettingsStore", () => {
     await store.setFileMinLevel("debug");
     await store.setConsoleMinLevel("critical");
 
+    expect(await store.load()).toEqual({
+      version: 1,
+      fileMinLevel: "debug",
+      consoleMinLevel: "critical",
+    });
     const restored = await new DiagnosticSettingsStore(fs).load();
     expect(restored.fileMinLevel).toBe("debug");
     expect(restored.consoleMinLevel).toBe("critical");
