@@ -6,6 +6,7 @@ import type {
   NativeAppRegistry,
   NeutronBridge,
 } from "../contracts/index.ts";
+import type { DiagnosticLogger } from "../diagnostics/index.ts";
 import { reconcileStartMenu, type StartSeedResult } from "./startMenu.ts";
 
 export interface StartMenuReconciliationSnapshot {
@@ -22,6 +23,7 @@ type ReconcileStartMenu = (
 
 export interface StartMenuReconciliationControllerOptions {
   reconcile?: ReconcileStartMenu;
+  diagnostics?: DiagnosticLogger;
 }
 
 function identityKey(
@@ -41,6 +43,10 @@ function identityKey(
 
 function message(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
+}
+
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
 }
 
 /**
@@ -69,7 +75,7 @@ export class StartMenuReconciliationController {
     private readonly fs: FsService,
     private readonly nativeApps: NativeAppRegistry,
     private readonly neutron: NeutronBridge,
-    options: StartMenuReconciliationControllerOptions = {},
+    private readonly options: StartMenuReconciliationControllerOptions = {},
   ) {
     this.reconcile = options.reconcile ?? reconcileStartMenu;
   }
@@ -138,6 +144,10 @@ export class StartMenuReconciliationController {
         revision: this.snapshot.revision + 1,
       };
     } catch (cause: unknown) {
+      this.options.diagnostics?.error("shell.start.reconcile.failed", {
+        message: "Start Menu reconciliation failed",
+        errorType: diagnosticErrorType(cause),
+      });
       this.snapshot = {
         ...this.snapshot,
         error: `Start Menu could not be reconciled: ${message(cause)}`,
