@@ -9,6 +9,7 @@ Applies to `apps/plasmon/src/os/**` together with parent instructions. Read the 
 - Shared concepts come from `contracts/**`; consumers must not create incompatible local versions.
 - `api/**` is the dependency-light production semantic OS capability boundary for legitimate high-level automation. Its adapter delegates to existing authorities; it must not become a second policy implementation or test-only facade.
 - `diagnostics/**` is the canonical Plasmon logging boundary. Production code scopes `diagnostics.for("subsystem")` and emits stable events through it; do not add subsystem-local loggers, direct sink writes, direct BugSnag calls, or ordinary production `console.*` producers. Narrow pre-diagnostics/bootstrap and sink-self-failure console exceptions must be documented and guarded.
+- Diagnostic operation identity is explicit cross-subsystem context. Continue a supplied `DiagnosticOperationContext` across Plasmon-owned async/service boundaries; do not create a new correlation ID in every subsystem and do not maintain a mutable global/ambient "current" operation.
 - Filesystem semantics and mutation remain behind the filesystem/core contracts.
 - Stable identifiers must remain stable across presentation changes such as rename, move, focus, or view changes.
 - Generic resource opening is shared infrastructure. Desktop, FileManager, Start, Search, and native apps should delegate instead of growing private dispatch tables.
@@ -44,7 +45,7 @@ Use focused subsystem tests for deterministic behavior, then the Plasmon fast su
 
 Focused subsystem/unit tests should continue calling their owning production model/service/controller/command directly; do not force every test through `OsApi`. If a legitimate high-level OS operation is missing from the API, evaluate that as a production `OsApi` gap. Test-only settlement, effect control, clocks, transport faults, impossible-state construction, and assertions stay outside the production API.
 
-When the claim is that production code emitted a diagnostic event, subscribe to the same production `DiagnosticService` (`env.diagnostics` in the headless composition) and assert stable event/subsystem/correlation fields. Do not create a test-only logger, infer logs from UI strings, or let diagnostic assertions replace the behavioral assertion that proves the operation itself.
+When the claim is that production code emitted a diagnostic event, subscribe to the same production `DiagnosticService` (`env.diagnostics` in the headless composition) and assert stable event/subsystem/correlation/operation fields. Do not create a test-only logger, infer logs from UI strings, or let diagnostic assertions replace the behavioral assertion that proves the operation itself.
 
 Add integration tests for contract/composition boundaries. Use browser tests where real DOM/browser/runtime mechanics matter, and package/installed checks where the artifact is part of the claim.
 
