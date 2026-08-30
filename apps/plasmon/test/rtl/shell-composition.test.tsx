@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { within } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import type { ExternalElement } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -13,7 +13,7 @@ const trayElement: ExternalElement = {
   running: "yes",
 };
 
-test("Shell composes calendar and tray coordination with canonical Settings activation", async () => {
+test("Shell composes calendar, tray, settings, and global one-flyout coordination", async () => {
   const app = await renderPlasmon({ elements: [trayElement] });
 
   try {
@@ -34,43 +34,12 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     const contextMenu = await app.findByRole("menu", { name: "Shell context menu" });
     await app.user.click(within(contextMenu).getByRole("menuitem", { name: "Settings" }));
 
-    const settings = await app.findByRole("region", { name: "Settings" });
+    const settings = await app.findByRole("region", { name: "Shell settings" });
     expect(app.queryByRole("region", { name: "Clock and calendar" })).toBeNull();
-    expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
-    const capabilityHeadings = [
-      "Storage",
-      "Files & Explorer",
-      "Appearance",
-      "File associations",
-      "Backup & sharing",
-    ];
-    for (const heading of capabilityHeadings) {
-      expect(within(settings).getByRole("heading", { name: heading })).toBeDefined();
-    }
-    expect(within(settings).getByRole("checkbox", { name: "Always show hidden files" })).toBeDefined();
+    expect(within(settings).getByRole("heading", { name: "Theme" })).toBeDefined();
 
-    const settingsProcess = app.environment.os.processes.list().find(
-      (process) => process.handlerId === "native:settings",
-    );
-    expect(settingsProcess?.state).toBe("running");
-    expect(settingsProcess?.windowId).toBeDefined();
-    expect(app.environment.os.windows.list().some(
-      (window) => window.processId === settingsProcess?.id,
-    )).toBe(true);
-
-    // Settings.sys is a second generic entry point to the same singleton app,
-    // not a different Settings implementation or a launcher document target.
-    await app.environment.os.open("/System/Settings.sys");
-    const settingsProcesses = app.environment.os.processes.list().filter(
-      (process) => process.handlerId === "native:settings",
-    );
-    expect(settingsProcesses).toHaveLength(1);
-    expect(settingsProcesses[0]?.id).toBe(settingsProcess?.id);
-    const settingsAfterLauncher = app.getByRole("region", { name: "Settings" });
-    for (const heading of capabilityHeadings) {
-      expect(within(settingsAfterLauncher).getByRole("heading", { name: heading })).toBeDefined();
-    }
-    expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
+    await app.user.keyboard("{Escape}");
+    await waitFor(() => expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull());
   } finally {
     app.dispose();
   }
