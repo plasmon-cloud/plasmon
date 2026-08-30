@@ -1,4 +1,4 @@
-export const FILE_MANAGER_NAME = "File Manager";
+export const FILE_MANAGER_NAME = "File Explorer";
 
 export function fileManagerLocationLabel(path: string): string {
   if (path === "/") return "This Plasmon";
