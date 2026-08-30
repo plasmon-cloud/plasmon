@@ -11,19 +11,31 @@ interface LoadedPlacements {
   placements: Map<string, WindowGeometry>;
 }
 
+export type WindowPlacementPersistenceStage = "read" | "write";
+export type WindowPlacementRestoreRejection = "invalid-metadata";
+
 export interface WindowPlacementStore {
   get(key: string): Promise<WindowGeometry | null>;
   set(key: string, geometry: WindowGeometry): Promise<void>;
   flush(): Promise<void>;
 }
 
+export interface FsServiceWindowPlacementStoreOptions {
+  onRestoreRejected?: (reason: WindowPlacementRestoreRejection) => void;
+}
+
 export interface NativeWindowPlacementControllerOptions {
-  onPersistenceError?: (error: unknown) => void;
+  onPersistenceError?: (error: unknown, stage: WindowPlacementPersistenceStage) => void;
 }
 
 interface TrackedPlacement {
   key: string;
   last: WindowGeometry;
+}
+
+interface ParsedPlacements {
+  placements: Map<string, WindowGeometry>;
+  rejected: boolean;
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -48,18 +60,23 @@ function parseGeometry(value: unknown): WindowGeometry | null {
   return { x, y, width, height };
 }
 
-function parsePlacements(value: unknown): Map<string, WindowGeometry> {
+function parsePlacements(value: unknown): ParsedPlacements {
   const parsed = new Map<string, WindowGeometry>();
+  if (value === undefined) return { placements: parsed, rejected: false };
   try {
-    if (!isPlainRecord(value) || value.version !== 1 || !isPlainRecord(value.placements)) return parsed;
+    if (!isPlainRecord(value) || value.version !== 1 || !isPlainRecord(value.placements)) {
+      return { placements: parsed, rejected: true };
+    }
+    let rejected = false;
     for (const [key, candidate] of Object.entries(value.placements)) {
       const geometry = parseGeometry(candidate);
       if (geometry) parsed.set(key, geometry);
+      else rejected = true;
     }
+    return { placements: parsed, rejected };
   } catch {
-    return new Map();
+    return { placements: new Map(), rejected: true };
   }
-  return parsed;
 }
 
 function serializePlacements(placements: ReadonlyMap<string, WindowGeometry>): JsonValue {
@@ -98,15 +115,18 @@ export class FsServiceWindowPlacementStore implements WindowPlacementStore {
   constructor(
     private readonly fs: FsService,
     private readonly metadataKey = FS_WINDOW_PLACEMENTS_METADATA_KEY,
+    private readonly options: FsServiceWindowPlacementStoreOptions = {},
   ) {}
 
   private async load(): Promise<LoadedPlacements> {
     const root = await this.fs.resolvePath("/");
     if (!root) throw new Error("Filesystem root is unavailable");
     if (root.kind !== "directory") throw new Error("Filesystem root must be a directory");
+    const parsed = parsePlacements(root.metadata[this.metadataKey]);
+    if (parsed.rejected) this.options.onRestoreRejected?.("invalid-metadata");
     return {
       rootId: root.id,
-      placements: parsePlacements(root.metadata[this.metadataKey]),
+      placements: parsed.placements,
     };
   }
 
@@ -201,7 +221,7 @@ export class NativeWindowPlacementController {
     try {
       persisted = await this.store.get(appId);
     } catch (error) {
-      this.options.onPersistenceError?.(error);
+      this.options.onPersistenceError?.(error, "read");
       return;
     }
     if (!persisted || this.tracked.get(windowId)?.key !== appId) return;
@@ -259,7 +279,7 @@ export class NativeWindowPlacementController {
 
   private persist(key: string, geometry: WindowGeometry): void {
     void this.store.set(key, geometry).catch((error: unknown) => {
-      this.options.onPersistenceError?.(error);
+      this.options.onPersistenceError?.(error, "write");
     });
   }
 }
