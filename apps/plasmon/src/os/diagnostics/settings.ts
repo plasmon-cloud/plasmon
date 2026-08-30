@@ -126,7 +126,7 @@ export class DiagnosticSettingsStore {
   }
 
   load(): Promise<DiagnosticSettings> {
-    if (this.loadPromise) return this.loadPromise;
+    if (this.loadPromise) return this.loadPromise.then(() => this.getSnapshot());
     this.loadPromise = this.loadOnce().catch((error) => {
       this.loadPromise = null;
       throw error;
