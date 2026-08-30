@@ -1140,7 +1140,6 @@ test("local II signs in, opens hello, and approves a typed call", async ({
   await page.mouse.move(headerX, headerY);
   await page.mouse.down();
   await page.mouse.move(headerX + 12, headerY + 12, { steps: 4 });
-  await page.waitForTimeout(50);
   await expect(page.locator(".tile-rect--preview")).toHaveCount(1);
   await page.mouse.up();
   await expect(page.locator(".tile-rect--preview")).toHaveCount(0);

@@ -46,6 +46,12 @@ jobs:
           node test/ci/verify-active-provenance.mjs --self-test
           node test/ci/verify-active-provenance.mjs
 
+      - name: Verify Playwright timing policy
+        run: npm run test:plasmon:playwright-timing
+
+      - name: Verify public-consumption audit record contract
+        run: npm run test:plasmon:public-audit -- --self-test
+
       - name: Verify flake-probe workflow contract
         run: |
           set -euxo pipefail

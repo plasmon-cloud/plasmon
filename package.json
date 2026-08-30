@@ -28,6 +28,8 @@
     "test:e2e:plasmon:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon",
     "test:e2e:plasmon:smoke:fresh": "npm run plasmon:local:prepare && npm run plasmon:local:reinstall && npm run test:e2e:plasmon:smoke",
     "test:plasmon:deployment-commands": "bun test test/e2e/plasmon-deployment-environment.test.ts",
+    "test:plasmon:playwright-timing": "node test/ci/verify-playwright-timing.mjs",
+    "test:plasmon:public-audit": "node test/ci/verify-public-consumption-audit.mjs",
     "plasmon:local:prepare": "bun test/e2e/plasmon-deployment-environment.ts local prepare",
     "plasmon:local:serve": "bun test/e2e/plasmon-deployment-environment.ts local serve",
     "plasmon:local:reinstall": "bun test/e2e/plasmon-deployment-environment.ts local reinstall",

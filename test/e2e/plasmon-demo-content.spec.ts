@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import {
+  expectPlasmonReady,
+  PLASMON_ACTION_TIMEOUT_MS,
+} from "./plasmon-ready.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -27,28 +31,28 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   const appFrameSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
   await expect(page.locator(appFrameSelector).first()).toBeAttached();
   const app = page.frameLocator(appFrameSelector).first();
-  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+  await expectPlasmonReady(app);
   const activeAppUrl = new URL(await app.locator("html").evaluate(() => window.location.href));
   expect(activeAppUrl.searchParams.get("plasmon-fixture")).toBeNull();
 
   const desktopNotes = app.locator("[data-fm-node-id]", { hasText: "Demo Notes.txt" }).first();
   const desktopGuide = app.locator("[data-fm-node-id]", { hasText: "Demo Guide.md" }).first();
   const desktopArtwork = app.locator("[data-fm-node-id]", { hasText: "Demo Artwork.svg" }).first();
-  await expect(desktopNotes).toBeVisible({ timeout: 30_000 });
+  await expect(desktopNotes).toBeVisible();
   await expect(desktopGuide).toBeVisible();
   await expect(desktopArtwork).toBeVisible();
 
   await desktopNotes.dblclick();
   const textWindow = app.getByRole("dialog", { name: "Demo Notes.txt - Monaco Editor" }).last();
-  await expect(textWindow).toBeVisible({ timeout: 20_000 });
+  await expect(textWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await expect(textWindow.getByLabel("Text editor")).toBeVisible();
 
   await desktopGuide.dblclick();
   const markdownWindow = app.getByRole("dialog", { name: "Demo Guide.md - Monaco Editor" }).last();
-  await expect(markdownWindow).toBeVisible({ timeout: 20_000 });
+  await expect(markdownWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await expect(markdownWindow.getByLabel("Markdown editor", { exact: true })).toBeVisible();
   const markdownSurface = markdownWindow.locator('[data-editor-engine="monaco"][aria-label="Markdown source"]');
-  await expect(markdownSurface).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+  await expect(markdownSurface).toHaveAttribute("data-editor-ready", "true", { timeout: PLASMON_ACTION_TIMEOUT_MS });
   await markdownWindow.getByRole("button", { name: "Preview", exact: true }).click();
   const markdownPreview = markdownWindow.getByRole("article", { name: "Markdown preview" });
   await expect(markdownPreview.getByRole("heading", { name: "Plasmon Demo Guide", level: 1, exact: true })).toBeVisible();
@@ -64,7 +68,7 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await rootShortcut.dblclick();
   const rootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(rootExplorer).toBeVisible({ timeout: 20_000 });
+  await expect(rootExplorer).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await rootExplorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
 
   const documentsExplorer = app.getByRole("dialog", { name: "Documents" }).last();
@@ -74,14 +78,14 @@ test("plasmon:demo exposes demo files and Desktop shortcuts through installed Pl
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByLabel("Search Plasmon");
   await search.fill("Demo Guide");
-  await expect(app.locator("[data-search-result]", { hasText: "Demo Guide.md" }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(app.locator("[data-search-result]", { hasText: "Demo Guide.md" }).first()).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
 
   await search.fill("Demo Artwork");
   const artworkResult = app.locator("[data-search-result]", { hasText: "Demo Artwork.svg" }).first();
-  await expect(artworkResult).toBeVisible({ timeout: 15_000 });
+  await expect(artworkResult).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await artworkResult.click();
   const photosWindow = app.getByRole("dialog", { name: "Demo Artwork.svg" }).last();
-  await expect(photosWindow.getByLabel("Photos")).toBeVisible({ timeout: 20_000 });
+  await expect(photosWindow.getByLabel("Photos")).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const artwork = photosWindow.getByRole("img", { name: "Demo Artwork.svg" });
   await expect(artwork).toBeVisible();
   const artworkBounds = await artwork.boundingBox();

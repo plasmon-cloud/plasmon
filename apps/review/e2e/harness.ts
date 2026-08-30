@@ -20,8 +20,8 @@ export async function login(page: Page): Promise<void> {
   }, runtime.developerIdentitySeed);
   await expect(page.locator('[data-tid="auth-error"]')).toHaveCount(0);
   await expect(page.locator('[data-tid="app-background-frame"][data-app-id="review"]')).toHaveCount(1);
-  // #395 deliberately provisions Review without Files. The core acceptance path
-  // must not become green by accidentally relying on app:files:background.
+  // The standalone Review deployment deliberately omits Files. Its core
+  // acceptance path must not become green by relying on app:files:background.
   await expect(page.locator('[data-tid="app-background-frame"][data-app-id="files"]')).toHaveCount(0);
   await page.frameLocator('[data-tid="app-background-frame"][data-app-id="review"]').locator("body").waitFor({ state: "attached" });
 }
