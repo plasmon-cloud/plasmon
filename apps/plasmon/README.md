@@ -89,30 +89,40 @@ npm --workspace neutron-plasmon run test:all
 
 ### Package and runtime configuration model
 
-Plasmon's durable distribution model separates **package tier**, **demo content**, and **optional heavyweight runtimes**. Do not create a new package-profile name merely to select a runtime or demo dataset.
+Plasmon's durable distribution model separates **package tier**, **Demo content**, and **optional heavyweight runtimes**. Do not create a new package-tier name merely to select a runtime or demo dataset.
 
-- **Slim** — the permanently constrained Plasmon package. It is a normal installable Plasmon environment with Text, Markdown, Monaco editor/base assets, and only `editor.worker.js`. It excludes the dedicated JSON/CSS/HTML/TypeScript Monaco workers, js-dos, EmulatorJS, Games runtime/library roots, ROM/`.jsdos`/`.dosz` payloads, and demo-only content. Its emitted `.neutron` must remain **strictly less than 1,900,000 bytes**.
-- **Base** — the ordinary/default Plasmon product composition. It is intended to contain normal product features, including the complete Monaco language-service worker set and theming, without the Slim byte ceiling, while still excluding heavyweight optional runtimes and game payloads. The packaging model is transitioning from the historical `full` spelling/default behavior to this Base model.
-- **Demo** — Base plus explicit demo/bootstrap content. Demo is an overlay/setup concern, not a different product capability tier. It may later select optional runtime dependencies and preinstalled legal demo games through the runtime-configuration mechanism; those assets do not become unconditional Base content.
-- **Runtime configuration** — an orthogonal, declarative selection of optional heavyweight capabilities such as js-dos, EmulatorJS, and associated pinned content. Durable runtime delivery and configuration belong to this mechanism. A custom runtime configuration should be data/configuration, not a new package profile or source-code fork.
+- **Slim** — the permanently constrained Plasmon package. It is a normal installable Plasmon environment with Text, Markdown, Monaco editor/base assets, and only `editor.worker.js`. It excludes the dedicated JSON/CSS/HTML/TypeScript Monaco workers, js-dos, EmulatorJS, Games runtime/library roots, ROM/`.jsdos`/`.dosz` payloads, and Demo-only content. Its emitted `.neutron` must remain **strictly less than 1,900,000 bytes**.
+- **Base** — the ordinary/default Plasmon package tier. It contains normal product features, including the complete Monaco language-service worker set and theming, without the Slim byte ceiling, while still excluding heavyweight optional runtimes and game payloads by default.
+- **Demo** — Base plus explicit demo/bootstrap content. Demo is an overlay/setup concern, not another package capability tier. It may select showcase sibling applications through a deployment manifest and may later select optional runtime dependencies and legal demo games through the runtime-configuration mechanism; those assets do not become unconditional Base content.
+- **Runtime configuration** — an orthogonal, declarative selection of optional heavyweight capabilities such as js-dos, EmulatorJS, and associated pinned content. A custom runtime configuration is data/configuration, not a new package tier or source-code fork.
 
-Package-profile parsing is finite and fail-closed. During the current transition the accepted `PLASMON_PACKAGE_PROFILE` spellings are `slim`, `full`, and `demo`; event-specific historical profile names are intentionally invalid. These transition spellings should converge on canonical Base + Demo-overlay semantics.
+Package-tier parsing is finite and fail-closed. `PLASMON_PACKAGE_PROFILE` accepts only `base` and `slim`; an unset ordinary build resolves to `base`. Demo content is selected separately with `PLASMON_DEMO_OVERLAY=1`. Enabling the Demo overlay for Slim is invalid.
 
-The production Slim command is:
+Production package commands are:
 
 ```sh
+npm --workspace neutron-plasmon run package:base
+npm --workspace neutron-plasmon run package:demo
 npm --workspace neutron-plasmon run package:slim
 ```
 
-That command emits the real `.neutron`, then fails unless the archive is **strictly less than 1,900,000 bytes** and its package inventory satisfies the Slim exclusions. The corresponding deterministic package test is:
+`package:demo` is Base plus the Demo overlay. It does not introduce a third package tier. The package tier controls what is inside `plasmon.v0.1.0.neutron`; `.ndeploy.json` manifests independently control which sibling `.neutron` applications are installed alongside Plasmon.
+
+The deterministic Base package test is:
+
+```sh
+npm --workspace neutron-plasmon run test:package:base
+```
+
+The production Slim command emits the real `.neutron`, then fails unless the archive is **strictly less than 1,900,000 bytes** and its package inventory satisfies the Slim exclusions. Its deterministic test is:
 
 ```sh
 npm --workspace neutron-plasmon run test:package:slim
 ```
 
-`slim` remains the default package spelling only while ordinary/default packaging is transitioning to Base. The `<1,900,000` assertion belongs only to Slim; Base, Demo, and custom runtime-enabled preparations must not inherit that ceiling.
+The `<1,900,000` assertion belongs only to Slim; Base and Demo do not inherit that ceiling. Base and Demo package all five Monaco workers: `editor.worker.js`, `json.worker.js`, `css.worker.js`, `html.worker.js`, and `ts.worker.js`. Slim packages only `editor.worker.js` and disables dedicated language-service behavior.
 
-Heavyweight runtime delivery remains a separate runtime-configuration concern. Slim must remain runtime-free even if a demo or custom runtime configuration exists; Base starts without heavyweight runtime payloads; Demo/custom preparations may opt into approved pinned runtimes without redefining either base package tier.
+Heavyweight runtime delivery remains a separate runtime-configuration concern. Slim remains runtime-free; Base starts without heavyweight runtime payloads; Demo/custom preparations may opt into approved pinned runtimes without redefining either package tier.
 
 See [`TESTING.md`](TESTING.md) for the canonical matrix.
 
