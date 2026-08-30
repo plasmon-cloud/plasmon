@@ -26,6 +26,10 @@ class MemoryRuntimeConfigStore implements MonacoRuntimeConfigStore {
 
   readonly getSnapshot = (): MonacoRuntimeConfigSnapshot => this.current;
 
+  get subscriberCount(): number {
+    return this.listeners.size;
+  }
+
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -50,7 +54,7 @@ function Consumer({ id }: { id: string }) {
   return <output data-testid={id}>{String(current.editor.minimap.enabled)}</output>;
 }
 
-test("one Monaco runtime config provider fans the same live snapshot to multiple mounted consumers", async () => {
+test("one Monaco runtime config provider fans out live snapshots and releases mounted consumers", async () => {
   const store = new MemoryRuntimeConfigStore();
   const view = render(
     <MonacoRuntimeConfigProvider service={store}>
@@ -60,6 +64,7 @@ test("one Monaco runtime config provider fans the same live snapshot to multiple
   );
 
   try {
+    expect(store.subscriberCount).toBe(2);
     expect(view.getByTestId("text-consumer").textContent).toBe("true");
     expect(view.getByTestId("markdown-consumer").textContent).toBe("true");
 
@@ -72,6 +77,8 @@ test("one Monaco runtime config provider fans the same live snapshot to multiple
     expect(view.getByTestId("markdown-consumer").textContent).toBe("true");
   } finally {
     view.unmount();
-    store.dispose();
   }
+
+  expect(store.subscriberCount).toBe(0);
+  store.dispose();
 });
