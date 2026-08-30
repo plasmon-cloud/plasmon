@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { waitFor, within } from "@testing-library/react";
+import { within } from "@testing-library/react";
 import type { ExternalElement } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -13,7 +13,7 @@ const trayElement: ExternalElement = {
   running: "yes",
 };
 
-test("Shell composes calendar, tray, settings, and global one-flyout coordination", async () => {
+test("Shell composes calendar and tray coordination with canonical Settings activation", async () => {
   const app = await renderPlasmon({ elements: [trayElement] });
 
   try {
@@ -34,12 +34,22 @@ test("Shell composes calendar, tray, settings, and global one-flyout coordinatio
     const contextMenu = await app.findByRole("menu", { name: "Shell context menu" });
     await app.user.click(within(contextMenu).getByRole("menuitem", { name: "Settings" }));
 
-    const settings = await app.findByRole("region", { name: "Shell settings" });
+    const settings = await app.findByRole("region", { name: "Settings" });
     expect(app.queryByRole("region", { name: "Clock and calendar" })).toBeNull();
-    expect(within(settings).getByRole("heading", { name: "Theme" })).toBeDefined();
+    expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
+    for (const heading of ["Storage", "Files & Explorer", "Appearance", "File associations", "Backup & sharing"]) {
+      expect(within(settings).getByRole("heading", { name: heading })).toBeDefined();
+    }
+    expect(within(settings).getByRole("checkbox", { name: "Always show hidden files" })).toBeDefined();
 
-    await app.user.keyboard("{Escape}");
-    await waitFor(() => expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull());
+    const settingsProcess = app.environment.os.processes.list().find(
+      (process) => process.handlerId === "native:settings",
+    );
+    expect(settingsProcess?.state).toBe("running");
+    expect(settingsProcess?.windowId).toBeDefined();
+    expect(app.environment.os.windows.list().some(
+      (window) => window.processId === settingsProcess?.id,
+    )).toBe(true);
   } finally {
     app.dispose();
   }
