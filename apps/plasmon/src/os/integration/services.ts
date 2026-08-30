@@ -35,6 +35,7 @@ import {
 } from "../diagnostics/index.ts";
 import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
+import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
@@ -131,6 +132,8 @@ function createAuthorizationService(): ResourceAuthorizationService {
 class BrowserSelectedFsRepository implements FsRepository {
   readonly kind = "browser-selected";
   private readonly selected = createBrowserFsRepository({
+    // Diagnostics cannot depend on the filesystem before that filesystem exists.
+    // This pre-diagnostics bootstrap failure therefore uses the emergency console path.
     onFallback: (error) => console.warn("Plasmon standalone filesystem storage fallback:", error.message),
   });
 
@@ -258,17 +261,26 @@ function registerNativeApplications(
 export function createPlasmonServices(
   options: CreatePlasmonServicesOptions = {},
 ): PlasmonServices {
+  const filesystemMode = options.filesystemRepository ? null : detectFilesystemFrontendMode();
   const rawFs = options.filesystemRepository
     ? new PersistentFsService(options.filesystemRepository)
-    : createFilesystemService();
+    : createFilesystemService(filesystemMode ?? undefined);
   let filesystem: FilesystemCoreServices | null = null;
   const diagnostics = new PlasmonDiagnosticService({
     fs: rawFs,
     ready: async () => {
       if (filesystem) await filesystem.ready;
     },
+    // The diagnostics sink cannot recursively report failure through itself.
     onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
   });
+  const filesystemLog = diagnostics.for("filesystem");
+  const processLog = diagnostics.for("process");
+  const windowLog = diagnostics.for("windowing");
+  const monacoRuntimeConfigLog = diagnostics.for("monaco-runtime-config");
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  }
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
   const windowPlacement = new NativeWindowPlacementController(
@@ -276,10 +288,7 @@ export function createPlasmonServices(
     new FsServiceWindowPlacementStore(rawFs),
     {
       onPersistenceError: (error) => {
-        diagnostics.emit({
-          level: "warn",
-          subsystem: "windowing",
-          event: "window.placement.persistence.failed",
+        windowLog.warn("window.placement.persistence.failed", {
           message: "Window placement persistence failed",
           error,
         });
@@ -292,26 +301,19 @@ export function createPlasmonServices(
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
     onStartupError: (error, app) => {
-      diagnostics.emit({
-        level: "error",
-        subsystem: "process",
-        event: "process.start.failed",
+      processLog.error("process.start.failed", {
         message: `Failed to start ${app.name}`,
-        context: { appId: app.id, handlerId: app.handlerId },
+        appId: app.id,
+        handlerId: app.handlerId,
         error,
       });
     },
     onCloseError: (error, record) => {
-      diagnostics.emit({
-        level: "error",
-        subsystem: "process",
-        event: "process.close.failed",
+      processLog.error("process.close.failed", {
         message: "Native process close handler failed",
-        context: {
-          appId: record.appId,
-          handlerId: record.handlerId,
-          processId: record.id,
-        },
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
         error,
       });
     },
@@ -359,27 +361,18 @@ export function createPlasmonServices(
   const fs = filesystem.fs;
   void filesystem.ready
     .then((initialization) => {
-      diagnostics.emit({
-        level: "notice",
-        subsystem: "filesystem",
-        event: "filesystem.bootstrap.ready",
+      filesystemLog.notice("filesystem.bootstrap.ready", {
         message: "Filesystem bootstrap completed",
       });
       if (initialization.neutronProjectionError) {
-        diagnostics.emit({
-          level: "warn",
-          subsystem: "filesystem",
-          event: "filesystem.neutron-projection.failed",
+        filesystemLog.warn("filesystem.neutron-projection.failed", {
           message: "Initial Neutron application projection reconciliation failed",
           error: initialization.neutronProjectionError,
         });
       }
     })
     .catch((error) => {
-      diagnostics.emit({
-        level: "critical",
-        subsystem: "filesystem",
-        event: "filesystem.bootstrap.failed",
+      filesystemLog.critical("filesystem.bootstrap.failed", {
         message: "Filesystem bootstrap failed",
         error,
       });
@@ -389,12 +382,9 @@ export function createPlasmonServices(
     fsEvents: fs,
     programFiles: filesystem.programFiles,
     onDiagnostic: (item) => {
-      diagnostics.emit({
-        level: "warn",
-        subsystem: "monaco-runtime-config",
-        event: `monaco.runtime-config.${item.code}`,
+      monacoRuntimeConfigLog.warn(`monaco.runtime-config.${item.code}`, {
         message: item.message,
-        context: { code: item.code },
+        code: item.code,
       });
     },
   });
