@@ -15,6 +15,7 @@ const MONACO_WORKERS = [
   "ts.worker.js",
 ] as const;
 const BROWSER_TRANSPORT_PATH = `/app/${APP_ID}/runtime/monaco/worker-sources.js`;
+const LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS = 5_000;
 
 type WorkerProbeRecord = {
   url: string;
@@ -55,8 +56,10 @@ async function focusEditorEnd(page: Page, editor: Locator): Promise<void> {
 
 async function expectCompletion(editor: Locator, text: string): Promise<void> {
   const suggestions = editor.locator(".suggest-widget.visible");
-  await expect(suggestions, `Monaco completion should include ${text}`).toBeVisible({ timeout: 20_000 });
-  await expect(suggestions).toContainText(text, { timeout: 20_000 });
+  await expect(suggestions, `Monaco completion should include ${text}`).toBeVisible({
+    timeout: LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS,
+  });
+  await expect(suggestions).toContainText(text, { timeout: LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS });
 }
 
 test("Base packaged Monaco executes all dedicated workers and real language services", async ({
@@ -275,7 +278,7 @@ test("Base packaged Monaco executes all dedicated workers and real language serv
         );
       }, {
         message: `${browserName} must exchange messages with ${name}`,
-        timeout: 20_000,
+        timeout: LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS,
       }).toBe(true);
     };
 
@@ -288,7 +291,10 @@ test("Base packaged Monaco executes all dedicated workers and real language serv
     const typescript = await openFixture(fixtures[0].name, fixtures[0].language);
     await expect.poll(
       async () => typescript.locator(".monaco-editor .squiggly-error").count(),
-      { message: "Base TypeScript must produce a semantic diagnostic", timeout: 20_000 },
+      {
+        message: "Base TypeScript must produce a semantic diagnostic",
+        timeout: LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS,
+      },
     ).toBeGreaterThan(0);
     await focusEditorEnd(page, typescript);
     await page.keyboard.press("Control+Space");
@@ -299,7 +305,10 @@ test("Base packaged Monaco executes all dedicated workers and real language serv
     const json = await openFixture(fixtures[1].name, fixtures[1].language);
     await expect.poll(
       async () => json.locator(".monaco-editor .squiggly-error").count(),
-      { message: "Base JSON must produce a language-service diagnostic", timeout: 20_000 },
+      {
+        message: "Base JSON must produce a language-service diagnostic",
+        timeout: LANGUAGE_SERVICE_SIGNAL_TIMEOUT_MS,
+      },
     ).toBeGreaterThan(0);
     await expectWorkerExchange("plasmon-monaco-json");
     await closeEditor(json);
