@@ -23,9 +23,7 @@ async function launchPlasmon(page: import("@playwright/test").Page) {
   return { plasmon, kernelUrl };
 }
 
-async function closeTerminalDialog(
-  terminalWindow: import("@playwright/test").FrameLocator | import("@playwright/test").Locator,
-) {
+async function closeTerminalDialog(terminalWindow: import("@playwright/test").Locator) {
   await terminalWindow.getByRole("button", { name: "Close", exact: true }).click();
   await expect(terminalWindow).toBeHidden();
 }
