@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-const APPROVAL_WINDOW_MS = 120_000;
+const APPROVAL_WINDOW_MS = 60_000;
 
 export const APPROVAL_WORKFLOW_PATHS = new Set([
   ".github/workflows/kernel-ci.yml",
@@ -64,10 +64,9 @@ async function coordinateRerun() {
   const runId = Number(process.env.GITHUB_RUN_ID);
   const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT ?? 1);
   const prNumber = Number(process.env.PR_NUMBER);
-  const prHeadSha = process.env.PR_HEAD_SHA;
 
-  if (!token || !repository || !runId || !prNumber || !prHeadSha) {
-    throw new Error("approval rerun coordinator requires GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_RUN_ID, PR_NUMBER, and PR_HEAD_SHA");
+  if (!token || !repository || !runId || !prNumber) {
+    throw new Error("approval rerun coordinator requires GITHUB_TOKEN, GITHUB_REPOSITORY, GITHUB_RUN_ID, and PR_NUMBER");
   }
 
   if (runAttempt <= 1) {
@@ -77,6 +76,9 @@ async function coordinateRerun() {
 
   const repoUrl = `${apiUrl}/repos/${repository}`;
   const currentRun = await githubRequest(`${repoUrl}/actions/runs/${runId}`, token);
+  const prHeadSha = currentRun.head_sha;
+  if (!prHeadSha) throw new Error("approval rerun coordinator could not resolve the workflow head SHA");
+
   const query = new URLSearchParams({
     event: "pull_request_review",
     head_sha: prHeadSha,
