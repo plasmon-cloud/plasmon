@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { FsService, ProcessController, ProcessId } from "../contracts/index.ts";
 import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import type { NativeApplicationRegistry } from "./registry.ts";
 import type { NativeAppWindowControl } from "./runtime.ts";
 
@@ -19,6 +20,7 @@ export interface NativeProcessHostProps {
   registry: NativeApplicationRegistry;
   process: ProcessController;
   fs: FsService;
+  diagnostics?: DiagnosticService;
   nativeWindow?: NativeAppWindowControl;
   fallback?: ReactNode;
   missingFallback?: ReactNode;
@@ -98,6 +100,7 @@ export function NativeProcessHost({
   registry,
   process,
   fs,
+  diagnostics,
   nativeWindow,
   fallback = null,
   missingFallback = null,
@@ -152,6 +155,8 @@ export function NativeProcessHost({
             target={record.target}
             fs={fs}
             process={process}
+            {...(diagnostics ? { diagnostics } : {})}
+            {...(record.operation ? { operation: record.operation } : {})}
             {...(nativeWindow ? { nativeWindow } : {})}
           />
         </Suspense>
