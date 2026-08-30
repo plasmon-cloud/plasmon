@@ -1,5 +1,8 @@
 import type { NeutronBridge } from "../contracts/neutron.ts";
-import { admittedVanillaNeutronApi } from "./frontend-call-admission.ts";
+import {
+  admittedVanillaNeutronApi,
+  getFrontendCallAdmissionDiagnosticLogger,
+} from "./frontend-call-admission.ts";
 import { MockNeutronBridge, type MockNeutronBridgeOptions } from "./mock.ts";
 import { VanillaNeutronBridge, type VanillaNeutronBridgeOptions } from "./vanilla.ts";
 import type { NeutronBridgeMode } from "./types.ts";
@@ -26,5 +29,6 @@ export function createNeutronBridge(options: CreateNeutronBridgeOptions = {}): N
   return new VanillaNeutronBridge({
     ...vanilla,
     api: vanilla.api ?? admittedVanillaNeutronApi,
+    diagnosticLogger: vanilla.diagnosticLogger ?? getFrontendCallAdmissionDiagnosticLogger() ?? undefined,
   });
 }

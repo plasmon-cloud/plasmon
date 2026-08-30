@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
+import {
+  reportJsDosActivationFailure,
+  reportJsDosRestoreFailure,
+  reportJsDosSaveFailure,
+  reportJsDosStopFailure,
+  type JsDosActivationStage,
+} from "./diagnostics.ts";
 import { captureJsDosPreview } from "./preview.ts";
 import { JsDosProgressStore, createJsDosFsChanges } from "./progress.ts";
 import {
@@ -37,6 +44,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
   useEffect(() => {
     let disposed = false;
     let unregisterClose = () => undefined;
+    let startStage: JsDosActivationStage | "filesystem-stat" | "filesystem-read" = "target-validation";
 
     const start = async () => {
       if (!target.nodeId) throw new Error("js-dos requires a filesystem game target");
@@ -44,9 +52,13 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       const root = rootRef.current;
       if (!root) throw new Error("js-dos player container is unavailable");
 
+      startStage = "filesystem-stat";
       const node = await fs.stat(gameNodeId);
+      startStage = "target-validation";
       if (node.kind === "directory") throw new Error("js-dos cannot open a directory");
+      startStage = "filesystem-read";
       const bytes = await fs.read(node.id);
+      startStage = "target-validation";
       if (bytes.length === 0) throw new Error("DOS bundle is empty");
 
       const progressStore = new JsDosProgressStore(fs, gameNodeId);
@@ -54,12 +66,16 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       bundleUrlRef.current = bundleUrl;
       setState("starting");
 
+      startStage = "runtime-load";
       const Dos = await loadJsDosRuntime();
       if (disposed) return;
 
+      startStage = "asset-path";
+      const pathPrefix = jsDosPackageAssetUrl(document.baseURI, "emulators/");
+      startStage = "runtime-start";
       const player = startJsDosPlayer(Dos, root, {
         url: bundleUrl,
-        pathPrefix: jsDosPackageAssetUrl(document.baseURI, "emulators/"),
+        pathPrefix,
         workerThread: true,
         autoStart: true,
         autoSave: false,
@@ -67,6 +83,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         mouseCapture: false,
         fsChanges: createJsDosFsChanges(fs, gameNodeId, {
           onWarning: (message) => {
+            reportJsDosRestoreFailure();
             if (!disposed) setProgressWarning(message);
           },
           onRestored: (restored) => {
@@ -104,12 +121,14 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         }, CLOSE_SAVE_TIMEOUT_MS).then((result) => {
           if (disposed) return;
           if (result === "timeout") {
+            reportJsDosSaveFailure("timeout");
             allowCloseWithoutSaveRef.current = true;
             setProgressWarning("Saving game progress timed out. Close again to exit without saving.");
             request.cancel();
             return;
           }
           if (result === "failed") {
+            reportJsDosSaveFailure("failed");
             allowCloseWithoutSaveRef.current = true;
             setProgressWarning("Game progress could not be saved. Close again to exit without saving.");
             request.cancel();
@@ -124,6 +143,9 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
 
     void start().catch((error: unknown) => {
       if (disposed) return;
+      if (startStage !== "filesystem-stat" && startStage !== "filesystem-read") {
+        reportJsDosActivationFailure(startStage, error);
+      }
       setState("error");
       setDetail(error instanceof Error ? error.message : String(error));
     });
@@ -141,7 +163,8 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
       const player = playerRef.current;
       playerRef.current = null;
       if (player) {
-        void player.stop().catch(() => {
+        void player.stop().catch((error: unknown) => {
+          reportJsDosStopFailure(error);
           // Closing the window must continue even if the emulator is already gone.
         });
       }

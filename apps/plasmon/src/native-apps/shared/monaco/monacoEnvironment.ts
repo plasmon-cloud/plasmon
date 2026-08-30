@@ -1,7 +1,23 @@
+import type { DiagnosticLogger } from "../../../os/diagnostics/index.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 
 export const MONACO_PROGRAM_FILES_RUNTIME_ROOT = "./System/Program Files/MonacoEditor";
 export const MONACO_BROWSER_TRANSPORT_PATH = "./runtime/monaco/worker-sources.js";
+
+let monacoDiagnosticLogger: DiagnosticLogger | null = null;
+
+export function setMonacoDiagnosticLogger(logger: DiagnosticLogger | null): void {
+  monacoDiagnosticLogger = logger;
+}
+
+export function getMonacoDiagnosticLogger(): DiagnosticLogger | null {
+  return monacoDiagnosticLogger;
+}
+
+function errorType(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  return error === null ? "null" : typeof error;
+}
 
 export function monacoWorkerFile(label: string, slim = isSlimMonacoProfile): string {
   if (slim) return "editor.worker.js";
@@ -25,7 +41,15 @@ export function monacoWorkerBootstrapSource(
 ): string {
   const filename = monacoWorkerFile(label, slim);
   const source = sources?.[filename];
-  if (!source) throw new Error(`Missing packaged Monaco worker source: ${filename}`);
+  if (!source) {
+    monacoDiagnosticLogger?.error("runtime.monaco.worker.failed", {
+      message: "Packaged Monaco worker source is unavailable",
+      runtime: "Monaco",
+      stage: "worker-source",
+      workerFile: filename,
+    });
+    throw new Error(`Missing packaged Monaco worker source: ${filename}`);
+  }
   return source;
 }
 
@@ -42,6 +66,16 @@ type MonacoWorkerScope = typeof globalThis & {
 
 function monacoWorkerName(label: string): string {
   return `plasmon-monaco-${label || "editor"}`;
+}
+
+function reportWorkerConstructionFailure(label: string, error: unknown): void {
+  monacoDiagnosticLogger?.error("runtime.monaco.worker.failed", {
+    message: "Monaco worker could not be constructed",
+    runtime: "Monaco",
+    stage: "worker-create",
+    workerFile: monacoWorkerFile(label),
+    errorType: errorType(error),
+  });
 }
 
 /**
@@ -61,7 +95,12 @@ function createMonacoWorker(target: typeof globalThis, label: string): Worker {
   const workerPath = monacoWorkerPath(label);
 
   if (scope.origin !== "null") {
-    return new Worker(workerPath, { type: "module", name });
+    try {
+      return new Worker(workerPath, { type: "module", name });
+    } catch (error) {
+      reportWorkerConstructionFailure(label, error);
+      throw error;
+    }
   }
 
   const bootstrap = new Blob(
@@ -73,6 +112,7 @@ function createMonacoWorker(target: typeof globalThis, label: string): Worker {
     return new Worker(bootstrapUrl, { name });
   } catch (error: unknown) {
     URL.revokeObjectURL(bootstrapUrl);
+    reportWorkerConstructionFailure(label, error);
     throw error;
   }
 }
