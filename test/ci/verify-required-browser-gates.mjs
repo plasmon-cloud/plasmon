@@ -62,6 +62,11 @@ function verifyRetainedApproval(source, label) {
   const retained = stepSection(source, "Detect retained approval");
   requireFragment(retained, "reviewDecision", `${label} retained approval`);
   requireFragment(retained, 'decision" = "APPROVED"', `${label} retained approval`);
+  requireFragment(retained, "/pulls/$PR_NUMBER/reviews?per_page=100", `${label} approval history`);
+  requireFragment(retained, '.state == "APPROVED"', `${label} approval history`);
+  requireFragment(retained, "/issues/$PR_NUMBER/timeline?per_page=100", `${label} dismissed approval history`);
+  requireFragment(retained, 'review_dismissed', `${label} dismissed approval history`);
+  requireFragment(retained, '.dismissed_review.state == "approved"', `${label} dismissed approval history`);
   requireFragment(retained, 'echo "approved=true"', `${label} retained approval`);
 }
 
@@ -74,7 +79,7 @@ function verifyApprovalGate(gate) {
 
   const checkpoint = stepSection(source, gate.checkpoint);
   requireFragment(checkpoint, "merge queue is fast-only", `${label} queue checkpoint`);
-  requireFragment(checkpoint, "waits for normal GitHub review approval", `${label} approval checkpoint`);
+  requireFragment(checkpoint, "waits for the PR's first GitHub review approval", `${label} approval checkpoint`);
   requireFragment(checkpoint, RETAINED_APPROVAL, `${label} retained-approval checkpoint`);
 
   const nixStep = stepSection(source, "Install Nix");
@@ -115,4 +120,4 @@ for (const path of [".github/workflows/plasmon-ci.yml", ".github/workflows/kerne
   requireFragment(source, CHECKS_REQUESTED_TRIGGER, `${path} merge-queue support`);
 }
 
-console.log(`Required browser gates verified: expensive package/Playwright work runs on normal approval and retained approved heads, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+console.log(`Required browser gates verified: expensive package/Playwright work starts at first normal approval and remains enabled for every later PR head even if that approval is dismissed, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);
