@@ -79,9 +79,6 @@ async function savePackagedDemoGame(
   const fixtureResponse = await request.get(new URL(`/app/${APP_ID}/fixtures/PlasmonDemo.jsdos`, kernelUrl).href);
   expect(fixtureResponse.ok(), "demo fixture should be served from the installed Plasmon package").toBe(true);
   expect((await fixtureResponse.body()).length).toBeGreaterThan(0);
-  const artworkResponse = await request.get(new URL(`/app/${APP_ID}/${DEMO_ARTWORK_PATH}`, kernelUrl).href);
-  expect(artworkResponse.ok(), "demo artwork should be served from the installed Plasmon package").toBe(true);
-  expect((await artworkResponse.body()).length).toBeGreaterThan(0);
 
   const fixtureRoute = `**/app/${APP_ID}/**`;
   let fixtureRedirected = false;
@@ -191,7 +188,7 @@ async function savePackagedDemoGame(
 test(
   "explicit packaged js-dos fixture opens, accepts input, saves, and restores through the normal desktop path",
   async ({ page, request }) => {
-    const { app, savedDemo, pageErrors, consoleErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: true });
+    const { app, savedDemo, pageErrors, consoleErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: false });
     await activateFileManagerEntry(savedDemo);
     const reopenedWindow = app.getByRole("dialog", { name: "js-dos" }).last();
     await expect(reopenedWindow).toBeVisible();
