@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
 import {
+  SYSTEM_APP_METADATA_KEY,
   SYSTEM_APP_MIME,
   shortcutMetadata,
-  systemAppMetadata,
 } from "../fs/index.ts";
 import {
   canDropNodesToRecycleBin,
@@ -27,6 +27,17 @@ function node(
     modifiedAt: 1,
     metadata: options.metadata ?? {},
     ...(options.mime ? { mime: options.mime } : {}),
+  };
+}
+
+function systemAppMetadata(systemId: string, handlerId: string): FsNode["metadata"] {
+  return {
+    [SYSTEM_APP_METADATA_KEY]: {
+      format: "plasmon.system-app",
+      version: 1,
+      systemId,
+      handlerId,
+    },
   };
 }
 
