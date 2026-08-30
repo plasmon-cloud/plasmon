@@ -4,6 +4,7 @@ import { MemoryFsRepository, PersistentFsService } from "../fs/index.ts";
 import {
   PlasmonDiagnosticService,
   SYSTEM_LOG_PATH,
+  retainNewestDiagnosticLines,
   type DiagnosticConsole,
 } from "./service.ts";
 
@@ -110,6 +111,18 @@ describe("PlasmonDiagnosticService", () => {
     expect(new TextEncoder().encode(text).byteLength).toBeLessThanOrEqual(420);
     expect(text).toContain("retention.7");
     expect(text).not.toContain("retention.0");
+  });
+
+  test("preserves record identity and valid UTF-8 when one newest record exceeds the byte ceiling", () => {
+    const prefix = "2026-08-30T03:30:00.000Z | ERROR | [runtime] | runtime.start.failed | ";
+    const text = `${prefix}${"😀".repeat(100)}\n`;
+    const retained = retainNewestDiagnosticLines(text, 128, 96);
+
+    expect(new TextEncoder().encode(retained).byteLength).toBeLessThanOrEqual(128);
+    expect(retained).toStartWith(prefix);
+    expect(retained).toContain("runtime.start.failed");
+    expect(retained).toEndWith(" …[TRUNCATED]\n");
+    expect(retained).not.toContain("�");
   });
 
   test("isolates filesystem sink failures from event producers", async () => {
