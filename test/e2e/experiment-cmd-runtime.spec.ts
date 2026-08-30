@@ -60,6 +60,10 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   await terminalSurface.click();
   await expect(terminalInput).toBeFocused();
 
+  await terminalInput.pressSequentially("exit");
+  await terminalInput.press("Enter");
+  await expect(terminalWindow).toBeHidden({ timeout: 15_000 });
+
   await plasmon.getByRole("button", { name: "Search" }).click();
   await plasmon.getByLabel("Search Plasmon").fill("Files");
   const filesResult = plasmon.locator("[data-search-result]", { hasText: "Files" }).first();
