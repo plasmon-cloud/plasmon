@@ -24,6 +24,39 @@ async function launchPackagedPlasmon(page: Page): Promise<Frame> {
   return frame;
 }
 
+test("full remote experiment routes canonical diagnostics through the packaged Rollbar adapter", async ({ page }) => {
+  const reports: string[] = [];
+  await page.route("https://api.rollbar.com/**", async (route) => {
+    if (route.request().method() === "POST") reports.push(route.request().postData() ?? "");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"err":0,"result":{"uuid":"plasmon-ci-probe"}}',
+    });
+  });
+
+  const app = await launchPackagedPlasmon(page);
+  const installed = await app.evaluate(() => {
+    const target = window as Window & {
+      __plasmonRemoteIncidentExperiment?: (variant?: "same" | "different") => void;
+    };
+    return typeof target.__plasmonRemoteIncidentExperiment === "function";
+  });
+  expect(installed).toBe(true);
+
+  await app.evaluate(() => {
+    const target = window as Window & {
+      __plasmonRemoteIncidentExperiment?: (variant?: "same" | "different") => void;
+    };
+    target.__plasmonRemoteIncidentExperiment?.();
+  });
+
+  await expect.poll(() => reports.length, { timeout: 10_000 }).toBeGreaterThan(0);
+  const payload = reports.join("\n");
+  expect(payload).toContain("remote.synthetic.failed");
+  expect(payload).toContain("remote-experiment-same");
+});
+
 test("experimental packaged Plasmon can reach Rollbar HTTPS API from its real iframe", async ({ page }) => {
   const app = await launchPackagedPlasmon(page);
   const result = await app.evaluate(async () => {
