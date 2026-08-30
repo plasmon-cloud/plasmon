@@ -1,10 +1,12 @@
 import type { ComponentType } from "react";
 import type {
+  DiagnosticOperationContext,
   FsService,
   OpenTarget,
   ProcessController,
   ProcessId,
 } from "../contracts/index.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 
 /**
  * Narrow React-host capability for native apps that need to request canonical
@@ -24,6 +26,8 @@ export interface NativeAppComponentProps {
   fs: FsService;
   process: ProcessController;
   nativeWindow?: NativeAppWindowControl;
+  diagnostics?: DiagnosticService;
+  operation?: DiagnosticOperationContext;
 }
 
 export type NativeAppComponent = ComponentType<NativeAppComponentProps>;
