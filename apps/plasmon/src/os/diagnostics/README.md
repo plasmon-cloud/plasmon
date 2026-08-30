@@ -45,7 +45,9 @@ DiagnosticService
 
 ## Direct console policy
 
-Production `console.*` is not a normal producer API. A fast source guard rejects new direct calls outside the canonical diagnostics console sink and narrowly documented bootstrap/emergency exceptions. Current exceptions are limited to situations where diagnostics cannot truthfully report through itself: pre-filesystem storage fallback and the diagnostic sink's own persistence failure callback.
+Production `console.*` is not a normal producer API. A fast source guard rejects new direct calls outside the canonical diagnostics console sink and narrowly documented bootstrap/emergency exceptions.
+
+An exception is valid only when routing the event through `DiagnosticService` would be impossible or recursive. The current exception set is deliberately small: standalone storage fallback before diagnostics has a filesystem, the diagnostic filesystem sink's own failure callback, and the privileged filesystem background surface's storage/invalidation failures because that surface owns the persistence authority used by `/System/system.log`. Those exact call sites are enumerated by the source guard; adding another direct console call requires changing that executable inventory and documenting the architectural reason.
 
 Tests may use console output as test infrastructure when appropriate; the production-source guard intentionally applies only to non-test source.
 
