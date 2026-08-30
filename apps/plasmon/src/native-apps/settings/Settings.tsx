@@ -200,6 +200,17 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                   </button>
                 ))}
               </div>
+              <h3 style={styles.sectionHeading}>Desktop overlay</h3>
+              <button
+                type="button"
+                disabled={!shellPreferencesReady}
+                aria-label="Show Plasmon watermark"
+                aria-pressed={shellSnapshot.showBrandWatermark !== false}
+                onClick={() => updateShellPreferences({ showBrandWatermark: shellSnapshot.showBrandWatermark === false })}
+              >
+                Plasmon watermark: {shellSnapshot.showBrandWatermark !== false ? "On" : "Off"}
+              </button>
+              <p style={styles.helpText}>The Plasmon SVG watermark is layered over every wallpaper and can be hidden independently.</p>
               <h3 style={styles.sectionHeading}>Taskbar alignment</h3>
               <div style={styles.optionGrid}>
                 <button type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "center"} onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}>Center</button>

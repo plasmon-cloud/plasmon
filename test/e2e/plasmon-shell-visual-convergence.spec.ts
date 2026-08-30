@@ -79,7 +79,7 @@ test("packaged Shell and native content inherit one shared visual theme", async 
     await expect(settingsWindow).toBeVisible({ timeout: 20_000 });
     const settings = settingsWindow.getByRole("region", { name: "Settings" });
     await expect(settings).toBeVisible();
-    await expect(settingsWindow).toHaveCSS("border-color", await resolvedBorder(settingsWindow, "--plasmon-border-strong"));
+    await expect(settingsWindow).toHaveCSS("border-color", await resolvedBorder(settingsWindow, "--plasmon-selection-border"));
     await settings.getByRole("button", { name: "Midnight", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-midnight");
 
