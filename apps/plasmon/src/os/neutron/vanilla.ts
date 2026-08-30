@@ -6,6 +6,7 @@ import {
   openAppTile,
 } from "neutron-tools/app";
 import type { ExternalElement, NeutronBridge } from "../contracts/neutron.ts";
+import type { DiagnosticLogger } from "../diagnostics/index.ts";
 import {
   declaredElementIconPath,
   resolveElementIcon,
@@ -33,6 +34,11 @@ const defaultApi: VanillaNeutronApi = {
   openAppTile,
   offerAppInstall,
 };
+
+function errorType(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  return error === null ? "null" : typeof error;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -157,6 +163,7 @@ export interface VanillaNeutronBridgeOptions {
   api?: VanillaNeutronApi;
   resolveIcon?: ElementIconResolver;
   lifecycleTargets?: ForegroundLifecycleTargets;
+  diagnosticLogger?: DiagnosticLogger;
 }
 
 type CachedElementMetadata = {
@@ -179,6 +186,7 @@ export class VanillaNeutronBridge implements NeutronBridge {
   private readonly api: VanillaNeutronApi;
   private readonly resolveIcon: ElementIconResolver;
   private readonly lifecycleTargets: ForegroundLifecycleTargets | undefined;
+  private readonly log: DiagnosticLogger | null;
   private elements: ExternalElement[] = [];
   private readonly metadataCache = new Map<string, CachedElementMetadata>();
   private readonly metadataLoads = new Map<string, PendingElementMetadata>();
@@ -189,14 +197,39 @@ export class VanillaNeutronBridge implements NeutronBridge {
     this.api = options.api ?? defaultApi;
     this.resolveIcon = options.resolveIcon ?? resolveElementIcon;
     this.lifecycleTargets = options.lifecycleTargets;
+    this.log = options.diagnosticLogger ?? null;
   }
 
   async loadElements(): Promise<ExternalElement[]> {
-    const [listed, runtime] = await Promise.all([
-      this.api.listApps(),
-      this.readRuntimeSnapshot(),
-    ]);
-    const hints = parseInstalledElementHints(listed);
+    let listed: unknown;
+    let runtime: RuntimeSnapshot;
+    try {
+      [listed, runtime] = await Promise.all([
+        this.api.listApps(),
+        this.readRuntimeSnapshot(),
+      ]);
+    } catch (error) {
+      this.log?.error("neutron.discovery.failed", {
+        message: "Neutron application discovery failed",
+        operation: "kernel:apps.list",
+        stage: "discovery",
+        errorType: errorType(error),
+      });
+      throw error;
+    }
+
+    let hints: InstalledElementHint[];
+    try {
+      hints = parseInstalledElementHints(listed);
+    } catch (error) {
+      this.log?.error("neutron.discovery.invalid", {
+        message: "Neutron application discovery returned an invalid response",
+        operation: "kernel:apps.list",
+        stage: "parse",
+        errorType: errorType(error),
+      });
+      throw error;
+    }
     this.pruneMetadataCache(hints);
 
     const elements = await Promise.all(
@@ -216,29 +249,64 @@ export class VanillaNeutronBridge implements NeutronBridge {
     if (!element) {
       element = (await this.loadElements()).find((candidate) => candidate.id === appId);
     }
-    if (!element) throw new Error(`Unknown Neutron Element: ${appId}`);
+    if (!element) {
+      this.log?.error("neutron.open.invalid", {
+        message: "Neutron Element is not installed",
+        appId,
+        stage: "element-lookup",
+      });
+      throw new Error(`Unknown Neutron Element: ${appId}`);
+    }
 
     const tile = options.tileId
       ? element.tiles.find((candidate) => candidate.id === options.tileId)
       : element.tiles[0];
     if (!tile) {
+      this.log?.error("neutron.open.invalid", {
+        message: "Neutron Element does not expose the requested launch tile",
+        appId: element.id,
+        stage: "tile-selection",
+        ...(element.version === undefined ? {} : { appVersion: element.version }),
+      });
       const detail = options.tileId ? ` tile ${options.tileId}` : " a launchable tile";
       throw new Error(`${element.name} does not expose${detail}`);
     }
 
-    await this.api.openAppTile({
-      appId: element.id,
-      tileId: tile.id,
-      reuseExisting: true,
-      ...(options.view === undefined ? {} : { view: options.view }),
-    });
+    try {
+      await this.api.openAppTile({
+        appId: element.id,
+        tileId: tile.id,
+        reuseExisting: true,
+        ...(options.view === undefined ? {} : { view: options.view }),
+      });
+    } catch (error) {
+      this.log?.error("neutron.open.failed", {
+        message: "Kernel rejected the Neutron Element launch operation",
+        operation: "kernel:workspace.open_tile",
+        stage: "kernel-open-tile",
+        appId: element.id,
+        ...(element.version === undefined ? {} : { appVersion: element.version }),
+        errorType: errorType(error),
+      });
+      throw error;
+    }
 
     // Opening succeeded even if the snapshot endpoint is temporarily unavailable.
     await this.refreshRuntimeState();
   }
 
   async offerInstall(url: string): Promise<void> {
-    await this.api.offerAppInstall({ kind: "package_url", url });
+    try {
+      await this.api.offerAppInstall({ kind: "package_url", url });
+    } catch (error) {
+      this.log?.error("neutron.install.failed", {
+        message: "Kernel rejected a Neutron package install offer",
+        operation: "kernel:apps.offer_install",
+        stage: "kernel-install-offer",
+        errorType: errorType(error),
+      });
+      throw error;
+    }
   }
 
   async refreshRuntimeState(): Promise<void> {
