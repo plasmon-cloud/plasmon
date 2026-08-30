@@ -38,7 +38,7 @@ const scenarios: readonly DocumentScenario[] = [
     path: "/Desktop/Dirty Close.md",
     fileName: "Dirty Close.md",
     handlerId: "native:markdown",
-    title: "Markdown Editor",
+    title: "Markdown",
     unsavedText: "# unsaved Markdown contents",
   },
 ];
