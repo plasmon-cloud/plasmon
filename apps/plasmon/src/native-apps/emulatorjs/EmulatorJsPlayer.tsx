@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
 import { assertNesRom, resolveEmulatorJsHostUrl } from "./runtime.ts";
 
@@ -18,6 +18,11 @@ interface RuntimeMessage {
 }
 
 const RUNTIME_CHANNEL = "plasmon-emulatorjs";
+
+function errorKind(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  return error === null ? "null" : typeof error;
+}
 
 function messageFor(state: PlayerState): string {
   if (state === "loading") return "Loading ROM…";
@@ -62,15 +67,27 @@ function markPhase(container: HTMLDivElement | null, phase: string, error?: unkn
  * EJS globals and loader, receives validated ROM bytes via postMessage, and
  * reports only real EmulatorJS lifecycle progress back to this process host.
  */
-export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps) {
+export default function EmulatorJsPlayer({
+  target,
+  fs,
+  diagnostics,
+  operation,
+}: NativeAppComponentProps) {
   const runtimeContainerRef = useRef<HTMLDivElement>(null);
   const [rom, setRom] = useState<LoadedRom | null>(null);
   const [state, setState] = useState<PlayerState>("loading");
   const [detail, setDetail] = useState<string | null>(null);
+  const log = useMemo(() => {
+    if (!diagnostics) return null;
+    return operation
+      ? diagnostics.continueOperation(operation).for("runtime.emulatorjs")
+      : diagnostics.for("runtime.emulatorjs");
+  }, [diagnostics, operation]);
 
   useEffect(() => {
     let disposed = false;
     const runtimeToken = crypto.randomUUID();
+    let loadStage = "target-validation";
 
     markPhase(runtimeContainerRef.current, "loading-rom");
     setRom(null);
@@ -79,9 +96,13 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
 
     const load = async () => {
       if (!target.nodeId) throw new Error("EmulatorJS requires a filesystem ROM target");
+      loadStage = "filesystem-stat";
       const node = await fs.stat(target.nodeId);
+      loadStage = "target-validation";
       if (node.kind === "directory") throw new Error("EmulatorJS cannot open a directory");
+      loadStage = "filesystem-read";
       const bytes = await fs.read(node.id);
+      loadStage = "rom-validation";
       assertNesRom(bytes);
 
       if (disposed) return;
@@ -91,6 +112,15 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
 
     void load().catch((error: unknown) => {
       if (disposed) return;
+      if (loadStage !== "filesystem-stat" && loadStage !== "filesystem-read") {
+        log?.error("runtime.emulatorjs.start.failed", {
+          message: "EmulatorJS runtime input could not be prepared",
+          runtime: "EmulatorJS",
+          core: "nes",
+          stage: loadStage,
+          errorKind: errorKind(error),
+        });
+      }
       markPhase(runtimeContainerRef.current, "error", error);
       setState("error");
       setDetail(error instanceof Error ? error.message : String(error));
@@ -99,13 +129,19 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
     return () => {
       disposed = true;
     };
-  }, [fs, target.nodeId]);
+  }, [fs, log, target.nodeId]);
 
   useLayoutEffect(() => {
     if (!rom) return;
 
     const container = runtimeContainerRef.current;
     if (!container) {
+      log?.error("runtime.emulatorjs.start.failed", {
+        message: "EmulatorJS runtime container is unavailable",
+        runtime: "EmulatorJS",
+        core: "nes",
+        stage: "runtime-container",
+      });
       setState("error");
       setDetail("EmulatorJS runtime container is unavailable");
       return;
@@ -115,7 +151,24 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
     let initialized = false;
     let hostTimeout: ReturnType<typeof setTimeout> | null = null;
     let startTimeout: ReturnType<typeof setTimeout> | null = null;
-    const frame = createRuntimeFrame(resolveEmulatorJsHostUrl(document.baseURI, rom.runtimeToken), rom.runtimeToken);
+    let frame: HTMLIFrameElement;
+    try {
+      frame = createRuntimeFrame(
+        resolveEmulatorJsHostUrl(document.baseURI, rom.runtimeToken),
+        rom.runtimeToken,
+      );
+    } catch (error) {
+      log?.error("runtime.emulatorjs.start.failed", {
+        message: "EmulatorJS runtime frame could not be created",
+        runtime: "EmulatorJS",
+        core: "nes",
+        stage: "frame-create",
+        errorKind: errorKind(error),
+      });
+      setState("error");
+      setDetail(error instanceof Error ? error.message : String(error));
+      return;
+    }
 
     const clearTimers = () => {
       if (hostTimeout) clearTimeout(hostTimeout);
@@ -124,10 +177,17 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
       startTimeout = null;
     };
 
-    const fail = (reason: unknown) => {
+    const fail = (reason: unknown, stage: string) => {
       if (disposed) return;
       clearTimers();
       delete frame.dataset.emulatorjsReady;
+      log?.error("runtime.emulatorjs.start.failed", {
+        message: "EmulatorJS runtime failed during startup",
+        runtime: "EmulatorJS",
+        core: "nes",
+        stage,
+        errorKind: errorKind(reason),
+      });
       markPhase(container, "error", reason);
       setState("error");
       setDetail(reason instanceof Error ? reason.message : String(reason || "EmulatorJS runtime error"));
@@ -149,20 +209,31 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
         markPhase(container, "host-ready");
 
         const bytes = rom.bytes.slice().buffer as ArrayBuffer;
-        frame.contentWindow?.postMessage(
-          {
-            channel: RUNTIME_CHANNEL,
-            token: rom.runtimeToken,
-            command: "init",
-            gameName: rom.name,
-            bytes,
-          },
-          "*",
-          [bytes],
-        );
+        try {
+          frame.contentWindow?.postMessage(
+            {
+              channel: RUNTIME_CHANNEL,
+              token: rom.runtimeToken,
+              command: "init",
+              gameName: rom.name,
+              bytes,
+            },
+            "*",
+            [bytes],
+          );
+        } catch (error) {
+          log?.error("runtime.emulatorjs.start.failed", {
+            message: "EmulatorJS runtime initialization message failed",
+            runtime: "EmulatorJS",
+            core: "nes",
+            stage: "init-transfer",
+            errorKind: errorKind(error),
+          });
+          throw error;
+        }
         startTimeout = setTimeout(() => {
           startTimeout = null;
-          fail("EmulatorJS did not start within 60 seconds");
+          fail("EmulatorJS did not start within 60 seconds", "runtime-start-timeout");
         }, 60_000);
         return;
       }
@@ -191,7 +262,10 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
         return;
       }
       if (message.phase === "error") {
-        fail(typeof message.error === "string" ? message.error : "EmulatorJS runtime error");
+        fail(
+          typeof message.error === "string" ? message.error : "EmulatorJS runtime error",
+          "runtime-message",
+        );
       }
     };
 
@@ -200,7 +274,9 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
     markPhase(container, "frame-created");
     hostTimeout = setTimeout(() => {
       hostTimeout = null;
-      if (!initialized) fail("EmulatorJS packaged host did not initialize within 10 seconds");
+      if (!initialized) {
+        fail("EmulatorJS packaged host did not initialize within 10 seconds", "host-ready-timeout");
+      }
     }, 10_000);
 
     return () => {
@@ -213,12 +289,18 @@ export default function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps
           token: rom.runtimeToken,
           command: "terminate",
         }, "*");
-      } catch {
-        // Closing the process must continue even if the child context already stopped.
+      } catch (error) {
+        log?.debug("runtime.emulatorjs.stop.failed", {
+          message: "EmulatorJS terminate message failed during cleanup",
+          runtime: "EmulatorJS",
+          core: "nes",
+          stage: "cleanup-terminate",
+          errorKind: errorKind(error),
+        });
       }
       frame.remove();
     };
-  }, [rom]);
+  }, [log, rom]);
 
   return (
     <div
