@@ -58,12 +58,16 @@
   color: inherit;
 }
 
-/* Native select popups need an explicit semantic surface in Chromium/WebKit;
- * otherwise the OS option surface can remain white while inheriting theme text. */
-[data-plasmon-theme] .explorer-app__viewbar select,
+/* Native select popups need an explicit opaque semantic surface in Chromium/WebKit;
+ * otherwise translucent controls can be composited over the OS popup's white surface. */
+[data-plasmon-theme] .explorer-app__viewbar select {
+  background: var(--plasmon-control-background);
+  color: var(--plasmon-text-primary);
+}
+
 [data-plasmon-theme] .explorer-app__viewbar select option,
 [data-plasmon-theme] .explorer-app__viewbar select optgroup {
-  background: var(--plasmon-control-background);
+  background: var(--plasmon-panel-elevated);
   color: var(--plasmon-text-primary);
 }
 
@@ -82,8 +86,8 @@
 }
 
 [data-plasmon-theme] .explorer-app__viewbar select option:checked {
-  background: var(--plasmon-selection);
-  color: var(--plasmon-text-primary);
+  background: var(--plasmon-accent);
+  color: var(--plasmon-accent-ink);
 }
 
 [data-plasmon-theme] .explorer-app__address input[aria-invalid="true"] {
