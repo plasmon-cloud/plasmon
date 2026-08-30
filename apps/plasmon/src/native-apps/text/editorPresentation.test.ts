@@ -13,4 +13,9 @@ describe("Text editor presentation", () => {
     expect(editorLanguageDisplayName("typescript")).toBe("TypeScript");
     expect(editorLanguageDisplayName("custom-language")).toBe("custom-language");
   });
+
+  test("identifies .cmd as Plasmon Command without claiming Bash compatibility", () => {
+    expect(editorLanguageDisplayName("shell", "setup.cmd")).toBe("Plasmon Command (.cmd)");
+    expect(editorLanguageDisplayName("shell", "setup.sh")).toBe("Shell");
+  });
 });
