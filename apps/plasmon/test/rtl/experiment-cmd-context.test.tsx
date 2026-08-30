@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import type { FsNode } from "../../src/os/contracts/index.ts";
 import { FileManagerContextMenu } from "../../src/os/file-manager/FileManagerContextMenu.tsx";
 
@@ -22,7 +23,7 @@ const runNode: FsNode = {
   mime: "application/typescript",
 };
 
-function renderMenu(node: FsNode | null, overrides: Partial<React.ComponentProps<typeof FileManagerContextMenu>> = {}) {
+function renderMenu(node: FsNode | null, overrides: Partial<ComponentProps<typeof FileManagerContextMenu>> = {}) {
   const actions: string[] = [];
   render(
     <div>
