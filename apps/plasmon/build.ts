@@ -112,7 +112,10 @@ const monacoEntryPoints = [
 
 const config: BuildOptions = {
   entryPoints: [
-    { in: "./src/index.tsx", out: "main" },
+    {
+      in: remoteIncidentExperiment ? "./src/index.remote.tsx" : "./src/index.tsx",
+      out: "main",
+    },
     { in: "./src/os/fs/background.ts", out: "service" },
     ...(isSlimMonacoProfile
       ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
@@ -147,7 +150,6 @@ const config: BuildOptions = {
     __PLASMON_BUILD_SHA__: JSON.stringify(buildSha),
     __PLASMON_VERSION__: JSON.stringify(packageManifest.version),
     __PLASMON_PACKAGE_PROFILE__: JSON.stringify(packagePolicy.requestedProfile),
-    __PLASMON_REMOTE_INCIDENT_EXPERIMENT__: JSON.stringify(remoteIncidentExperiment),
   },
   metafile: true,
   plugins: [
