@@ -85,7 +85,7 @@ jobs:
           nix develop --command bash -lc '
             set -euxo pipefail
             npm ci
-            PLASMON_RUNTIME_CONFIGURATION=js-dos PLASMON_DEMO_GAME_FIXTURE=1 npm run plasmon:local:prepare
+            PLASMON_RUNTIME_CONFIGURATION=demo-games PLASMON_DEMO_GAME_FIXTURE=1 PLASMON_EMULATORJS_TEST_FIXTURE=1 npm run plasmon:local:prepare
 
             npm run plasmon:local:serve > /tmp/plasmon-pocketic.log 2>&1 &
             server_pid=$!

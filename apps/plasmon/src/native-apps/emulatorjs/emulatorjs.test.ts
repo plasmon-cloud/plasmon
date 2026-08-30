@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { HandlerAssociationRegistry } from "../../os/associations/index.ts";
 import type { FsNode } from "../../os/contracts/index.ts";
+import { createPlasmonNesTestRom, PACKAGED_EMULATORJS_TEST_FILENAME } from "../../games/emulatorJsFixture.ts";
 import {
   emulatorJsAssociationRules,
   emulatorJsHandler,
@@ -57,6 +58,20 @@ test("NES validation accepts a complete iNES image and rejects malformed or trun
 
   const truncated = validNesRom().subarray(0, 1024);
   expect(() => assertNesRom(truncated)).toThrow("truncated");
+});
+
+test("repository-owned EmulatorJS proof ROM is deterministic mapper-0 test-only content", () => {
+  const first = createPlasmonNesTestRom();
+  const second = createPlasmonNesTestRom();
+
+  expect(PACKAGED_EMULATORJS_TEST_FILENAME).toBe("PlasmonTest.nes");
+  expect(first).toEqual(second);
+  expect(first.byteLength).toBe(16 + 16_384 + 8_192);
+  expect([...first.slice(0, 8)]).toEqual([0x4e, 0x45, 0x53, 0x1a, 0x01, 0x01, 0x00, 0x00]);
+  expect(first[6]! >> 4).toBe(0);
+  expect(first[7]! & 0xf0).toBe(0);
+  expect(first[6]! & 0x02).toBe(0);
+  expect(() => assertNesRom(first)).not.toThrow();
 });
 
 test("EmulatorJS keeps Program Files authority separate from its URL-safe browser transport", () => {
