@@ -1,0 +1,3 @@
+apps/plasmon/build.ts
+apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts
+apps/plasmon/src/os/integration/services.ts
