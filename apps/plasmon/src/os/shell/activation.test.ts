@@ -133,7 +133,7 @@ test("Search filesystem activation preserves canonical directory, system-app, Ne
       mime: NEUTRON_APP_MIME,
       metadata: {
         [NEUTRON_APP_METADATA_KEY]: {
-          format: "plasmon.neutron-app",
+          format: "plasmon-neutron-app",
           version: 1,
           elementId: "mail",
           name: "Mail",
