@@ -44,16 +44,22 @@ for (const fragment of [
   "reviewDecision",
   "EFFECTIVE_EVENT_NAME",
   "steps.retained_approval.outputs.approved == 'true'",
-  "needs.applicability.outputs.phase == 'pre-merge-confidence'",
   "Report ordinary PR waiting for approval",
   "Report merge queue fast-only checkpoint",
-  "Require approved pre-merge probe matrix success",
   "name: Flake probe summary",
   "name: Flake characterization summary",
   "summarize-plasmon-flake-evidence.mjs",
+  "if: ${{ needs.applicability.outputs.applicable == 'true' }}",
+  "if: ${{ needs.applicability.outputs.characterization_applicable == 'true' }}",
+  "set -o pipefail",
   "continue-on-error: ${{ github.event_name == 'push' && matrix.mode == 'characterization' }}",
 ]) requireFragment(workflow, fragment, "Flake Probe workflow");
-for (const fragment of ["pull_request_target", "--repeat-each", "deferred to merge queue"]) forbidFragment(workflow, fragment, "Flake Probe workflow");
+for (const fragment of [
+  "pull_request_target",
+  "--repeat-each",
+  "deferred to merge queue",
+  "Require approved pre-merge probe matrix success",
+]) forbidFragment(workflow, fragment, "Flake Probe workflow");
 
 for (const fragment of ["ci:flake-probe", "createWorkflowDispatch", "workflow_id: 'plasmon-flake-probe.yml'"]) requireFragment(labelWorkflow, fragment, "explicit Flake Probe label bridge");
 for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine", "exact-set)"]) requireFragment(runner, fragment, "flake executable runner");
@@ -135,4 +141,4 @@ for (const fragment of [
   "@quarantine",
 ]) requireFragment(`${workflowReadme}\n${probeDoc}\n${stagedDoc}`, fragment, "durable CI documentation");
 
-console.log("Flake Probe scheduling verified: PR waits for approval, approval and retained approved heads run 1 broad + conditional 3 targeted as a hard gate, merge queue repeats no browser probe, post-merge runs 3 broad + conditional 3 targeted, and explicit heavy diagnostics remain available");
+console.log("Flake Probe scheduling verified: PR waits for approval, approval and retained approved heads run 1 broad + conditional 3 targeted as a hard gate, merge queue repeats no browser probe, post-merge runs 3 broad + conditional 3 targeted, and every applicable probe summary aggregates its evidence before propagating the aggregate result");

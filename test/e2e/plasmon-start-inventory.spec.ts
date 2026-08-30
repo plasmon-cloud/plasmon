@@ -79,7 +79,7 @@ test("— packaged Start omits managed Settings and Properties while keeping Exp
     // Start/open path.
     const explorer = panel.locator("[data-start-item]").filter({ hasText: "File Explorer" });
     await explorer.click();
-    await expect(plasmon.getByRole("dialog", { name: "File Explorer" })).toBeVisible({ timeout: 10_000 });
+    await expect(plasmon.getByRole("region", { name: "File Explorer" })).toBeVisible({ timeout: 10_000 });
 
     health.assertClean();
   } finally {

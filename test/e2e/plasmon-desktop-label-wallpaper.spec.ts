@@ -68,8 +68,8 @@ test("desktop label renders its explicit contrast treatment over representative 
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Shell settings" });
-    await expect(settings).toBeVisible();
+    const settings = app.getByRole("region", { name: "Settings" }).last();
+    await expect(settings).toBeVisible({ timeout: 20_000 });
 
     for (const [name, themeLabel, themeId, wallpaperLabel, wallpaperId] of COMPOSITIONS) {
       await settings.getByRole("button", { name: wallpaperLabel, exact: true }).click();

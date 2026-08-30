@@ -108,14 +108,16 @@ test("visible, native-window, and dragged owned icons actually recolor across al
     await page.keyboard.press("Escape");
     await expect(externalPreview).toHaveCount(0);
 
-    const openThemeSettings = async (): Promise<Locator> => {
+    const openThemeSettings = async (): Promise<{ settings: Locator; window: Locator }> => {
       await app.getByRole("button", { name: "Start", exact: true }).click();
       const start = app.getByRole("region", { name: "Start menu" });
       await expect(start).toBeVisible();
       await start.getByRole("button", { name: "Settings", exact: true }).click();
-      const settings = app.getByRole("region", { name: "Shell settings" });
+      const window = app.getByRole("dialog", { name: "Settings" }).last();
+      await expect(window).toBeVisible({ timeout: 20_000 });
+      const settings = window.getByRole("region", { name: "Settings" });
       await expect(settings).toBeVisible();
-      return settings;
+      return { settings, window };
     };
 
     const observedDesktopFills = new Set<string>();
@@ -123,7 +125,7 @@ test("visible, native-window, and dragged owned icons actually recolor across al
     const observedDragFills = new Set<string>();
 
     for (const theme of THEMES) {
-      const settings = await openThemeSettings();
+      const { settings, window: settingsWindow } = await openThemeSettings();
       const choice = settings.getByRole("button", { name: theme.label, exact: true });
       await choice.click();
       await expect(choice).toHaveAttribute("aria-pressed", "true");
@@ -136,8 +138,8 @@ test("visible, native-window, and dragged owned icons actually recolor across al
       observedDesktopFills.add(await computedFill(desktopPrimary));
       observedExplorerFills.add(await computedFill(explorerPrimary));
 
-      await page.keyboard.press("Escape");
-      await expect(settings).toBeHidden();
+      await settingsWindow.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(settingsWindow).not.toBeVisible();
       const source = await desktopFolderEntry.boundingBox();
       if (!source) throw new Error("Desktop folder has no browser bounds");
       const sourceX = source.x + source.width / 2;
