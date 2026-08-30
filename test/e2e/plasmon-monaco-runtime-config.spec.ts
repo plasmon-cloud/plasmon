@@ -105,11 +105,16 @@ async function replaceTextEditorContents(page: Page, editorWindow: Locator, text
     includeHidden: true,
   }).first();
   const firstLine = editorWindow.locator(".monaco-editor .view-line").first();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(page.url()).origin,
+  });
+  await page.evaluate(async (value) => navigator.clipboard.writeText(value), text);
   await expect(firstLine).toBeVisible();
   await firstLine.click({ position: { x: 8, y: 10 } });
   await expect(input).toBeFocused();
   await page.keyboard.press("Control+A");
-  await page.keyboard.insertText(text);
+  await page.keyboard.press("Backspace");
+  await page.keyboard.press("Control+V");
   await expect(editorWindow.getByText("Modified", { exact: true })).toBeVisible();
 }
 
