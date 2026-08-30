@@ -54,7 +54,9 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
 
   const terminalTask = plasmon.locator('[data-shell-context-native="native:terminal"]');
   await expect(terminalTask).toBeVisible({ timeout: 15_000 });
-  await expect(terminalTask.locator('img[src*="terminal.svg"]')).toBeVisible();
+  const renderedTerminalIcon = terminalTask.locator('[data-plasmon-owned-icon="system:terminal"]');
+  await expect(renderedTerminalIcon).toBeVisible();
+  await expect(renderedTerminalIcon.locator("path")).toHaveCount(2);
   await terminalTask.click();
   const terminalWindow = plasmon.getByRole("dialog", { name: "Terminal" }).last();
   await expect(terminalWindow).toBeVisible({ timeout: 15_000 });

@@ -94,6 +94,13 @@ export function OwnedSystemIcon({ icon, className }: { icon: SystemIconName; cla
         <circle cx="30" cy="43" r="4" fill={slot.accent} stroke={slot.highlight} strokeWidth="1.6" />
       </>;
       break;
+    case "terminal":
+      glyph = <>
+        <rect x="12" y="15" width="40" height="34" rx="5" fill={slot.secondary} opacity=".42" stroke={slot.accent} strokeWidth="2" />
+        <path d="m19 25 8 7-8 7" fill="none" stroke={slot.highlight} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M32 40h13" stroke={slot.highlight} strokeWidth="4" strokeLinecap="round" />
+      </>;
+      break;
     case "pin":
       glyph = <>
         <path d="M25 17h14l-2 8 6 7v3H34v12l-2 4-2-4V35h-9v-3l6-7z" fill={slot.accent} stroke={slot.highlight} strokeWidth="1.8" strokeLinejoin="round" />
