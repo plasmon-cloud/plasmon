@@ -43,7 +43,7 @@ function catalogWith(definition: OptionalRuntimeDefinition): RuntimeCatalog {
   return Object.freeze({ [definition.id]: definition });
 }
 
-describe("#370 runtime configuration authority", () => {
+describe("runtime configuration authority", () => {
   test("built-in selections use one canonical catalog", async () => {
     validateRuntimeCatalog();
     const none = await loadRuntimeConfiguration("none");
