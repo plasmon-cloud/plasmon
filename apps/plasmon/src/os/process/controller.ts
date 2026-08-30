@@ -13,10 +13,23 @@ import type {
 } from "../contracts/index.ts";
 import { ProcessStore } from "./store.ts";
 
+export type NativeProcessStartupStage = "window-create" | "window-placement" | "process-commit";
+
 export interface NativeProcessControllerOptions {
   processIdFactory?: (app: NativeAppDefinition, ordinal: number) => ProcessId;
-  onStartupError?: (error: unknown, app: NativeAppDefinition, target: OpenTarget) => void;
+  onStartupError?: (
+    error: unknown,
+    app: NativeAppDefinition,
+    target: OpenTarget,
+    stage: NativeProcessStartupStage,
+    processId: ProcessId,
+  ) => void;
+  /** Reports an application-owned close handler throwing. Prevent/defer/cancel are normal outcomes. */
   onCloseError?: (error: unknown, process: ProcessRecord) => void;
+  /** Reports WindowManager teardown failure after Process has entered closing state. */
+  onWindowCloseError?: (error: unknown, process: ProcessRecord) => void;
+  /** Reports a running Process whose authoritative window disappeared outside ordinary Process close. */
+  onWindowLost?: (process: ProcessRecord) => void;
   /** Composition hook for window-owned post-create concerns such as durable placement restore. */
   onWindowCreated?: (appId: string, windowId: WindowId) => void | Promise<void>;
 }
@@ -66,6 +79,7 @@ export class NativeProcessController implements ProcessController {
       state: "starting",
     });
 
+    let stage: NativeProcessStartupStage = "window-create";
     try {
       const windowId = this.windows.create(id, {
         width: app.defaultWindow.width,
@@ -77,12 +91,14 @@ export class NativeProcessController implements ProcessController {
           ? { minHeight: app.defaultWindow.minHeight }
           : {}),
       });
+      stage = "window-placement";
       await this.options.onWindowCreated?.(app.id, windowId);
+      stage = "process-commit";
       this.store.patch(id, { state: "running", windowId });
       return id;
     } catch (error: unknown) {
       this.cleanupFailedStartup(id);
-      this.options.onStartupError?.(error, app, target);
+      this.options.onStartupError?.(error, app, target, stage, id);
       return null;
     }
   }
@@ -198,6 +214,9 @@ export class NativeProcessController implements ProcessController {
     this.store.patch(id, { state: "closing" });
     try {
       if (record.windowId) this.windows.close(record.windowId);
+    } catch (error: unknown) {
+      this.options.onWindowCloseError?.(error, record);
+      throw error;
     } finally {
       this.removeProcess(id);
     }
@@ -256,6 +275,7 @@ export class NativeProcessController implements ProcessController {
           record.windowId !== undefined &&
           !active.has(record.windowId)
         ) {
+          this.options.onWindowLost?.(record);
           this.removeProcess(record.id);
         }
       }

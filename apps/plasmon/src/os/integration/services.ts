@@ -31,6 +31,7 @@ import {
 } from "../fs/index.ts";
 import {
   PlasmonDiagnosticService,
+  type DiagnosticLogger,
   type DiagnosticService,
 } from "../diagnostics/index.ts";
 import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
@@ -111,6 +112,10 @@ export interface CreatePlasmonServicesOptions {
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
 function createAuthorizationService(): ResourceAuthorizationService {
   const preview = typeof window === "undefined" || window.parent === window;
   return preview
@@ -181,6 +186,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
@@ -201,7 +207,15 @@ function registerNativeApplications(
   const contentLoaders = createContentAppLoaders({ hiddenVisibility });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
-    if (!loader) throw new Error(`Missing native application loader: ${definition.id}`);
+    if (!loader) {
+      log.error("native-app.registration.failed", {
+        message: "Native application loader is missing during registration",
+        appId: definition.id,
+        handlerId: definition.handlerId,
+        reason: "missing-loader",
+      });
+      throw new Error(`Missing native application loader: ${definition.id}`);
+    }
     nativeApps.registerWithLoader(definition, loader);
   }
 
@@ -272,43 +286,74 @@ export function createPlasmonServices(
   const filesystemLog = diagnostics.for("filesystem");
   const processLog = diagnostics.for("process");
   const windowLog = diagnostics.for("windowing");
+  const nativeAppLog = diagnostics.for("native-app");
+  const shellLog = diagnostics.for("shell");
   if (filesystemMode === "hosted") {
     setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
   }
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
+  const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
+    onRestoreRejected: (reason) => {
+      windowLog.warn("window.placement.restore.rejected", {
+        message: "Persisted window placement metadata was rejected",
+        reason,
+      });
+    },
+  });
   const windowPlacement = new NativeWindowPlacementController(
     windows,
-    new FsServiceWindowPlacementStore(rawFs),
+    placementStore,
     {
-      onPersistenceError: (error) => {
-        windowLog.warn("window.placement.persistence.failed", {
-          message: "Window placement persistence failed",
-          error,
+      onPersistenceError: (error, stage) => {
+        windowLog.warn(`window.placement.${stage}.failed`, {
+          message: `Window placement ${stage} failed`,
+          errorType: diagnosticErrorType(error),
         });
       },
     },
   );
   const neutron = options.neutron ?? createNeutronBridge();
-  const nativeApps = new NativeApplicationRegistry();
+  const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
-    onStartupError: (error, app) => {
+    onStartupError: (error, app, _target, stage, processId) => {
       processLog.error("process.start.failed", {
-        message: `Failed to start ${app.name}`,
+        message: "Native process startup failed",
         appId: app.id,
         handlerId: app.handlerId,
-        error,
+        processId,
+        stage,
+        errorType: diagnosticErrorType(error),
       });
     },
     onCloseError: (error, record) => {
-      processLog.error("process.close.failed", {
+      processLog.error("process.close.handler_failed", {
         message: "Native process close handler failed",
         appId: record.appId,
         handlerId: record.handlerId,
         processId: record.id,
-        error,
+        errorType: diagnosticErrorType(error),
+      });
+    },
+    onWindowCloseError: (error, record) => {
+      processLog.error("process.close.failed", {
+        message: "Native process window teardown failed",
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
+        stage: "window-close",
+        errorType: diagnosticErrorType(error),
+      });
+    },
+    onWindowLost: (record) => {
+      processLog.error("process.window_lost", {
+        message: "Running native process lost its window",
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
+        windowId: record.windowId,
       });
     },
   });
@@ -341,6 +386,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    nativeAppLog,
   );
 
   filesystem = createFilesystemCore({
@@ -375,7 +421,9 @@ export function createPlasmonServices(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
   );
-  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
+  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {
+    diagnostics: shellLog,
+  });
 
   return {
     fs,
