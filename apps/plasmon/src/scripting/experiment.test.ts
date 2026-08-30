@@ -4,7 +4,7 @@ import { classifyResource } from "../os/fs/index.ts";
 import { DEFAULT_SHELL_PREFERENCES } from "../os/shell/preferences.ts";
 import { SimpleCmdParser } from "./cmd/simple.ts";
 import { transpileCmdToRun } from "./cmd/transpile.ts";
-import { renderShellHelp, shellCommandHelp } from "./command/catalog.ts";
+import { renderShellHelp, shellCommandHelp, SHELL_COMMAND_NAMES } from "./command/catalog.ts";
 import { CommandSession } from "./command/runtime.ts";
 import { RUN_CONTEXT_DECLARATIONS } from "./os-api/declarations.ts";
 import { ScriptingService } from "./service.ts";
@@ -105,9 +105,9 @@ test(".run/.cmd classification, taskbar default, and ambient declarations expose
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const os: RunOsApi");
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const commands: RunCommandFactory");
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const shell: RunShellApi");
-  expect(RUN_CONTEXT_DECLARATIONS).toContain("touch(args?: readonly string[]): RunCommand");
-  expect(RUN_CONTEXT_DECLARATIONS).toContain("edit(args?: readonly string[]): RunCommand");
-  expect(RUN_CONTEXT_DECLARATIONS).toContain("man(args?: readonly string[]): RunCommand");
+  for (const commandName of SHELL_COMMAND_NAMES) {
+    expect(RUN_CONTEXT_DECLARATIONS).toContain(`${commandName}(args?: readonly string[]): RunCommand;`);
+  }
   expect(RUN_CONTEXT_DECLARATIONS).toContain("rename(path: string, newName: string)");
   expect(RUN_CONTEXT_DECLARATIONS).toContain("openWith(path: string, handlerId: string)");
 });
