@@ -191,6 +191,26 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     },
   } satisfies OsApi["fs"];
 
+  const openResult = async (
+    path: string,
+    opener: (node: FsNode) => Promise<void>,
+    explicitHandlerId?: string,
+  ): Promise<OpenResult> => {
+    const node = await requireNode(services, path);
+    const resource = await toResource(services, node);
+    const before = services.process.list();
+    await opener(node);
+    const process = processForRequestedResource(before, services.process.list(), node.id);
+    return {
+      resource,
+      ...(explicitHandlerId ? { handlerId: explicitHandlerId } : process ? { handlerId: process.handlerId } : {}),
+      ...(process ? {
+        processId: process.id,
+        ...(process.windowId ? { windowId: process.windowId } : {}),
+      } : {}),
+    };
+  };
+
   return {
     fs,
     processes: {
@@ -199,35 +219,14 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     windows: {
       list: () => services.windows.list().map(toWindow),
     },
-    open: async (path: string): Promise<OpenResult> => {
-      const node = await requireNode(services, path);
-      const resource = await toResource(services, node);
-      const before = services.process.list();
-      await services.filesystem.open.openNode(node.id);
-      const process = processForRequestedResource(before, services.process.list(), node.id);
-      return {
-        resource,
-        ...(process ? {
-          handlerId: process.handlerId,
-          processId: process.id,
-          ...(process.windowId ? { windowId: process.windowId } : {}),
-        } : {}),
-      };
-    },
-    openWith: async (path: string, handlerId: string): Promise<OpenResult> => {
-      const node = await requireNode(services, path);
-      const resource = await toResource(services, node);
-      const before = services.process.list();
-      await services.openService.open(handlerId, { nodeId: node.id });
-      const process = openedProcess(before, services.process.list(), node.id);
-      return {
-        resource,
-        handlerId,
-        ...(process ? {
-          processId: process.id,
-          ...(process.windowId ? { windowId: process.windowId } : {}),
-        } : {}),
-      };
-    },
+    open: (path: string) => openResult(
+      path,
+      async (node) => { await services.filesystem.open.openNode(node.id); },
+    ),
+    openWith: (path: string, handlerId: string) => openResult(
+      path,
+      async (node) => { await services.openService.open(handlerId, { nodeId: node.id }); },
+      handlerId,
+    ),
   };
 }
