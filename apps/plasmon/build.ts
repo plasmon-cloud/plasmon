@@ -71,13 +71,15 @@ const monacoEntryPoints = [
   { in: "monaco-editor/esm/vs/language/typescript/ts.worker.js", out: "runtime/monaco/ts.worker" },
 ] as const;
 
+const slimMonacoEntryPoints = monacoEntryPoints.filter(({ out }) =>
+  out === "System/Program Files/MonacoEditor/editor.worker"
+);
+
 const config: BuildOptions = {
   entryPoints: [
     { in: "./src/index.tsx", out: "main" },
     { in: "./src/os/fs/background.ts", out: "service" },
-    ...(isSlimMonacoProfile
-      ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker"))
-      : monacoEntryPoints),
+    ...(isSlimMonacoProfile ? slimMonacoEntryPoints : monacoEntryPoints),
   ],
   outdir: "./dist/web",
   bundle: true,

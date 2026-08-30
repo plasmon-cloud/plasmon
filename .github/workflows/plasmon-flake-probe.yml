@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: plasmon-flake-probe-${{ github.event.pull_request.number || github.event.merge_group.head_sha || github.event.after || github.run_id }}
@@ -77,6 +78,27 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.merge_group.head_sha || inputs.ref || github.sha }}
 
+      - name: Detect retained approval
+        id: retained_approval
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner="${REPOSITORY%%/*}"
+          name="${REPOSITORY#*/}"
+          decision="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewDecision}}}' \
+            -F owner="$owner" -F name="$name" -F number="$PR_NUMBER" \
+            --jq '.data.repository.pullRequest.reviewDecision')"
+          if [ "$decision" = "APPROVED" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Record changed files for this phase
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -111,6 +133,7 @@ jobs:
       - name: Configure probe phase
         id: configure
         env:
+          EFFECTIVE_EVENT_NAME: ${{ github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true' && 'pull_request_review' || github.event_name }}
           INPUT_ITERATIONS: ${{ inputs.iterations }}
           INPUT_TARGET: ${{ inputs.target }}
           INPUT_TEST_FILE: ${{ inputs.test_file }}
@@ -118,7 +141,7 @@ jobs:
         run: |
           node test/ci/configure-plasmon-flake-probe.mjs \
             flake-probe-applicability/changed-files.txt \
-            --event "${{ github.event_name }}" \
+            --event "$EFFECTIVE_EVENT_NAME" \
             --github-output "$GITHUB_OUTPUT" \
             --json-file flake-probe-applicability/configuration.json
 
@@ -227,7 +250,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Report ordinary PR waiting for approval
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && needs.applicability.outputs.phase != 'pre-merge-confidence' }}
         run: |
           echo "## Plasmon pre-merge confidence waits for approval" >> "$GITHUB_STEP_SUMMARY"
           echo "Normal GitHub Approve triggers the real 1x broad probe and conditional 3x targeted characterization." >> "$GITHUB_STEP_SUMMARY"
@@ -243,28 +266,28 @@ jobs:
         run: echo "Only an approving review starts expensive pre-merge confidence work." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Require successful applicability detection
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         env:
           APPLICABILITY_RESULT: ${{ needs.applicability.result }}
         run: |
           [ "$APPLICABILITY_RESULT" = success ] || { echo "Flake probe applicability failed: $APPLICABILITY_RESULT" >&2; exit 1; }
 
       - name: Require approved pre-merge probe matrix success
-        if: ${{ github.event_name == 'pull_request_review' && github.event.review.state == 'approved' }}
+        if: ${{ needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         env:
           PROBE_RESULT: ${{ needs.probe.result }}
         run: |
           [ "$PROBE_RESULT" = success ] || { echo "Required pre-merge broad/characterization evidence failed: $PROBE_RESULT" >&2; exit 1; }
 
       - name: Checkout exact probe ref
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.sha }}
 
       - name: Download applicability evidence
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
@@ -272,14 +295,14 @@ jobs:
           merge-multiple: true
 
       - name: Download primary probe results
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-${{ needs.applicability.outputs.primary_mode }}-${{ needs.applicability.outputs.iteration_count }}-${{ needs.applicability.outputs.scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-probe-results
 
       - name: Summarize primary stability evidence
-        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence' }}
         run: |
           mkdir -p flake-probe-diagnostics flake-probe-summary
           node test/ci/summarize-plasmon-flake-evidence.mjs \
@@ -287,7 +310,7 @@ jobs:
             --json-file flake-probe-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload primary evidence packet
-        if: ${{ always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) }}
+        if: ${{ always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.applicability.outputs.phase == 'pre-merge-confidence') }}
         uses: actions/upload-artifact@v4
         with:
           name: flake-summary-${{ needs.applicability.outputs.primary_mode }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
@@ -302,24 +325,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Report characterization not run in this phase
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'pull_request_review' && github.event.review.state != 'approved') }}
+        if: ${{ github.event_name == 'merge_group' || (github.event_name == 'pull_request' && needs.applicability.outputs.phase != 'pre-merge-confidence') || (github.event_name == 'pull_request_review' && github.event.review.state != 'approved') }}
         run: echo "Targeted characterization is not run in this phase." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report non-applicable automatic characterization
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable != 'true' }}
+        if: ${{ (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable != 'true' }}
         run: |
           echo "## Plasmon automatic characterization" >> "$GITHUB_STEP_SUMMARY"
           echo "No targeted characterization selected: ${{ needs.applicability.outputs.characterization_reason }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Checkout exact characterization ref
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable == 'true' }}
+        if: ${{ (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
 
       - name: Download characterization applicability evidence
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable == 'true' }}
+        if: ${{ (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-applicability-${{ github.run_id }}-attempt-*
@@ -327,14 +350,14 @@ jobs:
           merge-multiple: true
 
       - name: Download characterization results
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable == 'true' }}
+        if: ${{ (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/download-artifact@v4
         with:
           pattern: flake-probe-characterization-${{ needs.applicability.outputs.characterization_iteration_count }}-${{ needs.applicability.outputs.characterization_scope_key }}-iteration-result-${{ github.run_id }}-attempt-*-*
           path: flake-characterization-results
 
       - name: Summarize automatic characterization evidence
-        if: ${{ (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable == 'true' }}
+        if: ${{ (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable == 'true' }}
         run: |
           mkdir -p flake-characterization-diagnostics flake-characterization-summary
           node test/ci/summarize-plasmon-flake-evidence.mjs \
@@ -342,7 +365,7 @@ jobs:
             --json-file flake-characterization-summary/summary.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload characterization evidence packet
-        if: ${{ always() && (github.event_name == 'push' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) && needs.applicability.outputs.characterization_applicable == 'true' }}
+        if: ${{ always() && (github.event_name == 'push' || needs.applicability.outputs.phase == 'pre-merge-confidence') && needs.applicability.outputs.characterization_applicable == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: flake-summary-characterization-${{ github.run_id }}-attempt-${{ github.run_attempt }}
