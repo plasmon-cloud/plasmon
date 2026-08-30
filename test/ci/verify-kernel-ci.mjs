@@ -13,14 +13,16 @@ function forbidFragment(fragment, label = "Kernel CI workflow") {
 
 for (const fragment of [
   "  pull_request:",
+  "  pull_request_review:",
+  "    types: [submitted]",
   "  merge_group:",
   "    types: [checks_requested]",
   "      - main",
   `      - '${releaseBranchGlob}'`,
   "name: Determine Kernel CI applicability",
-  "run_kernel: ${{ steps.kernel_scope.outputs.run_kernel }}",
-  "if [ \"${{ github.event_name }}\" != \"pull_request\" ]; then",
-  "git diff --name-only \"$base_sha\" \"$head_sha\"",
+  "pull_request|merge_group)",
+  "github.event.review.state",
+  "refs/heads/main",
   "name: kernel",
   "needs: kernel_scope",
   "if: ${{ always() && (needs.kernel_scope.result != 'success' || needs.kernel_scope.outputs.run_kernel == 'true') }}",
@@ -29,16 +31,8 @@ for (const fragment of [
   "npm --workspace neutron-kernel test",
 ]) requireFragment(fragment);
 
-for (const fragment of [
-  "pull_request_target",
-  "continue-on-error: true",
-  "if: steps.kernel_scope.outputs.run_kernel == 'true'",
-  "    paths:",
-  "    paths-ignore:",
-]) forbidFragment(fragment);
+for (const fragment of ["pull_request_target", "continue-on-error: true", "    paths:", "    paths-ignore:"]) forbidFragment(fragment);
 
-if (/release\/0\.1\.0-r\d/u.test(workflow)) {
-  throw new Error("Kernel CI must use the release branch role instead of a concrete release branch");
-}
+if (/release\/0\.1\.0-r\d/u.test(workflow)) throw new Error("Kernel CI must use the release branch role instead of a concrete release branch");
 
-console.log(`Kernel CI verified for staged CI: PR cheap applicability remains, merge_group executes the full required kernel lane, ${releaseBranchGlob} release-role push coverage and stable kernel context are preserved`);
+console.log(`Kernel CI verified for staged CI: ordinary PR and merge_group are cheap, normal approval runs the real required kernel lane, main push coverage remains real, and ${releaseBranchGlob} release pushes do not repeat pre-merge kernel work`);
