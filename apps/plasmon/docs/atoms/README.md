@@ -1,6 +1,6 @@
 # Atom and collaboration architecture
 
-This directory is the current cross-subsystem index for Plasmon's logical Atom model. Historical collaborative-Atom research and hackathon scope documents are preserved under [`../history/`](../history/); they are useful design provenance but are not required current authority.
+This directory is the current cross-subsystem index for Plasmon's logical Atom model.
 
 ## Current mental model
 
@@ -42,7 +42,7 @@ For current Sharing implementation and the fail-closed MTN boundary, read [`../.
 
 ## Implementation status
 
-This document defines the durable logical distinctions used by Plasmon documentation. It does **not** claim that a generic collaborative Atom runtime or the historical Review design is fully implemented.
+This document defines the durable logical distinctions used by Plasmon documentation. It does **not** claim that a generic collaborative Atom runtime is fully implemented.
 
 Before implementing Atom-specific behavior:
 
@@ -51,12 +51,3 @@ Before implementing Atom-specific behavior:
 3. keep Atom identity separate from AppScope/process/window/path/revision identity;
 4. define typed application-domain operations rather than treating a transport/storage representation as the semantic API;
 5. update current contracts/docs when a new durable cross-subsystem invariant is accepted.
-
-## Historical design provenance
-
-The original collaborative Review/Atom research and the narrowed hackathon MVP scope are preserved verbatim as history:
-
-- [`../history/FIRST_COLLABORATIVE_ATOM_DESIGN.md`](../history/FIRST_COLLABORATIVE_ATOM_DESIGN.md)
-- [`../history/FIRST_COLLABORATIVE_ATOM_MVP.md`](../history/FIRST_COLLABORATIVE_ATOM_MVP.md)
-
-Those documents contain historical branch/SHA, coordinator, candidate-technology, and hackathon-scope decisions. Use them for provenance/research context, not as a substitute for current implementation or contracts.
