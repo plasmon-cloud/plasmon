@@ -112,8 +112,8 @@ export interface CreatePlasmonServicesOptions {
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
   /**
-   * Capability seam for the separately owned remote incident sink. #655 never
-   * installs a provider; callers may enable policy only when that sink exists.
+   * Capability seam for the separately owned remote incident sink. This layer
+   * never installs a provider; callers may enable policy only when that sink exists.
    */
   remoteIncidentSinkAvailable?: boolean;
 }
