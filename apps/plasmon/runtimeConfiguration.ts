@@ -265,7 +265,9 @@ function normalizeRuntimeConfiguration(value: unknown, catalog: RuntimeCatalog):
     if (typeof runtimeId !== "string") throw new Error("Runtime configuration runtime ids must be strings");
     if (seen.has(runtimeId)) throw new Error(`Runtime configuration repeats runtime id ${runtimeId}`);
     seen.add(runtimeId);
-    if (!(runtimeId in catalog)) throw new Error(`Unknown optional runtime id: ${runtimeId}`);
+    if (!Object.prototype.hasOwnProperty.call(catalog, runtimeId)) {
+      throw new Error(`Unknown optional runtime id: ${runtimeId}`);
+    }
     runtimes.push(runtimeId as RuntimeId);
   }
 
