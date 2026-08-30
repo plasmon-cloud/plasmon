@@ -19,6 +19,7 @@ import {
   type MonacoEditorCommandApi,
 } from "../shared/monaco/MonacoEditorHost.tsx";
 import { editorLanguageForResource } from "../shared/monaco/editorModel.ts";
+import { useMonacoRuntimeConfig } from "../monaco-runtime-config/runtimeConfigContext.tsx";
 import { DocumentClosePrompt } from "./DocumentClosePrompt.tsx";
 import { controlInputStyle, editorErrorStyle } from "./editorChrome.ts";
 import { editorLanguageDisplayName, textEditorWindowTitle } from "./editorPresentation.ts";
@@ -35,15 +36,16 @@ export interface TextEditorProps {
 export default function TextEditor({ processId, target, fs, process }: TextEditorProps) {
   const { snapshot, sessionRef } = useDocumentSession(fs, target.nodeId);
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
+  const { snapshot: runtimeConfig, setMinimapEnabled } = useMonacoRuntimeConfig();
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
   const [commandApi, setCommandApi] = useState<MonacoEditorCommandApi | null>(null);
-  const [minimap, setMinimap] = useState(true);
   const [wordWrap, setWordWrap] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
   const readOnly = target.readOnly === true;
   const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
+  const minimap = runtimeConfig.editor.minimap.enabled;
 
   useEffect(() => {
     process.setTitle(processId, textEditorWindowTitle(snapshot.name));
@@ -118,7 +120,13 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <NativeAppButton type="button" onClick={() => runEditorCommand("replace")} disabled={editorCommandsDisabled}>Replace</NativeAppButton>
         <NativeAppButton type="button" onClick={() => runEditorCommand("goToLine")} disabled={editorCommandsDisabled}>Go to line</NativeAppButton>
         <NativeAppButton type="button" aria-pressed={wordWrap} onClick={() => setWordWrap((current) => !current)}>Word wrap</NativeAppButton>
-        <NativeAppButton type="button" aria-pressed={minimap} onClick={() => setMinimap((current) => !current)}>Minimap</NativeAppButton>
+        <NativeAppButton
+          type="button"
+          aria-pressed={minimap}
+          onClick={() => { void setMinimapEnabled(!minimap); }}
+        >
+          Minimap
+        </NativeAppButton>
         {readOnly && <span style={styles.readOnly}>Read only</span>}
         {snapshot.status === "conflict" && (
           <>

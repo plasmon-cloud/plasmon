@@ -69,6 +69,10 @@ import {
   recycleBinAppDefinition,
 } from "../../native-apps/recycle-bin/index.ts";
 import {
+  MonacoRuntimeConfigService,
+  type MonacoRuntimeConfigStore,
+} from "../../native-apps/monaco-runtime-config/runtimeConfig.ts";
+import {
   FakeResourceAuthorizationService,
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
@@ -90,6 +94,7 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  monacoRuntimeConfig: MonacoRuntimeConfigStore;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -307,6 +312,11 @@ export function createPlasmonServices(
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
+  const monacoRuntimeConfig = new MonacoRuntimeConfigService({
+    fs,
+    fsEvents: fs,
+    programFiles: filesystem.programFiles,
+  });
   nativeApps.setLoader(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
@@ -328,5 +338,6 @@ export function createPlasmonServices(
     fileClipboard,
     startMenu,
     hiddenVisibility,
+    monacoRuntimeConfig,
   };
 }

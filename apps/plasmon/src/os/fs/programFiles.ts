@@ -10,9 +10,20 @@ export interface ProgramFilesMetadata {
   version: 1;
 }
 
+export interface ProgramFilesRuntimeFileOptions {
+  initialBytes: Uint8Array;
+  mime?: string;
+  metadata?: Record<string, JsonValue>;
+}
+
 export interface ProgramFilesService {
   root(): Promise<FsNode>;
   ensureRuntimeDirectory(name: string): Promise<FsNode>;
+  ensureRuntimeFile(
+    runtimeName: string,
+    fileName: string,
+    options: ProgramFilesRuntimeFileOptions,
+  ): Promise<FsNode>;
 }
 
 function programFilesMetadata(): JsonValue {
@@ -65,11 +76,19 @@ export async function reconcileProgramFilesRoot(fs: FsService): Promise<FsNode> 
   });
 }
 
-function runtimeDirectoryName(name: string): string {
+function runtimeEntryName(name: string, label: string): string {
   if (!name || name.trim() !== name || name === "." || name === ".." || /[\\/\0]/u.test(name)) {
-    throw new Error(`Invalid Program Files runtime directory name: ${name || "<empty>"}`);
+    throw new Error(`Invalid Program Files ${label} name: ${name || "<empty>"}`);
   }
   return name;
+}
+
+function runtimeDirectoryName(name: string): string {
+  return runtimeEntryName(name, "runtime directory");
+}
+
+function runtimeFileName(name: string): string {
+  return runtimeEntryName(name, "runtime file");
 }
 
 /**
@@ -99,6 +118,39 @@ export async function reconcileProgramFilesRuntimeDirectory(
   return directory;
 }
 
+/**
+ * Privileged create-if-missing seam for runtime-owned user-editable files.
+ * Existing bytes and metadata are never rewritten by reconciliation. The
+ * parent remains protected; callers choose the file's own metadata/ownership.
+ */
+export async function reconcileProgramFilesRuntimeFile(
+  fs: FsService,
+  runtimeName: string,
+  fileName: string,
+  options: ProgramFilesRuntimeFileOptions,
+): Promise<FsNode> {
+  const canonicalFileName = runtimeFileName(fileName);
+  const directory = await reconcileProgramFilesRuntimeDirectory(fs, runtimeName);
+  const children = await fs.list(directory.id, { includeHidden: true, sort: "name" });
+  const existing = children.find(
+    (node) => node.name.toLocaleLowerCase() === canonicalFileName.toLocaleLowerCase(),
+  ) ?? null;
+
+  if (existing) {
+    if (existing.kind !== "file") {
+      throw new Error(`${PROGRAM_FILES_PATH}/${directory.name}/${existing.name} exists but is not a file`);
+    }
+    return existing;
+  }
+
+  const created = await fs.createFile(directory.id, canonicalFileName, {
+    ...(options.mime ? { mime: options.mime } : {}),
+    ...(options.metadata ? { metadata: options.metadata } : {}),
+  });
+  if (options.initialBytes.length === 0) return created;
+  return fs.write(created.id, options.initialBytes, { truncate: true });
+}
+
 export class ManagedProgramFilesService implements ProgramFilesService {
   constructor(
     private readonly fs: FsService,
@@ -113,5 +165,14 @@ export class ManagedProgramFilesService implements ProgramFilesService {
   async ensureRuntimeDirectory(name: string): Promise<FsNode> {
     await this.ready;
     return reconcileProgramFilesRuntimeDirectory(this.fs, name);
+  }
+
+  async ensureRuntimeFile(
+    runtimeName: string,
+    fileName: string,
+    options: ProgramFilesRuntimeFileOptions,
+  ): Promise<FsNode> {
+    await this.ready;
+    return reconcileProgramFilesRuntimeFile(this.fs, runtimeName, fileName, options);
   }
 }

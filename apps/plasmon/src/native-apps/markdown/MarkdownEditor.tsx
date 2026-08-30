@@ -12,6 +12,7 @@ import {
   type MonacoCursorState,
   type MonacoEditorCommandApi,
 } from "../shared/monaco/MonacoEditorHost.tsx";
+import { useMonacoRuntimeConfig } from "../monaco-runtime-config/runtimeConfigContext.tsx";
 import { DocumentClosePrompt } from "../text/DocumentClosePrompt.tsx";
 import { editorChrome, editorErrorStyle } from "../text/editorChrome.ts";
 import { useDocumentCloseProtection } from "../text/useDocumentCloseProtection.ts";
@@ -41,7 +42,7 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
   const [commandApi, setCommandApi] = useState<MonacoEditorCommandApi | null>(null);
-  const [minimap, setMinimap] = useState(MARKDOWN_EDITOR_DEFAULTS.minimap);
+  const { snapshot: runtimeConfig, setMinimapEnabled } = useMonacoRuntimeConfig();
   const [wordWrap, setWordWrap] = useState(MARKDOWN_EDITOR_DEFAULTS.wordWrap);
   const [formatFeedback, setFormatFeedback] = useState<string | null>(null);
   const [formatError, setFormatError] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const readOnly = target.readOnly === true;
   const visible = markdownPaneVisibility(mode);
+  const minimap = runtimeConfig.editor.minimap.enabled;
 
   useEffect(() => {
     process.setTitle(processId, markdownEditorWindowTitle(snapshot.name));
@@ -127,7 +129,11 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
         <NativeAppButton type="button" aria-pressed={wordWrap} onClick={() => setWordWrap((current) => !current)}>
           Word wrap
         </NativeAppButton>
-        <NativeAppButton type="button" aria-pressed={minimap} onClick={() => setMinimap((current) => !current)}>
+        <NativeAppButton
+          type="button"
+          aria-pressed={minimap}
+          onClick={() => { void setMinimapEnabled(!minimap); }}
+        >
           Minimap
         </NativeAppButton>
         {readOnly && <span style={styles.readOnly}>Read only</span>}

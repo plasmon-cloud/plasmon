@@ -14,6 +14,17 @@ test("Text and Markdown consume one shared Monaco host", () => {
   expect(markdown).not.toContain("../text/MonacoEditorSurface");
 });
 
+test("Text and Markdown consume one filesystem-backed minimap authority", () => {
+  const text = read("src/native-apps/text/TextEditor.tsx");
+  const markdown = read("src/native-apps/markdown/MarkdownEditor.tsx");
+  for (const source of [text, markdown]) {
+    expect(source).toContain("useMonacoRuntimeConfig");
+    expect(source).toContain("runtimeConfig.editor.minimap.enabled");
+    expect(source).toContain("setMinimapEnabled(!minimap)");
+    expect(source).not.toContain("setMinimap((current)");
+  }
+});
+
 test("shared Monaco host does not absorb document or Process authority", () => {
   const host = read("src/native-apps/shared/monaco/MonacoEditorHost.tsx");
   expect(host).not.toContain("FsService");
@@ -34,4 +45,5 @@ test("shared Monaco host exposes the actual live model language and identity", (
   expect(host).toContain('data-editor-model-uri={modelUri ?? ""}');
   expect(host).toContain("setModelLanguage(model.getLanguageId())");
   expect(host).toContain("syncEditorModelLanguage(");
+  expect(host).toContain("updateMonacoEditorOptions(editor, { readOnly, ariaLabel, minimap, wordWrap })");
 });

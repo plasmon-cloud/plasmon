@@ -17,6 +17,7 @@ export {
   type EditorValueModel,
   type OwnedEditorModel,
 } from "./editorModel.ts";
+export { updateMonacoEditorOptions, type MonacoEditorOptionValues } from "./editorOptions.ts";
 export {
   installMonacoEnvironment,
   MONACO_BROWSER_TRANSPORT_PATH,
