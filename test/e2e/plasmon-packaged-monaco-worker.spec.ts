@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
@@ -42,7 +42,7 @@ test.afterEach(async ({ browserName }, testInfo) => {
   );
 });
 
-async function focusEditorEnd(page: Parameters<typeof test>[0] extends never ? never : any, editor: Locator): Promise<void> {
+async function focusEditorEnd(page: Page, editor: Locator): Promise<void> {
   const input = editor.getByRole("textbox", {
     name: "Text content",
     exact: true,
