@@ -48,6 +48,7 @@ describe("headless production diagnostics", () => {
     const diagnostics = observeDiagnostics(env.diagnostics);
     try {
       await env.ready;
+      await diagnostics.settle();
       const opened = await env.os.open(SYSTEM_LOG_PATH);
       if (!opened.processId) throw new Error("system.log did not create a native process");
 
