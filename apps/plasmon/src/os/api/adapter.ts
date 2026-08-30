@@ -39,6 +39,10 @@ function splitAbsolutePath(path: string): { parentPath: string; name: string } {
   };
 }
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
 async function toResource(services: PlasmonServices, node: FsNode): Promise<OsResource> {
   const path = await services.fs.pathOf(node.id);
   return {
@@ -165,10 +169,11 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
           offset: 0,
           truncate: true,
         });
+        const resource = await toResource(services, written);
         log.info("os.fs.write.completed", { nodeId: written.id, created });
-        return toResource(services, written);
+        return resource;
       } catch (error) {
-        log.error("os.fs.write.failed", { error });
+        log.error("os.fs.write.failed", { errorType: diagnosticErrorType(error) });
         throw error;
       }
     },
@@ -231,7 +236,7 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
           } : {}),
         };
       } catch (error) {
-        log.error("os.open.failed", { error });
+        log.error("os.open.failed", { errorType: diagnosticErrorType(error) });
         throw error;
       }
     },
