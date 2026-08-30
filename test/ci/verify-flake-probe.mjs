@@ -44,7 +44,6 @@ for (const fragment of [
   "reviewDecision",
   "EFFECTIVE_EVENT_NAME",
   "steps.retained_approval.outputs.approved == 'true'",
-  "needs.applicability.outputs.phase == 'pre-merge-confidence'",
   "Report ordinary PR waiting for approval",
   "Report merge queue fast-only checkpoint",
   "name: Flake probe summary",
