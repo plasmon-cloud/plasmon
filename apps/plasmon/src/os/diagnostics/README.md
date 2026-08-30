@@ -62,10 +62,14 @@ Tests may use console output as test infrastructure when appropriate; the produc
 
 ## Testing contract
 
-When a test claim is that production code emitted diagnostics, subscribe to the production `DiagnosticService` exposed by the real composition (`env.diagnostics`) and assert stable event/subsystem/correlation fields. Do not create a parallel test logger and do not infer diagnostics indirectly from UI prose.
+Focused/headless tests use `observeDiagnostics(env.diagnostics)` from `apps/plasmon/test/diagnosticObserver.ts`. The helper only subscribes to the production `DiagnosticService`, delegates deterministic settlement to `DiagnosticService.flush()`, and filters exact structured identity by `subsystem`, `event`, `level`, and an optional naturally-present `correlationId`. It is not a logger or a timing utility.
 
-Logging evidence complements behavioral assertions; it does not replace them. BrowserHealth/page errors remain failures even if the same problem also appears in diagnostics.
+Behavior/state assertions remain primary. Add a diagnostic assertion when the stable event proves a useful failure or lifecycle boundary that ordinary state alone does not explain. Do not assert diagnostics merely because an event exists, do not depend on incidental record order or human message wording, and do not require Product code to manufacture correlation metadata for a test. When the structured subscriber stream is available, use it rather than parsing `system.log`.
+
+Packaged/browser tests cannot directly subscribe to the in-app service without adding a Product-only-for-tests API. For representative packaged acceptance, `test/e2e/plasmon-diagnostic-artifact.ts` observes the existing production console sink and, only on test failure, can attach a bounded tail containing timestamp, level, subsystem, and event identity. The artifact parser rejects arbitrary console text and drops message, context, error, correlation values, paths, URLs, credentials, and other payload before attachment. It is debugging evidence only.
+
+BrowserHealth remains independent and strict. Page errors, request/response failures, and disallowed console warnings/errors still fail the browser test even when a matching diagnostic identity is retained as an artifact. Diagnostic evidence never adds a BrowserHealth allow rule.
 
 ## Scope boundary
 
-This subsystem owns the canonical sanitized Plasmon diagnostic stream and local sinks. Remote error monitoring, settings-controlled sink policy, correlation propagation, CI artifact retention, and broad subsystem instrumentation extend this stream without creating another producer API. Kernel-wide logging remains Neutron-owned.
+This subsystem owns the canonical sanitized Plasmon diagnostic stream and local sinks. Remote error monitoring, settings-controlled sink policy, correlation propagation, and broad subsystem instrumentation extend this stream without creating another producer API. Test-only artifact retention may observe existing production sinks but does not become a producer or sink authority. Kernel-wide logging remains Neutron-owned.

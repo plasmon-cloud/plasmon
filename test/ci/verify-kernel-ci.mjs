@@ -23,6 +23,11 @@ for (const fragment of [
   "name: Detect retained approval",
   "reviewDecision",
   'decision" = "APPROVED"',
+  "/pulls/$PR_NUMBER/reviews?per_page=100",
+  '.state == "APPROVED"',
+  "/issues/$PR_NUMBER/timeline?per_page=100",
+  "review_dismissed",
+  '.dismissed_review.state == "approved"',
   "steps.retained_approval.outputs.approved",
   "github.event.review.state",
   "refs/heads/main",
@@ -38,4 +43,4 @@ for (const fragment of ["pull_request_target", "continue-on-error: true", "    p
 
 if (/release\/0\.1\.0-r\d/u.test(workflow)) throw new Error("Kernel CI must use the release branch role instead of a concrete release branch");
 
-console.log(`Kernel CI verified for staged CI: ordinary unapproved PRs and merge_group are cheap, normal approval and retained approved heads run the real required kernel lane, main push coverage remains real, and ${releaseBranchGlob} release pushes do not repeat pre-merge kernel work`);
+console.log(`Kernel CI verified for staged CI: ordinary PRs are cheap only until their first approval, approval history keeps every later PR head on the real kernel lane even after review dismissal, merge_group stays cheap, main push coverage remains real, and ${releaseBranchGlob} release pushes do not repeat pre-merge kernel work`);

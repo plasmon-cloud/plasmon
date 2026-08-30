@@ -5,6 +5,7 @@ import type {
   NativeAppDefinition,
   OpenService,
 } from "../../os/contracts/index.ts";
+import type { DiagnosticService } from "../../os/diagnostics/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import type { NativeAppComponent, NativeAppLoader } from "../../os/process/index.ts";
 import type {
@@ -37,6 +38,7 @@ export interface ExplorerNativeDependencies {
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  diagnostics?: DiagnosticService;
 }
 
 export function createExplorerNativeLoader(dependencies: ExplorerNativeDependencies): NativeAppLoader {
@@ -51,6 +53,7 @@ export function createExplorerNativeLoader(dependencies: ExplorerNativeDependenc
       hiddenVisibility: dependencies.hiddenVisibility,
       ...(dependencies.fsEvents ? { fsEvents: dependencies.fsEvents } : {}),
       ...(dependencies.clipboard ? { clipboard: dependencies.clipboard } : {}),
+      ...(dependencies.diagnostics ? { diagnostics: dependencies.diagnostics } : {}),
     });
     return { default: Component };
   };

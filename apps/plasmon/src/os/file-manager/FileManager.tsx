@@ -17,6 +17,7 @@ import type {
   ProcessController,
 } from "../contracts/index.ts";
 import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import {
   FileOperationClipboard,
   emptySelection,
@@ -61,6 +62,7 @@ export type {
 export interface FileManagerProps {
   directoryId: NodeId;
   fs: FsService;
+  diagnostics?: DiagnosticService;
   openAuthority: FileManagerOpenAuthority;
   trashAuthority: FileManagerTrashAuthority;
   fsEvents?: FsEventSource;
@@ -88,6 +90,7 @@ export interface FileManagerProps {
 export function FileManager({
   directoryId,
   fs,
+  diagnostics,
   openAuthority,
   trashAuthority,
   fsEvents,
@@ -116,6 +119,7 @@ export function FileManager({
   const [operation, setOperation] = useState<FileOperationSnapshot>(() => operationState.snapshot());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cancelDownloadPreparationRef = useRef<() => void>(() => {});
+  const fileManagerLog = useMemo(() => diagnostics?.for("filemanager") ?? null, [diagnostics]);
 
   const closeContextMenu = () => {
     cancelDownloadPreparationRef.current();
@@ -148,6 +152,17 @@ export function FileManager({
   }, [operationState]);
 
   useEffect(() => {
+    if (!fileManagerLog || operation.kind !== "move" || operation.status !== "failed") return;
+    const fields = {
+      total: operation.totalItems,
+      succeeded: operation.succeededItems,
+      failed: operation.failedItems,
+    };
+    if (operation.succeededItems > 0) fileManagerLog.warn("filemanager.move.partial", fields);
+    else fileManagerLog.warn("filemanager.move.failed", fields);
+  }, [fileManagerLog, operation]);
+
+  useEffect(() => {
     onSnapshot?.(renderState.snapshot);
   }, [onSnapshot, renderState.snapshot]);
 
@@ -161,6 +176,7 @@ export function FileManager({
   const commands = useFileManagerCommands({
     directoryId,
     fs,
+    ...(diagnostics ? { diagnostics } : {}),
     openAuthority,
     trashAuthority,
     clipboard,

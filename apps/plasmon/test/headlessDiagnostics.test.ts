@@ -1,28 +1,34 @@
 import { describe, expect, test } from "bun:test";
 import { SYSTEM_LOG_PATH } from "../src/os/diagnostics/index.ts";
 import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
+import { observeDiagnostics } from "./diagnosticObserver.ts";
 
 describe("headless production diagnostics", () => {
-  test("persists a protected system.log and opens it through normal associations", async () => {
+  test("persists a protected system.log and observes structured records deterministically", async () => {
     const env = createHeadlessPlasmonEnvironment();
+    const diagnostics = observeDiagnostics(env.diagnostics);
     try {
       await env.ready;
-      const observed: string[] = [];
-      const unsubscribe = env.diagnostics.subscribe((record) => observed.push(record.event));
       env.diagnostics.emit({
         level: "notice",
         subsystem: "test",
         event: "diagnostics.integration.probe",
         message: "headless diagnostic probe",
+        correlationId: "diagnostics-probe-1",
       });
-      await env.diagnostics.flush();
-      unsubscribe();
 
-      expect(observed).toContain("diagnostics.integration.probe");
+      expect(await diagnostics.settle({
+        subsystem: "test",
+        event: "diagnostics.integration.probe",
+        level: "notice",
+        correlationId: "diagnostics-probe-1",
+      })).toHaveLength(1);
+      expect(diagnostics.records({ correlationId: "different-correlation" })).toEqual([]);
+
       const resource = await env.os.fs.stat(SYSTEM_LOG_PATH);
       expect(resource).not.toBeNull();
       expect(resource?.mimeType).toBe("text/plain");
-      expect(await env.os.fs.readText(SYSTEM_LOG_PATH)).toContain("diagnostics.integration.probe");
+      expect((await env.os.fs.readText(SYSTEM_LOG_PATH)).length).toBeGreaterThan(0);
 
       const opened = await env.os.open(SYSTEM_LOG_PATH);
       expect(opened.handlerId).toBe("native:text");
@@ -32,6 +38,44 @@ describe("headless production diagnostics", () => {
       await expect(env.os.fs.writeText(SYSTEM_LOG_PATH, "tampered"))
         .rejects.toThrow(/protected|system-managed/i);
     } finally {
+      diagnostics.dispose();
+      env.dispose();
+    }
+  });
+
+  test("retains a Product lifecycle failure alongside the primary behavior assertion", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+    const diagnostics = observeDiagnostics(env.diagnostics);
+    try {
+      await env.ready;
+      await diagnostics.settle();
+      const opened = await env.os.open(SYSTEM_LOG_PATH);
+      if (!opened.processId) throw new Error("system.log did not create a native process");
+
+      const unregister = env.services.process.registerCloseHandler(opened.processId, () => {
+        throw new TypeError("representative close-handler failure");
+      });
+      try {
+        expect(env.services.process.close(opened.processId)).toBe(false);
+        expect(env.processes().some((process) => process.id === opened.processId)).toBe(true);
+
+        const failures = await diagnostics.settle({
+          subsystem: "process",
+          event: "process.close.handler_failed",
+          level: "error",
+        });
+        expect(failures).toHaveLength(1);
+        expect(failures[0]?.context).toMatchObject({
+          appId: "native:text",
+          handlerId: "native:text",
+          processId: opened.processId,
+        });
+      } finally {
+        unregister();
+        env.services.process.forceClose(opened.processId);
+      }
+    } finally {
+      diagnostics.dispose();
       env.dispose();
     }
   });
