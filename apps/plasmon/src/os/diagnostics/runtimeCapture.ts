@@ -76,6 +76,7 @@ export function installRuntimeDiagnosticCapture(
   diagnostics: DiagnosticService,
   target: RuntimeDiagnosticEventTarget = window,
 ): RuntimeDiagnosticCapture {
+  const log = diagnostics.for("runtime");
   const recentObjects = new WeakSet<object>();
   const recentQueue: object[] = [];
   let active = true;
@@ -99,17 +100,12 @@ export function installRuntimeDiagnosticCapture(
     source: "window.error" | "unhandledrejection" | "react.root",
   ): void => {
     if (!active || !claimFailure(failure)) return;
-    diagnostics.emit({
-      level: "error",
-      subsystem: "runtime",
-      event,
+    log.error(event, {
       message: event === "runtime.uncaught_error"
         ? "Uncaught Product runtime failure"
         : "Unhandled Product Promise rejection",
-      context: {
-        category: event === "runtime.uncaught_error" ? "uncaught-exception" : "unhandled-rejection",
-        source,
-      },
+      category: event === "runtime.uncaught_error" ? "uncaught-exception" : "unhandled-rejection",
+      source,
       error: safeDiagnosticError(failure),
     });
   };
