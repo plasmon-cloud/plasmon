@@ -1,4 +1,4 @@
-import type { HandlerId, IconRef, JsonValue, NodeId } from "./common.ts";
+import type { DiagnosticOperationContext, HandlerId, IconRef, JsonValue, NodeId } from "./common.ts";
 import type { FsNode } from "./fs.ts";
 
 export interface AtomDescriptor {
@@ -52,5 +52,9 @@ export interface AssociationRegistry {
 
 /** Routes a resolved handler to the native runtime, Neutron bridge, or browser. */
 export interface OpenService {
-  open(handlerId: HandlerId, target: OpenTarget): Promise<void>;
+  open(
+    handlerId: HandlerId,
+    target: OpenTarget,
+    operation?: DiagnosticOperationContext,
+  ): Promise<void>;
 }
