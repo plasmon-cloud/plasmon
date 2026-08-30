@@ -265,7 +265,6 @@ export function createPlasmonServices(
   const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({
     defaults: createAssociationDefaultStore(rawFs, diagnostics),
-    diagnostics,
   });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
