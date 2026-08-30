@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
 import {
   NativeAppButton,
   NativeAppContentSurface,
@@ -25,14 +25,16 @@ import { editorLanguageDisplayName, textEditorWindowTitle } from "./editorPresen
 import { useDocumentCloseProtection } from "./useDocumentCloseProtection.ts";
 import { useDocumentSession } from "./useDocumentSession.ts";
 
-export interface TextEditorProps {
-  processId: ProcessId;
-  target: OpenTarget;
-  fs: FsService;
-  process: ProcessController;
-}
+export interface TextEditorProps extends NativeAppComponentProps {}
 
-export default function TextEditor({ processId, target, fs, process }: TextEditorProps) {
+export default function TextEditor({
+  processId,
+  target,
+  fs,
+  process,
+  diagnostics,
+  operation,
+}: TextEditorProps) {
   const { snapshot, sessionRef } = useDocumentSession(fs, target.nodeId);
   const closeProtection = useDocumentCloseProtection(process, processId, sessionRef, target.nodeId);
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
@@ -150,6 +152,8 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
             minimap={minimap}
             wordWrap={wordWrap}
             ariaLabel="Text content"
+            diagnostics={diagnostics}
+            operation={operation}
             onChange={(value) => sessionRef.current?.edit(value)}
             onCursorChange={setCursor}
             onReadyChange={setMonacoReady}
