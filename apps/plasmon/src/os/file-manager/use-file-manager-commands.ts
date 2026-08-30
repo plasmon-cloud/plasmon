@@ -7,6 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import { activateFileManagerNode, type FileManagerOpenAuthority } from "./activation.ts";
 import { pasteClipboardCollisionAware } from "./clipboard.ts";
 import {
@@ -37,6 +38,7 @@ import { FileOperationState } from "./operation-state.ts";
 interface UseFileManagerCommandsOptions {
   directoryId: NodeId;
   fs: FsService;
+  diagnostics?: DiagnosticService;
   openAuthority: FileManagerOpenAuthority;
   trashAuthority: FileManagerTrashAuthority;
   clipboard: FileOperationClipboard;
@@ -57,10 +59,24 @@ function downloadSignature(node: FsNode): string {
   return [node.id, node.name, node.mime ?? "", node.size, node.modifiedAt, node.contentHash ?? ""].join("\0");
 }
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
+function isExpectedPolicyFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /protected and cannot be|installed application; use Uninstall|already in Recycle Bin|Filesystem root cannot be deleted/u.test(error.message);
+}
+
+function isExpectedDeleteFailure(message: string): boolean {
+  return /protected and cannot be|installed application; use Uninstall|already in Recycle Bin|Filesystem root cannot be deleted/u.test(message);
+}
+
 export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
   const {
     directoryId,
     fs,
+    diagnostics,
     openAuthority,
     trashAuthority,
     clipboard,
@@ -76,6 +92,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     onOpenDirectory,
     confirmDelete,
   } = options;
+  const log = diagnostics?.for("filemanager") ?? null;
 
   const selectedNodes = () => {
     const ids = selection.ids;
@@ -163,12 +180,26 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     if (!permitted) return;
     try {
       const result = await deleteFilesystemNodes(trashAuthority, items);
+      const unexpectedFailures = result.failures.filter((failure) => !isExpectedDeleteFailure(failure.message));
+      if (unexpectedFailures.length > 0) {
+        log?.warn("filemanager.delete.partial", {
+          total: items.length,
+          succeeded: result.deletedIds.length,
+          failed: unexpectedFailures.length,
+        });
+      }
       if (result.failures.length === 0) setSelection(clearSelection());
       closeContextMenu();
       await refresh();
       const failure = deleteFailureMessage(result.failures);
       if (failure) setError(failure);
     } catch (cause: unknown) {
+      if (!isExpectedPolicyFailure(cause)) {
+        log?.warn("filemanager.delete.failed", {
+          total: items.length,
+          errorType: diagnosticErrorType(cause),
+        });
+      }
       await refresh();
       setError(fileManagerErrorMessage(cause));
     }
@@ -201,6 +232,13 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       setError(null);
       await refresh();
     } catch (cause: unknown) {
+      if (!isExpectedPolicyFailure(cause)) {
+        log?.warn("filemanager.paste.failed", {
+          mode: snapshot.mode,
+          total: snapshot.ids.length,
+          errorType: diagnosticErrorType(cause),
+        });
+      }
       if (operationState.isRunning()) {
         operationState.fail(fileManagerErrorMessage(cause));
       }
@@ -267,6 +305,15 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     }
 
     operationState.complete();
+    if (failures.length > 0) {
+      const fields = {
+        total: files.length,
+        succeeded: imported.length,
+        failed: failures.length,
+      };
+      if (imported.length > 0) log?.warn("filemanager.import.partial", fields);
+      else log?.warn("filemanager.import.failed", fields);
+    }
     await refresh();
     if (imported.length > 0) {
       const ids = imported.map((node) => node.id);

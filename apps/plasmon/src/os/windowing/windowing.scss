@@ -171,6 +171,35 @@
   vector-effect: non-scaling-stroke;
 }
 
+.plasmon-window__context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 178px;
+  padding: 5px;
+  border: 1px solid var(--plasmon-border-strong);
+  border-radius: 9px;
+  background: var(--plasmon-panel-elevated);
+  box-shadow: var(--plasmon-shadow-panel);
+  color: var(--plasmon-text-primary);
+}
+
+.plasmon-window__context-menu button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  padding: 7px 9px;
+  text-align: left;
+  font: inherit;
+}
+
+.plasmon-window__context-menu button:hover,
+.plasmon-window__context-menu button:focus-visible {
+  background: var(--plasmon-control-hover);
+}
+
 .plasmon-window__content {
   min-width: 0;
   min-height: 0;

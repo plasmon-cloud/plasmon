@@ -48,7 +48,14 @@ jobs:
             -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewDecision}}}' \
             -F owner="$owner" -F name="$name" -F number="$PR_NUMBER" \
             --jq '.data.repository.pullRequest.reviewDecision')"
-          if [ "$decision" = "APPROVED" ]; then
+          approved_review_ids="$(gh api --paginate \
+            "repos/$REPOSITORY/pulls/$PR_NUMBER/reviews?per_page=100" \
+            --jq '.[] | select(.state == "APPROVED") | .id')"
+          dismissed_approval_ids="$(gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "repos/$REPOSITORY/issues/$PR_NUMBER/timeline?per_page=100" \
+            --jq '.[] | select(.event == "review_dismissed" and .dismissed_review.state == "approved") | .id')"
+          if [ "$decision" = "APPROVED" ] || [ -n "$approved_review_ids" ] || [ -n "$dismissed_approval_ids" ]; then
             echo "approved=true" >> "$GITHUB_OUTPUT"
           else
             echo "approved=false" >> "$GITHUB_OUTPUT"

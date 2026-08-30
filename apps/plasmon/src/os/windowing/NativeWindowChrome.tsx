@@ -1,9 +1,11 @@
-import type {
-  CSSProperties,
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-  RefObject,
+import {
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import type { WindowGeometry, WindowState } from "../contracts/window.ts";
@@ -43,6 +45,9 @@ interface NativeWindowChromeProps {
   focusWindow(): void;
   titlebar: PointerHandlers;
   resize(direction: ResizeDirection): PointerHandlers;
+  onTitlebarContextMenu(event: ReactMouseEvent<HTMLElement>): void;
+  contextMenu: { x: number; y: number } | null;
+  dismissContextMenu(): void;
   minimize(): void;
   toggleMaximize(): void;
   requestClose(): void;
@@ -103,11 +108,27 @@ export function NativeWindowChrome({
   focusWindow,
   titlebar,
   resize,
+  onTitlebarContextMenu,
+  contextMenu,
+  dismissContextMenu,
   minimize,
   toggleMaximize,
   requestClose,
   onCloseAnimationEnd,
 }: NativeWindowChromeProps): ReactNode {
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const menu = contextMenuRef.current;
+    if (!menu || !contextMenu || typeof window === "undefined") return;
+    const margin = 8;
+    const bounds = menu.getBoundingClientRect();
+    const left = Math.min(Math.max(margin, contextMenu.x), Math.max(margin, window.innerWidth - bounds.width - margin));
+    const top = Math.min(Math.max(margin, contextMenu.y), Math.max(margin, window.innerHeight - bounds.height - margin));
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+  }, [contextMenu]);
+
   return (
     <div
       ref={rootRef}
@@ -120,7 +141,10 @@ export function NativeWindowChrome({
       tabIndex={-1}
       data-window-id={state.id}
       data-window-snap={snapSide ?? undefined}
-      onPointerDown={focusWindow}
+      onPointerDown={() => {
+        dismissContextMenu();
+        focusWindow();
+      }}
       onAnimationEnd={onCloseAnimationEnd}
     >
       {snapPreview ? createPortal(
@@ -142,6 +166,7 @@ export function NativeWindowChrome({
         className="plasmon-window__titlebar"
         {...titlebar}
         onDoubleClick={toggleMaximize}
+        onContextMenu={onTitlebarContextMenu}
       >
         <div className="plasmon-window__identity">
           {icon ? <span className="plasmon-window__icon" aria-hidden="true">{icon}</span> : null}
@@ -152,7 +177,10 @@ export function NativeWindowChrome({
             type="button"
             className="plasmon-window__control"
             aria-label="Minimize"
-            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => event.stopPropagation()}
+            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => {
+              event.stopPropagation();
+              dismissContextMenu();
+            }}
             onDoubleClick={(event: ReactMouseEvent<HTMLButtonElement>) => event.stopPropagation()}
             onClick={minimize}
           >
@@ -162,7 +190,10 @@ export function NativeWindowChrome({
             type="button"
             className="plasmon-window__control"
             aria-label={state.maximized ? "Restore" : "Maximize"}
-            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => event.stopPropagation()}
+            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => {
+              event.stopPropagation();
+              dismissContextMenu();
+            }}
             onDoubleClick={(event: ReactMouseEvent<HTMLButtonElement>) => event.stopPropagation()}
             onClick={toggleMaximize}
           >
@@ -172,7 +203,10 @@ export function NativeWindowChrome({
             type="button"
             className="plasmon-window__control plasmon-window__control--close"
             aria-label="Close"
-            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => event.stopPropagation()}
+            onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => {
+              event.stopPropagation();
+              dismissContextMenu();
+            }}
             onDoubleClick={(event: ReactMouseEvent<HTMLButtonElement>) => event.stopPropagation()}
             onClick={requestClose}
           >
@@ -189,6 +223,22 @@ export function NativeWindowChrome({
           {...resize(direction)}
         />
       )) : null}
+      {contextMenu && typeof document !== "undefined" ? createPortal(
+        <div
+          ref={contextMenuRef}
+          className="plasmon-window__context-menu"
+          role="menu"
+          aria-label="Window context menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        >
+          <button type="button" role="menuitem" autoFocus onClick={minimize}>Minimize</button>
+          <button type="button" role="menuitem" onClick={toggleMaximize}>{state.maximized ? "Restore" : "Maximize"}</button>
+          <button type="button" role="menuitem" onClick={requestClose}>Close</button>
+        </div>,
+        document.body,
+      ) : null}
     </div>
   );
 }

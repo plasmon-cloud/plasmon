@@ -3,6 +3,7 @@ import { expect, test, type FrameLocator, type Locator, type Page } from "@playw
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { installPackagedDiagnosticArtifact } from "./plasmon-diagnostic-artifact.ts";
 
 const PLASMON_SELECTOR = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 const ACTION_TIMEOUT = 5_000;
@@ -10,6 +11,7 @@ const ACTION_TIMEOUT = 5_000;
 async function launchPlasmon(page: Page) {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
+  const diagnostics = installPackagedDiagnosticArtifact(page);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
 
   await page.goto(kernelUrl);
@@ -25,7 +27,7 @@ async function launchPlasmon(page: Page) {
   await expect(page.locator(PLASMON_SELECTOR).first()).toBeVisible();
   const app = page.frameLocator(PLASMON_SELECTOR).first();
   await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
-  return { app, health };
+  return { app, health, diagnostics };
 }
 
 function nativeWindows(app: FrameLocator): Locator {
@@ -142,8 +144,8 @@ async function permanentlyDeleteEntry(app: FrameLocator, explorer: Locator, entr
   await closeNativeWindowById(app, windowId, recycleBin);
 }
 
-test("packaged Search dismisses on an outside workspace click without launching a result", async ({ page }) => {
-  const { app, health } = await launchPlasmon(page);
+test("packaged Search dismisses on an outside workspace click without launching a result", async ({ page }, testInfo) => {
+  const { app, health, diagnostics } = await launchPlasmon(page);
   try {
     const windows = nativeWindows(app);
     const initialWindowCount = await windows.count();
@@ -163,13 +165,17 @@ test("packaged Search dismisses on an outside workspace click without launching 
     await expect(windows).toHaveCount(initialWindowCount);
 
     health.assertClean();
+  } catch (error) {
+    await diagnostics.attach(testInfo);
+    throw error;
   } finally {
+    diagnostics.dispose();
     health.dispose();
   }
 });
 
-test("directly activates installed /Apps/Review.neutron through FileManager", async ({ page }) => {
-  const { app, health } = await launchPlasmon(page);
+test("directly activates installed /Apps/Review.neutron through FileManager", async ({ page }, testInfo) => {
+  const { app, health, diagnostics } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
     const rootFiles = explorer.getByRole("listbox", { name: "Files" });
@@ -195,13 +201,17 @@ test("directly activates installed /Apps/Review.neutron through FileManager", as
     await expect(review.getByRole("region", { name: "Current Review workspace" })).toBeVisible({ timeout: ACTION_TIMEOUT });
 
     health.assertClean();
+  } catch (error) {
+    await diagnostics.attach(testInfo);
+    throw error;
   } finally {
+    diagnostics.dispose();
     health.dispose();
   }
 });
 
-test("FileManager Download produces browser-owned bytes", async ({ page }) => {
-  const { app, health } = await launchPlasmon(page);
+test("FileManager Download produces browser-owned bytes", async ({ page }, testInfo) => {
+  const { app, health, diagnostics } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
@@ -229,13 +239,17 @@ test("FileManager Download produces browser-owned bytes", async ({ page }) => {
     await permanentlyDeleteEntry(app, explorer, entry, filename);
 
     health.assertClean();
+  } catch (error) {
+    await diagnostics.attach(testInfo);
+    throw error;
   } finally {
+    diagnostics.dispose();
     health.dispose();
   }
 });
 
-test("visible Recycle Bin lifecycle restores one item and permanently deletes another", async ({ page }) => {
-  const { app, health } = await launchPlasmon(page);
+test("visible Recycle Bin lifecycle restores one item and permanently deletes another", async ({ page }, testInfo) => {
+  const { app, health, diagnostics } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
@@ -275,13 +289,17 @@ test("visible Recycle Bin lifecycle restores one item and permanently deletes an
 
     await permanentlyDeleteEntry(app, explorer, restoredEntry, restoreName);
     health.assertClean();
+  } catch (error) {
+    await diagnostics.attach(testInfo);
+    throw error;
   } finally {
+    diagnostics.dispose();
     health.dispose();
   }
 });
 
-test("installed Video surfaces actionable native-codec failure for an invalid video", async ({ page }) => {
-  const { app, health } = await launchPlasmon(page);
+test("installed Video surfaces actionable native-codec failure for an invalid video", async ({ page }, testInfo) => {
+  const { app, health, diagnostics } = await launchPlasmon(page);
   try {
     const explorer = await openExplorer(app);
     await openRootDirectory(explorer, "Desktop");
@@ -312,7 +330,11 @@ test("installed Video surfaces actionable native-codec failure for an invalid vi
     await expect(windows).toHaveCount(beforeVideoWindows, { timeout: ACTION_TIMEOUT });
     await permanentlyDeleteEntry(app, explorer, entry, filename);
     health.assertClean();
+  } catch (error) {
+    await diagnostics.attach(testInfo);
+    throw error;
   } finally {
+    diagnostics.dispose();
     health.dispose();
   }
 });
