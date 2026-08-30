@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  demoOverlayForDeployment,
   manifestForPlasmonDeployment,
+  packageProfileForDeployment,
   PLASMON_DEMO_MANIFEST,
   PLASMON_LOCAL_MANIFEST,
+  PLASMON_WORKSPACE,
   resolveDeploymentArtifacts,
   workspacesToPackage,
 } from "./plasmon-deployment-environment.ts";
@@ -50,6 +53,15 @@ describe("Plasmon deployment command semantics", () => {
     expect(manifestForPlasmonDeployment("demo")).toBe(PLASMON_DEMO_MANIFEST);
     expect(PLASMON_LOCAL_MANIFEST).toBe("plasmon-local.ndeploy.json");
     expect(PLASMON_DEMO_MANIFEST).toBe("plasmon.ndeploy.json");
+  });
+
+  test("local and demo both use Base while only demo enables the overlay", () => {
+    expect(packageProfileForDeployment(PLASMON_LOCAL_MANIFEST, PLASMON_WORKSPACE)).toBe("base");
+    expect(packageProfileForDeployment(PLASMON_DEMO_MANIFEST, PLASMON_WORKSPACE)).toBe("base");
+    expect(demoOverlayForDeployment(PLASMON_LOCAL_MANIFEST, PLASMON_WORKSPACE)).toBeUndefined();
+    expect(demoOverlayForDeployment(PLASMON_DEMO_MANIFEST, PLASMON_WORKSPACE)).toBe("1");
+    expect(packageProfileForDeployment(PLASMON_DEMO_MANIFEST, "neutron-review")).toBeUndefined();
+    expect(demoOverlayForDeployment(PLASMON_DEMO_MANIFEST, "neutron-review")).toBeUndefined();
   });
 
   test("demo preparation resolves every artifact declared by plasmon.ndeploy.json", async () => {

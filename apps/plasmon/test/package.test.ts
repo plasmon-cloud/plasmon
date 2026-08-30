@@ -108,7 +108,9 @@ test("plasmon bundles the shared design system stylesheet", async () => {
   expect(css).toContain("--nt-bg-panel");
 });
 
-test("package profile excludes game payloads and selects the requested Monaco worker set", async () => {
+test("Base and Slim exclude heavyweight game/demo payloads and emit the exact requested Monaco worker set", async () => {
+  expect(packagePolicy.demoOverlay).toBe(false);
+
   const archiveFiles = (await readdir(distRootUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
   const webFiles = (await readdir(distWebUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
   const forbiddenGamePaths = archiveFiles.filter((file) => file.includes("jsdos")
@@ -139,11 +141,31 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   const sources = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string>;
   expect(Object.keys(sources).sort()).toEqual([...monacoWorkers].sort());
 
-  if (packagePolicy.isSlim) {
-    expect(packagePolicy.isDemo).toBe(false);
-    const mainBundle = await readFile(mainBundleUrl, "utf8");
-    for (const marker of DEMO_PAYLOAD_MARKERS) {
-      expect(mainBundle).not.toContain(marker);
-    }
+  for (const worker of monacoWorkers) {
+    const canonical = await readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url), "utf8");
+    const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
+    expect(canonical.length).toBeGreaterThan(0);
+    expect(runtime).toBe(canonical);
+    expect(sources[worker]).toBe(canonical);
   }
+
+  const mainBundle = await readFile(mainBundleUrl, "utf8");
+  for (const marker of DEMO_PAYLOAD_MARKERS) {
+    expect(mainBundle).not.toContain(marker);
+  }
+});
+
+test("ordinary package tests exercise Base while the Slim ceiling stays Slim-only", () => {
+  if (packagePolicy.isSlim) {
+    expect(packagePolicy.packageTier).toBe("slim");
+    expect(packagePolicy.monacoProfile).toBe("slim");
+    return;
+  }
+
+  expect(packagePolicy).toMatchObject({
+    packageTier: "base",
+    isSlim: false,
+    demoOverlay: false,
+    monacoProfile: "base",
+  });
 });

@@ -6,15 +6,15 @@ This directory is the single Monaco browser adapter consumed by the first-party 
 - `editorModel.ts` owns deterministic model ownership/URI and canonical resource-to-Monaco language policy.
 - `monacoEnvironment.ts` consumes the packaged worker transport. `/System/Program Files/MonacoEditor` remains the sole logical worker-runtime authority; the opaque-origin transport adapter is only a browser compatibility transport and does not become a second authority.
 
-## Package profiles and worker mapping
+## Package tiers and worker mapping
 
-Editor-capable package profiles use explicit profile-specific worker inventories:
+Editor-capable package tiers use explicit worker inventories:
 
-- `slim` and `demo` package profiles ship only `editor.worker.js`. Every Monaco worker label, including TypeScript/JavaScript language-service labels, resolves to that Program Files editor-worker source in these profiles. JavaScript language classification and syntax tokenization remain editor behavior even though heavyweight dedicated language-service workers are omitted.
-- `full` ships the dedicated editor, JSON, CSS, HTML, and TypeScript workers. Worker labels map to those corresponding Program Files resources.
-- the Hackathon core profile omits Monaco/editor payloads entirely. That is an intentional supported package-profile boundary, not a broken editor installation.
+- **Slim** ships only `editor.worker.js`. Every Monaco worker label resolves to that Program Files editor-worker source, and dedicated language-service features are disabled. JavaScript language classification and syntax tokenization remain editor behavior even though the dedicated language-service workers are omitted.
+- **Base** is the ordinary/default Plasmon tier and ships `editor.worker.js`, `json.worker.js`, `css.worker.js`, `html.worker.js`, and `ts.worker.js`. JSON, CSS/SCSS/Less, HTML/Handlebars/Razor, and TypeScript/JavaScript labels map to their corresponding dedicated Program Files workers.
+- **Demo** is an overlay on Base, not a package tier. Enabling Demo content does not change the Base Monaco worker inventory or routing.
 
-Package-profile selection is a build/composition concern. Do not infer worker availability from a release branch, work item, or historical acceptance packet, and do not restore heavyweight workers to a slim profile merely to satisfy an older test expectation.
+Package-tier and Demo-overlay selection are build/composition concerns. Do not infer worker availability from a release branch, work item, deployment app inventory, or historical acceptance packet. Optional heavyweight runtime configuration is separate from Monaco package-tier selection.
 
 ## Browser transport
 
@@ -30,4 +30,4 @@ Each mounted editor host owns exactly one concrete Monaco model. Two live surfac
 
 ## Testing
 
-Use fast tests for deterministic model/language/worker mapping and transport policy. Package verification must prove the Program Files workers, URL-safe mirror, and opaque-frame preload remain byte-identical for every worker present in the selected profile. Installed-browser acceptance remains authoritative for real worker startup, sandbox/origin behavior, Monaco readiness, focus, and rendered editing.
+Use fast tests for deterministic model/language/worker mapping and transport policy. Package verification must prove the Program Files workers, URL-safe mirror, and opaque-frame preload remain byte-identical for every worker present in the selected tier. Installed-browser acceptance is authoritative for real Worker construction and language-service behavior that depends on browser execution.

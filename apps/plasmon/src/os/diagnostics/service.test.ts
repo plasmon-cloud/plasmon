@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { FsService } from "../contracts/index.ts";
-import { MemoryFsRepository, PersistentFsService } from "../fs/index.ts";
+import {
+  FS_TOOLS,
+  FsRpcClient,
+  FsRpcServer,
+  MemoryFsRepository,
+  PersistentFsService,
+} from "../fs/index.ts";
 import {
   PlasmonDiagnosticService,
   SYSTEM_LOG_PATH,
@@ -123,6 +129,81 @@ describe("PlasmonDiagnosticService", () => {
     expect(retained).toContain("runtime.start.failed");
     expect(retained.endsWith(" …[TRUNCATED]\n")).toBe(true);
     expect(retained).not.toContain("�");
+  });
+
+  test("retries a transient RPC read conflict without losing, duplicating, or reordering records", async () => {
+    const backingFs = createFs();
+    const server = new FsRpcServer(backingFs);
+    const sinkFailures: unknown[] = [];
+    let conflictNextReadChunk = false;
+    let observedTransientConflicts = 0;
+    const encoder = new TextEncoder();
+
+    const fs = new FsRpcClient(async (name, args) => {
+      if (name === FS_TOOLS.readChunk && conflictNextReadChunk) {
+        conflictNextReadChunk = false;
+        const logNode = await backingFs.resolvePath(SYSTEM_LOG_PATH);
+        if (!logNode) throw new Error("expected system.log before forced read conflict");
+        const current = await backingFs.read(logNode.id);
+        const concurrentLine = encoder.encode("external-concurrent-write\n");
+        const changed = new Uint8Array(current.length + concurrentLine.length);
+        changed.set(current);
+        changed.set(concurrentLine, current.length);
+        await backingFs.write(logNode.id, changed, { truncate: true });
+      }
+
+      try {
+        return await server.call(name, args);
+      } catch (error) {
+        if (
+          error instanceof Error
+          && error.message === "Filesystem changed during read; retry the operation"
+        ) {
+          observedTransientConflicts += 1;
+        }
+        throw error;
+      }
+    });
+    const diagnostics = new PlasmonDiagnosticService({
+      fs,
+      console: null,
+      fileMinLevel: "debug",
+      onSinkError: (error) => sinkFailures.push(error),
+    });
+
+    diagnostics.emit({
+      level: "info",
+      subsystem: "test",
+      event: "diagnostics.retry.seed",
+      message: "seed the diagnostic log",
+    });
+    await diagnostics.flush();
+
+    conflictNextReadChunk = true;
+    diagnostics.emit({
+      level: "info",
+      subsystem: "test",
+      event: "diagnostics.retry.first",
+      message: "first queued record",
+    });
+    diagnostics.emit({
+      level: "info",
+      subsystem: "test",
+      event: "diagnostics.retry.second",
+      message: "second queued record",
+    });
+    await diagnostics.flush();
+
+    expect(observedTransientConflicts).toBe(1);
+    expect(sinkFailures).toEqual([]);
+
+    const text = await readSystemLog(fs);
+    expect(text).toContain("external-concurrent-write");
+    expect(text.split("diagnostics.retry.first")).toHaveLength(2);
+    expect(text.split("diagnostics.retry.second")).toHaveLength(2);
+    expect(text.indexOf("diagnostics.retry.first")).toBeLessThan(
+      text.indexOf("diagnostics.retry.second"),
+    );
   });
 
   test("isolates filesystem sink failures from event producers", async () => {

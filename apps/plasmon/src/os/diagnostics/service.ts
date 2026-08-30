@@ -87,6 +87,8 @@ const MAX_CONTEXT_DEPTH = 5;
 const MAX_CONTEXT_ARRAY = 32;
 const REDACTED = "[REDACTED]";
 const TRUNCATED_RECORD_MARKER = " …[TRUNCATED]\n";
+const TRANSIENT_FILESYSTEM_READ_CONFLICT = "Filesystem changed during read; retry the operation";
+const MAX_TRANSIENT_FILESYSTEM_READ_ATTEMPTS = 3;
 
 function thresholdAllows(level: DiagnosticLevel, minimum: DiagnosticLevel): boolean {
   return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[minimum];
@@ -262,6 +264,10 @@ function emitToConsole(target: DiagnosticConsole, record: DiagnosticRecord): voi
   else target.error(line);
 }
 
+function isTransientFilesystemReadConflict(error: unknown): boolean {
+  return error instanceof Error && error.message === TRANSIENT_FILESYSTEM_READ_CONFLICT;
+}
+
 export class PlasmonDiagnosticService implements DiagnosticService {
   private readonly listeners = new Set<(record: DiagnosticRecord) => void>();
   private readonly path: string;
@@ -331,6 +337,22 @@ export class PlasmonDiagnosticService implements DiagnosticService {
   }
 
   private async persist(record: DiagnosticRecord): Promise<void> {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        await this.persistOnce(record);
+        return;
+      } catch (error) {
+        if (
+          !isTransientFilesystemReadConflict(error)
+          || attempt >= MAX_TRANSIENT_FILESYSTEM_READ_ATTEMPTS
+        ) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  private async persistOnce(record: DiagnosticRecord): Promise<void> {
     await this.options.ready?.();
     const { parent, name } = parentPath(this.path);
     const parentNode = await this.options.fs.resolvePath(parent);
