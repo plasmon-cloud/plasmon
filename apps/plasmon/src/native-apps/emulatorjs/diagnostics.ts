@@ -1,14 +1,20 @@
-import type { DiagnosticLogger } from "../../os/diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticRuntime,
+  DiagnosticStage,
+  type DiagnosticLogger,
+  type DiagnosticSubsystem,
+} from "../../os/diagnostics/index.ts";
 
 const RUNTIME_CONTEXT = {
-  runtime: "EmulatorJS",
+  runtime: DiagnosticRuntime.EmulatorJs,
   core: "nes",
 } as const;
 
 export type EmulatorJsHandledFailure =
   | { kind: "validation"; error: unknown }
-  | { kind: "start"; stage: "runtime-container" | "host-ready" | "runtime-start"; reason?: "timeout" }
-  | { kind: "protocol"; stage: "runtime-message"; error: unknown }
+  | { kind: "start"; stage: typeof DiagnosticStage.RuntimeContainer | typeof DiagnosticStage.HostReady | typeof DiagnosticStage.RuntimeStart; reason?: "timeout" }
+  | { kind: "protocol"; stage: typeof DiagnosticStage.RuntimeMessage; error: unknown }
   | { kind: "stop"; error: unknown };
 
 function errorType(error: unknown): string {
@@ -18,23 +24,23 @@ function errorType(error: unknown): string {
 
 /** Emit only failures that the EmulatorJS host intentionally handles or suppresses. */
 export function logEmulatorJsHandledFailure(
-  log: DiagnosticLogger | undefined,
+  log: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeEmulatorJs> | undefined,
   failure: EmulatorJsHandledFailure,
 ): void {
   if (!log) return;
 
   if (failure.kind === "validation") {
-    log.error("runtime.emulatorjs.validation.failed", {
+    log.error(DiagnosticEvent.RuntimeEmulatorJs.ValidationFailed, {
       message: "EmulatorJS ROM validation failed",
       ...RUNTIME_CONTEXT,
-      stage: "rom-validation",
+      stage: DiagnosticStage.RomValidation,
       errorType: errorType(failure.error),
     });
     return;
   }
 
   if (failure.kind === "start") {
-    log.error("runtime.emulatorjs.start.failed", {
+    log.error(DiagnosticEvent.RuntimeEmulatorJs.StartFailed, {
       message: failure.reason === "timeout"
         ? "EmulatorJS runtime startup timed out"
         : "EmulatorJS runtime failed to start",
@@ -46,7 +52,7 @@ export function logEmulatorJsHandledFailure(
   }
 
   if (failure.kind === "protocol") {
-    log.error("runtime.emulatorjs.protocol.failed", {
+    log.error(DiagnosticEvent.RuntimeEmulatorJs.ProtocolFailed, {
       message: "EmulatorJS runtime reported a protocol failure",
       ...RUNTIME_CONTEXT,
       stage: failure.stage,
@@ -55,10 +61,10 @@ export function logEmulatorJsHandledFailure(
     return;
   }
 
-  log.warn("runtime.emulatorjs.stop.failed", {
+  log.warn(DiagnosticEvent.RuntimeEmulatorJs.StopFailed, {
     message: "EmulatorJS terminate message failed during cleanup",
     ...RUNTIME_CONTEXT,
-    stage: "cleanup-terminate",
+    stage: DiagnosticStage.CleanupTerminate,
     errorType: errorType(failure.error),
   });
 }

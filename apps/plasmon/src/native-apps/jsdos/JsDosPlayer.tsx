@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { DiagnosticLogger } from "../../os/diagnostics/index.ts";
+import {
+  DiagnosticStage,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../../os/diagnostics/index.ts";
 import type { NativeAppComponent, NativeAppComponentProps } from "../../os/process/runtime.ts";
 import { logJsDosHandledFailure } from "./diagnostics.ts";
 import { captureJsDosPreview } from "./preview.ts";
@@ -27,7 +31,9 @@ function messageFor(state: PlayerState): string {
  * Build the runtime host with the one scoped observer used only at handled
  * js-dos adapter boundaries. NativeAppComponentProps stays diagnostic-free.
  */
-export function createJsDosPlayer(diagnosticLogger?: DiagnosticLogger): NativeAppComponent {
+export function createJsDosPlayer(
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeJsDos>,
+): NativeAppComponent {
   return function JsDosPlayer({ processId, target, fs, process }: NativeAppComponentProps) {
     const rootRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<JsDosPlayerHandle | null>(null);
@@ -61,7 +67,7 @@ export function createJsDosPlayer(diagnosticLogger?: DiagnosticLogger): NativeAp
         try {
           Dos = await loadJsDosRuntime();
         } catch (error) {
-          logJsDosHandledFailure(diagnosticLogger, { kind: "start", stage: "runtime-load", error });
+          logJsDosHandledFailure(diagnosticLogger, { kind: "start", stage: DiagnosticStage.RuntimeLoad, error });
           throw error;
         }
         if (disposed) return;
@@ -98,7 +104,7 @@ export function createJsDosPlayer(diagnosticLogger?: DiagnosticLogger): NativeAp
             },
           });
         } catch (error) {
-          logJsDosHandledFailure(diagnosticLogger, { kind: "start", stage: "runtime-start", error });
+          logJsDosHandledFailure(diagnosticLogger, { kind: "start", stage: DiagnosticStage.RuntimeStart, error });
           throw error;
         }
 

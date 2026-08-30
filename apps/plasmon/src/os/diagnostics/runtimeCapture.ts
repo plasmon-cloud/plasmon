@@ -1,3 +1,4 @@
+import { DiagnosticCategory, DiagnosticEvent, DiagnosticSource, DiagnosticSubsystem } from "./vocabulary.ts";
 import type { DiagnosticService } from "./service.ts";
 
 const MAX_RECENT_FAILURES = 32;
@@ -74,7 +75,7 @@ export function installRuntimeDiagnosticCapture(
   diagnostics: DiagnosticService,
   target: RuntimeDiagnosticEventTarget = window,
 ): RuntimeDiagnosticCapture {
-  const log = diagnostics.for("runtime");
+  const log = diagnostics.for(DiagnosticSubsystem.Runtime);
   const recentObjects = new WeakSet<object>();
   const recentQueue: object[] = [];
   let active = true;
@@ -94,15 +95,17 @@ export function installRuntimeDiagnosticCapture(
 
   const emit = (
     failure: unknown,
-    event: "runtime.uncaught_error" | "runtime.unhandled_rejection",
-    source: "window.error" | "unhandledrejection" | "react.root",
+    event: typeof DiagnosticEvent.Runtime.UncaughtError | typeof DiagnosticEvent.Runtime.UnhandledRejection,
+    source: typeof DiagnosticSource.WindowError | typeof DiagnosticSource.UnhandledRejection | typeof DiagnosticSource.ReactRoot,
   ): void => {
     if (!active || !claimFailure(failure)) return;
     log.error(event, {
-      message: event === "runtime.uncaught_error"
+      message: event === DiagnosticEvent.Runtime.UncaughtError
         ? "Uncaught Product runtime failure"
         : "Unhandled Product Promise rejection",
-      category: event === "runtime.uncaught_error" ? "uncaught-exception" : "unhandled-rejection",
+      category: event === DiagnosticEvent.Runtime.UncaughtError
+        ? DiagnosticCategory.UncaughtException
+        : DiagnosticCategory.UnhandledRejection,
       source,
       error: safeDiagnosticError(failure),
     });
@@ -110,11 +113,11 @@ export function installRuntimeDiagnosticCapture(
 
   const onWindowError: EventListener = (event) => {
     const browserEvent = event as ErrorEvent;
-    emit(browserEvent.error, "runtime.uncaught_error", "window.error");
+    emit(browserEvent.error, DiagnosticEvent.Runtime.UncaughtError, DiagnosticSource.WindowError);
   };
   const onUnhandledRejection: EventListener = (event) => {
     const rejectionEvent = event as PromiseRejectionEvent;
-    emit(rejectionEvent.reason, "runtime.unhandled_rejection", "unhandledrejection");
+    emit(rejectionEvent.reason, DiagnosticEvent.Runtime.UnhandledRejection, DiagnosticSource.UnhandledRejection);
   };
 
   target.addEventListener("error", onWindowError);
@@ -122,7 +125,7 @@ export function installRuntimeDiagnosticCapture(
 
   return {
     onReactUncaughtError: (error: unknown) => {
-      emit(error, "runtime.uncaught_error", "react.root");
+      emit(error, DiagnosticEvent.Runtime.UncaughtError, DiagnosticSource.ReactRoot);
     },
     dispose: () => {
       if (!active) return;

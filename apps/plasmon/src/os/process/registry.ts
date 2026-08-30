@@ -3,12 +3,16 @@ import type {
   NativeAppDefinition,
   NativeAppRegistry,
 } from "../contracts/index.ts";
-import type { DiagnosticLogger } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../diagnostics/index.ts";
 import type { NativeAppComponent, NativeAppLoader } from "./runtime.ts";
 import { normalizeNativeAppModule } from "./runtime.ts";
 
 export interface NativeApplicationRegistryOptions {
-  diagnostics?: DiagnosticLogger;
+  diagnostics?: DiagnosticLogger<typeof DiagnosticSubsystem.NativeApp>;
 }
 
 function cloneDefinition(definition: NativeAppDefinition): NativeAppDefinition {
@@ -48,7 +52,7 @@ export class NativeApplicationRegistry implements NativeAppRegistry {
 
   register(definition: NativeAppDefinition): void {
     if (this.definitions.has(definition.id)) {
-      this.options.diagnostics?.error("native-app.registration.failed", {
+      this.options.diagnostics?.error(DiagnosticEvent.NativeApp.RegistrationFailed, {
         message: "Native application registration failed",
         appId: definition.id,
         handlerId: definition.handlerId,
@@ -58,7 +62,7 @@ export class NativeApplicationRegistry implements NativeAppRegistry {
     }
     const existingHandler = this.handlerToApp.get(definition.handlerId);
     if (existingHandler) {
-      this.options.diagnostics?.error("native-app.registration.failed", {
+      this.options.diagnostics?.error(DiagnosticEvent.NativeApp.RegistrationFailed, {
         message: "Native application registration failed",
         appId: definition.id,
         handlerId: definition.handlerId,
@@ -81,7 +85,7 @@ export class NativeApplicationRegistry implements NativeAppRegistry {
 
   setLoader(appId: string, loader: NativeAppLoader): void {
     if (!this.definitions.has(appId)) {
-      this.options.diagnostics?.error("native-app.registration.failed", {
+      this.options.diagnostics?.error(DiagnosticEvent.NativeApp.RegistrationFailed, {
         message: "Native application loader registration failed",
         appId,
         reason: "unknown-loader-app",
@@ -125,7 +129,7 @@ export class NativeApplicationRegistry implements NativeAppRegistry {
     if (!loader) {
       const error = new Error(`No React host loader registered for native application: ${appId}`);
       this.rememberLoadFailure(appId, error);
-      this.options.diagnostics?.error("native-app.load.failed", {
+      this.options.diagnostics?.error(DiagnosticEvent.NativeApp.LoadFailed, {
         message: "Native application host loader is unavailable",
         appId,
         reason: "missing-loader",
@@ -139,7 +143,7 @@ export class NativeApplicationRegistry implements NativeAppRegistry {
       .catch((error: unknown) => {
         this.componentLoads.delete(appId);
         this.rememberLoadFailure(appId, error);
-        this.options.diagnostics?.error("native-app.load.failed", {
+        this.options.diagnostics?.error(DiagnosticEvent.NativeApp.LoadFailed, {
           message: "Native application host loader failed",
           appId,
           reason: "loader-rejected",

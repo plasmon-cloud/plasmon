@@ -39,7 +39,7 @@ describe("Monaco worker-boundary diagnostics", () => {
         subsystem: "runtime.monaco",
         event: "runtime.monaco.worker.failed",
         context: {
-          runtime: "Monaco",
+          runtime: "monaco",
           stage: "worker-source",
           workerFile: "ts.worker.js",
           errorType: "Error",
@@ -76,7 +76,7 @@ describe("Monaco worker-boundary diagnostics", () => {
       subsystem: "runtime.monaco",
       event: "runtime.monaco.worker.failed",
       context: {
-        runtime: "Monaco",
+        runtime: "monaco",
         stage: "worker-create",
         workerFile: "ts.worker.js",
         errorType: "TypeError",

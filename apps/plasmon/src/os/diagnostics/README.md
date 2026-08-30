@@ -5,13 +5,11 @@
 The production authority is `PlasmonDiagnosticService`. Product code scopes a logger once to the owning subsystem and emits stable named events through that logger:
 
 ```ts
-const log = diagnostics.for("filesystem");
+const log = diagnostics.for(DiagnosticSubsystem.Filesystem);
 
-log.info("file.move.completed", { count: 3 });
-log.error("file.write.failed", {
-  message: "Could not persist file",
+log.error(DiagnosticEvent.Filesystem.TrashFailed, {
+  operation: DiagnosticOperation.Delete,
   error,
-  path,
 });
 ```
 
@@ -31,9 +29,22 @@ DiagnosticService
   +-----------------> /System/system.log (filtered, bounded, durable)
 ```
 
+## Producer guide
+
+Unexpected uncaught failure: throw normally; global diagnostics captures it. Handled/swallowed meaningful failure: emit once at the owning boundary using canonical vocabulary. Never invent subsystem, event, runtime, operation, or stage strings.
+
+```ts
+const log = diagnostics.for(DiagnosticSubsystem.Process);
+log.error(DiagnosticEvent.Process.StartFailed, {
+  operation: DiagnosticOperation.Start,
+  stage: DiagnosticStage.WindowCreate,
+  errorType,
+});
+```
+
 ## Producer contract
 
-- Scope with `diagnostics.for("subsystem")`; do not build subsystem-local logger wrappers or call sink-specific APIs.
+- Scope with `diagnostics.for(DiagnosticSubsystem.<Owner>)`; do not build subsystem-local logger wrappers or call sink-specific APIs.
 - Use `debug`, `info`, `notice`, `warn`, `error`, and `critical` consistently. Routine high-volume interactions should usually not be diagnostic events at all.
 - Event names are stable machine identities, lowercase dot-separated phrases such as `filesystem.bootstrap.ready`, `process.start.failed`, or `file.write.failed`. Do not use UI prose, Issue numbers, release names, or temporary implementation vocabulary as event identities.
 - Include a `message` only when it makes the record more useful to a human than the event name alone.

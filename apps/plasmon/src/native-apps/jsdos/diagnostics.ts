@@ -1,12 +1,18 @@
-import type { DiagnosticLogger } from "../../os/diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticRuntime,
+  DiagnosticStage,
+  type DiagnosticLogger,
+  type DiagnosticSubsystem,
+} from "../../os/diagnostics/index.ts";
 
 const RUNTIME_CONTEXT = {
-  runtime: "js-dos",
+  runtime: DiagnosticRuntime.JsDos,
   version: "8.4.1",
 } as const;
 
 export type JsDosHandledFailure =
-  | { kind: "start"; stage: "runtime-load" | "runtime-start"; error: unknown }
+  | { kind: "start"; stage: typeof DiagnosticStage.RuntimeLoad | typeof DiagnosticStage.RuntimeStart; error: unknown }
   | { kind: "restore" }
   | { kind: "save"; reason: "failed" | "timeout" }
   | { kind: "stop"; error: unknown };
@@ -18,13 +24,13 @@ function errorType(error: unknown): string {
 
 /** Emit only failures that the js-dos host intentionally handles or converts to UI state. */
 export function logJsDosHandledFailure(
-  log: DiagnosticLogger | undefined,
+  log: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeJsDos> | undefined,
   failure: JsDosHandledFailure,
 ): void {
   if (!log) return;
 
   if (failure.kind === "start") {
-    log.error("runtime.jsdos.start.failed", {
+    log.error(DiagnosticEvent.RuntimeJsDos.StartFailed, {
       message: "js-dos runtime failed to start",
       ...RUNTIME_CONTEXT,
       stage: failure.stage,
@@ -34,31 +40,31 @@ export function logJsDosHandledFailure(
   }
 
   if (failure.kind === "restore") {
-    log.warn("runtime.jsdos.restore.failed", {
+    log.warn(DiagnosticEvent.RuntimeJsDos.RestoreFailed, {
       message: "Saved js-dos progress could not be restored",
       ...RUNTIME_CONTEXT,
-      stage: "progress-restore",
+      stage: DiagnosticStage.ProgressRestore,
       reason: "saved-progress-unavailable",
     });
     return;
   }
 
   if (failure.kind === "save") {
-    log.warn("runtime.jsdos.save.failed", {
+    log.warn(DiagnosticEvent.RuntimeJsDos.SaveFailed, {
       message: failure.reason === "timeout"
         ? "js-dos progress save timed out"
         : "js-dos progress save failed",
       ...RUNTIME_CONTEXT,
-      stage: "close-save",
+      stage: DiagnosticStage.CloseSave,
       reason: failure.reason,
     });
     return;
   }
 
-  log.warn("runtime.jsdos.stop.failed", {
+  log.warn(DiagnosticEvent.RuntimeJsDos.StopFailed, {
     message: "js-dos runtime stop rejected during cleanup",
     ...RUNTIME_CONTEXT,
-    stage: "cleanup-stop",
+    stage: DiagnosticStage.CleanupStop,
     errorType: errorType(failure.error),
   });
 }

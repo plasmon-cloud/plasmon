@@ -1,4 +1,10 @@
-import type { DiagnosticLogger } from "../../../os/diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticRuntime,
+  DiagnosticStage,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../../../os/diagnostics/index.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 
 export const MONACO_PROGRAM_FILES_RUNTIME_ROOT = "./System/Program Files/MonacoEditor";
@@ -47,16 +53,16 @@ function errorType(error: unknown): string {
 }
 
 function reportWorkerFailure(
-  log: DiagnosticLogger | undefined,
+  log: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeMonaco> | undefined,
   label: string,
-  stage: "worker-source" | "worker-create",
+  stage: typeof DiagnosticStage.WorkerSource | typeof DiagnosticStage.WorkerCreate,
   error?: unknown,
 ): void {
-  log?.error("runtime.monaco.worker.failed", {
-    message: stage === "worker-source"
+  log?.error(DiagnosticEvent.RuntimeMonaco.WorkerFailed, {
+    message: stage === DiagnosticStage.WorkerSource
       ? "Packaged Monaco worker source is unavailable"
       : "Monaco worker could not be constructed",
-    runtime: "Monaco",
+    runtime: DiagnosticRuntime.Monaco,
     stage,
     workerFile: monacoWorkerFile(label),
     ...(error === undefined ? {} : { errorType: errorType(error) }),
@@ -78,7 +84,7 @@ function monacoWorkerName(label: string): string {
 function createMonacoWorker(
   target: typeof globalThis,
   label: string,
-  diagnosticLogger?: DiagnosticLogger,
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeMonaco>,
 ): Worker {
   const scope = target as MonacoWorkerScope;
   const name = monacoWorkerName(label);
@@ -114,7 +120,7 @@ function createMonacoWorker(
 
 export function installMonacoEnvironment(
   target: typeof globalThis = globalThis,
-  diagnosticLogger?: DiagnosticLogger,
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeMonaco>,
 ): void {
   const scope = target as MonacoWorkerScope;
   if (scope.MonacoEnvironment?.getWorker) return;
