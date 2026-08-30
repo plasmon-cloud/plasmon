@@ -19,7 +19,7 @@ async function put(root: string, path: string, contents: string | Uint8Array): P
   await writeFile(target, contents);
 }
 
-describe("#370 runtime cost report", () => {
+describe("runtime cost report", () => {
   test("classifies package contributors by durable runtime/product category", () => {
     expect(classifyRuntimeCostPath("web/System/Program Files/MonacoEditor/ts.worker.js")).toBe("monaco");
     expect(classifyRuntimeCostPath("web/runtime/jsdos/js-dos.js")).toBe("js-dos");
