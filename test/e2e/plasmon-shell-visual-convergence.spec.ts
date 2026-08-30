@@ -75,14 +75,16 @@ test("packaged Shell and native content inherit one shared visual theme", async 
     await expect(firstStartItem).toBeFocused();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
 
-    const settingsFlyout = plasmon.getByRole("region", { name: "Shell settings" });
-    await expect(settingsFlyout).toBeVisible();
-    await expect(settingsFlyout).toHaveCSS("border-color", await resolvedBorder(settingsFlyout, "--plasmon-border-strong"));
-    await settingsFlyout.getByRole("button", { name: "Midnight", exact: true }).click();
+    const settingsWindow = plasmon.getByRole("dialog", { name: "Settings" }).last();
+    await expect(settingsWindow).toBeVisible({ timeout: 20_000 });
+    const settings = settingsWindow.getByRole("region", { name: "Settings" });
+    await expect(settings).toBeVisible();
+    await expect(settingsWindow).toHaveCSS("border-color", await resolvedBorder(settingsWindow, "--plasmon-border-strong"));
+    await settings.getByRole("button", { name: "Midnight", exact: true }).click();
     await expect(shell).toHaveAttribute("data-plasmon-theme", "plasmon-midnight");
 
     await expectSemanticBackground(taskbar, "--plasmon-taskbar-background");
-    await expectSemanticBackground(settingsFlyout, "--plasmon-panel-elevated");
+    await expectSemanticBackground(settings, "--plasmon-window-background");
 
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const search = plasmon.getByRole("region", { name: "Search" });
