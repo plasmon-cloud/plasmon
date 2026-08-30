@@ -294,8 +294,11 @@ export function createPlasmonServices(
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
-    onStartupError: (error, app) => {
-      processLog.error("process.start.failed", {
+    onStartupError: (error, app, _target, operation) => {
+      const log = operation
+        ? diagnostics.continueOperation(operation).for("process")
+        : processLog;
+      log.error("process.start.failed", {
         message: `Failed to start ${app.name}`,
         appId: app.id,
         handlerId: app.handlerId,
@@ -312,7 +315,13 @@ export function createPlasmonServices(
       });
     },
   });
-  const openService = new IntegratedOpenService({ nativeApps, associations, process, neutron });
+  const openService = new IntegratedOpenService({
+    nativeApps,
+    associations,
+    process,
+    neutron,
+    diagnostics,
+  });
   const fileClipboard = new FileOperationClipboard();
 
   // Native Explorer registration happens before filesystem bootstrap so the
