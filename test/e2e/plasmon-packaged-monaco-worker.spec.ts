@@ -283,9 +283,10 @@ test("Base packaged Monaco executes all dedicated workers and real language serv
     };
 
     const closeEditor = async (editor: Locator) => {
+      const beforeClose = await nativeWindows.count();
       await page.keyboard.press("Escape").catch(() => undefined);
       await editor.getByRole("button", { name: "Close", exact: true }).click();
-      await expect(editor).toBeHidden({ timeout: 10_000 });
+      await expect(nativeWindows).toHaveCount(beforeClose - 1, { timeout: 10_000 });
     };
 
     const typescript = await openFixture(fixtures[0].name, fixtures[0].language);
