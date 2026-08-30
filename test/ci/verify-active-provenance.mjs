@@ -18,6 +18,7 @@ const activeInputs = Object.freeze([
   "apps/plasmon/monacoWorkerTransport.ts",
   "apps/plasmon/neutron.json",
   "apps/plasmon/neutron.lock.json",
+  "apps/plasmon/public",
   "apps/plasmon/src",
   "apps/plasmon/test",
   "test",
