@@ -32,6 +32,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
     title: "Browser",
   });
   const [address, setAddress] = useState(target.url ?? "");
+  const [navigationError, setNavigationError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -65,13 +66,10 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
     event.preventDefault();
     const command = browserNavigationCommand(address);
     if (!command) {
-      setState({
-        status: "error",
-        message: "Enter a complete http:// or https:// URL",
-        url: address,
-      });
+      setNavigationError("Enter a complete http:// or https:// URL");
       return;
     }
+    setNavigationError(null);
     setAddress(command.location.url);
     setState({ status: "loading", ...command.location });
     process.setTitle(processId, command.location.title || "Browser");
@@ -112,6 +110,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
       <div style={styles.notice}>
         Some sites block embedded browsing. Use “Open externally” when a page refuses to load here.
       </div>
+      {navigationError ? <div style={styles.validationError} role="alert">{navigationError}</div> : null}
       {state.status === "error" ? (
         <div style={styles.error} role="alert">{state.message}</div>
       ) : state.url ? (
@@ -216,6 +215,12 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: "none",
     color: "var(--plasmon-text-secondary)",
     background: "color-mix(in srgb, var(--plasmon-window-background) 88%, transparent)",
+  },
+  validationError: {
+    padding: "6px 10px",
+    color: "var(--plasmon-danger)",
+    background: "color-mix(in srgb, var(--plasmon-danger) 10%, var(--plasmon-window-background))",
+    borderBottom: "1px solid var(--plasmon-border-subtle)",
   },
   error: {
     display: "grid",

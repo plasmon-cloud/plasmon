@@ -52,6 +52,8 @@ test("Browser launcher supports Go and Enter navigation with bounded invalid-inp
       );
       expect(current?.title).toBe("example.org");
     });
+    const preservedFrame = app.getByTitle("example.org");
+    expect(preservedFrame.getAttribute("src")).toBe("https://example.org/");
   } finally {
     app.dispose();
   }
