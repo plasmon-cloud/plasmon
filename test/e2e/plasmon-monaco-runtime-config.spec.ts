@@ -61,24 +61,23 @@ async function createDesktopTextDocument(app: FrameLocator, name: string): Promi
   return entry;
 }
 
-async function openFileExplorerAtConfig(app: FrameLocator, nativeWindows: Locator): Promise<Locator> {
+async function openFileManagerAtConfig(app: FrameLocator, nativeWindows: Locator): Promise<Locator> {
   const before = await nativeWindows.count();
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByRole("region", { name: "Search" });
   await expect(search).toBeVisible();
-  await app.getByLabel("Search Plasmon").fill("File Explorer");
-  const result = app.locator("[data-search-result]", { hasText: "File Explorer" }).first();
+  await app.getByLabel("Search Plasmon").fill("File");
+  const result = app.locator("[data-search-result]", { hasText: "Plasmon application" }).first();
   await expect(result).toBeVisible({ timeout: 15_000 });
   await result.click();
   await expect(nativeWindows).toHaveCount(before + 1, { timeout: 15_000 });
 
-  const explorerWindow = nativeWindows.last();
-  const explorer = explorerWindow.getByRole("region", { name: "File Explorer" });
-  await expect(explorer).toBeVisible();
-  const address = explorer.getByLabel("Address");
+  const fileManagerWindow = nativeWindows.last();
+  const address = fileManagerWindow.getByLabel("Address");
+  await expect(address).toBeVisible();
   await address.fill(CONFIG_DIRECTORY);
   await address.press("Enter");
-  const configEntry = explorerWindow.locator("[data-fm-node-id]", { hasText: CONFIG_FILE }).first();
+  const configEntry = fileManagerWindow.locator("[data-fm-node-id]", { hasText: CONFIG_FILE }).first();
   await expect(configEntry).toBeVisible();
   return configEntry;
 }
@@ -143,7 +142,7 @@ test("packaged Monaco runtime config updates an open editor in place through Pro
     const modelUri = await documentSurface.getAttribute("data-editor-model-uri");
     expect(modelUri).toBeTruthy();
 
-    const configEntry = await openFileExplorerAtConfig(app, nativeWindows);
+    const configEntry = await openFileManagerAtConfig(app, nativeWindows);
     const beforeConfig = await nativeWindows.count();
     await configEntry.dblclick();
     await expect(nativeWindows).toHaveCount(beforeConfig + 1, { timeout: 15_000 });
