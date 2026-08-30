@@ -114,7 +114,7 @@ export class FilesystemOpenDispatcher {
 
     const classification = classifyResource(node);
     if (classification.kind === "system-app" && classification.systemApp) {
-      await this.openService.open(classification.systemApp.handlerId, { nodeId: node.id });
+      await this.openService.open(classification.systemApp.handlerId, {});
       return;
     }
     if (classification.kind === "neutron-app" && classification.neutronApp) {

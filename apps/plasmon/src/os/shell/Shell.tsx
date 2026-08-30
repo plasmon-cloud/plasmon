@@ -22,6 +22,7 @@ import type { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { FILE_TYPE_ICON_ASSETS, PLASMON_VISUAL_ASSET_ROOT, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import {
   activateSearchFilesystemResult,
+  activateShellSettings,
   activateStartFilesystemNode,
   type ShellFilesystemOpener,
 } from "./activation.ts";
@@ -43,16 +44,13 @@ import {
   type PresentedTaskbarEntry,
 } from "./model.ts";
 import {
-  cloneShellPreferences,
   DEFAULT_SHELL_PREFERENCES,
   effectiveShellWallpaper,
-  saveShellPreferencesNonDestructive,
-  ShellPreferenceStore,
   SHELL_WALLPAPER_IDS,
   togglePinned,
   type ShellPreferences,
+  type ShellPreferencesAuthority,
   type ShellTaskbarAlignment,
-  type ShellThemeId,
 } from "./preferences.ts";
 import { SearchSurface } from "./SearchSurface.tsx";
 import type { ShellSearchResult } from "./search.ts";
@@ -64,7 +62,6 @@ import {
   CalendarSurface,
   ContextMenuSurface,
   SearchMark,
-  SettingsSurface,
   ShellMessages,
   TaskbarSurface,
   TraySurface,
@@ -90,6 +87,7 @@ export interface ShellProps {
   openService?: OpenService;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  shellPreferences: ShellPreferencesAuthority;
   children?: ReactNode;
   now?: () => Date;
 }
@@ -113,11 +111,13 @@ export function Shell({
   openService,
   startMenu,
   hiddenVisibility,
+  shellPreferences,
   children,
   now = () => new Date(),
 }: ShellProps) {
-  const preferenceStore = useMemo(() => new ShellPreferenceStore(fs), [fs]);
-  const [preferences, setPreferences] = useState<ShellPreferences | null>(null);
+  const [preferences, setPreferences] = useState<ShellPreferences | null>(
+    () => shellPreferences.isReady() ? shellPreferences.getSnapshot() : null,
+  );
   const [coordination, dispatchCoordination] = useReducer(
     reduceShellCoordination,
     INITIAL_SHELL_COORDINATION_STATE,
@@ -148,17 +148,14 @@ export function Shell({
   }, []);
 
   useEffect(() => {
-    let active = true;
-    setPreferences(null);
-    void preferenceStore.load()
-      .then((loaded) => { if (active) setPreferences(loaded); })
-      .catch((cause: unknown) => {
-        if (!active) return;
-        setPreferences(cloneShellPreferences());
-        setNotice(`Shell preferences could not be loaded: ${formatError(cause)}. Defaults are active for this session.`);
-      });
-    return () => { active = false; };
-  }, [preferenceStore]);
+    const unsubscribe = shellPreferences.subscribe((next, ready) => {
+      setPreferences(ready ? next : null);
+    });
+    void shellPreferences.load().catch((cause: unknown) => {
+      setNotice(`Shell preferences could not be loaded: ${formatError(cause)}. Defaults are active for this session.`);
+    });
+    return unsubscribe;
+  }, [shellPreferences]);
 
   const nativeDefinitions = useMemo(() => nativeApps.list(), [nativeApps]);
   const nativeByHandler = useMemo(
@@ -266,13 +263,12 @@ export function Shell({
       setNotice("Shell preferences are still loading; try that setting again in a moment.");
       return;
     }
-    setPreferences(next);
-    void saveShellPreferencesNonDestructive(preferenceStore, next).then((outcome) => {
+    void shellPreferences.save(next).then((outcome) => {
       if (!outcome.saved) {
         setNotice(`Shell preferences could not be saved: ${formatError(outcome.error)}. Your changes remain active for this session.`);
       }
     });
-  }, [preferenceStore, preferencesReady]);
+  }, [preferencesReady, shellPreferences]);
 
   const toggleNativePin = useCallback((handlerId: string) => persistPreferences({
     ...effectivePreferences,
@@ -282,10 +278,6 @@ export function Shell({
     ...effectivePreferences,
     pinnedElements: togglePinned(effectivePreferences.pinnedElements, elementId),
   }), [effectivePreferences, persistPreferences]);
-  const selectTheme = useCallback(
-    (themeId: ShellThemeId) => persistPreferences({ ...effectivePreferences, themeId }),
-    [effectivePreferences, persistPreferences],
-  );
   const selectTaskbarAlignment = useCallback(
     (taskbarAlignment: ShellTaskbarAlignment) => persistPreferences({ ...effectivePreferences, taskbarAlignment }),
     [effectivePreferences, persistPreferences],
@@ -316,6 +308,16 @@ export function Shell({
       setBusyId(null);
     }
   }, [filesystemOpen]);
+
+  const openSettings = useCallback(async () => {
+    setActionError(null);
+    try {
+      await activateShellSettings(openService ?? process);
+      dispatchCoordination({ type: "dismiss-transient" });
+    } catch (cause: unknown) {
+      setActionError(`Could not open Settings: ${formatError(cause)}`);
+    }
+  }, [openService, process]);
 
   const activateTaskbar = useCallback(async (entry: PresentedTaskbarEntry) => {
     setActionError(null);
@@ -534,7 +536,7 @@ export function Shell({
         dispatchCoordination({ type: "open-flyout", flyout: "search" });
       }}
       onPin={(kind, id) => { if (kind === "native") toggleNativePin(id); else toggleElementPin(id); }}
-      onSettings={() => dispatchCoordination({ type: "open-flyout", flyout: "settings" })}
+      onSettings={() => { void openSettings(); }}
     />
 
     {flyout === "search" ? <SearchSurface
@@ -558,15 +560,6 @@ export function Shell({
       entries={trayEntries}
       elementsById={elementsById}
       onOpenElement={(elementId) => { void openElement(elementId); }}
-    /> : null}
-
-    {flyout === "settings" ? <SettingsSurface
-      preferences={effectivePreferences}
-      preferencesReady={preferencesReady}
-      onSelectTheme={selectTheme}
-      onSelectWallpaper={(wallpaper) => persistPreferences({ ...effectivePreferences, wallpaper })}
-      onSetBrandWatermark={(showBrandWatermark) => persistPreferences({ ...effectivePreferences, showBrandWatermark })}
-      onSelectTaskbarAlignment={selectTaskbarAlignment}
     /> : null}
 
     {openTaskbarGroup ? <TaskbarGroupChooser
@@ -599,7 +592,13 @@ export function Shell({
         if (contextMenu.processId) closeNativeTaskContextProcess(process, contextMenu.processId);
         dispatchCoordination({ type: "dismiss-context-menu" });
       }}
-      onOpenFlyout={(next) => dispatchCoordination({ type: "open-flyout", flyout: next })}
+      onOpenFlyout={(next) => {
+        if (next === "settings") {
+          void openSettings();
+          return;
+        }
+        dispatchCoordination({ type: "open-flyout", flyout: next });
+      }}
     /> : null}
 
     <TaskbarSurface

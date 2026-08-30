@@ -257,6 +257,67 @@ export interface ShellPreferenceSaveOutcome {
   error: unknown | null;
 }
 
+export interface ShellPreferencesAuthority {
+  getSnapshot(): ShellPreferences;
+  isReady(): boolean;
+  subscribe(listener: (preferences: ShellPreferences, ready: boolean) => void): () => void;
+  load(): Promise<ShellPreferences>;
+  save(preferences: ShellPreferences): Promise<ShellPreferenceSaveOutcome>;
+}
+
+/**
+ * Shared Shell preference authority for Shell and native Settings. The
+ * controller owns the in-memory snapshot while ShellPreferenceStore remains
+ * the filesystem persistence boundary.
+ */
+export class ShellPreferencesController implements ShellPreferencesAuthority {
+  private preferences = cloneShellPreferences();
+  private ready = false;
+  private readonly listeners = new Set<(preferences: ShellPreferences, ready: boolean) => void>();
+
+  constructor(private readonly store: ShellPreferenceStore) {}
+
+  getSnapshot(): ShellPreferences {
+    return cloneShellPreferences(this.preferences);
+  }
+
+  isReady(): boolean {
+    return this.ready;
+  }
+
+  subscribe(listener: (preferences: ShellPreferences, ready: boolean) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  async load(): Promise<ShellPreferences> {
+    try {
+      this.preferences = await this.store.load();
+    } catch (error: unknown) {
+      this.preferences = cloneShellPreferences();
+      this.ready = true;
+      this.notify();
+      throw error;
+    }
+    this.ready = true;
+    this.notify();
+    return this.getSnapshot();
+  }
+
+  async save(preferences: ShellPreferences): Promise<ShellPreferenceSaveOutcome> {
+    const checked = validateShellPreferences(preferences);
+    if (!checked) throw new Error("Shell preferences are invalid");
+    this.preferences = cloneShellPreferences(checked);
+    this.notify();
+    return saveShellPreferencesNonDestructive(this.store, this.preferences);
+  }
+
+  private notify(): void {
+    const snapshot = this.getSnapshot();
+    for (const listener of this.listeners) listener(snapshot, this.ready);
+  }
+}
+
 export async function saveShellPreferencesNonDestructive(
   store: ShellPreferenceStore,
   preferences: ShellPreferences,

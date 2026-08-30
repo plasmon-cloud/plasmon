@@ -8,6 +8,7 @@ const MERGE_GROUP_TRIGGER = "  merge_group:";
 const CHECKS_REQUESTED_TRIGGER = "    types: [checks_requested]";
 const APPROVED_REVIEW = "github.event_name == 'pull_request_review' && github.event.review.state == 'approved'";
 const RETAINED_APPROVAL = "github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true'";
+const SPECIALIST_PREAPPROVAL = "github.event_name == 'pull_request' || github.event_name == 'pull_request_review'";
 
 const gates = [
   {
@@ -79,17 +80,23 @@ function verifyApprovalGate(gate) {
 
   const checkpoint = stepSection(source, gate.checkpoint);
   requireFragment(checkpoint, "merge queue is fast-only", `${label} queue checkpoint`);
-  requireFragment(checkpoint, "waits for the PR's first GitHub review approval", `${label} approval checkpoint`);
   requireFragment(checkpoint, RETAINED_APPROVAL, `${label} retained-approval checkpoint`);
+  if (gate.id === "browser") {
+    requireFragment(checkpoint, "Specialist acceptance runs on every PR head before and after approval", `${label} pre-approval checkpoint`);
+  } else {
+    requireFragment(checkpoint, "waits for the PR's first GitHub review approval", `${label} approval checkpoint`);
+  }
 
   const nixStep = stepSection(source, "Install Nix");
   requireFragment(nixStep, APPROVED_REVIEW, `${label} Nix setup`);
   requireFragment(nixStep, RETAINED_APPROVAL, `${label} retained-approval Nix setup`);
+  if (gate.id === "browser") requireFragment(nixStep, SPECIALIST_PREAPPROVAL, `${label} pre-approval Nix setup`);
   requireFragment(nixStep, "uses: cachix/install-nix-action@v31", `${label} Nix setup`);
 
   const expensiveStep = stepSection(source, gate.expensiveStep);
   requireFragment(expensiveStep, APPROVED_REVIEW, `${label} confidence gate`);
   requireFragment(expensiveStep, RETAINED_APPROVAL, `${label} retained-approval confidence gate`);
+  if (gate.id === "browser") requireFragment(expensiveStep, SPECIALIST_PREAPPROVAL, `${label} pre-approval confidence gate`);
   for (const command of gate.requiredCommands) requireFragment(expensiveStep, command, `${label} confidence gate`);
 
   const verifierStep = stepSection(source, "Verify required-gate workflow contract");
@@ -120,4 +127,4 @@ for (const path of [".github/workflows/plasmon-ci.yml", ".github/workflows/kerne
   requireFragment(source, CHECKS_REQUESTED_TRIGGER, `${path} merge-queue support`);
 }
 
-console.log(`Required browser gates verified: expensive package/Playwright work starts at first normal approval and remains enabled for every later PR head even if that approval is dismissed, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+console.log(`Required browser gates verified: Specialist package/Playwright runs on every PR head before approval and on submitted review events, the remaining expensive package/Playwright work starts at first normal approval and remains enabled for every later PR head even if that approval is dismissed, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);
