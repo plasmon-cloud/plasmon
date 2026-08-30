@@ -1,4 +1,10 @@
-import type { HandlerId, IconRef, ProcessId, WindowId } from "./common.ts";
+import type {
+  DiagnosticOperationContext,
+  HandlerId,
+  IconRef,
+  ProcessId,
+  WindowId,
+} from "./common.ts";
 import type { OpenTarget } from "./associations.ts";
 
 export interface ProcessRecord {
@@ -28,7 +34,11 @@ export interface ProcessCloseRequest {
 export type ProcessCloseHandler = (request: ProcessCloseRequest) => ProcessCloseDecision;
 
 export interface ProcessController {
-  open(handlerId: HandlerId, target: OpenTarget): Promise<ProcessId | null>;
+  open(
+    handlerId: HandlerId,
+    target: OpenTarget,
+    operation?: DiagnosticOperationContext,
+  ): Promise<ProcessId | null>;
   focus(id: ProcessId): void;
   /** Returns true only when the ordinary close completed immediately. */
   close(id: ProcessId): boolean;
