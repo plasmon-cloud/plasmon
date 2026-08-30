@@ -44,7 +44,10 @@ jobs:
             echo "$1/apps/plasmon/plasmon.v0.1.0.neutron"
           }
           package_size() {
-            local tree="$1" profile="$2" remote="$3" log="/tmp/$1-$profile-$remote.log"
+            local tree="$1"
+            local profile="$2"
+            local remote="$3"
+            local log="/tmp/$tree-$profile-$remote.log"
             local command="PLASMON_PACKAGE_PROFILE=$profile npm --workspace neutron-plasmon run package"
             if [[ "$remote" == "remote" ]]; then
               command="PLASMON_PACKAGE_PROFILE=$profile PLASMON_REMOTE_INCIDENT_EXPERIMENT=1 PLASMON_ROLLBAR_CLIENT_TOKEN=ci-package-probe-token PLASMON_BUILD_SHA=$EXPERIMENT_SHA npm --workspace neutron-plasmon run package"
