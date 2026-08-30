@@ -5,8 +5,10 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
 import type { ProcessId, WindowId } from "../contracts/common.ts";
 import type { WindowManager, WindowState } from "../contracts/window.ts";
 import { DEFAULT_MIN_HEIGHT, DEFAULT_MIN_WIDTH } from "./geometry.ts";
@@ -51,6 +53,7 @@ export function NativeWindow({
   const closeTimerRef = useRef<number | null>(null);
   const closingRef = useRef(false);
   const [closing, setClosing] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const minWidth = state.minWidth ?? DEFAULT_MIN_WIDTH;
   const minHeight = state.minHeight ?? DEFAULT_MIN_HEIGHT;
   const {
@@ -84,9 +87,35 @@ export function NativeWindow({
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
   }, []);
 
+  useEffect(() => {
+    if (!contextMenu || typeof document === "undefined" || typeof window === "undefined") return undefined;
+    const dismiss = () => setContextMenu(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") dismiss();
+    };
+    document.addEventListener("pointerdown", dismiss);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [contextMenu]);
+
+  const dismissContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const openContextMenu = useCallback((event: ReactMouseEvent<HTMLElement>) => {
+    if (!claimFirstPartyContextMenu(event)) return;
+    event.stopPropagation();
+    focusWindow();
+    setContextMenu({ x: event.clientX, y: event.clientY });
+  }, [focusWindow]);
+
   const minimize = useCallback(() => {
+    dismissContextMenu();
     manager.minimize(state.id);
-  }, [manager, state.id]);
+  }, [dismissContextMenu, manager, state.id]);
 
   const toggleMaximize = useCallback(() => {
     focusWindow();
@@ -146,9 +175,18 @@ export function NativeWindow({
       focusWindow={focusWindow}
       titlebar={titlebar}
       resize={resize}
+      onTitlebarContextMenu={openContextMenu}
+      contextMenu={contextMenu}
+      dismissContextMenu={dismissContextMenu}
       minimize={minimize}
-      toggleMaximize={toggleMaximize}
-      requestClose={requestClose}
+      toggleMaximize={() => {
+        dismissContextMenu();
+        toggleMaximize();
+      }}
+      requestClose={() => {
+        dismissContextMenu();
+        requestClose();
+      }}
       onCloseAnimationEnd={closing ? finalizeClose : undefined}
       contentClassName={contentClassName}
     >

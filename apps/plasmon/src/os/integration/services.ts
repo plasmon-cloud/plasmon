@@ -158,8 +158,12 @@ export function createFilesystemService(
   return new PersistentFsService(new BrowserSelectedFsRepository());
 }
 
-export function createAssociationDefaultStore(fs: FsService): AssociationDefaultStore {
-  return new FsServiceAssociationDefaultStore(fs);
+export function createAssociationDefaultStore(
+  fs: FsService,
+  diagnostics?: DiagnosticService,
+): AssociationDefaultStore {
+  return new FsServiceAssociationDefaultStore(fs, undefined, diagnostics);
+}
 }
 
 function registerNativeApplications(
@@ -171,6 +175,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  diagnostics: DiagnosticService,
   log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
@@ -211,6 +216,7 @@ function registerNativeApplications(
       trashAuthority,
       clipboard,
       hiddenVisibility,
+      diagnostics,
     }),
   );
   nativeApps.registerWithLoader(
@@ -264,7 +270,9 @@ export function createPlasmonServices(
   });
   const neutron = options.neutron ?? createNeutronBridge();
   const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
-  const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
+  const associations = new HandlerAssociationRegistry({
+    defaults: createAssociationDefaultStore(rawFs, diagnostics),
+  });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
     onStartupError: (error, app, _target, stage, processId) => {
@@ -331,6 +339,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    diagnostics,
     nativeAppLog,
   );
 
@@ -341,6 +350,7 @@ export function createPlasmonServices(
     associations,
     openService,
     process,
+    diagnostics,
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
