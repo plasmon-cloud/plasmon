@@ -20,8 +20,18 @@ test("fresh production composition exposes editable Monaco config through OsApi 
     });
     expect(await env.os.fs.readText(MONACO_RUNTIME_CONFIG_PATH)).toBe(DEFAULT_MONACO_RUNTIME_CONFIG_TEXT);
 
-    const changed = new Promise<void>((resolve) => {
+    let firstObserved: boolean | null = null;
+    let secondObserved: boolean | null = null;
+    const firstChanged = new Promise<void>((resolve) => {
       const unsubscribe = env.services.monacoRuntimeConfig.subscribe(() => {
+        firstObserved = env.services.monacoRuntimeConfig.getSnapshot().editor.minimap.enabled;
+        unsubscribe();
+        resolve();
+      });
+    });
+    const secondChanged = new Promise<void>((resolve) => {
+      const unsubscribe = env.services.monacoRuntimeConfig.subscribe(() => {
+        secondObserved = env.services.monacoRuntimeConfig.getSnapshot().editor.minimap.enabled;
         unsubscribe();
         resolve();
       });
@@ -31,9 +41,11 @@ test("fresh production composition exposes editable Monaco config through OsApi 
       editor: { minimap: { enabled: false } },
     }, null, 2)}\n`;
     await env.os.fs.writeText(MONACO_RUNTIME_CONFIG_PATH, edited);
-    await changed;
+    await Promise.all([firstChanged, secondChanged]);
     expect(await env.os.fs.readText(MONACO_RUNTIME_CONFIG_PATH)).toBe(edited);
     expect(env.services.monacoRuntimeConfig.getSnapshot().editor.minimap.enabled).toBe(false);
+    expect(firstObserved).toBe(false);
+    expect(secondObserved).toBe(false);
 
     const opened = await env.os.open(MONACO_RUNTIME_CONFIG_PATH);
     expect(opened.resource.path).toBe(MONACO_RUNTIME_CONFIG_PATH);
