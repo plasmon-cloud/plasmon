@@ -7,6 +7,7 @@ const APPROVAL_TYPES = "    types: [submitted]";
 const MERGE_GROUP_TRIGGER = "  merge_group:";
 const CHECKS_REQUESTED_TRIGGER = "    types: [checks_requested]";
 const APPROVED_REVIEW = "github.event_name == 'pull_request_review' && github.event.review.state == 'approved'";
+const RETAINED_APPROVAL = "github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true'";
 
 const gates = [
   {
@@ -57,22 +58,33 @@ function verifyCommonTriggers(source, label) {
   if (/release\/0\.1\.0-r\d/u.test(source)) throw new Error(`${label} hard-codes a concrete release branch`);
 }
 
+function verifyRetainedApproval(source, label) {
+  const retained = stepSection(source, "Detect retained approval");
+  requireFragment(retained, "reviewDecision", `${label} retained approval`);
+  requireFragment(retained, 'decision" = "APPROVED"', `${label} retained approval`);
+  requireFragment(retained, 'echo "approved=true"', `${label} retained approval`);
+}
+
 function verifyApprovalGate(gate) {
   const source = readFileSync(gate.path, "utf8");
   const label = gate.context;
   verifyCommonTriggers(source, label);
   requireFragment(source, `    name: ${gate.context}`, label);
+  verifyRetainedApproval(source, label);
 
   const checkpoint = stepSection(source, gate.checkpoint);
   requireFragment(checkpoint, "merge queue is fast-only", `${label} queue checkpoint`);
   requireFragment(checkpoint, "waits for normal GitHub review approval", `${label} approval checkpoint`);
+  requireFragment(checkpoint, RETAINED_APPROVAL, `${label} retained-approval checkpoint`);
 
   const nixStep = stepSection(source, "Install Nix");
   requireFragment(nixStep, APPROVED_REVIEW, `${label} Nix setup`);
+  requireFragment(nixStep, RETAINED_APPROVAL, `${label} retained-approval Nix setup`);
   requireFragment(nixStep, "uses: cachix/install-nix-action@v31", `${label} Nix setup`);
 
   const expensiveStep = stepSection(source, gate.expensiveStep);
   requireFragment(expensiveStep, APPROVED_REVIEW, `${label} confidence gate`);
+  requireFragment(expensiveStep, RETAINED_APPROVAL, `${label} retained-approval confidence gate`);
   for (const command of gate.requiredCommands) requireFragment(expensiveStep, command, `${label} confidence gate`);
 
   const verifierStep = stepSection(source, "Verify required-gate workflow contract");
@@ -88,10 +100,13 @@ for (const gate of selectedGates) verifyApprovalGate(gate);
 const browserWorkflow = readFileSync(".github/workflows/plasmon-browser-ci.yml", "utf8");
 requireFragment(browserWorkflow, "    name: Packaged Playwright demo acceptance", "Demo browser gate");
 const demoJob = browserWorkflow.slice(browserWorkflow.indexOf("  packaged-demo:"));
+verifyRetainedApproval(demoJob, "Demo browser gate");
 const demoCheckpoint = stepSection(demoJob, "Report staged demo checkpoint");
 requireFragment(demoCheckpoint, "merge queue is fast-only", "Demo queue checkpoint");
+requireFragment(demoCheckpoint, RETAINED_APPROVAL, "Demo retained-approval checkpoint");
 const demoSlowStep = stepSection(demoJob, "Package and run Plasmon demo browser acceptance");
 requireFragment(demoSlowStep, APPROVED_REVIEW, "Demo confidence gate");
+requireFragment(demoSlowStep, RETAINED_APPROVAL, "Demo retained-approval confidence gate");
 for (const command of ["npm run plasmon:demo:prepare", "npm run plasmon:demo:status", "npm run plasmon:demo:reinstall", "npm run test:e2e:plasmon:demo"]) requireFragment(demoSlowStep, command, "Demo confidence gate");
 
 for (const path of [".github/workflows/plasmon-ci.yml", ".github/workflows/kernel-ci.yml", ".github/workflows/plasmon-browser-smoke-ci.yml", ".github/workflows/plasmon-browser-ci.yml", ".github/workflows/plasmon-browser-persistence-ci.yml"]) {
@@ -100,4 +115,4 @@ for (const path of [".github/workflows/plasmon-ci.yml", ".github/workflows/kerne
   requireFragment(source, CHECKS_REQUESTED_TRIGGER, `${path} merge-queue support`);
 }
 
-console.log(`Required browser gates verified: expensive package/Playwright work runs on normal approval, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+console.log(`Required browser gates verified: expensive package/Playwright work runs on normal approval and retained approved heads, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);

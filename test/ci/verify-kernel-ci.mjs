@@ -20,7 +20,10 @@ for (const fragment of [
   "      - main",
   `      - '${releaseBranchGlob}'`,
   "name: Determine Kernel CI applicability",
-  "pull_request|merge_group)",
+  "name: Detect retained approval",
+  "reviewDecision",
+  'decision" = "APPROVED"',
+  "steps.retained_approval.outputs.approved",
   "github.event.review.state",
   "refs/heads/main",
   "name: kernel",
@@ -35,4 +38,4 @@ for (const fragment of ["pull_request_target", "continue-on-error: true", "    p
 
 if (/release\/0\.1\.0-r\d/u.test(workflow)) throw new Error("Kernel CI must use the release branch role instead of a concrete release branch");
 
-console.log(`Kernel CI verified for staged CI: ordinary PR and merge_group are cheap, normal approval runs the real required kernel lane, main push coverage remains real, and ${releaseBranchGlob} release pushes do not repeat pre-merge kernel work`);
+console.log(`Kernel CI verified for staged CI: ordinary unapproved PRs and merge_group are cheap, normal approval and retained approved heads run the real required kernel lane, main push coverage remains real, and ${releaseBranchGlob} release pushes do not repeat pre-merge kernel work`);

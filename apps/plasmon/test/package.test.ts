@@ -8,9 +8,14 @@ import {
 import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
-import { DEMO_PAYLOAD_MARKERS, SLIM_MAX_BYTES } from "../slimPackageGate.ts";
+import {
+  assertSlimRuntimePackagePath,
+  DEMO_PAYLOAD_MARKERS,
+  SLIM_MAX_BYTES,
+} from "../slimPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
+const SLIM_HEADROOM_TARGET_BYTES = 1_800_000;
 const manifestUrl = new URL("../neutron.json", import.meta.url);
 const backendUrl = new URL("../backend/main.mo", import.meta.url);
 const htmlUrl = new URL("../dist/web/index.html", import.meta.url);
@@ -71,7 +76,8 @@ test("plasmon package output matches the source manifest archive identity", asyn
   if (packagePolicy.isSlim) {
     const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
     console.log(`Slim package test size: ${archiveStats.size} bytes`);
-    expect(archiveStats.size).toBeLessThan(SLIM_MAX_BYTES);
+    expect(SLIM_HEADROOM_TARGET_BYTES).toBeLessThan(SLIM_MAX_BYTES);
+    expect(archiveStats.size).toBeLessThan(SLIM_HEADROOM_TARGET_BYTES);
   }
 });
 
@@ -108,7 +114,37 @@ test("plasmon bundles the shared design system stylesheet", async () => {
   expect(css).toContain("--nt-bg-panel");
 });
 
-test("package profile excludes game payloads and selects the requested Monaco worker set", async () => {
+test("Slim package input rejects repository-only artifacts and permits runtime assets", () => {
+  if (!packagePolicy.isSlim) return;
+
+  for (const rejectedPath of [
+    "README.md",
+    "web/main.js.map",
+    "src/app.ts",
+    "tests/app.test.js",
+    "web/docs/guide.html",
+  ]) {
+    expect(() => assertSlimRuntimePackagePath(rejectedPath)).toThrow(
+      "non-runtime package input is forbidden",
+    );
+  }
+
+  for (const runtimePath of [
+    "web/index.html",
+    "web/main.css",
+    "web/config.json",
+    "web/static/icon.svg",
+    "web/static/wallpaper.jpg",
+    "web/static/font.ttf",
+    "web/runtime/worker.wasm",
+  ]) {
+    expect(() => assertSlimRuntimePackagePath(runtimePath)).not.toThrow();
+  }
+});
+
+test("Base and Slim exclude heavyweight game/demo payloads and emit the exact requested Monaco worker set", async () => {
+  expect(packagePolicy.demoOverlay).toBe(false);
+
   const archiveFiles = (await readdir(distRootUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
   const webFiles = (await readdir(distWebUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
   const forbiddenGamePaths = archiveFiles.filter((file) => file.includes("jsdos")
@@ -130,7 +166,9 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   const workerPaths = webFiles.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
   expect(workerPaths).toEqual([
     ...monacoWorkers.map((worker) => `System/Program Files/MonacoEditor/${worker}`),
-    ...monacoWorkers.map((worker) => `runtime/monaco/${worker}`),
+    ...(packagePolicy.monacoProfile === "slim"
+      ? []
+      : monacoWorkers.map((worker) => `runtime/monaco/${worker}`)),
   ].sort());
 
   const transportScript = await readFile(new URL("../dist/web/runtime/monaco/worker-sources.js", import.meta.url), "utf8");
@@ -139,11 +177,34 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   const sources = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string>;
   expect(Object.keys(sources).sort()).toEqual([...monacoWorkers].sort());
 
-  if (packagePolicy.isSlim) {
-    expect(packagePolicy.isDemo).toBe(false);
-    const mainBundle = await readFile(mainBundleUrl, "utf8");
-    for (const marker of DEMO_PAYLOAD_MARKERS) {
-      expect(mainBundle).not.toContain(marker);
+  for (const worker of monacoWorkers) {
+    const canonical = await readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url), "utf8");
+    expect(canonical.length).toBeGreaterThan(0);
+    expect(sources[worker]).toBe(canonical);
+
+    if (packagePolicy.monacoProfile !== "slim") {
+      const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
+      expect(runtime).toBe(canonical);
     }
   }
+
+  const mainBundle = await readFile(mainBundleUrl, "utf8");
+  for (const marker of DEMO_PAYLOAD_MARKERS) {
+    expect(mainBundle).not.toContain(marker);
+  }
+});
+
+test("ordinary package tests exercise Base while the Slim ceiling stays Slim-only", () => {
+  if (packagePolicy.isSlim) {
+    expect(packagePolicy.packageTier).toBe("slim");
+    expect(packagePolicy.monacoProfile).toBe("slim");
+    return;
+  }
+
+  expect(packagePolicy).toMatchObject({
+    packageTier: "base",
+    isSlim: false,
+    demoOverlay: false,
+    monacoProfile: "base",
+  });
 });

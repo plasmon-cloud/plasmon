@@ -57,7 +57,7 @@ const REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES = [
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}ts.worker.js`,
 ] as const;
 
-type MonacoProfile = "slim" | "full";
+type MonacoProfile = "slim" | "base";
 
 function normalized(value: string): string {
   return `/${value.replaceAll("\\", "/").replace(/^\.?\//u, "")}`;
@@ -77,7 +77,7 @@ export function assertMatureNativeAppBundle(
   profile: NativeAppPackageProfile = {},
 ): void {
   const requireEditors = profile.requireEditors ?? true;
-  const monacoProfile = profile.monacoProfile ?? "full";
+  const monacoProfile = profile.monacoProfile ?? "base";
   const outputs = Object.entries(metafile.outputs);
   const outputPaths = outputs.map(([path]) => path);
   const main = outputs.find(([path]) => normalized(path).endsWith("/dist/web/main.js"));

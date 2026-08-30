@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: plasmon-browser-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -34,8 +35,29 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs browser
 
+      - name: Detect retained approval
+        id: retained_approval
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner="${REPOSITORY%%/*}"
+          name="${REPOSITORY#*/}"
+          decision="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewDecision}}}' \
+            -F owner="$owner" -F name="$name" -F number="$PR_NUMBER" \
+            --jq '.data.repository.pullRequest.reviewDecision')"
+          if [ "$decision" = "APPROVED" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Report staged specialist checkpoint
-        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') && !(github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           case "${{ github.event_name }}" in
             pull_request) echo "Specialist acceptance waits for normal GitHub review approval." ;;
@@ -45,13 +67,13 @@ jobs:
           esac
 
       - name: Install Nix
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon specialist browser acceptance
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -87,7 +109,7 @@ jobs:
           '
 
       - name: Upload Specialist Playwright report
-        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) }}
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true')) }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-specialist-report-${{ github.run_attempt }}
@@ -106,8 +128,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect retained approval
+        id: retained_approval
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner="${REPOSITORY%%/*}"
+          name="${REPOSITORY#*/}"
+          decision="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewDecision}}}' \
+            -F owner="$owner" -F name="$name" -F number="$PR_NUMBER" \
+            --jq '.data.repository.pullRequest.reviewDecision')"
+          if [ "$decision" = "APPROVED" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Report staged demo checkpoint
-        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') && !(github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           case "${{ github.event_name }}" in
             pull_request) echo "Demo acceptance waits for normal GitHub review approval." ;;
@@ -117,13 +160,13 @@ jobs:
           esac
 
       - name: Install Nix
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon demo browser acceptance
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -160,7 +203,7 @@ jobs:
           '
 
       - name: Upload Demo Playwright report
-        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) }}
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true')) }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-demo-report-${{ github.run_attempt }}

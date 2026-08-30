@@ -16,9 +16,9 @@ const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
 const packagePolicy = resolvePackageProfile();
 const isSlimMonacoProfile = packagePolicy.monacoProfile === "slim";
-const isDemoProfile = packagePolicy.isDemo;
+const demoOverlay = packagePolicy.demoOverlay;
 
-const [demoTextSource, demoMarkdownSource, demoSvgSource] = isDemoProfile
+const [demoTextSource, demoMarkdownSource, demoSvgSource] = demoOverlay
   ? await Promise.all([
     readFile(new URL("./src/demo/assets/Demo Notes.txt", import.meta.url), "utf8"),
     readFile(new URL("./src/demo/assets/Demo Guide.md", import.meta.url), "utf8"),
@@ -71,13 +71,15 @@ const monacoEntryPoints = [
   { in: "monaco-editor/esm/vs/language/typescript/ts.worker.js", out: "runtime/monaco/ts.worker" },
 ] as const;
 
+const slimMonacoEntryPoints = monacoEntryPoints.filter(({ out }) =>
+  out.endsWith("/editor.worker") || out.endsWith("/ts.worker")
+);
+
 const config: BuildOptions = {
   entryPoints: [
     { in: "./src/index.tsx", out: "main" },
     { in: "./src/os/fs/background.ts", out: "service" },
-    ...(isSlimMonacoProfile
-      ? monacoEntryPoints.filter(({ out }) => out.endsWith("/editor.worker") || out.endsWith("/ts.worker"))
-      : monacoEntryPoints),
+    ...(isSlimMonacoProfile ? slimMonacoEntryPoints : monacoEntryPoints),
   ],
   outdir: "./dist/web",
   bundle: true,
@@ -99,7 +101,7 @@ const config: BuildOptions = {
     __PLASMON_SLIM_PROFILE__: JSON.stringify(packagePolicy.isSlim),
     __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
-    __PLASMON_DEMO__: JSON.stringify(isDemoProfile),
+    __PLASMON_DEMO__: JSON.stringify(demoOverlay),
     __PLASMON_DEMO_TEXT__: demoTextSource === undefined ? "undefined" : JSON.stringify(demoTextSource),
     __PLASMON_DEMO_MARKDOWN__: demoMarkdownSource === undefined ? "undefined" : JSON.stringify(demoMarkdownSource),
     __PLASMON_DEMO_SVG__: demoSvgSource === undefined ? "undefined" : JSON.stringify(demoSvgSource),

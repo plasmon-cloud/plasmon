@@ -40,6 +40,11 @@ for (const fragment of [
   "workflow_dispatch:",
   "pull_request|pull_request_review)",
   "github.event.review.state == 'approved'",
+  "name: Detect retained approval",
+  "reviewDecision",
+  "EFFECTIVE_EVENT_NAME",
+  "steps.retained_approval.outputs.approved == 'true'",
+  "needs.applicability.outputs.phase == 'pre-merge-confidence'",
   "Report ordinary PR waiting for approval",
   "Report merge queue fast-only checkpoint",
   "Require approved pre-merge probe matrix success",
@@ -130,4 +135,4 @@ for (const fragment of [
   "@quarantine",
 ]) requireFragment(`${workflowReadme}\n${probeDoc}\n${stagedDoc}`, fragment, "durable CI documentation");
 
-console.log("Flake Probe scheduling verified: PR waits for approval, approval runs 1 broad + conditional 3 targeted as a hard gate, merge queue repeats no browser probe, post-merge runs 3 broad + conditional 3 targeted, and explicit heavy diagnostics remain available");
+console.log("Flake Probe scheduling verified: PR waits for approval, approval and retained approved heads run 1 broad + conditional 3 targeted as a hard gate, merge queue repeats no browser probe, post-merge runs 3 broad + conditional 3 targeted, and explicit heavy diagnostics remain available");

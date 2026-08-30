@@ -11,6 +11,10 @@ export interface PlasmonOSProps {
   services?: PlasmonServices;
 }
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
 /**
  * Integration-owned OS composition root. Native applications render in
  * Plasmon-managed windows; real Neutron Elements are only opened through the
@@ -18,6 +22,10 @@ export interface PlasmonOSProps {
  */
 export function PlasmonOS({ services: provided }: PlasmonOSProps) {
   const services = useMemo(() => provided ?? createPlasmonServices(), [provided]);
+  const nativeAppLog = useMemo(
+    () => services.diagnostics.for("native-app"),
+    [services.diagnostics],
+  );
   const [processRevision, setProcessRevision] = useState(0);
 
   useEffect(
@@ -99,6 +107,25 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                             Application failed to render: {error instanceof Error ? error.message : String(error)}
                           </div>
                         )}
+                        onMissingLoader={() => {
+                          nativeAppLog.error("native-app.load.failed", {
+                            message: "Native application host loader is unavailable",
+                            appId: record.appId,
+                            handlerId: record.handlerId,
+                            processId: record.id,
+                            reason: "missing-loader",
+                          });
+                        }}
+                        onError={(error) => {
+                          if (services.nativeApps.isLoadFailure(record.appId, error)) return;
+                          nativeAppLog.error("native-app.crashed", {
+                            message: "Native application failed inside its Process host",
+                            appId: record.appId,
+                            handlerId: record.handlerId,
+                            processId: record.id,
+                            errorType: diagnosticErrorType(error),
+                          });
+                        }}
                       />
                     ) : (
                       <div className="plasmon-os-host-state" role="alert">Process record is unavailable.</div>

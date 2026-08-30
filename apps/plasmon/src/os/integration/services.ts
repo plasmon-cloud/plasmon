@@ -29,8 +29,14 @@ import {
   type RepositoryCommit,
   type RepositoryState,
 } from "../fs/index.ts";
+import {
+  PlasmonDiagnosticService,
+  type DiagnosticLogger,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
+import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
@@ -87,6 +93,7 @@ export interface PlasmonServices {
   fs: FsService;
   fsEvents: FsEventSource;
   filesystem: FilesystemCoreServices;
+  diagnostics: DiagnosticService;
   process: ProcessController;
   windows: WindowManager;
   windowPlacement: NativeWindowPlacementController;
@@ -113,6 +120,10 @@ export interface CreatePlasmonServicesOptions {
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
 function createAuthorizationService(): ResourceAuthorizationService {
   const preview = typeof window === "undefined" || window.parent === window;
   return preview
@@ -129,6 +140,8 @@ function createAuthorizationService(): ResourceAuthorizationService {
 class BrowserSelectedFsRepository implements FsRepository {
   readonly kind = "browser-selected";
   private readonly selected = createBrowserFsRepository({
+    // Diagnostics cannot depend on the filesystem before that filesystem exists.
+    // This pre-diagnostics bootstrap failure therefore uses the emergency console path.
     onFallback: (error) => console.warn("Plasmon standalone filesystem storage fallback:", error.message),
   });
 
@@ -181,6 +194,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
@@ -201,7 +215,15 @@ function registerNativeApplications(
   const contentLoaders = createContentAppLoaders({ hiddenVisibility });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
-    if (!loader) throw new Error(`Missing native application loader: ${definition.id}`);
+    if (!loader) {
+      log.error("native-app.registration.failed", {
+        message: "Native application loader is missing during registration",
+        appId: definition.id,
+        handlerId: definition.handlerId,
+        reason: "missing-loader",
+      });
+      throw new Error(`Missing native application loader: ${definition.id}`);
+    }
     nativeApps.registerWithLoader(definition, loader);
   }
 
@@ -238,12 +260,13 @@ function registerNativeApplications(
  * Tests may inject only true external/runtime boundaries (for example an
  * in-memory persistence repository, a mock Neutron bridge, or deterministic window
  * manager). Registration, associations, opening, filesystem policy, process
- * behavior, and all other OS semantics remain the same production composition.
+ * behavior, diagnostics, and all other OS semantics remain the same production composition.
  *
  * The returned public fs is the filesystem-core facade: it waits for migration
  * and bootstrap to finish and applies dot-hidden listing semantics. The core
  * itself still mutates only through FsService primitives, so persistence remains
- * owned by the existing hosted/background boundary.
+ * owned by the existing hosted/background boundary. Diagnostics also persist
+ * through that raw authority after the filesystem readiness barrier.
  *
  * Runtime controllers are assembled here but started by the outer application
  * bootstrap before React renders. This keeps service construction deterministic
@@ -255,27 +278,95 @@ function registerNativeApplications(
 export function createPlasmonServices(
   options: CreatePlasmonServicesOptions = {},
 ): PlasmonServices {
+  const filesystemMode = options.filesystemRepository ? null : detectFilesystemFrontendMode();
   const rawFs = options.filesystemRepository
     ? new PersistentFsService(options.filesystemRepository)
-    : createFilesystemService();
+    : createFilesystemService(filesystemMode ?? undefined);
+  let filesystem: FilesystemCoreServices | null = null;
+  const diagnostics = new PlasmonDiagnosticService({
+    fs: rawFs,
+    ready: async () => {
+      if (filesystem) await filesystem.ready;
+    },
+    // The diagnostics sink cannot recursively report failure through itself.
+    onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
+  });
+  const filesystemLog = diagnostics.for("filesystem");
+  const processLog = diagnostics.for("process");
+  const windowLog = diagnostics.for("windowing");
+  const nativeAppLog = diagnostics.for("native-app");
+  const shellLog = diagnostics.for("shell");
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  }
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
+  const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
+    onRestoreRejected: (reason) => {
+      windowLog.warn("window.placement.restore.rejected", {
+        message: "Persisted window placement metadata was rejected",
+        reason,
+      });
+    },
+  });
   const windowPlacement = new NativeWindowPlacementController(
     windows,
-    new FsServiceWindowPlacementStore(rawFs),
+    placementStore,
     {
-      onPersistenceError: (error) => console.warn("Plasmon window placement persistence failed:", error),
+      onPersistenceError: (error, stage) => {
+        windowLog.warn(`window.placement.${stage}.failed`, {
+          message: `Window placement ${stage} failed`,
+          errorType: diagnosticErrorType(error),
+        });
+      },
     },
   );
   const neutron = options.neutron ?? createNeutronBridge();
-  const nativeApps = new NativeApplicationRegistry();
+  const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
+    onStartupError: (error, app, _target, stage, processId) => {
+      processLog.error("process.start.failed", {
+        message: "Native process startup failed",
+        appId: app.id,
+        handlerId: app.handlerId,
+        processId,
+        stage,
+        errorType: diagnosticErrorType(error),
+      });
+    },
+    onCloseError: (error, record) => {
+      processLog.error("process.close.handler_failed", {
+        message: "Native process close handler failed",
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
+        errorType: diagnosticErrorType(error),
+      });
+    },
+    onWindowCloseError: (error, record) => {
+      processLog.error("process.close.failed", {
+        message: "Native process window teardown failed",
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
+        stage: "window-close",
+        errorType: diagnosticErrorType(error),
+      });
+    },
+    onWindowLost: (record) => {
+      processLog.error("process.window_lost", {
+        message: "Running native process lost its window",
+        appId: record.appId,
+        handlerId: record.handlerId,
+        processId: record.id,
+        windowId: record.windowId,
+      });
+    },
   });
   const openService = new IntegratedOpenService({ nativeApps, associations, process, neutron });
   const fileClipboard = new FileOperationClipboard();
-  let filesystem: FilesystemCoreServices | null = null;
 
   // Native Explorer registration happens before filesystem bootstrap so the
   // canonical dispatcher can discover the Explorer handler during core setup.
@@ -303,6 +394,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    nativeAppLog,
   );
   if (!isCoreProfile) {
     associations.registerHandler(terminalHandler);
@@ -320,11 +412,36 @@ export function createPlasmonServices(
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
-  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron);
+  void filesystem.ready
+    .then((initialization) => {
+      filesystemLog.notice("filesystem.bootstrap.ready", {
+        message: "Filesystem bootstrap completed",
+      });
+      if (initialization.neutronProjectionError) {
+        filesystemLog.warn("filesystem.neutron-projection.failed", {
+          message: "Initial Neutron application projection reconciliation failed",
+          error: initialization.neutronProjectionError,
+        });
+      }
+    })
+    .catch((error) => {
+      filesystemLog.critical("filesystem.bootstrap.failed", {
+        message: "Filesystem bootstrap failed",
+        error,
+      });
+    });
+  nativeApps.setLoader(
+    recycleBinAppDefinition.id,
+    createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
+  );
+  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {
+    diagnostics: shellLog,
+  });
   const services: PlasmonServices = {
     fs,
     fsEvents: fs,
     filesystem,
+    diagnostics,
     process,
     windows,
     windowPlacement,
@@ -338,8 +455,6 @@ export function createPlasmonServices(
     hiddenVisibility,
   };
 
-  // Scripting consumes the same production OsApi contract exposed as env.os in
-  // headless/RTL composition. RunContext and command behavior stay above OsApi.
   const scripting = new ScriptingService({ os: createPlasmonOsApi({ services }) });
   nativeApps.setLoader(
     explorerAppDefinition.id,
@@ -354,13 +469,7 @@ export function createPlasmonServices(
       transpileCmdFile: async (nodeId) => scripting.transpileCmdFile(await fs.pathOf(nodeId)),
     }),
   );
-  if (!isCoreProfile) {
-    nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
-  }
-  nativeApps.setLoader(
-    recycleBinAppDefinition.id,
-    createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
-  );
+  if (!isCoreProfile) nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
 
   return services;
 }
