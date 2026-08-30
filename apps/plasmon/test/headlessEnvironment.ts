@@ -85,7 +85,7 @@ export function createHeadlessPlasmonEnvironment(
     filesystemRepository: repository,
     neutron,
     windows,
-    runtimeSelection: options.runtimeSelection,
+    ...(options.runtimeSelection ? { runtimeSelection: options.runtimeSelection } : {}),
   });
   const os = createPlasmonOsApi({ services });
 
