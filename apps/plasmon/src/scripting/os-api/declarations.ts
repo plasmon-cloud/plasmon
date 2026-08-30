@@ -36,21 +36,26 @@ interface RunOsWindow {
   minimized: boolean;
   maximized: boolean;
 }
+interface RunOsListOptions {
+  includeHidden?: boolean;
+}
 interface RunOsApi {
   readonly fs: {
     stat(path: string): Promise<RunOsResource | null>;
     exists(path: string): Promise<boolean>;
+    list(path: string, options?: RunOsListOptions): Promise<readonly RunOsResource[]>;
     readText(path: string): Promise<string>;
     writeText(path: string, text: string): Promise<RunOsResource>;
     createDirectory(path: string): Promise<RunOsResource>;
-    list(path: string): Promise<readonly RunOsResource[]>;
     copy(sourcePath: string, destinationPath: string): Promise<RunOsResource>;
     move(sourcePath: string, destinationPath: string): Promise<RunOsResource>;
+    rename(path: string, newName: string): Promise<RunOsResource>;
     remove(path: string): Promise<void>;
   };
   readonly processes: { list(): readonly RunOsProcess[] };
   readonly windows: { list(): readonly RunOsWindow[] };
   open(path: string): Promise<RunOpenResult>;
+  openWith(path: string, handlerId: string): Promise<RunOpenResult>;
 }
 interface RunCommandResult {
   exitCode: number;
@@ -69,6 +74,7 @@ interface RunCommandFactory {
   ls(args?: readonly string[]): RunCommand;
   pwd(args?: readonly string[]): RunCommand;
   cd(args?: readonly string[]): RunCommand;
+  touch(args?: readonly string[]): RunCommand;
   mkdir(args?: readonly string[]): RunCommand;
   cp(args?: readonly string[]): RunCommand;
   mv(args?: readonly string[]): RunCommand;
@@ -83,7 +89,9 @@ interface RunCommandFactory {
   clear(args?: readonly string[]): RunCommand;
   history(args?: readonly string[]): RunCommand;
   open(args?: readonly string[]): RunCommand;
+  edit(args?: readonly string[]): RunCommand;
   help(args?: readonly string[]): RunCommand;
+  man(args?: readonly string[]): RunCommand;
   true(args?: readonly string[]): RunCommand;
   false(args?: readonly string[]): RunCommand;
   exit(args?: readonly string[]): RunCommand;
