@@ -1,253 +1,357 @@
-# `.cmd` / `.run` roadmap
+# `.cmd` / `.run` roadmap and acceptance ledger
 
-This is the working backlog for the `experiment/cmd` branch. It records the desired product surface discussed during the experiment so future developers do not need the original chat to reconstruct intent.
+This is the working backlog for `experiment/cmd`. It records the desired product surface and the concrete dogfood acceptance requirements so future developers do not need the original chat to reconstruct intent.
 
-The version labels describe capability stages, not release numbers for Plasmon itself.
+The version labels are capability stages, not Plasmon release numbers.
 
 Status convention:
 
-- `[x]` implemented on this experiment branch and covered at least by deterministic tests/build checks;
-- `[~]` partially implemented, implemented with a temporary dependency, or still missing required packaged/browser proof;
-- `[ ]` desired but not implemented.
+- `[x]` implemented and covered at the lowest practical deterministic layer;
+- `[~]` implementation exists but still needs packaged-browser or manual interaction proof;
+- `[ ]` desired but not implemented;
+- `[BLOCKED]` required product capability cannot be truthfully implemented by this scripting layer yet.
 
-The detailed v1 language contract is in `apps/plasmon/src/scripting/V1.md`. The design and architectural rationale are in `apps/plasmon/src/scripting/README.md` and `apps/plasmon/src/scripting/DESIGN.md`.
+Read with:
 
-## v1 — useful Plasmon shell and executable scripts
+- `apps/plasmon/src/scripting/README.md` — subsystem orientation;
+- `apps/plasmon/src/scripting/DESIGN.md` — architecture/rationale;
+- `apps/plasmon/src/scripting/V1.md` — original frozen v1 language contract;
+- `apps/plasmon/src/scripting/VOICE_DOGFOOD_ACCEPTANCE.md` — line-by-line reconciliation of the two voice dogfood passes.
 
-### Architecture and runtime
+The dogfood pass expanded the original v1 usability contract. Where this file and the older `V1.md` differ on usability scope, this ledger is the active experiment target.
 
-- [x] `.cmd` is a small Bash-like convenience language, not Bash compatibility.
-- [x] `.cmd` parses into a local AST and genuinely transpiles to readable `.run` TypeScript before execution.
+# v1 — useful Plasmon shell and executable scripts
+
+## Voice-dogfood acceptance ledger
+
+Every concrete issue/expectation from the two dogfood voice notes is represented here.
+
+### Terminal interaction and presentation
+
+- [~] **Recognizable Terminal taskbar icon.** `native:terminal` uses the dedicated terminal SVG; final packaged/manual proof must show it actually renders in the taskbar rather than falling back/appearing blank.
+- [~] **Autofocus on launch.** Opening Terminal must put keyboard focus in xterm immediately, PuTTY-style, with no extra click.
+- [~] **Focus retained after Enter.** Every completed command must return a prompt that is immediately typeable; Enter must not strand focus.
+- [~] **Window/content click restores typing focus.** Clicking back into Terminal must restore xterm input without resetting cwd/history/session state.
+- [~] **Terminal text selection works.** Output must be selectable with normal pointer interaction.
+- [~] **Standard copy/paste works.** Use ordinary browser/OS terminal clipboard conventions; do not invent Enter-to-copy unless deliberately designed later.
+- [x] **Use a real terminal surface.** xterm owns presentation/input; command/runtime semantics stay independent of xterm.
+- [x] **cwd is obvious.** Prompt visibly contains cwd, changes after `cd`, and `pwd` remains available.
+- [x] **Successful mutation commands may be quiet.** `mkdir`, `mv`, `rm`, etc. follow normal Unix-style silence on success, but the next prompt must visibly return and `help` explains the convention.
+- [x] **Errors are explicit.** Failures return readable stderr and user-facing terminology says `OS API`, not implementation spelling such as `OsApi`.
+- [x] **Filesystem case behavior is deliberate.** The shell inherits canonical Plasmon filesystem/path case semantics; it does not invent a second Linux-style case-sensitive namespace.
+
+### Commands discovered during dogfood
+
+- [x] `ls` is a core command and works without flags.
+- [x] `ls -a`, `ls -l`, `ls -h`, and combined forms such as `ls -lah`.
+- [x] `touch` for simple create-if-missing behavior without fake Unix timestamp semantics.
+- [x] pipes with `|`.
+- [x] overwrite redirection with `>` so commands such as `echo hello > hello.txt` create/write files.
+- [x] `open PATH` remains intentionally Plasmon-native and is documented as desktop-open behavior analogous to `xdg-open`/macOS `open`, not a claim of GNU coreutils parity.
+- [x] pretty default `help`, including the explicit note that successful mutation commands are normally silent.
+- [x] every registered command has `man COMMAND` / `help COMMAND` generated from the same command metadata.
+- [x] `true` and `false` remain available for exit status composition but are hidden from beginner/default help.
+- [~] `exit [STATUS]` closes/ends the interactive Terminal session; deterministic behavior exists, packaged interaction proof remains.
+- [x] `mv SOURCE DESTINATION` supports real move **and rename** behavior rather than only “move into existing directory”.
+- [x] quoted paths with spaces are part of the command grammar; filenames such as `"File Manager.sys"` must be quoted like an ordinary shell.
+- [x] protected resources remain protected through `rm`/`mv`/`cp`; shell flags never bypass canonical policy.
+
+### Common-option compatibility audit
+
+The v1 goal is not GNU compatibility. It is that familiar commands have the common flags users will naturally try **when those flags have truthful Plasmon semantics**, and unsupported flags fail clearly instead of being silently ignored.
+
+Frozen v1 option matrix:
+
+- [x] `ls -a -l -h` and combined forms;
+- [x] `cat -n`;
+- [x] `mkdir -p`;
+- [x] `cp -r` / `cp -R` as familiar spellings for canonical directory copy;
+- [x] `rm -r` / `-R` / `-f`, including combined `-rf`;
+- [x] `grep -i` / `-n`, including combined `-in`;
+- [x] `head -n N`;
+- [x] `tail -n N`;
+- [x] `wc -l` / `-w` / `-c`, including combined forms;
+- [x] `sort -r`;
+- [x] `uniq -c`;
+- [x] `tee -a`.
+
+Commands without a useful truthful v1 flag surface (`pwd`, `cd`, `touch`, `mv`, `echo`, `ps`, `clear`, `history`, `open`, `edit`, `help`, `man`, `exit`) reject unsupported options/extra arguments with useful guidance instead of faking POSIX/GNU behavior.
+
+### Script-file and editor dogfood
+
+- [x] no shebang/hashbang is required; `.cmd`/`.run` associations already choose the runtime.
+- [~] double-click/normal activation of `.cmd` executes it instead of opening generic text; packaged proof remains.
+- [~] double-click/normal activation of `.run` executes it; packaged proof remains.
+- [~] right-click `.cmd` exposes **Run**, **Edit**, and **Transpile to .run**; packaged proof remains.
+- [~] right-click `.run` exposes **Run** and **Edit**; packaged proof remains.
+- [~] Explorer background **New** creates **Command Script (.cmd)** and **Run Script (.run)** templates; packaged proof remains.
+- [x] templates explain the language and do not imply a shebang is necessary.
+- [x] `edit PATH` opens the existing native Text Editor, providing a v1 terminal-to-editor workflow without building a second editor.
+- [x] `.cmd` command-name completion is based on the real Plasmon command catalog.
+- [ ] `.cmd` option completion is based on the same command metadata as `man`/`help`.
+- [x] `.cmd` command hover describes the real Plasmon command/usage rather than generic Bash behavior.
+- [ ] visible editor mode for `.cmd` says **Plasmon Command (.cmd)** where the editor shows a language label; Monaco may reuse its shell tokenizer internally.
+- [x] `.run` is edited as TypeScript and receives typed completion for implicit runtime globals/`OsApi`.
+- [ ] keep `.run` ambient command declarations synchronized with every v1 command factory (`touch`, `edit`, `man`, etc.).
+- [x] Nano is **not required for v1** because `edit PATH` reaches the real native editor; a terminal-native Nano-style application is a v2 usability feature.
+- [x] aliases are **not required for v1**; they are v2 because they require expansion, recursion, quoting, and session-persistence semantics rather than basic file editing.
+
+## Architecture and runtime
+
+- [x] `.cmd` is a small shell-like convenience language, not Bash compatibility.
+- [x] `.cmd` parses locally and genuinely transpiles to readable `.run` TypeScript before execution.
 - [x] `.run` is real TypeScript with an implicit `RunContext`, not a private intermediate DSL.
-- [x] Keep `OsApi`, `RunContext`, command/runtime mechanics, and test-only powers as separate layers.
-- [~] Consume the canonical production `OsApi` as the durable OS capability boundary. The branch still contains temporary scripting compatibility types/adapter that must be removed after rebasing onto the canonical API work.
-- [ ] Add the legitimate canonical `os.fs.list()` capability needed by `ls` if it is still absent when the experiment is rebased.
-- [x] Reuse the packaged Monaco TypeScript worker/compiler for `.run`; do not add a second compiler or runtime CDN dependency.
-- [x] Keep the `.cmd` parser local and small; no runtime download of a shell parser.
-- [x] Support cancellation plumbing through `AbortSignal` in `RunContext`.
-- [x] Preserve normal Plasmon/Neutron capability and filesystem authorities; scripting must never become a parallel privileged OS implementation.
+- [x] `OsApi`, `RunContext`, command/runtime mechanics, browser presentation, and test-only powers remain separate layers.
+- [x] the experiment consumes canonical production `src/os/api` contracts/adapter; the old duplicate compatibility contract/adapter has been removed. `src/scripting/os-api/declarations.ts` is only a Monaco declaration projection and must stay synchronized with canonical contracts until generation replaces it.
+- [x] canonical `os.fs.list()` exists and backs `ls`; hidden-entry selection remains a production list option, while formatting/sorting are shell concerns.
+- [x] canonical filesystem operations used by v1 include stat/exists/list/readText/writeText/createDirectory/copy/move/rename/remove.
+- [x] canonical open operations used by v1 include default `open` and explicit `openWith` for `edit`.
+- [x] reuse the packaged Monaco TypeScript worker/compiler for `.run`; no second TS compiler or runtime CDN dependency.
+- [x] keep the `.cmd` parser local and intentionally small; no runtime shell-parser download.
+- [x] `RunContext` carries an `AbortSignal`; full interactive Ctrl-C cancellation behavior is v2 runtime polish.
+- [x] scripting never bypasses normal Plasmon/Neutron filesystem, protection, association, process, or installation authorities.
 
-### `.cmd` v1 syntax
+## `.cmd` v1 syntax
 
-- [x] whitespace-separated command arguments;
+- [x] whitespace-separated arguments;
 - [x] single-quoted arguments;
 - [x] double-quoted arguments;
 - [x] basic backslash escaping;
 - [x] `#` line comments;
-- [x] newline-separated command sequencing;
-- [x] pipelines with `|`;
-- [x] stdout overwrite redirection with `>`;
-- [x] absolute Plasmon paths and relative paths resolved against session cwd;
+- [x] newline-separated sequencing;
+- [x] pipelines `|`;
+- [x] overwrite stdout redirection `>`;
+- [x] absolute paths and cwd-relative paths;
 - [x] command exit status propagation;
-- [x] explicit `exit` command/status;
-- [x] unsupported shell syntax fails explicitly instead of being silently misparsed;
-- [x] no shebang requirement. A leading `#!` is not needed to choose the runtime because the `.cmd`/`.run` file association already does that.
+- [x] multiline `.cmd` execution is fail-fast by default when a generated pipeline returns nonzero;
+- [x] explicit `exit [STATUS]`;
+- [x] unsupported shell syntax fails explicitly rather than being silently misparsed;
+- [x] no shebang requirement.
 
-### `.run` v1 context
+## `.run` v1 context
 
-- [x] expose `os`;
-- [x] expose command factories/registry access;
-- [x] expose shell/pipeline helpers;
-- [x] expose `args`;
-- [x] expose stdin/stdout/stderr abstractions;
-- [x] expose cancellation signal;
-- [x] expose a simple `print(...)` convenience;
-- [x] provide Monaco TypeScript declarations/completion for the implicit runtime context.
+- [x] `os`;
+- [x] command factories/registry access;
+- [x] shell/pipeline helpers;
+- [x] `args`;
+- [x] stdin/stdout/stderr abstractions;
+- [x] cancellation signal;
+- [x] `print(...)`;
+- [~] Monaco declarations/completion for the runtime context; declarations work but the v1 command-factory projection must be kept fully synchronized as commands are added.
 
-### v1 commands — filesystem/navigation
+## v1 command inventory
 
-- [x] `pwd`;
-- [x] `cd`;
-- [x] `ls`, including common human-friendly flags such as `-l`, `-a`, and combined forms such as `-lah` where meaningful;
-- [x] `mkdir`, including `-p` behavior where it can be expressed truthfully through Plasmon filesystem semantics;
-- [x] `touch` for simple file creation without pretending to implement Unix timestamp semantics;
-- [x] `cp` through canonical filesystem copy semantics;
-- [x] `mv` through canonical filesystem move/rename semantics;
-- [x] `rm` through canonical Plasmon removal/Recycle Bin semantics, including familiar convenience flags where they do not bypass product policy;
-- [x] `cat`;
-- [x] `open` through the shared open/association service;
-- [x] `edit PATH` to open a resource in the normal Plasmon Text Editor;
+Filesystem/navigation:
 
-### v1 commands — text/pipelines
+- [x] `pwd`
+- [x] `cd`
+- [x] `ls`
+- [x] `mkdir`
+- [x] `touch`
+- [x] `cp`
+- [x] `mv`
+- [x] `rm`
+- [x] `cat`
+- [x] `open`
+- [x] `edit`
 
-- [x] `echo`;
-- [x] `grep`, with a small useful option set such as case-insensitive and line-number output;
-- [x] `head`;
-- [x] `tail` without live-follow mode;
-- [x] `wc`;
-- [x] `sort`;
-- [x] `uniq`;
-- [x] `tee`;
+Text/pipeline:
 
-### v1 commands — session/OS help
+- [x] `echo`
+- [x] `grep`
+- [x] `head`
+- [x] `tail` (no live follow in v1)
+- [x] `wc`
+- [x] `sort`
+- [x] `uniq`
+- [x] `tee`
 
-- [x] `ps` using Plasmon process records;
-- [x] `clear`;
-- [x] `history`;
-- [x] `help` backed by command metadata;
-- [x] `man COMMAND`/equivalent command-specific help backed by the same metadata rather than a separate manual database;
-- [x] `true` and `false` for status composition, but do not clutter the normal beginner help list;
-- [x] `exit`;
-- [x] commands that succeed normally remain quiet like Unix tools unless they have meaningful output to report;
-- [x] errors use Plasmon terminology such as "OS API" rather than exposing internal experimental names.
+Session/OS/help:
 
-### v1 package/provisioning capability
+- [x] `ps` using truthful Plasmon native process records
+- [x] `clear`
+- [x] `history`
+- [x] `help`
+- [x] `man`
+- [x] `true`
+- [x] `false`
+- [x] `exit`
 
-A useful v1 should be capable of driving a basic system/application provisioning script, not only manipulating already-installed files.
+## v1 package/provisioning capability
 
-- [ ] `pkg list` through a truthful production package/application authority;
-- [ ] `pkg install <package-or-source>` through the production installation path;
-- [ ] `pkg remove <package>` through the production removal path;
-- [ ] do not invent a scripting-only package database or bypass Neutron installation/security ownership;
-- [ ] prove a small idempotent base-system provisioning example using `.cmd` for linear steps and `.run` for conditionals.
+A useful v1 is intended to drive a basic base-system/application provisioning script, not only manipulate already-installed files.
 
-### Terminal v1 UX
+- [BLOCKED] `pkg list` through one truthful production package/application authority.
+- [BLOCKED] `pkg install <package-or-source>` through the real owner-reviewed/Kernel installation authority with a truthful completion contract.
+- [BLOCKED] `pkg remove <package>` through a supported production removal authority.
+- [x] do **not** invent a scripting-only package database or bypass Neutron installation/security ownership.
+- [BLOCKED] prove a complete idempotent package-install/remove base-system example once the production authority exists.
+- [x] filesystem/configuration portion of a base-system script is expressible today with `.cmd`; conditionals/idempotence use `.run` TypeScript.
 
-- [x] real terminal presentation using xterm rather than a plain form/text-area imitation;
-- [~] reliable keyboard focus and input inside the installed Plasmon iframe. Deterministic/UI tests pass, but the final packaged-browser smoke still needs a clean pass after the latest interaction changes;
-- [x] command history and Up/Down recall;
-- [x] Tab completion for registered commands and useful path/argument cases;
-- [x] text selection and ordinary copy behavior;
-- [x] visible cwd/prompt behavior;
-- [x] `exit` closes/ends the active terminal session appropriately;
-- [ ] Ctrl-C cancellation should be visibly and consistently proven against a cancellable command/script, not only represented in the runtime types.
+The blocker is architectural: current Neutron exposes discovery/install-offer behavior but not one generalized application-facing list/install/remove package authority. Scripting must report this gap, not fake it.
 
-### Script-file lifecycle and discoverability
+## Terminal v1 UX
 
-- [x] `.cmd` and `.run` have explicit file classifications/associations;
-- [x] double-click/normal activation executes `.cmd` and `.run` instead of silently opening them as generic text;
-- [x] right-click `.cmd` exposes **Run**, **Edit**, and **Transpile to .run**;
-- [x] right-click `.run` exposes **Run** and **Edit**;
-- [x] Explorer background **New** can create **Command Script (.cmd)** and **Run Script (.run)** starter files;
-- [x] starter templates explain the intended language and that no shebang is required;
-- [x] `.cmd` can be manually transpiled to a sibling `.run` file and refuses unsafe overwrite by default;
-- [x] `.run` can be opened and edited as TypeScript;
-- [ ] settle whether Desktop and every other file surface should expose the same Run/Edit/New actions through one shared semantic action model rather than Explorer-only wiring.
+- [x] xterm-backed presentation/input;
+- [~] packaged launch focus;
+- [~] focus retained after Enter;
+- [~] click-to-refocus behavior;
+- [x] Up/Down session history;
+- [x] Tab completion for registered command names and current terminal completion cases;
+- [~] text selection and ordinary copy/paste — xterm provides the surface; final packaged/manual acceptance still required;
+- [x] visible cwd prompt;
+- [~] `exit` closes the active terminal window/session in packaged UI;
+- [x] dedicated Terminal icon asset and app definition;
+- [~] icon renders recognizably in the packaged taskbar rather than falling back;
+- [x] command errors render in stderr and successful quiet commands return the prompt.
 
-### Monaco/editor v1 UX
+## Script-file lifecycle and discoverability
 
-- [x] `.cmd` is detected as the Plasmon command language rather than relying solely on a generic shell-script association;
-- [x] `.cmd` command-name completion for the actual registered Plasmon commands;
-- [x] `.cmd` hover/help text sourced from the command catalog so users can discover syntax/options;
-- [x] `.run` uses TypeScript language services and completion for `os`, shell, commands, and context globals;
-- [ ] expand `.cmd` completion beyond command names to useful command options and filesystem path arguments;
-- [ ] make the language identity visibly say Plasmon Command/`.cmd` where Monaco UI exposes a language label, instead of implying full Bash compatibility.
+- [x] `.cmd` and `.run` classifications/associations;
+- [~] normal activation executes `.cmd`;
+- [~] normal activation executes `.run`;
+- [~] `.cmd` Run/Edit/Transpile actions;
+- [~] `.run` Run/Edit actions;
+- [~] Explorer New `.cmd` / New `.run` starter files;
+- [x] safe `.cmd` -> sibling `.run` transpile with overwrite refusal;
+- [x] `.run` opens/edits as TypeScript;
+- [x] `edit PATH` opens native Text Editor;
+- [ ] broader Desktop/other file-surface action convergence is useful but is **not a v1 blocker**; move to v2/shared-file-action cleanup unless a concrete v1 surface is broken.
 
-### v1 verification/cleanup gate
+## Monaco/editor v1 UX
+
+- [x] `.cmd` uses shell tokenization only as an implementation detail and installs Plasmon-specific completion/hover providers;
+- [x] command-name completion from command catalog;
+- [ ] option completion from command catalog metadata;
+- [x] hover/usage from command catalog;
+- [ ] visible status/mode label says `Plasmon Command (.cmd)`;
+- [x] `.run` TypeScript language services;
+- [x] `os.` completion exposes canonical production API members;
+- [ ] ambient `RunCommandFactory` declaration contains every v1 command factory.
+- [x] filesystem path completion in Monaco is **not required for v1**; it moves to v2 alongside richer context-aware completion.
+
+## v1 verification gate
 
 - [x] deterministic parser/transpiler/runtime/command tests;
 - [x] focused UI tests for Explorer script actions;
-- [x] fast Bun suite passes on the clean branch head used for the dogfood pass;
-- [x] slim build and Monaco worker packaging checks pass on that head;
-- [~] packaged Neutron/PocketIC browser smoke reaches the real Explorer script menu, but the latest run failed on a Playwright locator ambiguity between `Run` and `Transpile to .run`; fix the test to use an exact `Run` match and continue the remainder of the packaged smoke;
-- [ ] packaged smoke must prove Terminal input, `.cmd` execution, manual transpile, `.run` editing, and `.run` TypeScript completion on the final branch head;
-- [ ] rebase/integrate with the canonical production `OsApi`, delete duplicate experimental API types/adapters, reconcile DTO differences, and rerun all gates.
+- [x] fast Bun suite passed on the pre-ledger dogfood head;
+- [x] slim build and TypeScript-worker packaging passed on the pre-ledger dogfood head;
+- [ ] fix packaged Playwright `Run` locator to exact match so it does not collide with `Transpile to .run`;
+- [ ] packaged smoke proves Terminal taskbar icon asset/binding is present;
+- [ ] packaged smoke proves Terminal autofocus and focus retention after Enter;
+- [ ] packaged/manual acceptance proves selection/copy/paste behaves like a normal terminal;
+- [ ] packaged smoke proves simple Terminal command and cwd update;
+- [ ] packaged smoke proves New `.cmd`, Run/Edit/Transpile actions, generated `.run`, `.run` Edit, and TypeScript `os.` completion;
+- [ ] packaged smoke proves normal activation executes `.cmd` and `.run` or a focused deterministic/browser test proves the association path without duplicating semantics;
+- [ ] final deterministic suite passes after all v1 ledger changes;
+- [ ] final slim/package/worker checks pass after all v1 ledger changes;
+- [ ] sync/merge the **current** #631 head again before final acceptance while #631 remains open, then rerun gates; once #631 lands on `release/0.1.0-r3`, switch the experiment base relationship to R3.
+- [BLOCKED] package-provisioning acceptance remains blocked until production installation/removal authority exists.
 
-## v2 — shell ergonomics and everyday scripting
+# v2 — shell ergonomics and everyday scripting
 
-v2 should make `.cmd` comfortable for repeated human use without turning it into a Bash clone. When a feature becomes programming-language complexity rather than shell ergonomics, prefer `.run`.
+v2 should make `.cmd` comfortable for repeated human use without turning it into a Bash clone. If a feature becomes programming-language complexity, prefer `.run` TypeScript.
 
-### Language/expansion
+## Language/expansion
 
 - [ ] `;` command separators;
-- [ ] `&&` and `||` with real exit-status short-circuit semantics;
-- [ ] shell variables and `$VAR` expansion with a deliberately small, documented environment model;
-- [ ] command substitution `$(...)` if it can be implemented without compromising parser clarity;
+- [ ] `&&` / `||` short-circuit semantics;
+- [ ] shell variables and `$VAR` expansion with a deliberately small environment model;
+- [ ] command substitution `$(...)` if parser clarity can be preserved;
 - [ ] append redirection `>>` backed by a truthful append/write contract;
 - [ ] stdin redirection `<`;
 - [ ] stderr/basic fd redirection such as `2>` only after stdio routing is modeled cleanly;
 - [ ] globbing `*`/`?` with explicit Plasmon hidden-resource, case, escaping, and ordering semantics;
-- [ ] aliases with recursion protection, quoting rules, session persistence decision, and `alias`/`unalias` commands;
+- [ ] aliases plus `alias`/`unalias`, recursion protection, quoting rules, and a session-persistence decision;
 - [ ] command/script invocation by path with clear `.cmd` versus `.run` resolution;
-- [ ] settle a PATH/command-resolution model before adding `which`/`type`.
+- [ ] settle PATH/command resolution before `which`/`type`.
 
-### Completion and help
+## Completion/help
 
-- [ ] context-aware command option completion;
-- [ ] filesystem path completion using the same canonical path semantics as execution;
-- [ ] completion for aliases and script files;
-- [ ] richer hover/man examples generated from one command metadata source;
-- [ ] command usage errors consistently include a concise usage hint;
+- [ ] context-aware option completion beyond the v1 command/option baseline;
+- [ ] filesystem path completion in Monaco and Terminal using canonical path semantics;
+- [ ] alias/script-file completion;
+- [ ] richer examples in hover/man from one metadata source;
+- [ ] concise usage hints consistently attached to argument/option errors.
 
-### Additional commands
+## Additional commands
 
 - [ ] `which` / `type` after command resolution is defined;
 - [ ] `diff`;
 - [ ] `cut`;
 - [ ] `tr`;
 - [ ] `xargs` with intentionally bounded quoting semantics;
-- [ ] an interactive pager such as `less` if xterm session input is mature enough;
-- [ ] truthful system-information commands for Plasmon/Neutron/runtime state where useful, without emulating Linux values that do not exist.
+- [ ] interactive pager such as `less` once terminal session input is mature;
+- [ ] truthful Plasmon/Neutron/runtime information commands where useful.
 
-### Editing
+## Editing
 
-- [x] v1 baseline: `edit PATH` opens the native Text Editor;
-- [ ] add a lightweight terminal-native `nano`-style editor/application for users who want to stay in Terminal;
-- [ ] do not add Vim merely for parity; it is not a requirement for the scripting feature.
+- [x] v1 baseline: `edit PATH` opens native Text Editor;
+- [ ] lightweight terminal-native Nano-style editor/application;
+- [ ] Vim is not required merely for parity.
 
-### Runtime/process polish
+## Runtime/process polish
 
-- [ ] robust Ctrl-C cancellation across pipelines and `.run` scripts;
-- [ ] explicit script arguments when launched from Terminal/File Manager;
-- [ ] surface useful exit codes from script execution in Terminal and programmatic callers;
+- [ ] robust Ctrl-C cancellation across running pipelines and `.run` scripts;
+- [ ] script arguments when launched from Terminal/File Manager;
+- [ ] useful exit-code presentation/programmatic access;
 - [ ] decide whether command history persists across Terminal sessions;
-- [ ] expose script/runtime diagnostics in a user-friendly way while keeping implementation stack traces optional/developer-facing.
+- [ ] friendlier runtime diagnostics with optional developer stack details;
+- [ ] shared semantic Run/Edit/New actions across Explorer/Desktop/other file surfaces.
 
-### Trust and execution UX
+## Trust/execution UX
 
-- [ ] define provenance/trust treatment for downloaded/shared executable `.cmd` and `.run` files if normal activation remains executable-by-type;
-- [ ] any warning/quarantine model must be based on actual Plasmon/Neutron provenance/capability semantics, not a fake Unix executable bit;
-- [ ] keep **Edit** readily available so executable script files are never difficult to inspect before running.
+- [ ] provenance/trust treatment for downloaded/shared executable `.cmd`/`.run` resources if needed;
+- [ ] base any warning/quarantine model on real Plasmon/Neutron provenance/capability semantics, never a fake Unix executable bit;
+- [ ] keep Edit readily available so executable scripts are easy to inspect.
 
-## v3 — advanced automation and richer OS capabilities
+# v3 — advanced automation and richer OS capabilities
 
-v3 may add features that require broader legitimate OS/runtime capabilities. These should only land when the production authority exists; the shell must not fake them.
+These land only when the corresponding legitimate production authority exists.
 
-### Jobs and process control
+## Jobs/process control
 
-- [ ] background execution with `&`;
-- [ ] job table and `jobs`;
-- [ ] foreground/background control (`fg`/`bg`) if the runtime can model it honestly;
-- [ ] process termination commands such as `kill` only after production process-control authority exists;
-- [ ] clear ownership/cancellation behavior when a Terminal window closes while work is active.
+- [ ] background `&`;
+- [ ] `jobs` table;
+- [ ] `fg` / `bg` if the runtime can model them honestly;
+- [ ] `kill`/process termination only after production process-control authority exists;
+- [ ] ownership/cancellation rules when Terminal closes during active work.
 
-### Network and archive capabilities
+## Network/archive/storage
 
-- [ ] `curl`/`wget`-class HTTP commands only behind an explicit network capability/security model;
-- [ ] archive create/extract support (`tar`-class UX) only after safe binary/archive APIs exist;
-- [ ] storage inspection (`df`/`du`-class UX) only when truthful quota/capacity/recursive-size semantics exist;
-- [ ] shortcut/link manipulation only using real Plasmon shortcut/resource semantics, never fake Unix inode/symlink behavior.
+- [ ] `curl`/`wget`-class HTTP commands behind an explicit network capability/security model;
+- [ ] archive create/extract (`tar`-class UX) after safe binary/archive APIs exist;
+- [ ] `df`/`du`-class storage inspection only with truthful capacity/quota/recursive-size semantics;
+- [ ] link/shortcut manipulation using real Plasmon shortcut/resource semantics, never fake Unix inode/symlink behavior.
 
-### Scheduling and automation
+## Scheduling/automation
 
-- [ ] persistent scheduled script execution (`at`/`cron`-class capability) only after authorization, persistence, wake/execution, logging, and failure semantics are defined;
-- [ ] background/scheduled scripts must retain the same capability boundaries as interactive scripts;
-- [ ] provide a durable execution/log/history surface for scheduled automation.
+- [ ] persistent scheduled execution (`at`/`cron`-class) after authorization, persistence, wake/execution, logging, and failure semantics are defined;
+- [ ] scheduled/background scripts retain the same capability boundaries as interactive scripts;
+- [ ] durable execution/log/history surface for scheduled automation.
 
-### Larger optional command applications/languages
+## Larger optional command applications/languages
 
-These are optional v3 candidates, not promises of POSIX/GNU compatibility.
+- [ ] `find`-class recursive query/action support if justified;
+- [ ] `sed`-class stream editing only if a second mini-language is justified;
+- [ ] `awk`-class processing only if justified; `.run` remains the preferred programmable escape hatch;
+- [ ] richer terminal applications after the xterm/application boundary is mature.
 
-- [ ] `find`-class recursive query/action support if there is a compelling use case;
-- [ ] `sed`-class stream editing only if maintaining a second mini-language is justified;
-- [ ] `awk`-class processing only if justified; `.run` TypeScript remains the preferred programmable escape hatch;
-- [ ] richer terminal applications may be added independently once the xterm/runtime application boundary is mature.
+## `.run` growth
 
-### `.run` growth
-
-- [ ] reusable local modules/imports with a defined filesystem/module-resolution model;
-- [ ] script libraries/packages without exposing arbitrary host/browser globals as an accidental API;
+- [ ] reusable local modules/imports with defined filesystem/module resolution;
+- [ ] script libraries/packages without accidentally exposing arbitrary browser globals as API;
 - [ ] richer typed OS capabilities as canonical `OsApi` grows;
-- [ ] debugger/diagnostic affordances if Monaco/runtime integration can support them cleanly;
-- [ ] explicit long-running task lifecycle and progress/event APIs where production subsystems expose them.
+- [ ] debugger/diagnostic affordances if Monaco/runtime can support them cleanly;
+- [ ] explicit long-running task lifecycle/progress/event APIs when production subsystems expose them.
 
-## Intentional non-goals across all versions
+# Intentional non-goals across all versions
 
 Do not add these merely to make the shell look Linux-like:
 
-- `sudo`/`su` or a fake root user model;
-- `chmod`/`chown` without a real matching Plasmon/Neutron authority model;
-- fake Linux network interfaces/socket tables (`ip`, `ss`, `netstat`, `ping`) where the underlying runtime does not expose those semantics;
-- fake `systemd`/kernel logs (`journalctl`, `dmesg`); future logging commands should report native Plasmon/Neutron logs;
+- fake `sudo`/`su` or root-user model;
+- `chmod`/`chown` without a matching real authority/security model;
+- fake Linux network interfaces/socket tables (`ip`, `ss`, `netstat`, raw `ping`) where the runtime does not expose them;
+- fake systemd/kernel logs (`journalctl`, `dmesg`); future logging commands report native Plasmon/Neutron logs;
 - fake Linux `uname`, `free`, uptime, inode, symlink, UID/GID, permission-bit, or executable-bit semantics;
-- full Bash compatibility as a goal. `.run` TypeScript exists specifically so control flow and real programming do not force `.cmd` to become Bash.
+- full Bash compatibility as a goal. `.run` TypeScript exists so real control flow/programming does not force `.cmd` to become Bash.
