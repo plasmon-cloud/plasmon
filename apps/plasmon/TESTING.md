@@ -63,7 +63,7 @@ The harness calls production `createPlasmonServices()` and replaces only true ex
 
 The harness exposes the production service graph for focused composition work and the production semantic `OsApi` as `env.os` for high-level deterministic workflows. `env.os` is created by `createPlasmonOsApi()` from the same production services; the test harness must not implement a second product-semantic facade over `environment.services`.
 
-Use `env.os` when the setup or behavior is a legitimate OS operation a normal authorized automation caller could reasonably perform. The current R3 surface includes filesystem stat/existence/list/text read-write/directory creation/copy/move/Trash removal, canonical resource opening, and process/window observation. Example:
+Use `env.os` when the setup or behavior is a legitimate OS operation a normal authorized automation caller could reasonably perform. The current OS API surface includes filesystem stat/existence/list/text read-write/directory creation/copy/move/Trash removal, canonical resource opening, and process/window observation. Example:
 
 ```ts
 const env = createHeadlessPlasmonEnvironment();
@@ -85,7 +85,7 @@ The harness must not acquire feature-specific business semantics. If a determini
 
 Pass an existing `MemoryFsRepository` through the `repository` option when a test must reconstruct production composition over the same persistence boundary.
 
-The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain during the bounded R3 transition so existing coverage does not need a migration campaign. New high-level deterministic tests should prefer `env.os`; systematic retroactive migration belongs to the deeper testing audit rather than this quick pass.
+The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain for compatibility with existing coverage. New high-level deterministic tests should prefer `env.os`; systematic retroactive migration belongs to a separate testing audit.
 
 `test/reviewInstalledIntegration.test.ts` is the representative independently-installed-app proof. It verifies that duplicate Kernel discovery for Review still reconciles to one `/Apps/Review.neutron` resource with canonical metadata and that opening the projected resource reaches exactly one `NeutronBridge.openElement("review")` call through the production filesystem/open dispatcher. It deliberately asserts that no fake Plasmon-native Review process/window is created because authenticated Neutron applications remain Kernel-owned sibling tiles.
 
