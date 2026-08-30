@@ -67,11 +67,12 @@ const script = [
   "",
 ].join("\n");
 
-// build.ts emits worker entry points so the package metafile continues to prove
-// their presence. The static-file copy step runs after esbuild output and
-// deliberately replaces those transport copies with these canonical IIFE bytes.
-// That leaves Program Files, the URL-safe mirror, and the opaque-frame preload
-// derived from one exact byte stream while keeping main.js in ESM format.
+// Program Files is the canonical worker authority. Opaque Neutron frames need
+// the generated source preload because they cannot construct Monaco's module
+// Worker directly. Base retains URL-safe worker mirrors for its packaged
+// language-service acceptance; Slim does not need the redundant mirror because
+// its production paths are Program Files (normal origin) and the preload
+// (opaque origin).
 await Promise.all([
   rm(GENERATED_CANONICAL_ROOT, { recursive: true, force: true }),
   rm(GENERATED_RUNTIME_ROOT, { recursive: true, force: true }),
@@ -83,7 +84,9 @@ await Promise.all([
 await Promise.all(
   Object.entries(sources).flatMap(([filename, source]) => [
     writeFile(`${GENERATED_CANONICAL_ROOT}/${filename}`, source),
-    writeFile(`${GENERATED_RUNTIME_ROOT}/${filename}`, source),
+    ...(packagePolicy.monacoProfile === "slim"
+      ? []
+      : [writeFile(`${GENERATED_RUNTIME_ROOT}/${filename}`, source)]),
   ]),
 );
 await mkdir(dirname(GENERATED_TRANSPORT), { recursive: true });

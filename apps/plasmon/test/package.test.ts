@@ -11,6 +11,7 @@ import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
 import { DEMO_PAYLOAD_MARKERS, SLIM_MAX_BYTES } from "../slimPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
+const SLIM_HEADROOM_TARGET_BYTES = 1_800_000;
 const manifestUrl = new URL("../neutron.json", import.meta.url);
 const backendUrl = new URL("../backend/main.mo", import.meta.url);
 const htmlUrl = new URL("../dist/web/index.html", import.meta.url);
@@ -71,7 +72,8 @@ test("plasmon package output matches the source manifest archive identity", asyn
   if (packagePolicy.isSlim) {
     const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
     console.log(`Slim package test size: ${archiveStats.size} bytes`);
-    expect(archiveStats.size).toBeLessThan(SLIM_MAX_BYTES);
+    expect(SLIM_HEADROOM_TARGET_BYTES).toBeLessThan(SLIM_MAX_BYTES);
+    expect(archiveStats.size).toBeLessThan(SLIM_HEADROOM_TARGET_BYTES);
   }
 });
 
@@ -132,7 +134,9 @@ test("Base and Slim exclude heavyweight game/demo payloads and emit the exact re
   const workerPaths = webFiles.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
   expect(workerPaths).toEqual([
     ...monacoWorkers.map((worker) => `System/Program Files/MonacoEditor/${worker}`),
-    ...monacoWorkers.map((worker) => `runtime/monaco/${worker}`),
+    ...(packagePolicy.monacoProfile === "slim"
+      ? []
+      : monacoWorkers.map((worker) => `runtime/monaco/${worker}`)),
   ].sort());
 
   const transportScript = await readFile(new URL("../dist/web/runtime/monaco/worker-sources.js", import.meta.url), "utf8");
@@ -143,10 +147,13 @@ test("Base and Slim exclude heavyweight game/demo payloads and emit the exact re
 
   for (const worker of monacoWorkers) {
     const canonical = await readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url), "utf8");
-    const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
     expect(canonical.length).toBeGreaterThan(0);
-    expect(runtime).toBe(canonical);
     expect(sources[worker]).toBe(canonical);
+
+    if (packagePolicy.monacoProfile !== "slim") {
+      const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
+      expect(runtime).toBe(canonical);
+    }
   }
 
   const mainBundle = await readFile(mainBundleUrl, "utf8");

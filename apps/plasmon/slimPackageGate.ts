@@ -13,9 +13,9 @@ const mainBundleUrl = new URL("./dist/web/main.js", import.meta.url);
 
 const REQUIRED_WORKER_PATHS = [
   "System/Program Files/MonacoEditor/editor.worker.js",
-  "runtime/monaco/editor.worker.js",
   "runtime/monaco/worker-sources.js",
 ] as const;
+const REDUNDANT_SLIM_WORKER_MIRROR = "runtime/monaco/editor.worker.js";
 
 const FORBIDDEN_WORKERS = [
   "json.worker.js",
@@ -76,6 +76,10 @@ export async function verifySlimPackage(): Promise<{ archive: string; bytes: num
     if (!webFileSet.has(required)) fail(`missing required Monaco transport member ${required}`);
     const member = await stat(new URL(required, distWebUrl));
     if (member.size === 0) fail(`required Monaco transport member is empty: ${required}`);
+  }
+
+  if (webFileSet.has(REDUNDANT_SLIM_WORKER_MIRROR)) {
+    fail(`redundant Slim Monaco worker mirror present: ${REDUNDANT_SLIM_WORKER_MIRROR}`);
   }
 
   for (const worker of FORBIDDEN_WORKERS) {

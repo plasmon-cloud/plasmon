@@ -122,6 +122,10 @@ npm --workspace neutron-plasmon run test:package:slim
 
 The `<1,900,000` assertion belongs only to Slim; Base and Demo do not inherit that ceiling. Base and Demo package all five Monaco workers: `editor.worker.js`, `json.worker.js`, `css.worker.js`, `html.worker.js`, and `ts.worker.js`. Slim packages only `editor.worker.js` and disables dedicated language-service behavior.
 
+Slim intentionally carries two representations of its one Monaco worker: `/System/Program Files/MonacoEditor/editor.worker.js` is the canonical packaged worker authority, while `runtime/monaco/worker-sources.js` contains the generated source preload needed to construct a worker inside Neutron's opaque-origin application sandbox. Slim does not carry a third `runtime/monaco/editor.worker.js` mirror. Base retains its URL-safe runtime mirrors because its packaged language-service acceptance exercises those dedicated workers as well as the opaque transport.
+
+`.neutron` archives are built from generated `dist/`, not from the repository source tree. The packer fails closed if repository/build-only artifacts such as Markdown documentation, source maps, TypeScript/JSX source, test/spec files, source directories, coverage output, or repository documentation leak into that boundary. Runtime-required non-code assets such as HTML, CSS, JSON, SVG/images, fonts, and WASM remain valid package members.
+
 Heavyweight runtime delivery remains a separate runtime-configuration concern. Slim remains runtime-free; Base starts without heavyweight runtime payloads; Demo/custom preparations may opt into approved pinned runtimes without redefining either package tier.
 
 See [`TESTING.md`](TESTING.md) for the canonical matrix.
