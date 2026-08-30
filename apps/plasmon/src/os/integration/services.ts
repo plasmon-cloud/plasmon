@@ -30,6 +30,9 @@ import {
   type RepositoryState,
 } from "../fs/index.ts";
 import {
+  DiagnosticEvent,
+  DiagnosticStage,
+  DiagnosticSubsystem,
   PlasmonDiagnosticService,
   type DiagnosticLogger,
   type DiagnosticService,
@@ -38,6 +41,10 @@ import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
+import {
+  ShellPreferenceStore,
+  ShellPreferencesController,
+} from "../shell/preferences.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
   FsServiceWindowPlacementStore,
@@ -74,12 +81,14 @@ import {
   createRecycleBinNativeLoader,
   recycleBinAppDefinition,
 } from "../../native-apps/recycle-bin/index.ts";
+import { installMonacoEnvironment } from "../../native-apps/shared/monaco/monacoEnvironment.ts";
 import {
   FakeResourceAuthorizationService,
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
 import {
+  isCoreProfile,
   packagedRuntimeSelection,
   type PackagedRuntimeSelection,
 } from "./packageProfile.ts";
@@ -100,6 +109,7 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  shellPreferences: ShellPreferencesController;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -175,8 +185,9 @@ function registerNativeApplications(
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
   runtimeSelection: PackagedRuntimeSelection,
+  shellPreferences: ShellPreferencesController,
   diagnostics: DiagnosticService,
-  log: DiagnosticLogger,
+  log: DiagnosticLogger<typeof DiagnosticSubsystem.NativeApp>,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
@@ -184,20 +195,26 @@ function registerNativeApplications(
   if (runtimeSelection.emulatorJs) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+    nativeApps.registerWithLoader(
+      emulatorJsRuntimeDefinition,
+      createEmulatorJsRuntimeLoader(diagnostics.for(DiagnosticSubsystem.RuntimeEmulatorJs)),
+    );
   }
 
   if (runtimeSelection.jsDos) {
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+    nativeApps.registerWithLoader(
+      jsDosRuntimeDefinition,
+      createJsDosRuntimeLoader(diagnostics.for(DiagnosticSubsystem.RuntimeJsDos)),
+    );
   }
 
-  const contentLoaders = createContentAppLoaders({ hiddenVisibility });
+  const contentLoaders = createContentAppLoaders({ hiddenVisibility, shellPreferences });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) {
-      log.error("native-app.registration.failed", {
+      log.error(DiagnosticEvent.NativeApp.RegistrationFailed, {
         message: "Native application loader is missing during registration",
         appId: definition.id,
         handlerId: definition.handlerId,
@@ -243,19 +260,26 @@ export function createPlasmonServices(
     },
     onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
   });
-  const filesystemLog = diagnostics.for("filesystem");
-  const processLog = diagnostics.for("process");
-  const windowLog = diagnostics.for("windowing");
-  const nativeAppLog = diagnostics.for("native-app");
-  const shellLog = diagnostics.for("shell");
-  if (filesystemMode === "hosted") {
-    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  const filesystemLog = diagnostics.for(DiagnosticSubsystem.Filesystem);
+  const processLog = diagnostics.for(DiagnosticSubsystem.Process);
+  const windowLog = diagnostics.for(DiagnosticSubsystem.Windowing);
+  const nativeAppLog = diagnostics.for(DiagnosticSubsystem.NativeApp);
+  const shellLog = diagnostics.for(DiagnosticSubsystem.Shell);
+  const neutronLog = diagnostics.for(DiagnosticSubsystem.Neutron);
+
+  if (typeof window !== "undefined" && !isCoreProfile) {
+    installMonacoEnvironment(globalThis, diagnostics.for(DiagnosticSubsystem.RuntimeMonaco));
   }
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(neutronLog);
+  }
+
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
+  const shellPreferences = new ShellPreferencesController(new ShellPreferenceStore(rawFs));
   const windows = options.windows ?? new NativeWindowManager();
   const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
     onRestoreRejected: (reason) => {
-      windowLog.warn("window.placement.restore.rejected", {
+      windowLog.warn(DiagnosticEvent.Windowing.PlacementRestoreRejected, {
         message: "Persisted window placement metadata was rejected",
         reason,
       });
@@ -263,13 +287,19 @@ export function createPlasmonServices(
   });
   const windowPlacement = new NativeWindowPlacementController(windows, placementStore, {
     onPersistenceError: (error, stage) => {
-      windowLog.warn(`window.placement.${stage}.failed`, {
+      windowLog.warn(
+        stage === "read"
+          ? DiagnosticEvent.Windowing.PlacementReadFailed
+          : DiagnosticEvent.Windowing.PlacementWriteFailed,
+        {
         message: `Window placement ${stage} failed`,
         errorType: diagnosticErrorType(error),
       });
     },
   });
-  const neutron = options.neutron ?? createNeutronBridge();
+  const neutron = options.neutron ?? createNeutronBridge({
+    vanilla: { diagnosticLogger: neutronLog },
+  });
   const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({
     defaults: createAssociationDefaultStore(rawFs, diagnostics),
@@ -277,17 +307,21 @@ export function createPlasmonServices(
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
     onStartupError: (error, app, _target, stage, processId) => {
-      processLog.error("process.start.failed", {
+      processLog.error(DiagnosticEvent.Process.StartFailed, {
         message: "Native process startup failed",
         appId: app.id,
         handlerId: app.handlerId,
         processId,
-        stage,
+        stage: stage === "window-create"
+          ? DiagnosticStage.WindowCreate
+          : stage === "window-placement"
+            ? DiagnosticStage.WindowPlacement
+            : DiagnosticStage.ProcessCommit,
         errorType: diagnosticErrorType(error),
       });
     },
     onCloseError: (error, record) => {
-      processLog.error("process.close.handler_failed", {
+      processLog.error(DiagnosticEvent.Process.CloseHandlerFailed, {
         message: "Native process close handler failed",
         appId: record.appId,
         handlerId: record.handlerId,
@@ -296,17 +330,17 @@ export function createPlasmonServices(
       });
     },
     onWindowCloseError: (error, record) => {
-      processLog.error("process.close.failed", {
+      processLog.error(DiagnosticEvent.Process.CloseFailed, {
         message: "Native process window teardown failed",
         appId: record.appId,
         handlerId: record.handlerId,
         processId: record.id,
-        stage: "window-close",
+        stage: DiagnosticStage.WindowClose,
         errorType: diagnosticErrorType(error),
       });
     },
     onWindowLost: (record) => {
-      processLog.error("process.window_lost", {
+      processLog.error(DiagnosticEvent.Process.WindowLost, {
         message: "Running native process lost its window",
         appId: record.appId,
         handlerId: record.handlerId,
@@ -341,6 +375,7 @@ export function createPlasmonServices(
     fileClipboard,
     hiddenVisibility,
     options.runtimeSelection ?? packagedRuntimeSelection,
+    shellPreferences,
     diagnostics,
     nativeAppLog,
   );
@@ -358,18 +393,18 @@ export function createPlasmonServices(
   const fs = filesystem.fs;
   void filesystem.ready
     .then((initialization) => {
-      filesystemLog.notice("filesystem.bootstrap.ready", {
+      filesystemLog.notice(DiagnosticEvent.Filesystem.BootstrapReady, {
         message: "Filesystem bootstrap completed",
       });
       if (initialization.neutronProjectionError) {
-        filesystemLog.warn("filesystem.neutron-projection.failed", {
+        filesystemLog.warn(DiagnosticEvent.Filesystem.NeutronProjectionFailed, {
           message: "Initial Neutron application projection reconciliation failed",
           error: initialization.neutronProjectionError,
         });
       }
     })
     .catch((error) => {
-      filesystemLog.critical("filesystem.bootstrap.failed", {
+      filesystemLog.critical(DiagnosticEvent.Filesystem.BootstrapFailed, {
         message: "Filesystem bootstrap failed",
         error,
       });
@@ -398,5 +433,6 @@ export function createPlasmonServices(
     fileClipboard,
     startMenu,
     hiddenVisibility,
+    shellPreferences,
   };
 }

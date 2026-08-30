@@ -106,7 +106,7 @@ test("— packaged hidden visibility composes global Settings with Explorer-loca
     await expect(globalHidden).toBeEnabled();
     await expect(globalHidden).not.toBeChecked();
 
-    await activateSearchResult(plasmon, "Files", "Files");
+    await activateSearchResult(plasmon, "File Explorer", "File Explorer");
     const explorer = plasmon.locator(".explorer-app").last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
     const files = explorer.getByRole("listbox", { name: "Files" });

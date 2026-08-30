@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { FsService } from "../../os/contracts/index.ts";
-import { normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
+import { browserNavigationCommand, normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
 
 const shortcutFs = (content: string): FsService => ({
   stat: async (id: string) => ({ id, parentId: "root", name: "Example.url", kind: "shortcut", mime: "application/x-mswinurl", size: content.length, createdAt: 0, modifiedAt: 0, metadata: {} }),
@@ -9,7 +9,8 @@ const shortcutFs = (content: string): FsService => ({
 
 test("Browser resolves direct and .url targets through the existing shortcut format", async () => {
   const direct = await resolveBrowserTarget({ url: "https://example.com/path" }, shortcutFs(""));
-  expect(direct.url).toBe("https://example.com/path");
+  expect(direct).toEqual({ url: "https://example.com/path", title: "example.com" });
+  expect(await resolveBrowserTarget({}, shortcutFs(""))).toBeNull();
 
   const fromShortcut = await resolveBrowserTarget(
     { nodeId: "shortcut" },
@@ -24,6 +25,14 @@ test("Browser accepts only HTTP(S) schemes", () => {
   expect(normalizeHttpUrl("javascript:alert(1)")).toBeNull();
   expect(normalizeHttpUrl("data:text/html,boom")).toBeNull();
   expect(normalizeHttpUrl("file:///etc/passwd")).toBeNull();
+});
+
+test("manual Browser navigation produces one normalized URL target", () => {
+  expect(browserNavigationCommand("  https://example.com/demo  ")).toEqual({
+    location: { url: "https://example.com/demo", title: "example.com" },
+    target: { url: "https://example.com/demo" },
+  });
+  expect(browserNavigationCommand("javascript:alert(1)")).toBeNull();
 });
 
 test("external open requests _blank with noopener,noreferrer", () => {

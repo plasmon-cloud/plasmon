@@ -26,8 +26,8 @@ test("— packaged non-empty Recycle Bin confirms and empties canonical Trash", 
     // of this empty-bin acceptance and can race desktop layout/readiness in packaged CI.
     await plasmon.getByRole("button", { name: "Search" }).click();
     const search = plasmon.getByRole("region", { name: "Search" });
-    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
-    const filesResult = search.locator("[data-search-result]", { hasText: "Files" }).first();
+    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("File Explorer");
+    const filesResult = search.locator("[data-search-result]", { hasText: "File Explorer" }).first();
     await expect(filesResult).toBeVisible();
     await filesResult.click();
 

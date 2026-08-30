@@ -212,8 +212,12 @@ test("package runtime inventory matches the explicit optional-runtime selection"
     expect(packagePolicy).toMatchObject({ packageTier: "base", isSlim: false, demoOverlay: false });
     const requiredAssets = OPTIONAL_RUNTIME_CATALOG["js-dos"].requiredAssets;
     const expected = jsDosRoots.flatMap((root) => requiredAssets.map((asset) => `${root}/${asset}`)).sort();
-    const actual = webFiles.filter((file) => jsDosRoots.some((root) => file.startsWith(`${root}/`))).sort();
-    expect(actual).toEqual(expected);
+    const runtimePaths = webFiles.filter((file) => jsDosRoots.some((root) => file.startsWith(`${root}/`)));
+    const actual: string[] = [];
+    for (const file of runtimePaths) {
+      if ((await stat(new URL(file, distWebUrl))).isFile()) actual.push(file);
+    }
+    expect(actual.sort()).toEqual(expected);
 
     let logicalBytes = 0;
     for (const asset of requiredAssets) {

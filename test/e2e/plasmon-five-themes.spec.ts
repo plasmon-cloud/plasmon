@@ -92,8 +92,8 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await taskbar.getByRole("button", { name: "Search", exact: true }).click();
     const search = app.getByRole("region", { name: "Search" });
     await expect(search).toBeVisible();
-    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
-    const filesResult = search.locator("[data-search-result]", { hasText: "Files" }).first();
+    await search.getByRole("textbox", { name: "Search Plasmon" }).fill("File Explorer");
+    const filesResult = search.locator("[data-search-result]", { hasText: "File Explorer" }).first();
     await expect(filesResult).toBeVisible();
     const beforeExplorer = await windows.count();
     await filesResult.click();
@@ -102,7 +102,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     const explorerCandidate = windows.last();
     const explorerCandidateAddress = explorerCandidate.getByRole("textbox", { name: "Address" });
     await expect(explorerCandidateAddress).toHaveValue("/");
-    await expect(explorerCandidate).toHaveAccessibleName("This Plasmon");
+    await expect(explorerCandidate).toHaveAccessibleName("This Plasmon — File Explorer");
     const explorerWindowId = await explorerCandidate.getAttribute("data-window-id");
     expect(explorerWindowId, "Explorer should expose stable Windowing identity").toBeTruthy();
     const explorer = app.locator(`.plasmon-window-layer [data-window-id="${explorerWindowId}"]`);
@@ -113,7 +113,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
 
     await explorer.locator("[data-fm-node-id]", { hasText: "Documents" }).first().dblclick();
     await expect(explorerAddress).toHaveValue("/Documents");
-    await expect(explorer).toHaveAccessibleName("Documents");
+    await expect(explorer).toHaveAccessibleName("Documents — File Explorer");
 
     const generatedName = `Theme Probe ${Date.now()}.md`;
     await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
@@ -159,7 +159,8 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Shell settings" });
+    await expect(nativeSettingsWindow).toHaveClass(/plasmon-window--active/);
+    const settings = nativeSettingsSurface;
     await expect(settings).toBeVisible();
 
     const observed = {

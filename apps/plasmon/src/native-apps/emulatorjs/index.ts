@@ -3,6 +3,7 @@ import type {
   HandlerDefinition,
   NativeAppDefinition,
 } from "../../os/contracts/index.ts";
+import { DiagnosticSubsystem, type DiagnosticLogger } from "../../os/diagnostics/index.ts";
 import type { NativeAppLoader } from "../../os/process/runtime.ts";
 import { EMULATORJS_NES_MIME } from "./runtime.ts";
 
@@ -43,6 +44,11 @@ export const emulatorJsRuntimeDefinition: NativeAppDefinition = {
   associations: emulatorJsAssociationRules,
 };
 
-export function createEmulatorJsRuntimeLoader(): NativeAppLoader {
-  return () => import("./EmulatorJsPlayer.tsx");
+export function createEmulatorJsRuntimeLoader(
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeEmulatorJs>,
+): NativeAppLoader {
+  return async () => {
+    const module = await import("./EmulatorJsPlayer.tsx");
+    return { default: module.createEmulatorJsPlayer(diagnosticLogger) };
+  };
 }

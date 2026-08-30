@@ -46,10 +46,10 @@ test("taskbar context menus stay source-adjacent and expose canonical Close and 
     await rootShortcut.dblclick();
     await expect(nativeWindows).toHaveCount(1, { timeout: 20_000 });
 
-    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    const filesTask = taskbar.getByRole("button", { name: /^File Explorer;/ }).first();
     await expect(filesTask).toBeVisible();
     const filesTaskBounds = await filesTask.boundingBox();
-    if (!filesTaskBounds) throw new Error("Files taskbar item has no browser bounds");
+    if (!filesTaskBounds) throw new Error("File Explorer taskbar item has no browser bounds");
 
     await filesTask.click({ button: "right" });
     const itemMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
@@ -75,7 +75,7 @@ test("taskbar context menus stay source-adjacent and expose canonical Close and 
     );
     expect(itemMenuBounds.y).toBeGreaterThanOrEqual(plasmonFrameBounds.y + 7);
 
-    // Close remains an ordinary Process lifecycle request. This native Files
+    // Close remains an ordinary Process lifecycle request. This native File Explorer
     // process has no dirty-veto path, so the rendered window should disappear.
     await itemMenu.getByRole("menuitem", { name: "Close" }).click();
     await expect(nativeWindows).toHaveCount(0, { timeout: 10_000 });
