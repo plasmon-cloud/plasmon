@@ -134,7 +134,7 @@ test("Discard abandons persistence and completes the same deferred close", () =>
   expect(close.cancelled()).toBe(0);
 });
 
-test("Cancel resumes autosave and keeps the process/window alive", () => {
+test("Cancel resumes autosave and preserves the dirty document", () => {
   const session = new FakeCloseSession();
   session.dirty = true;
   const model = new DocumentCloseModel(session);
@@ -143,6 +143,9 @@ test("Cancel resumes autosave and keeps the process/window alive", () => {
 
   expect(model.cancelClose()).toBe(true);
   expect(session.resumeCalls).toBe(1);
+  expect(session.dirty).toBe(true);
+  expect(session.saveCalls).toBe(0);
+  expect(session.discardCalls).toBe(0);
   expect(close.completed()).toBe(0);
   expect(close.cancelled()).toBe(1);
   expect(model.snapshot()).toEqual({ pending: false, saving: false });
