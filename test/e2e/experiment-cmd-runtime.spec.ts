@@ -44,7 +44,7 @@ async function openBackgroundMenu(
   return plasmon.getByRole("menu").last();
 }
 
-test("packaged experiment executes .cmd through .run and exposes .run TypeScript completion", async ({ page, request }) => {
+test("packaged experiment executes .cmd through .run and exposes script editor discovery", async ({ page, request }) => {
   const { plasmon, kernelUrl } = await launchPlasmon(page);
 
   const tsWorker = await request.get(new URL(`/app/${PLASMON_APP_ID}/runtime/monaco/ts.worker.js`, kernelUrl).href);
@@ -111,6 +111,22 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const cmdEditor = plasmon.getByRole("dialog", { name: /Experiment Smoke\.cmd/ }).last();
   await expect(cmdEditor).toBeVisible({ timeout: 20_000 });
   await expect(cmdEditor.getByText("Plasmon Command (.cmd)", { exact: true })).toBeVisible();
+  const cmdMonaco = cmdEditor.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
+  await expect(cmdMonaco).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
+  const cmdInputArea = cmdMonaco.locator("textarea.inputarea").first();
+  await cmdInputArea.click();
+  await cmdInputArea.press("Control+A");
+  await cmdInputArea.pressSequentially("ls -");
+  await cmdInputArea.press("Control+Space");
+  const cmdSuggestions = cmdEditor.locator(".suggest-widget");
+  await expect(cmdSuggestions).toBeVisible({ timeout: 15_000 });
+  await expect(cmdSuggestions).toContainText("-l");
+  await expect(cmdSuggestions).toContainText("-a");
+  await expect(cmdSuggestions).toContainText("-la");
+  await cmdInputArea.press("Escape");
+  await cmdInputArea.press("Control+A");
+  await cmdInputArea.pressSequentially('echo "Hello from Plasmon"');
+  await cmdInputArea.press("Control+S");
   await closeWindow(cmdEditor);
 
   // Normal file activation must execute .cmd instead of opening it as generic text.
@@ -168,6 +184,7 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
 
   const editorWindow = plasmon.getByRole("dialog", { name: "Experiment Smoke.run" }).last();
   await expect(editorWindow).toBeVisible({ timeout: 20_000 });
+  await expect(editorWindow.getByText("Plasmon Run (.run)", { exact: true })).toBeVisible();
   const editor = editorWindow.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
   await expect(editor).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
   await expect(editor).toHaveAttribute("data-editor-language", "typescript");
