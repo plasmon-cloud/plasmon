@@ -5,7 +5,8 @@ import {
   offerAppInstall,
   openAppTile,
 } from "neutron-tools/app";
-import type { ExternalElement, NeutronBridge } from "../contracts/neutron.ts";
+import type { ExternalElement, NeutronBridge, NeutronOpenOptions } from "../contracts/neutron.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import {
   declaredElementIconPath,
   resolveElementIcon,
@@ -33,6 +34,11 @@ const defaultApi: VanillaNeutronApi = {
   openAppTile,
   offerAppInstall,
 };
+
+function errorKind(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  return error === null ? "null" : typeof error;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -157,6 +163,7 @@ export interface VanillaNeutronBridgeOptions {
   api?: VanillaNeutronApi;
   resolveIcon?: ElementIconResolver;
   lifecycleTargets?: ForegroundLifecycleTargets;
+  diagnostics?: DiagnosticService;
 }
 
 type CachedElementMetadata = {
@@ -179,6 +186,7 @@ export class VanillaNeutronBridge implements NeutronBridge {
   private readonly api: VanillaNeutronApi;
   private readonly resolveIcon: ElementIconResolver;
   private readonly lifecycleTargets: ForegroundLifecycleTargets | undefined;
+  private readonly diagnostics: DiagnosticService | null;
   private elements: ExternalElement[] = [];
   private readonly metadataCache = new Map<string, CachedElementMetadata>();
   private readonly metadataLoads = new Map<string, PendingElementMetadata>();
@@ -189,14 +197,39 @@ export class VanillaNeutronBridge implements NeutronBridge {
     this.api = options.api ?? defaultApi;
     this.resolveIcon = options.resolveIcon ?? resolveElementIcon;
     this.lifecycleTargets = options.lifecycleTargets;
+    this.diagnostics = options.diagnostics ?? null;
   }
 
   async loadElements(): Promise<ExternalElement[]> {
-    const [listed, runtime] = await Promise.all([
-      this.api.listApps(),
-      this.readRuntimeSnapshot(),
-    ]);
-    const hints = parseInstalledElementHints(listed);
+    let listed: unknown;
+    let runtime: RuntimeSnapshot;
+    try {
+      [listed, runtime] = await Promise.all([
+        this.api.listApps(),
+        this.readRuntimeSnapshot(),
+      ]);
+    } catch (error) {
+      this.diagnostics?.for("neutron").error("neutron.discovery.failed", {
+        message: "Neutron application discovery failed",
+        operation: "kernel:apps.list",
+        stage: "discovery",
+        errorKind: errorKind(error),
+      });
+      throw error;
+    }
+
+    let hints: InstalledElementHint[];
+    try {
+      hints = parseInstalledElementHints(listed);
+    } catch (error) {
+      this.diagnostics?.for("neutron").error("neutron.discovery.invalid", {
+        message: "Neutron application discovery returned an invalid response",
+        operation: "kernel:apps.list",
+        stage: "parse",
+        errorKind: errorKind(error),
+      });
+      throw error;
+    }
     this.pruneMetadataCache(hints);
 
     const elements = await Promise.all(
@@ -210,35 +243,76 @@ export class VanillaNeutronBridge implements NeutronBridge {
 
   async openElement(
     appId: string,
-    options: { tileId?: string; view?: string } = {},
+    options: NeutronOpenOptions = {},
   ): Promise<void> {
+    const log = this.diagnostics
+      ? options.operation
+        ? this.diagnostics.continueOperation(options.operation).for("neutron")
+        : this.diagnostics.for("neutron")
+      : null;
     let element = this.elements.find((candidate) => candidate.id === appId);
     if (!element) {
       element = (await this.loadElements()).find((candidate) => candidate.id === appId);
     }
-    if (!element) throw new Error(`Unknown Neutron Element: ${appId}`);
+    if (!element) {
+      log?.error("neutron.open.invalid", {
+        message: "Neutron Element is not installed",
+        appId,
+        stage: "element-lookup",
+      });
+      throw new Error(`Unknown Neutron Element: ${appId}`);
+    }
 
     const tile = options.tileId
       ? element.tiles.find((candidate) => candidate.id === options.tileId)
       : element.tiles[0];
     if (!tile) {
+      log?.error("neutron.open.invalid", {
+        message: "Neutron Element does not expose the requested launch tile",
+        appId: element.id,
+        stage: "tile-selection",
+        ...(element.version === undefined ? {} : { appVersion: element.version }),
+      });
       const detail = options.tileId ? ` tile ${options.tileId}` : " a launchable tile";
       throw new Error(`${element.name} does not expose${detail}`);
     }
 
-    await this.api.openAppTile({
-      appId: element.id,
-      tileId: tile.id,
-      reuseExisting: true,
-      ...(options.view === undefined ? {} : { view: options.view }),
-    });
+    try {
+      await this.api.openAppTile({
+        appId: element.id,
+        tileId: tile.id,
+        reuseExisting: true,
+        ...(options.view === undefined ? {} : { view: options.view }),
+      });
+    } catch (error) {
+      log?.error("neutron.open.failed", {
+        message: "Kernel rejected the Neutron Element launch operation",
+        operation: "kernel:workspace.open_tile",
+        runtime: "neutron",
+        stage: "kernel-open-tile",
+        appId: element.id,
+        ...(element.version === undefined ? {} : { appVersion: element.version }),
+        errorKind: errorKind(error),
+      });
+      throw error;
+    }
 
     // Opening succeeded even if the snapshot endpoint is temporarily unavailable.
     await this.refreshRuntimeState();
   }
 
   async offerInstall(url: string): Promise<void> {
-    await this.api.offerAppInstall({ kind: "package_url", url });
+    try {
+      await this.api.offerAppInstall({ kind: "package_url", url });
+    } catch (error) {
+      this.diagnostics?.for("neutron").error("neutron.install-offer.failed", {
+        message: "Kernel rejected a Neutron package install offer",
+        operation: "kernel:apps.offer_install",
+        stage: "kernel-install-offer",
+        errorKind: errorKind(error),
+      });
+      throw error;
+    }
   }
 
   async refreshRuntimeState(): Promise<void> {
@@ -309,7 +383,14 @@ export class VanillaNeutronBridge implements NeutronBridge {
     let descriptor: unknown = null;
     try {
       descriptor = await this.api.describeApp(hint.id);
-    } catch {
+    } catch (error) {
+      this.diagnostics?.for("neutron").debug("neutron.metadata.describe.failed", {
+        message: "Neutron Element metadata lookup failed; fallback metadata will be used",
+        operation: "kernel:apps.describe",
+        stage: "metadata",
+        appId: hint.id,
+        errorKind: errorKind(error),
+      });
       // A failed descriptor is cached as fallback metadata until discovery
       // identity changes, avoiding repeated failure storms on every reload.
     }
@@ -317,11 +398,14 @@ export class VanillaNeutronBridge implements NeutronBridge {
     const declaredPath = declaredElementIconPath(descriptor, hint.id);
     let icon: string | undefined;
     try {
-      // A missing safe descriptor path intentionally reaches the resolver:
-      // current Kernel apps.describe strips tile/tray icon paths, so the
-      // resolver performs only the bounded static/icon.svg compatibility path.
       icon = await this.resolveIcon(hint.id, declaredPath);
-    } catch {
+    } catch (error) {
+      this.diagnostics?.for("neutron").debug("neutron.icon.resolve.failed", {
+        message: "Neutron Element icon resolution failed; fallback presentation will be used",
+        stage: "icon-resolution",
+        appId: hint.id,
+        errorKind: errorKind(error),
+      });
       // Icon failure must never hide the Element or poison other metadata.
     }
 
@@ -341,7 +425,13 @@ export class VanillaNeutronBridge implements NeutronBridge {
   private async readRuntimeSnapshot(): Promise<RuntimeSnapshot> {
     try {
       return parseRuntimeSnapshot(await this.api.listEndpoints());
-    } catch {
+    } catch (error) {
+      this.diagnostics?.for("neutron").debug("neutron.runtime.snapshot.failed", {
+        message: "Neutron runtime state is temporarily unknown",
+        operation: "kernel:endpoints.list",
+        stage: "runtime-snapshot",
+        errorKind: errorKind(error),
+      });
       return { known: false, liveAppIds: new Set() };
     }
   }
