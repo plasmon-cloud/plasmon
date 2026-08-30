@@ -12,7 +12,12 @@ const activeInputs = Object.freeze([
   "apps/plasmon/README.md",
   "apps/plasmon/AGENTS.md",
   "apps/plasmon/TESTING.md",
+  "apps/plasmon/backend",
+  "apps/plasmon/build.ts",
   "apps/plasmon/docs",
+  "apps/plasmon/monacoWorkerTransport.ts",
+  "apps/plasmon/neutron.json",
+  "apps/plasmon/neutron.lock.json",
   "apps/plasmon/src",
   "apps/plasmon/test",
   "test",
@@ -38,6 +43,7 @@ const contentRules = Object.freeze([
   ["Issue tag", /@issue-\d+\b/iu],
   ["PR tag", /@pr-\d+\b/iu],
   ["release-numbered tag", /@r\d+(?:[-_][a-z0-9_-]+)?\b/iu],
+  ["standalone R2/R3 release-era token", /\b[rR][23]\b/u],
   ["Issue-numbered test title", /\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["'`]#\d+\b/iu],
   ["Issue-numbered active artifact/resource", /\bissue[-_ ]\d+\b/iu],
   ["PR-numbered active artifact/resource", /\bpr[-_ ]\d+\b/iu],
@@ -46,6 +52,22 @@ const contentRules = Object.freeze([
   ["concrete release branch coupling", /\brelease\/\d+\.\d+\.\d+(?:-[A-Za-z0-9._-]+)?\b/u],
   ["release-era identifier", /\bR\d+_[A-Z][A-Z0-9_]*\b/u],
   ["submission-fix provenance", /\bsubmission\s+fix\b/iu],
+]);
+
+const explicitClassifications = Object.freeze([
+  Object.freeze({
+    id: "provenance-guard-negative-fixtures",
+    path: guardPath,
+    kind: "scanner-self-test",
+    reason: "The guard source deliberately constructs synthetic work-item and release-era specimens so its permanent negative tests can prove those identities are rejected. The file is never a product/test identity and is excluded from its own recursive scan to avoid self-matching.",
+  }),
+  Object.freeze({
+    id: "quarantine-repair-owner",
+    path: "test/ci/plasmon-quarantine.json",
+    kind: "current-machine-readable-owner",
+    linePattern: /"repairIssue"\s*:\s*\d+/u,
+    reason: "The active quarantine entry may retain one bounded GitHub repair owner while the executable selector, test title, tag, and CI behavior remain semantic and release-neutral.",
+  }),
 ]);
 
 function slash(path) {
@@ -83,12 +105,12 @@ function isCommentLike(path, line) {
   return /^\s*(?:\/\/|\/\*|\*|#)/u.test(line);
 }
 
+function classificationForLine(path, line) {
+  return explicitClassifications.find((entry) => entry.path === path && entry.linePattern?.test(line)) ?? null;
+}
+
 function allowedLine(path, line) {
-  // Current executable debt ownership stays machine-readable while selectors stay semantic.
-  if (path === "test/ci/plasmon-quarantine.json" && /"repairIssue"\s*:\s*\d+/u.test(line)) {
-    return true;
-  }
-  return false;
+  return classificationForLine(path, line) !== null;
 }
 
 function lineFailures(path, line) {
@@ -99,7 +121,6 @@ function lineFailures(path, line) {
   }
   if (isCommentLike(path, line)) {
     if (/#\d{2,}\b/u.test(line)) failures.push("work-item number in active comment/documentation");
-    if (/\b(?:for\s+)?r[23]\b/iu.test(line)) failures.push("release-era wording in active comment/documentation");
   }
   return failures;
 }
@@ -128,34 +149,72 @@ export function scanActiveProvenance({ root = repoRoot, inputs = activeInputs } 
   return failures;
 }
 
+function collectExplicitClassificationInventory({ root = repoRoot } = {}) {
+  const inventory = [];
+
+  for (const entry of explicitClassifications) {
+    if (entry.path === guardPath) {
+      inventory.push({ ...entry, location: entry.path });
+      continue;
+    }
+
+    const lines = readFileSync(resolve(root, entry.path), "utf8").split(/\r?\n/u);
+    const matches = lines
+      .map((line, index) => ({ line, lineNumber: index + 1 }))
+      .filter(({ line }) => entry.linePattern?.test(line));
+
+    if (matches.length !== 1) {
+      throw new Error(`explicit provenance classification ${entry.id} expected exactly one occurrence in ${entry.path}, found ${matches.length}`);
+    }
+
+    inventory.push({
+      ...entry,
+      location: `${entry.path}:${matches[0].lineNumber}`,
+      occurrence: matches[0].line.trim(),
+    });
+  }
+
+  return inventory;
+}
+
+function printExplicitClassificationInventory() {
+  const inventory = collectExplicitClassificationInventory();
+  console.log(`Explicit active-provenance classifications (${inventory.length}):`);
+  for (const entry of inventory) {
+    const occurrence = entry.occurrence ? ` — ${entry.occurrence}` : "";
+    console.log(`- ${entry.id}: ${entry.location} [${entry.kind}]${occurrence}`);
+    console.log(`  ${entry.reason}`);
+  }
+}
+
 function selfTest() {
-  const issuePath = `issue-${"999"}-foo.test.ts`;
+  const workItemPath = `issue-${"999"}-foo.test.ts`;
   const numberedSpec = `test/e2e/plasmon-foo-${"999"}.spec.ts`;
   const camelCaseTest = `startMenuReconciliation${"999"}.test.ts`;
-  const issueTag = `@issue-${"999"}`;
+  const workItemTag = `@issue-${"999"}`;
   const releaseTag = `@r${"2"}-quarantine`;
-  const r2ReleaseBranch = ["release", "0.1.0-r2"].join("/");
-  const r3ReleaseBranch = ["release", "0.1.0-r3"].join("/");
+  const legacyReleaseBranchA = ["release", `0.1.0-r${"2"}`].join("/");
+  const legacyReleaseBranchB = ["release", `0.1.0-r${"3"}`].join("/");
   const testTitle = `test("#${"999"} behavior", () => {})`;
   const artifact = `issue-${"999"}-graphite.png`;
 
   const fixtureRoot = mkdtempSync(resolve(tmpdir(), "plasmon-active-provenance-"));
   try {
     mkdirSync(resolve(fixtureRoot, "test/e2e"), { recursive: true });
-    writeFileSync(resolve(fixtureRoot, "test", issuePath), "export {};\n");
+    writeFileSync(resolve(fixtureRoot, "test", workItemPath), "export {};\n");
     writeFileSync(resolve(fixtureRoot, numberedSpec), [
       testTitle,
-      `// ${issueTag}`,
+      `// ${workItemTag}`,
       `// ${releaseTag}`,
-      `const r2Branch = "${r2ReleaseBranch}";`,
-      `const r3Branch = "${r3ReleaseBranch}";`,
+      `const legacyBranchA = "${legacyReleaseBranchA}";`,
+      `const legacyBranchB = "${legacyReleaseBranchB}";`,
       `const evidence = "${artifact}";`,
     ].join("\n"));
     writeFileSync(resolve(fixtureRoot, "test", camelCaseTest), "export {};\n");
 
     const fixtureFailures = scanActiveProvenance({ root: fixtureRoot, inputs: ["test"] });
     const expectedFailures = [
-      `Issue-numbered active path: test/${issuePath}`,
+      `Issue-numbered active path: test/${workItemPath}`,
       `numbered Plasmon browser spec: ${numberedSpec}`,
       `camelCase work-item test suffix: test/${camelCaseTest}`,
       "Issue tag:",
@@ -193,7 +252,10 @@ function selfTest() {
     throw new Error("guard self-test incorrectly rejected semantic numbered test identity sha256.test.ts");
   }
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
-    throw new Error("guard self-test lost the bounded quarantine repair-owner allowance");
+    throw new Error("guard self-test lost the bounded quarantine repair-owner classification");
+  }
+  if (explicitClassifications.length !== 2) {
+    throw new Error("guard self-test expected the complete explicit classification inventory to remain narrowly bounded");
   }
 
   console.log("Active provenance guard self-test passed");
@@ -209,5 +271,6 @@ if (process.argv.includes("--self-test")) {
     process.exitCode = 1;
   } else {
     console.log("Active provenance guard passed with no migration baseline");
+    printExplicitClassificationInventory();
   }
 }
