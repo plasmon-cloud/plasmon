@@ -3,6 +3,7 @@ import { buildProbeMatrix, packetSizeForProbe } from "./build-plasmon-flake-prob
 import { browserLanes } from "./plasmon-test-inventory.mjs";
 import { isolationForProbe, PERSISTENT_STATE_RESET_FILES } from "./plasmon-playwright-isolation.mjs";
 import {
+  MANUAL_CHARACTERIZATION_PACKET_SIZE,
   PRE_MERGE_CHARACTERIZATION_COUNT,
   PRE_MERGE_PROBE_COUNT,
   POST_MERGE_CHARACTERIZATION_COUNT,
@@ -50,6 +51,9 @@ if (packetSizeForProbe({ mode: "characterization", iteration_count: PRE_MERGE_CH
 }
 if (packetSizeForProbe({ mode: "characterization", iteration_count: POST_MERGE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== TARGETED_CHARACTERIZATION_PACKET_SIZE) {
   throw new Error("post-merge targeted characterization must use one prepared packet");
+}
+if (packetSizeForProbe({ mode: "manual", iteration_count: 50, target: "exact" }) !== MANUAL_CHARACTERIZATION_PACKET_SIZE) {
+  throw new Error("manual 50-run targeted probe must retain five repetitions per prepared packet");
 }
 for (const count of [PRE_MERGE_PROBE_COUNT, POST_MERGE_PROBE_COUNT]) {
   if (packetSizeForProbe({ mode: "baseline", iteration_count: count, target: "all" }) !== 1) {
@@ -139,4 +143,4 @@ for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine
   requireFragment(flakeRunner, fragment, "flake runner");
 }
 
-console.log("Playwright packet lifecycle verified: approval confidence uses one broad execution plus one prepared 3x characterization packet; post-merge uses three independent broad observations plus one prepared 3x targeted packet; setup reuse, state reset, retries=0, workers=1, and quarantine exclusion are preserved");
+console.log("Playwright packet lifecycle verified: approval confidence uses one broad execution plus one prepared 3x characterization packet; post-merge uses three independent broad observations plus one prepared 3x targeted packet; manual targeted 50-run probes retain 10 parallel packets of 5 repetitions; setup reuse, state reset, retries=0, workers=1, and quarantine exclusion are preserved");
