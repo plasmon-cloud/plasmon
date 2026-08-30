@@ -272,8 +272,8 @@ export class PlasmonDiagnosticService implements DiagnosticService {
   private readonly listeners = new Set<(record: DiagnosticRecord) => void>();
   private readonly path: string;
   private readonly now: () => number;
-  private readonly fileMinLevel: DiagnosticLevel;
-  private readonly consoleMinLevel: DiagnosticLevel;
+  private fileMinLevel: DiagnosticLevel;
+  private consoleMinLevel: DiagnosticLevel;
   private readonly console: DiagnosticConsole | null;
   private readonly maxBytes: number;
   private readonly retainBytes: number;
@@ -291,6 +291,15 @@ export class PlasmonDiagnosticService implements DiagnosticService {
 
   for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger {
     return createDiagnosticLogger(this, subsystem, defaults);
+  }
+
+  /** Runtime sink policy seam; producer emission remains unchanged. */
+  setSinkMinimumLevels(levels: {
+    fileMinLevel: DiagnosticLevel;
+    consoleMinLevel: DiagnosticLevel;
+  }): void {
+    this.fileMinLevel = levels.fileMinLevel;
+    this.consoleMinLevel = levels.consoleMinLevel;
   }
 
   emit(input: DiagnosticEventInput): DiagnosticRecord {
