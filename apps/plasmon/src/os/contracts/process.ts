@@ -16,6 +16,8 @@ export interface ProcessRecord {
   icon: IconRef;
   state: "starting" | "running" | "closing";
   windowId?: WindowId;
+  /** Explicit launch operation retained only for in-memory runtime correlation. */
+  operation?: DiagnosticOperationContext;
 }
 
 export type ProcessCloseDecision = "allow" | "prevent" | "defer";
