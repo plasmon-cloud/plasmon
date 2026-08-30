@@ -24,9 +24,15 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Package, install, launch, and probe Rollbar from Plasmon iframe
+        env:
+          EXPERIMENT_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
+            export PLASMON_PACKAGE_PROFILE=full
+            export PLASMON_REMOTE_INCIDENT_EXPERIMENT=1
+            export PLASMON_ROLLBAR_CLIENT_TOKEN=ci-packaged-egress-token
+            export PLASMON_BUILD_SHA="$EXPERIMENT_SHA"
             npm ci
             npm run plasmon:local:prepare
             npm run plasmon:local:serve > /tmp/plasmon-rollbar-egress-pocketic.log 2>&1 &
@@ -50,5 +56,5 @@ jobs:
 
             npm run plasmon:local:status
             npm run plasmon:local:reinstall
-            playwright test test/e2e/plasmon-rollbar-egress-experiment.spec.ts
+            npx playwright test test/e2e/plasmon-rollbar-egress-experiment.spec.ts
           '
