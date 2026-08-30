@@ -3,8 +3,6 @@ import type { FsEvent, FsNode } from "../contracts/index.ts";
 import { isFsEventRelevant, reconcileSelection, type SelectionState } from "./model.ts";
 
 /**
- * Adopted from Luna-A's validated #195 characterization packet.
- *
  * These guards protect the refresh boundary that the FileManager browser/render
  * decomposition must preserve: filesystem events decide when the adapter
  * re-reads authoritative directory state, and selection is reconciled by stable

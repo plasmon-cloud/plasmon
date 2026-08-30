@@ -24,7 +24,7 @@ production Plasmon authorities
 - Test-only powers such as global deterministic settlement, fake-effect failure/defer controls, clock manipulation, impossible-state construction, transport fault injection, and assertions do not belong here.
 - Focused subsystem tests should continue testing their subsystem directly. The OS API is primarily for high-level deterministic workflows that span production authorities.
 
-## Initial R3 / scripting-v1 surface
+## Current scripting-v1 surface
 
 The bounded production surface exposes:
 
@@ -55,7 +55,7 @@ All filesystem paths are absolute. `writeText()` creates or replaces a UTF-8 tex
 
 ## Package/provisioning boundary
 
-There is intentionally no `os.packages` API in this R3 surface.
+There is intentionally no `os.packages` API in the current surface.
 
 The current production Neutron bridge can discover installed Elements and can request the Kernel-owned, user-reviewed installation-offer flow for a source URL. That is not a generalized package manager with an `install(packageIdOrSource) -> installed package` completion contract. More importantly, vanilla Neutron currently exposes no supported ordinary-application API for requesting uninstall/removal; uninstall remains Kernel frontend orchestration with dependency checks, destructive confirmation, deployment, AppScope cleanup, and security authority.
 
@@ -65,4 +65,4 @@ Because a coherent production `list/install/remove` authority does not yet exist
 
 Broader scripting concerns remain intentionally separate. A future executable runtime may provide a `RunContext` for args/stdin/stdout/stderr/cancellation, while shell commands may live in a `CommandRegistry` built above the OS API. cwd, pipelines, redirects, shell formatting, text transforms, history, variables, aliases, command parsing, and Terminal presentation do not belong on this contract.
 
-The contract is structured so it can later be extracted into a reusable SDK and used as the source of TypeScript/Monaco declarations without changing its dependency direction. Physical SDK extraction and scripting integration are not part of this R3 testing pass.
+The contract is structured so it can later be extracted into a reusable SDK and used as the source of TypeScript/Monaco declarations without changing its dependency direction. Physical SDK extraction and scripting integration are intentionally separate follow-up work.

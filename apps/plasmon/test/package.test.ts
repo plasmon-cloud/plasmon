@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import {
   generateAppMethodSchemaArtifact,
@@ -8,16 +8,19 @@ import {
 import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 import { type NeutronManifest } from "neutron-tools/src/schema.js";
 import { validate_neutron_conf } from "neutron-tools/src/validate_schema.js";
+import { DEMO_PAYLOAD_MARKERS, SLIM_MAX_BYTES } from "../slimPackageGate.ts";
+import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 
 const manifestUrl = new URL("../neutron.json", import.meta.url);
 const backendUrl = new URL("../backend/main.mo", import.meta.url);
 const htmlUrl = new URL("../dist/web/index.html", import.meta.url);
 const cssUrl = new URL("../dist/web/main.css", import.meta.url);
+const mainBundleUrl = new URL("../dist/web/main.js", import.meta.url);
 const appDirectoryUrl = new URL("../", import.meta.url);
+const distRootUrl = new URL("../dist/", import.meta.url);
 const distWebUrl = new URL("../dist/web/", import.meta.url);
-const packageProfile = process.env.PLASMON_PACKAGE_PROFILE ?? "slim";
-const editorProfile = packageProfile === "slim" || packageProfile === "full" || packageProfile === "demo";
-const monacoWorkers = packageProfile === "slim" || packageProfile === "demo"
+const packagePolicy = resolvePackageProfile();
+const monacoWorkers = packagePolicy.monacoProfile === "slim"
   ? ["editor.worker.js"]
   : ["editor.worker.js", "json.worker.js", "css.worker.js", "html.worker.js", "ts.worker.js"];
 
@@ -65,6 +68,11 @@ test("plasmon package output matches the source manifest archive identity", asyn
     .sort();
 
   expect(archives).toEqual([expectedArchive]);
+  if (packagePolicy.isSlim) {
+    const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
+    console.log(`Slim package test size: ${archiveStats.size} bytes`);
+    expect(archiveStats.size).toBeLessThan(SLIM_MAX_BYTES);
+  }
 });
 
 test("plasmon emits a build-time app method schema", async () => {
@@ -101,19 +109,25 @@ test("plasmon bundles the shared design system stylesheet", async () => {
 });
 
 test("package profile excludes game payloads and selects the requested Monaco worker set", async () => {
-  const files = (await readdir(distWebUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
-  const forbiddenGamePaths = files.filter((file) => file.includes("jsdos")
+  const archiveFiles = (await readdir(distRootUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
+  const webFiles = (await readdir(distWebUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
+  const forbiddenGamePaths = archiveFiles.filter((file) => file.includes("jsdos")
     || file.includes("emulatorjs")
     || file.includes("emulatorjs-host")
     || file.includes("Program Files/js-dos")
     || file.includes("Program Files/EmulatorJS")
-    || file.startsWith("fixtures/")
-    || file.startsWith("Games/"));
+    || file.startsWith("module/emulatorjs/")
+    || file.startsWith("module/emulatorjs-shim/")
+    || file.startsWith("module/emulatorjs-runtime/")
+    || file.startsWith("module/native-apps/games/game-libraries/")
+    || file.startsWith("module/native-apps/games/game-runtime/")
+    || file.startsWith("web/fixtures/")
+    || file.startsWith("web/Games/")
+    || [".jsdos", ".dosz", ".nes", ".rom"].some((extension) => file.toLowerCase().endsWith(extension)));
 
   expect(forbiddenGamePaths).toEqual([]);
-  if (!editorProfile) return;
 
-  const workerPaths = files.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
+  const workerPaths = webFiles.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
   expect(workerPaths).toEqual([
     ...monacoWorkers.map((worker) => `System/Program Files/MonacoEditor/${worker}`),
     ...monacoWorkers.map((worker) => `runtime/monaco/${worker}`),
@@ -124,4 +138,12 @@ test("package profile excludes game payloads and selects the requested Monaco wo
   runInNewContext(transportScript, transportScope);
   const sources = transportScope.__PLASMON_MONACO_WORKER_SOURCES__ as Record<string, string>;
   expect(Object.keys(sources).sort()).toEqual([...monacoWorkers].sort());
+
+  if (packagePolicy.isSlim) {
+    expect(packagePolicy.isDemo).toBe(false);
+    const mainBundle = await readFile(mainBundleUrl, "utf8");
+    for (const marker of DEMO_PAYLOAD_MARKERS) {
+      expect(mainBundle).not.toContain(marker);
+    }
+  }
 });

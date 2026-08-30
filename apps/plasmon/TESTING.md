@@ -63,7 +63,7 @@ The harness calls production `createPlasmonServices()` and replaces only true ex
 
 The harness exposes the production service graph for focused composition work and the production semantic `OsApi` as `env.os` for high-level deterministic workflows. `env.os` is created by `createPlasmonOsApi()` from the same production services; the test harness must not implement a second product-semantic facade over `environment.services`.
 
-Use `env.os` when the setup or behavior is a legitimate OS operation a normal authorized automation caller could reasonably perform. The initial R3 surface includes filesystem stat/existence/text read-write/directory creation, canonical resource opening, and process/window observation. Example:
+Use `env.os` when the setup or behavior is a legitimate OS operation a normal authorized automation caller could reasonably perform. The current OS API surface includes filesystem stat/existence/list/text read-write/directory creation/copy/move/Trash removal, canonical resource opening, and process/window observation. Example:
 
 ```ts
 const env = createHeadlessPlasmonEnvironment();
@@ -77,7 +77,7 @@ expect(env.os.processes.list()).toContainEqual(
 );
 ```
 
-The semantic API is a production contract under `src/os/api/`; it must delegate to the existing owning authorities rather than recreate filesystem protection, associations, open dispatch, process lifecycle, or window policy. Its public contracts/DTOs must remain dependency-light and must not depend on concrete service/controller classes or anything under `test/`.
+The semantic API is a production contract under `src/os/api/`; it must delegate to the existing owning authorities rather than recreate filesystem protection, associations, open dispatch, process lifecycle, window policy, or Trash behavior. Its public contracts/DTOs must remain dependency-light and must not depend on concrete service/controller classes or anything under `test/`.
 
 Keep test superpowers outside `OsApi`. Global deterministic settlement, programmable external success/failure/defer behavior, fake call recording, clock control, transport faults, impossible-state construction, policy bypasses, and assertions belong in test-only support beside `env.os`, not on the production API. Operation-specific completion/readiness belongs in production only when it represents a real named Product lifecycle boundary rather than a replacement for sleeps.
 
@@ -85,7 +85,7 @@ The harness must not acquire feature-specific business semantics. If a determini
 
 Pass an existing `MemoryFsRepository` through the `repository` option when a test must reconstruct production composition over the same persistence boundary.
 
-The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain during the bounded R3 transition so existing coverage does not need a migration campaign. New high-level deterministic tests should prefer `env.os`; systematic retroactive migration belongs to the deeper testing audit rather than this quick pass.
+The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain for compatibility with existing coverage. New high-level deterministic tests should prefer `env.os`; systematic retroactive migration belongs to a separate testing audit.
 
 `test/reviewInstalledIntegration.test.ts` is the representative independently-installed-app proof. It verifies that duplicate Kernel discovery for Review still reconciles to one `/Apps/Review.neutron` resource with canonical metadata and that opening the projected resource reaches exactly one `NeutronBridge.openElement("review")` call through the production filesystem/open dispatcher. It deliberately asserts that no fake Plasmon-native Review process/window is created because authenticated Neutron applications remain Kernel-owned sibling tiles.
 
@@ -287,12 +287,15 @@ Expensive installed-package/browser validation is staged around review rather th
 
 The phase contract is:
 
-1. **ordinary PR head** — Fast Bun tests run as real readiness evidence; stable required packaged/browser and Flake Probe contexts report explicit deferred success without installing Nix, starting PocketIC, or launching Playwright;
-2. **approved merge queue** — required workflows run their real slow workloads against the exact `merge_group` SHA; Flake Probe adds exactly one broad retry-free `all` observation and, when relevant Playwright scope is selected, one prepared packet containing exactly 10 targeted retry-free repetitions;
-3. **integrated `release/**` push** — required release-push gates still run, and diagnostic Flake Probe adds exactly 10 broad observations plus conditional 50 targeted characterization observations; the 50 targeted observations remain packetized to reuse setup;
-4. **explicit diagnostic request** — `ci:flake-probe` remains the targeted exact-head 50-iteration diagnostic mechanism. `ci:flaky` is classification/debt metadata, not the heavy-probe trigger.
+1. **ordinary PR head** — Fast Bun tests run as real readiness evidence; stable required packaged/browser, Kernel, and Flake Probe contexts report staged success without installing Nix, starting PocketIC, or launching Playwright;
+2. **normal GitHub approval** — the full required confidence gate runs: every required non-quarantined acceptance once, one broad retry-free `all` observation, and conditional impacted Playwright characterization exactly 3× in one prepared targeted packet; any approval-stage failure blocks Merge;
+3. **merge queue** — Fast Bun tests are the real test workload on the synthetic `merge_group` SHA; expensive package/PocketIC/Playwright/Kernel contexts report quickly without repeating slow work that already passed before the user pressed Merge;
+4. **integrated `release/**` push** — diagnostic Flake Probe records exactly 3 broad retry-free observations plus conditional 3 targeted characterization observations; the targeted 3 use one prepared packet, while broad 3 may remain independent setups until shared-state reuse is proven safe;
+5. **explicit diagnostic request** — `ci:flake-probe` remains the targeted exact-head 50-iteration diagnostic mechanism. `ci:flaky` is classification/debt metadata, not the heavy-probe trigger.
 
-Do not enable the repository merge queue until every required status context reports correctly for `merge_group: checks_requested`. A merge-group slow failure must block the queue entry. A post-merge diagnostic failure remains visible evidence but cannot retroactively undo the completed merge.
+The intended mental model is: **approval-stage CI decides correctness; pressing Merge commits the change to merging; the merge queue is a fast final integration checkpoint; post-merge probing looks for flakiness without delaying the merge.**
+
+Every required status context must continue to report for `merge_group: checks_requested`, but slow contexts must not repeat their expensive workloads there. A merge-queue failure is an integration/scheduling signal to investigate. A post-merge diagnostic failure remains visible evidence but cannot retroactively undo the completed merge.
 
 Profile-specific Playwright characterization must use the package profile that can truthfully execute the selected acceptance. Never characterize a demo/full-profile acceptance against the slim/local package merely to reuse an environment.
 

@@ -68,7 +68,7 @@ test("— packaged Start omits managed Settings and Properties while keeping Exp
     await expect(panel.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
 
     // Ordinary managed application inventory remains available under the same
-    // Accessories category rather than being moved or replaced by #428.
+    // Accessories category rather than being moved or replaced by another default projection.
     const accessories = startItems.filter({ hasText: "Accessories" });
     await accessories.click();
     await expect(panel.locator("[data-start-item]")).not.toHaveCount(0);

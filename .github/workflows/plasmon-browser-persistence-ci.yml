@@ -5,6 +5,8 @@ on:
     branches:
       - 'release/**'
   pull_request:
+  pull_request_review:
+    types: [submitted]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -13,8 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: plasmon-browser-persistence-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: plasmon-browser-persistence-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   packaged-persistence:
@@ -31,20 +33,24 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs persistence
 
-      - name: Report PR gate deferred to merge queue
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Report staged persistence checkpoint
+        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
-          echo "Packaged browser persistence is deferred until the approved PR enters the merge queue."
-          echo "The required check is intentionally satisfied on the PR head; the real package/browser gate runs on merge_group."
+          case "${{ github.event_name }}" in
+            pull_request) echo "Persistence acceptance waits for normal GitHub review approval." ;;
+            merge_group) echo "Persistence already passed before Merge; merge queue is fast-only." ;;
+            push) echo "Persistence already passed before merge; post-merge Flake Probe owns stability analysis." ;;
+            pull_request_review) echo "This review was not an approval; no expensive persistence work is started." ;;
+          esac
 
       - name: Install Nix
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run browser persistence gate
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail

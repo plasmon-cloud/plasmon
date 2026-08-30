@@ -14,7 +14,7 @@ These instructions apply to `apps/plasmon/**`. Repository-level instructions sti
 6. Relevant accepted current documents under `apps/plasmon/docs/`.
 7. Repository `/doc/` when behavior crosses the Neutron/Kernel boundary.
 
-Use `apps/plasmon/docs/GLOSSARY.md` for shared terminology and identity distinctions. Do not rely on external project sources, chat, old handoffs, or `apps/plasmon/docs/history/**` as architecture/testing authority when current repository guidance exists.
+Use `apps/plasmon/docs/GLOSSARY.md` for shared terminology and identity distinctions. Do not rely on external project sources, chat, old handoffs, old branch snapshots, or superseded release/refactor material as architecture/testing authority when current repository guidance exists. Git history and GitHub own historical provenance; the checked-in documentation tree is current product/contributor authority or a live compatibility contract.
 
 ## Source-of-truth order
 
@@ -24,7 +24,7 @@ Use `apps/plasmon/docs/GLOSSARY.md` for shared terminology and identity distinct
 4. Scoped `README.md`.
 5. Existing implementation and tests as evidence of current behavior.
 
-If those conflict materially, surface the conflict rather than silently preserving whichever implementation is easiest. External project/chat context may bootstrap navigation, but it does not outrank current repository authority. Historical records may explain provenance but do not override a current contract or subsystem owner.
+If those conflict materially, surface the conflict rather than silently preserving whichever implementation is easiest. External project/chat context may bootstrap navigation, but it does not outrank current repository authority.
 
 ## Durable product rules
 
@@ -85,11 +85,11 @@ A UI regression should get browser coverage only when browser behavior is materi
 
 README files explain what a directory is, how it fits the product, its public seams, and its current broad implementation shape. `AGENTS.md` files explain durable operational rules: authority, boundaries, refactor direction, testing, and escalation.
 
-Do not use README/AGENTS as an issue tracker. Concrete bugs, temporary migrations, exact one-off acceptance fixes, and sprint ownership belong in GitHub Issues, tests, or historical records. Release/refactor packets, dated acceptance baselines, old parity ledgers, branch experiments, and superseded design handoffs belong under `apps/plasmon/docs/history/**` when they are retained for provenance; keep their original Issue/PR/branch/release terminology intact there rather than rewriting history to look current.
+Do not use README/AGENTS as an issue tracker. Concrete bugs, temporary migrations, exact one-off acceptance fixes, sprint ownership, release/refactor packets, dated acceptance baselines, old parity ledgers, branch experiments, superseded design handoffs, and other project-management archaeology belong in GitHub/Git history rather than the current documentation tree. A document about an older version remains current only when it is still required to understand or support a live compatibility, migration, schema, package, persistence, or protocol contract.
 
 Keep implementation, headless verification, packaged/browser verification, and human/manual acceptance as separate claims. Never upgrade one evidence layer merely because another passed, and never count an open implementation PR as integrated behavior. Current work/acceptance ownership lives in canonical GitHub Issues and current executable inventories rather than a historical ledger.
 
-Durable discoveries must be committed back to the appropriate current repository documentation, test, contract, or implementation. If a rule is found only in historical evidence, restate the lasting invariant in its current owner before relying on the archived record as provenance. Do not leave information needed by future implementers only in chat, external project context, an agent handoff, or history.
+Durable discoveries must be committed back to the appropriate current repository documentation, test, contract, or implementation. If a lasting rule is discovered while reviewing historical Git/GitHub evidence, restate it in its current owner before relying on that evidence. Do not leave information needed by future implementers only in chat, external project context, an agent handoff, or history.
 
 ## Escalate instead of assuming
 

@@ -96,9 +96,9 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
     const viewport = page.viewportSize();
     if (!viewport) throw new Error("Packaged smoke requires a fixed Playwright viewport");
 
-    // Search is a projection over native/system authority. #175 owns its exact
-    // panel geometry. This broad refactor smoke permits the known ~22px right
-    // overflow while still catching gross off-screen regressions.
+    // Search is a projection over native/system authority. Its exact panel
+    // geometry is independently covered. This broad refactor smoke permits the
+    // known ~22px right overflow while still catching gross off-screen regressions.
     await plasmon.getByRole("button", { name: "Search" }).click();
     const searchRegion = plasmon.getByRole("region", { name: "Search" });
     await expect(searchRegion).toBeVisible();
@@ -137,8 +137,8 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
 
     // Create and open one ordinary document through Desktop/FileManager. The
     // browser assertion protects the packaged editor boundary; association/open
-    // semantics remain covered in the deterministic guard. #89 now owns the
-    // canonical worker path and keeps worker fallback/security warnings fatal.
+    // semantics remain covered in the deterministic guard. The canonical worker
+    // path keeps worker fallback/security warnings fatal.
     const desktopFiles = plasmon.getByRole("listbox", { name: "Files" }).first();
     const desktopBounds = await desktopFiles.boundingBox();
     if (!desktopBounds) throw new Error("Desktop FileManager has no browser bounds");

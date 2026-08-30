@@ -78,7 +78,7 @@ Use this distinction when adding coverage:
 
 If a high-level deterministic workflow needs a semantic operation that a normal authorized caller could reasonably automate, treat that as a candidate production `OsApi` gap rather than immediately encoding the workflow in Playwright. If a workflow needs a new Product rule, add it to the owning production model/controller/command first; the `OsApi` adapter must remain a thin delegate rather than a second implementation.
 
-The older `node()`, `open()`, `processes()`, and `windows()` headless helpers remain for existing coverage during the R3 quick pass. New high-level tests should prefer `env.os`; broad legacy migration is deferred to the deeper testing audit rather than being forced into this change.
+The older `node()`, `open()`, `processes()`, and `windows()` headless helpers remain for existing coverage during the compatibility transition. New high-level tests should prefer `env.os`; broad legacy migration is deferred to the deeper testing audit rather than being forced into unrelated changes.
 
 `reviewInstalledIntegration.test.ts` is the representative sibling-application proof: it verifies Review projection identity/uniqueness and canonical filesystem-open-to-Neutron-bridge activation without inventing a Plasmon-native Review process or window.
 

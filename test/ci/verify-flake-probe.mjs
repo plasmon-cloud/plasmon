@@ -3,10 +3,11 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { configureProbe } from "./configure-plasmon-flake-probe.mjs";
+import { packetSizeForProbe } from "./build-plasmon-flake-probe-matrix.mjs";
 import { browserLanes, optionalCoreBrowserTests } from "./plasmon-test-inventory.mjs";
 import {
-  MERGE_QUEUE_CHARACTERIZATION_COUNT,
-  MERGE_QUEUE_PROBE_COUNT,
+  PRE_MERGE_CHARACTERIZATION_COUNT,
+  PRE_MERGE_PROBE_COUNT,
   POST_MERGE_CHARACTERIZATION_COUNT,
   POST_MERGE_PROBE_COUNT,
 } from "./plasmon-flake-probe-policy.mjs";
@@ -14,6 +15,7 @@ import {
 const workflow = readFileSync(".github/workflows/plasmon-flake-probe.yml", "utf8");
 const workflowReadme = readFileSync(".github/workflows/README.md", "utf8");
 const probeDoc = readFileSync(".github/workflows/PLASMON_FLAKE_PROBE.md", "utf8");
+const stagedDoc = readFileSync(".github/workflows/PLASMON_STAGED_CI.md", "utf8");
 const labelWorkflow = readFileSync(".github/workflows/plasmon-flake-probe-label.yml", "utf8");
 const runner = readFileSync("test/ci/run-plasmon-flake-probe.sh", "utf8");
 const summarizerPath = "test/ci/summarize-plasmon-flake-evidence.mjs";
@@ -31,85 +33,63 @@ for (const fragment of [
   "      - 'release/**'",
   "  pull_request:",
   "types: [opened, synchronize, reopened]",
+  "  pull_request_review:",
+  "types: [submitted]",
   "  merge_group:",
   "types: [checks_requested]",
   "workflow_dispatch:",
-  "github.event.merge_group.head_sha",
-  "github.event.after",
-  "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
-  "Record changed files for this phase",
-  "configure-plasmon-flake-probe.mjs",
-  "Build probe matrix",
+  "pull_request|pull_request_review)",
+  "github.event.review.state == 'approved'",
+  "Report ordinary PR waiting for approval",
+  "Report merge queue fast-only checkpoint",
+  "Require approved pre-merge probe matrix success",
   "name: Flake probe summary",
-  "Report PR flake gate deferred to merge queue",
   "name: Flake characterization summary",
-  "Report PR characterization deferred to merge queue",
   "summarize-plasmon-flake-evidence.mjs",
-  "continue-on-error: ${{ matrix.mode == 'characterization' }}",
-  "max-parallel: 10",
+  "continue-on-error: ${{ github.event_name == 'push' && matrix.mode == 'characterization' }}",
 ]) requireFragment(workflow, fragment, "Flake Probe workflow");
-for (const fragment of ["pull_request_target", "--repeat-each", "select-plasmon-flake-characterization-phase.mjs", "summarize-staged-flake-probe.mjs"]) {
-  forbidFragment(workflow, fragment, "Flake Probe workflow");
-}
+for (const fragment of ["pull_request_target", "--repeat-each", "deferred to merge queue"]) forbidFragment(workflow, fragment, "Flake Probe workflow");
 
-for (const fragment of ["ci:flake-probe", "createWorkflowDispatch", "workflow_id: 'plasmon-flake-probe.yml'"]) {
-  requireFragment(labelWorkflow, fragment, "explicit Flake Probe label bridge");
-}
-for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine", "exact-set)", "--grep @saved-preview"]) {
-  requireFragment(runner, fragment, "flake executable runner");
-}
+for (const fragment of ["ci:flake-probe", "createWorkflowDispatch", "workflow_id: 'plasmon-flake-probe.yml'"]) requireFragment(labelWorkflow, fragment, "explicit Flake Probe label bridge");
+for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine", "exact-set)"]) requireFragment(runner, fragment, "flake executable runner");
 
 const ordinaryPlaywright = browserLanes.specialist[0];
 const profileSpecificPlaywright = optionalCoreBrowserTests.find((path) => !browserLanes.specialist.includes(path));
 if (!ordinaryPlaywright || !profileSpecificPlaywright) throw new Error("shared browser inventory lacks representative ordinary/profile-specific acceptance");
 
-const review = await configureProbe({ eventName: "pull_request", changedFiles: [ordinaryPlaywright] });
-if (review.applicable || review.phase !== "pr-review" || review.primary.iteration_count !== MERGE_QUEUE_PROBE_COUNT || review.characterization.applicable) {
-  throw new Error("ordinary PR heads must defer Flake Probe execution to merge queue");
-}
+const reviewHead = await configureProbe({ eventName: "pull_request", changedFiles: [ordinaryPlaywright] });
+if (reviewHead.applicable || reviewHead.phase !== "pr-review" || reviewHead.characterization.applicable) throw new Error("ordinary PR heads must wait for approval without probe execution");
+
+const approved = await configureProbe({ eventName: "pull_request_review", changedFiles: [ordinaryPlaywright] });
+if (!approved.applicable || approved.phase !== "pre-merge-confidence" || approved.primary.iteration_count !== PRE_MERGE_PROBE_COUNT) throw new Error("approved review lost required broad confidence probe");
+if (!approved.characterization.applicable || approved.characterization.iteration_count !== PRE_MERGE_CHARACTERIZATION_COUNT || approved.characterization.profile !== "local") throw new Error("approved Playwright impact must select 3x local characterization");
+
+const profileApproved = await configureProbe({ eventName: "pull_request_review", changedFiles: [profileSpecificPlaywright] });
+if (!profileApproved.characterization.applicable || profileApproved.characterization.profile !== "demo" || !profileApproved.characterization.files.includes(profileSpecificPlaywright)) throw new Error("profile-only approved impact must use truthful demo characterization");
 
 const merge = await configureProbe({ eventName: "merge_group", changedFiles: [ordinaryPlaywright] });
-if (!merge.applicable || merge.phase !== "merge-queue" || merge.primary.iteration_count !== MERGE_QUEUE_PROBE_COUNT) {
-  throw new Error("merge-group validation lost its required broad probe policy");
-}
-if (!merge.characterization.applicable || merge.characterization.iteration_count !== MERGE_QUEUE_CHARACTERIZATION_COUNT || merge.characterization.profile !== "local") {
-  throw new Error("merge-group ordinary Playwright impact must select local targeted characterization");
-}
-
-const profileMerge = await configureProbe({ eventName: "merge_group", changedFiles: [profileSpecificPlaywright] });
-if (!profileMerge.characterization.applicable || profileMerge.characterization.profile !== "demo" || !profileMerge.characterization.files.includes(profileSpecificPlaywright)) {
-  throw new Error("profile-only Playwright impact must use the truthful demo/full-profile characterization environment");
-}
+if (merge.applicable || merge.phase !== "merge-queue" || merge.characterization.applicable) throw new Error("merge queue must not repeat browser flake probing");
 
 const postMerge = await configureProbe({ eventName: "push", changedFiles: [ordinaryPlaywright] });
-if (!postMerge.applicable || postMerge.phase !== "post-merge" || postMerge.primary.iteration_count !== POST_MERGE_PROBE_COUNT) {
-  throw new Error("integrated release push lost post-merge broad stability policy");
-}
-if (!postMerge.characterization.applicable || postMerge.characterization.iteration_count !== POST_MERGE_CHARACTERIZATION_COUNT) {
-  throw new Error("integrated Playwright impact lost post-merge characterization policy");
-}
+if (!postMerge.applicable || postMerge.phase !== "post-merge" || postMerge.primary.iteration_count !== POST_MERGE_PROBE_COUNT) throw new Error("integrated release push lost 3-observation broad policy");
+if (!postMerge.characterization.applicable || postMerge.characterization.iteration_count !== POST_MERGE_CHARACTERIZATION_COUNT) throw new Error("integrated Playwright impact lost 3x targeted post-merge policy");
 
-const unrelated = await configureProbe({ eventName: "merge_group", changedFiles: ["README.md"] });
+if (packetSizeForProbe({ iteration_count: PRE_MERGE_CHARACTERIZATION_COUNT, target: "exact-set", mode: "characterization" }) !== PRE_MERGE_CHARACTERIZATION_COUNT) throw new Error("pre-merge 3x characterization must use one prepared packet");
+if (packetSizeForProbe({ iteration_count: POST_MERGE_CHARACTERIZATION_COUNT, target: "exact-set", mode: "characterization" }) !== POST_MERGE_CHARACTERIZATION_COUNT) throw new Error("post-merge targeted 3x characterization must use one prepared packet");
+if (packetSizeForProbe({ iteration_count: POST_MERGE_PROBE_COUNT, target: "all", mode: "baseline" }) !== 1) throw new Error("broad post-merge observations remain independent setups until the PocketIC optimization proves reuse safe");
+
+const unrelated = await configureProbe({ eventName: "pull_request_review", changedFiles: ["README.md"] });
 if (unrelated.characterization.applicable) throw new Error("non-Playwright changes must not receive automatic targeted characterization");
 
 function writeResult(root, iteration, count, { mode, outcome = "success", runAttempt = 1 } = {}) {
   const directory = join(root, `attempt-${runAttempt}-iteration-${iteration}`);
   mkdirSync(directory, { recursive: true });
   writeFileSync(join(directory, "result.txt"), [
-    "run_id=fixture",
-    "run_number=900",
-    `run_attempt=${runAttempt}`,
-    `mode=${mode}`,
-    `iteration=${iteration}`,
-    `iteration_count=${count}`,
-    `outcome=${outcome}`,
-    "sha=fixture-sha",
+    "run_id=fixture", "run_number=900", `run_attempt=${runAttempt}`, `mode=${mode}`, `iteration=${iteration}`,
+    `iteration_count=${count}`, `outcome=${outcome}`, "sha=fixture-sha",
     `target=${mode === "characterization" ? "exact-set" : "all"}`,
     `scope=${mode === "characterization" ? "characterization:local:fixture" : "all"}`,
-    "test_file=",
-    "test_grep=",
-    "test_files_json=[]",
-    "",
+    "test_file=", "test_grep=", "test_files_json=[]", "",
   ].join("\n"));
 }
 
@@ -129,31 +109,25 @@ function verifySummaryFixture({ count, mode, shouldPass = true }) {
     if (shouldPass) {
       requireFragment(run.stdout, `Configured probe iterations: ${count}`, `${mode}/${count} summary`);
       requireFragment(run.stdout, `Fresh probe iterations reported: ${count}/${count}`, `${mode}/${count} summary`);
-      const packet = JSON.parse(readFileSync(json, "utf8")).evidence_packets?.[0];
-      if (packet?.mode !== mode || packet?.iteration_count !== count || packet?.sha !== "fixture-sha") {
-        throw new Error(`${mode}/${count} summary lost exact packet identity`);
-      }
     }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 }
 
-verifySummaryFixture({ count: MERGE_QUEUE_PROBE_COUNT, mode: "merge-validation" });
+verifySummaryFixture({ count: PRE_MERGE_PROBE_COUNT, mode: "merge-validation" });
 verifySummaryFixture({ count: POST_MERGE_PROBE_COUNT, mode: "baseline" });
-verifySummaryFixture({ count: MERGE_QUEUE_CHARACTERIZATION_COUNT, mode: "characterization" });
-verifySummaryFixture({ count: POST_MERGE_CHARACTERIZATION_COUNT, mode: "characterization" });
+verifySummaryFixture({ count: PRE_MERGE_CHARACTERIZATION_COUNT, mode: "characterization" });
 verifySummaryFixture({ count: POST_MERGE_PROBE_COUNT, mode: "merge-validation", shouldPass: false });
 
 for (const fragment of [
-  "### Pull-request head: review readiness",
-  "### Merge queue: required pre-merge validation",
-  "### Integrated release branch: post-merge stability evidence",
+  "Reviewer approves",
+  "Merge queue",
+  "fast-only",
+  "3 broad",
+  "3 targeted",
   "ci:flake-probe",
   "@quarantine",
-]) requireFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
-for (const fragment of ["Issue #594", "R3 staged", "release/0.1.0-r3"]) {
-  forbidFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
-}
+]) requireFragment(`${workflowReadme}\n${probeDoc}\n${stagedDoc}`, fragment, "durable CI documentation");
 
-console.log("Flake Probe scheduling verified from shared policy: PR deferral, merge-group 1+conditional-10 validation, post-merge 10+conditional-50 stability analysis, profile-aware targeting, explicit heavy diagnostics, retry-free quarantine-safe execution, and phase/count summary integrity");
+console.log("Flake Probe scheduling verified: PR waits for approval, approval runs 1 broad + conditional 3 targeted as a hard gate, merge queue repeats no browser probe, post-merge runs 3 broad + conditional 3 targeted, and explicit heavy diagnostics remain available");

@@ -8,7 +8,7 @@ Applies to `apps/plasmon/test/**`. Also follow `apps/plasmon/AGENTS.md`, [`../TE
 
 `renderPlasmon()` is the bounded React adapter around that same headless composition. It exposes the same `environment.os` for legitimate setup and resulting-state inspection. It is not a second OS model and must not grow into a Page Object Model.
 
-The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain only to avoid a broad R3 migration. Do not use them in new high-level tests when `env.os` expresses the operation. Focused subsystem/unit tests are different: they should continue calling the owning production model/service/controller/command directly rather than being forced through the OS API (`OsApi`).
+The legacy headless `node()`, `open()`, `processes()`, and `windows()` conveniences remain only to avoid a broad compatibility migration. Do not use them in new high-level tests when `env.os` expresses the operation. Focused subsystem/unit tests are different: they should continue calling the owning production model/service/controller/command directly rather than being forced through the OS API (`OsApi`).
 
 ## Required lanes
 
