@@ -35,6 +35,7 @@ import {
 } from "../../os/file-manager/index.ts";
 import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
+import { FILE_MANAGER_NAME, fileManagerWindowTitle } from "./identity.ts";
 import { ExplorerNavigationModel, resolveExplorerAddress } from "./navigation.ts";
 
 export interface ExplorerAppProps {
@@ -49,11 +50,6 @@ export interface ExplorerAppProps {
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
-}
-
-function labelForPath(path: string): string {
-  if (path === "/") return "This Plasmon";
-  return path.split("/").filter(Boolean).at(-1) ?? path;
 }
 
 function breadcrumbPaths(path: string): Array<{ label: string; path: string }> {
@@ -215,7 +211,7 @@ export function ExplorerApp({
 
   useEffect(() => {
     if (!location) return;
-    process.setTitle(processId, labelForPath(location.path));
+    process.setTitle(processId, fileManagerWindowTitle(location.path));
   }, [location, process, processId]);
 
   useEffect(() => {
@@ -282,7 +278,7 @@ export function ExplorerApp({
   return (
     <section
       className="explorer-app"
-      aria-label="File Explorer"
+      aria-label={FILE_MANAGER_NAME}
       onKeyDown={(event: ReactKeyboardEvent<HTMLElement>) => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") {
           event.preventDefault();
