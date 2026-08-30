@@ -4,6 +4,7 @@ import { classifyResource } from "../os/fs/index.ts";
 import { DEFAULT_SHELL_PREFERENCES } from "../os/shell/preferences.ts";
 import { SimpleCmdParser } from "./cmd/simple.ts";
 import { transpileCmdToRun } from "./cmd/transpile.ts";
+import { renderShellHelp, shellCommandHelp } from "./command/catalog.ts";
 import { CommandSession } from "./command/runtime.ts";
 import { RUN_CONTEXT_DECLARATIONS } from "./os-api/declarations.ts";
 import { ScriptingService } from "./service.ts";
@@ -25,6 +26,12 @@ test(".cmd parser lowers quotes, pipelines, and redirection to readable .run Typ
   expect(run).toContain('commands.grep(["Plasmon"])');
   expect(run).toContain(']).writeTo("result.txt")');
   await expect(parser.parse("echo $HOME")).rejects.toThrow("does not yet support shell operator");
+});
+
+test(".cmd preserves quoted paths with spaces for familiar filesystem commands", async () => {
+  const parser = new SimpleCmdParser();
+  const program = await parser.parse('mv "File Manager.sys" "MO.sys"');
+  expect(program.pipelines[0]?.commands[0]).toEqual({ name: "mv", args: ["File Manager.sys", "MO.sys"] });
 });
 
 test("production OsApi and command session provide deterministic filesystem/open behavior", async () => {
@@ -78,6 +85,17 @@ test("transpileCmdFile creates a sibling .run without overwriting existing outpu
   }
 });
 
+test("command catalog exposes the frozen v1 option/manual surface", () => {
+  expect(shellCommandHelp("ls")?.options?.map((option) => option.flag)).toEqual(["-a", "-l", "-h"]);
+  expect(shellCommandHelp("cat")?.options?.map((option) => option.flag)).toEqual(["-n"]);
+  expect(shellCommandHelp("rm")?.options?.map((option) => option.flag)).toEqual(["-r", "-R", "-f"]);
+  expect(shellCommandHelp("tee")?.options?.map((option) => option.flag)).toEqual(["-a"]);
+  expect(renderShellHelp("ls")).toContain("OPTIONS");
+  expect(renderShellHelp("ls")).toContain("-l");
+  expect(renderShellHelp()).not.toContain("  true ");
+  expect(renderShellHelp()).not.toContain("  false ");
+});
+
 test(".run/.cmd classification, taskbar default, and ambient declarations expose the experiment", () => {
   const run = classifyResource({ name: "demo.run", kind: "file", metadata: {} });
   const cmd = classifyResource({ name: "demo.cmd", kind: "file", metadata: {} });
@@ -87,4 +105,9 @@ test(".run/.cmd classification, taskbar default, and ambient declarations expose
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const os: RunOsApi");
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const commands: RunCommandFactory");
   expect(RUN_CONTEXT_DECLARATIONS).toContain("declare const shell: RunShellApi");
+  expect(RUN_CONTEXT_DECLARATIONS).toContain("touch(args?: readonly string[]): RunCommand");
+  expect(RUN_CONTEXT_DECLARATIONS).toContain("edit(args?: readonly string[]): RunCommand");
+  expect(RUN_CONTEXT_DECLARATIONS).toContain("man(args?: readonly string[]): RunCommand");
+  expect(RUN_CONTEXT_DECLARATIONS).toContain("rename(path: string, newName: string)");
+  expect(RUN_CONTEXT_DECLARATIONS).toContain("openWith(path: string, handlerId: string)");
 });
