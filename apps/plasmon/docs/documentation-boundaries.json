@@ -225,6 +225,15 @@
       }
     },
     {
+      "path": "apps/plasmon/src/os/diagnostics",
+      "kind": "os-subsystem",
+      "readme": "local",
+      "agents": {
+        "mode": "inherited",
+        "from": "apps/plasmon/src/os/AGENTS.md"
+      }
+    },
+    {
       "path": "apps/plasmon/src/os/file-manager",
       "kind": "os-subsystem",
       "readme": "local",
