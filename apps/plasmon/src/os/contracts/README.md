@@ -1,13 +1,13 @@
 # OS contracts
 
 
-This directory defines the public TypeScript interfaces and stable identifiers shared by Plasmon OS subsystems. It is the vocabulary boundary between filesystem, associations, native applications, process/windowing, Neutron integration, authorization/sharing, backup, and composition.
+This directory defines the public TypeScript interfaces and stable identifiers shared by Plasmon OS subsystems. It is the vocabulary boundary between filesystem, associations, native applications, process/windowing, Neutron integration, authorization/sharing, backup, diagnostics operation correlation, and composition.
 
 Contracts describe capabilities and identities. They should not contain React UI, concrete repositories, browser-storage choices, Kernel transport code, or subsystem orchestration.
 
 ## Contract families
 
-- `common.ts` — identifiers and cross-cutting value types.
+- `common.ts` — identifiers and cross-cutting value types, including immutable `DiagnosticOperationContext` correlation/operation identity passed across subsystem boundaries.
 - `fs.ts` — filesystem nodes, service operations, events, metadata, and stable node identity.
 - `apps.ts` — native application metadata.
 - `associations.ts` — handlers, rules, matching/opening contracts, and logical resource descriptors.
@@ -19,5 +19,7 @@ Contracts describe capabilities and identities. They should not contain React UI
 ## Design direction
 
 A contract should exist because multiple components need a stable shared capability, not because one implementation wants to expose its internals. Prefer narrow contracts, stable identities, and compatibility-preserving additions. Keep application-specific policy in the owning subsystem.
+
+`DiagnosticOperationContext` carries identifiers only. It does not carry a logger, sink, path/content payload, or mutable "current operation" state; each subsystem remains responsible for its own bounded diagnostic events while preserving an explicitly supplied correlation identity.
 
 Contract changes are cross-subsystem changes: audit implementations, fakes, adapters, consumers, persisted representations, and tests before changing semantics.
