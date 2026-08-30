@@ -23,9 +23,25 @@ async function launchPlasmon(page: import("@playwright/test").Page) {
   return { plasmon, kernelUrl };
 }
 
-async function closeTerminalDialog(terminalWindow: import("@playwright/test").Locator) {
-  await terminalWindow.getByRole("button", { name: "Close", exact: true }).click();
-  await expect(terminalWindow).toBeHidden();
+async function closeWindow(window: import("@playwright/test").Locator) {
+  await window.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(window).toBeHidden();
+}
+
+async function openBackgroundMenu(
+  plasmon: import("@playwright/test").FrameLocator,
+  fileList: import("@playwright/test").Locator,
+) {
+  const bounds = await fileList.boundingBox();
+  if (!bounds) throw new Error("Explorer file list has no browser bounds");
+  await fileList.click({
+    button: "right",
+    position: {
+      x: Math.max(80, Math.floor(bounds.width * 0.8)),
+      y: Math.max(80, Math.floor(bounds.height * 0.85)),
+    },
+  });
+  return plasmon.getByRole("menu").last();
 }
 
 test("packaged experiment executes .cmd through .run and exposes .run TypeScript completion", async ({ page, request }) => {
@@ -73,16 +89,9 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const explorer = plasmon.locator(".explorer-app").last();
   await expect(explorer).toBeVisible({ timeout: 15_000 });
   const fileList = explorer.getByRole("listbox", { name: "Files" });
-  const bounds = await fileList.boundingBox();
-  if (!bounds) throw new Error("Explorer file list has no browser bounds");
-  await fileList.click({
-    button: "right",
-    position: {
-      x: Math.max(80, Math.floor(bounds.width * 0.8)),
-      y: Math.max(80, Math.floor(bounds.height * 0.85)),
-    },
-  });
-  await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Command Script (.cmd)" }).click();
+
+  const newCmdMenu = await openBackgroundMenu(plasmon, fileList);
+  await newCmdMenu.getByRole("menuitem", { name: "New Command Script (.cmd)" }).click();
   const rename = explorer.getByRole("textbox", { name: "Rename New Command Script.cmd" });
   await expect(rename).toBeVisible();
   await rename.fill("Experiment Smoke.cmd");
@@ -91,12 +100,23 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const cmdEntry = fileList.locator('[data-fm-node-id]', { hasText: "Experiment Smoke.cmd" }).first();
   await expect(cmdEntry).toBeVisible();
 
+  // Edit must remain explicit and teach the real language identity rather than generic Bash.
+  await cmdEntry.click({ button: "right" });
+  const firstCmdMenu = plasmon.getByRole("menu").last();
+  await expect(firstCmdMenu.getByRole("menuitem", { name: "Run", exact: true })).toBeVisible();
+  await expect(firstCmdMenu.getByRole("menuitem", { name: "Transpile to .run", exact: true })).toBeVisible();
+  await firstCmdMenu.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const cmdEditor = plasmon.getByRole("dialog", { name: /Experiment Smoke\.cmd/ }).last();
+  await expect(cmdEditor).toBeVisible({ timeout: 20_000 });
+  await expect(cmdEditor.getByText("Plasmon Command (.cmd)", { exact: true })).toBeVisible();
+  await closeWindow(cmdEditor);
+
   // Normal file activation must execute .cmd instead of opening it as generic text.
   await cmdEntry.dblclick();
   const cmdTerminal = plasmon.getByRole("dialog", { name: "Terminal" }).last();
   await expect(cmdTerminal.getByRole("log")).toContainText("Running /Experiment Smoke.cmd", { timeout: 20_000 });
   await expect(cmdTerminal.getByRole("log")).toContainText("Hello from Plasmon", { timeout: 30_000 });
-  await closeTerminalDialog(cmdTerminal);
+  await closeWindow(cmdTerminal);
 
   await cmdEntry.click({ button: "right" });
   const cmdMenu = plasmon.getByRole("menu").last();
@@ -122,7 +142,22 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const runTerminal = plasmon.getByRole("dialog", { name: "Terminal" }).last();
   await expect(runTerminal.getByRole("log")).toContainText("Running /Experiment Smoke.run", { timeout: 20_000 });
   await expect(runTerminal.getByRole("log")).toContainText("Hello from Plasmon", { timeout: 30_000 });
-  await closeTerminalDialog(runTerminal);
+  await closeWindow(runTerminal);
+
+  // Direct New Run Script is independently usable; v1 does not require .cmd as the creator for .run.
+  const newRunMenu = await openBackgroundMenu(plasmon, fileList);
+  await newRunMenu.getByRole("menuitem", { name: "New Run Script (.run)" }).click();
+  const renameRun = explorer.getByRole("textbox", { name: "Rename New Run Script.run" });
+  await expect(renameRun).toBeVisible();
+  await renameRun.fill("Direct Smoke.run");
+  await renameRun.press("Enter");
+  const directRunEntry = fileList.locator('[data-fm-node-id]', { hasText: "Direct Smoke.run" }).first();
+  await expect(directRunEntry).toBeVisible();
+  await directRunEntry.dblclick();
+  const directRunTerminal = plasmon.getByRole("dialog", { name: "Terminal" }).last();
+  await expect(directRunTerminal.getByRole("log")).toContainText("Running /Direct Smoke.run", { timeout: 20_000 });
+  await expect(directRunTerminal.getByRole("log")).toContainText("Hello from Plasmon", { timeout: 30_000 });
+  await closeWindow(directRunTerminal);
 
   await runEntry.click({ button: "right" });
   const runMenu = plasmon.getByRole("menu").last();
