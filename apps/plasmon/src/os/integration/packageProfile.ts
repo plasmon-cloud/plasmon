@@ -1,5 +1,5 @@
-// Package builds replace these identifiers with explicit profile values.
-// Game/emulator payloads are not shipped by any current package profile, so
+// Package builds replace these identifiers with explicit composition values.
+// Game/emulator payloads are not shipped by either current package tier, so
 // package builds explicitly disable those handlers. Unbundled tests retain the
 // full service graph through the fallback values below.
 // @ts-expect-error Build-time esbuild define; runtime tests use the fallback.
@@ -27,4 +27,6 @@ export const isSlimProfile = SLIM_PROFILE_DEFINE ?? false;
 export const isCoreProfile = false;
 export const isGameRuntimeProfile = GAME_RUNTIME_DEFINE ?? true;
 export const isSlimMonacoProfile = MONACO_SLIM_DEFINE ?? false;
-export const isDemoProfile = DEMO_DEFINE ?? false;
+export const isDemoOverlay = DEMO_DEFINE ?? false;
+/** @deprecated Demo is an overlay on Base, not a package profile. */
+export const isDemoProfile = isDemoOverlay;
