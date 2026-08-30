@@ -21,6 +21,13 @@ const FIXTURE_VALUE = "demo-game";
 const DEMO_ARTWORK_PATH = "static/plasmon/artwork/plasmon-demo.svg";
 const SAVED_PREVIEW_TIMEOUT_MS = 10_000;
 
+/**
+ * js-dos starts an external runtime after the native window is ready. This is
+ * the only long browser bound in this spec, and it waits on production-owned
+ * readiness signals rather than sleeping or polling implementation details.
+ */
+const JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS = 60_000;
+
 async function activateFileManagerEntry(entry: Locator): Promise<void> {
   await entry.click();
   await expect(entry).toHaveAttribute("aria-selected", "true");
@@ -126,7 +133,7 @@ async function savePackagedDemoGame(
   await expect(gameWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const player = gameWindow.getByLabel("DOS game");
   try {
-    await expect(player).toHaveAttribute("data-jsdos-ready", "true", { timeout: 60_000 });
+    await expect(player).toHaveAttribute("data-jsdos-ready", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
   } catch (error) {
     const runtimeStatus = await gameWindow.locator('[role="status"], [role="alert"]').allTextContents();
     const canvases = await player.locator("canvas").count();
@@ -167,8 +174,8 @@ test(
     const reopenedWindow = app.getByRole("dialog", { name: "js-dos" }).last();
     await expect(reopenedWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
     const reopenedPlayer = reopenedWindow.getByLabel("DOS game");
-    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-progress-restored", "true", { timeout: 60_000 });
-    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-ready", "true", { timeout: 60_000 });
+    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-progress-restored", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
+    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-ready", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
     await expect(reopenedPlayer.locator("canvas").first()).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
     expect(consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'"))).toEqual([]);
     expect(consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed"))).toEqual([]);

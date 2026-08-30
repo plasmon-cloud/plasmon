@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "targetRef": "agent/issue-670",
+  "baseRef": "version-0.1.0-os-r3",
+  "auditedSha": "ebf50212a1b7742c8afdf8bb392d9fe8d44d2748",
+  "auditedAt": "2026-08-30T05:55:51.000Z",
+  "owner": "agent/issue-670",
+  "status": "candidate",
+  "approvedBy": "",
+  "approvalReference": "",
+  "evidence": [
+    {
+      "name": "npm --workspace neutron-plasmon test (744 passed)",
+      "result": "pass"
+    },
+    {
+      "name": "npm --workspace neutron-review run test:semantic (25 passed)",
+      "result": "pass"
+    },
+    {
+      "name": "packaged Playwright demo and specialist acceptance (CI)",
+      "result": "pass"
+    },
+    {
+      "name": "active provenance and Playwright timing guards",
+      "result": "pass"
+    }
+  ]
+}

@@ -26,8 +26,16 @@ function failuresFor(path) {
     failures.push("direct Playwright waitForTimeout calls are not permitted");
   }
   if (reviewedDemoSpecs.has(path.split("/").pop())) {
-    if (/timeout\s*:\s*(?:20|30)_000\b/u.test(source)) {
-      failures.push("reviewed demo acceptance must not use routine 20/30-second assertion bounds");
+    if (/timeout\s*:\s*(?:20|30|60)_000\b/u.test(source)) {
+      failures.push("reviewed demo acceptance must not use unexplained long assertion bounds");
+    }
+  }
+  if (path.endsWith("/plasmon-demo-game.spec.ts")) {
+    if (!/const JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS = 60_000;/u.test(source)) {
+      failures.push("js-dos external startup SLA must be named and isolated");
+    }
+    if (!/data-jsdos-(?:ready|progress-restored).*JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS/u.test(source)) {
+      failures.push("js-dos SLA must guard production-owned readiness signals");
     }
   }
   return failures;

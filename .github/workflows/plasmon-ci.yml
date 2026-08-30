@@ -50,7 +50,14 @@ jobs:
         run: npm run test:plasmon:playwright-timing
 
       - name: Verify public-consumption audit record contract
-        run: npm run test:plasmon:public-audit -- --self-test
+        run: |
+          set -euxo pipefail
+          audit_head="${{ github.event.pull_request.head.sha || github.sha }}"
+          audit_source="$(git rev-parse "${audit_head}^")"
+          npm run test:plasmon:public-audit -- \
+            --verify test/ci/public-consumption-audit.json \
+            --expected-sha "$audit_source" \
+            --allow-candidate
 
       - name: Verify flake-probe workflow contract
         run: |

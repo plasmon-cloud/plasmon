@@ -9,8 +9,10 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const REQUIRED_KEYS = [
   "schemaVersion",
   "targetRef",
+  "baseRef",
   "auditedSha",
   "auditedAt",
+  "owner",
   "status",
   "approvedBy",
   "approvalReference",
@@ -34,6 +36,12 @@ function validateRecord(record, { expectedSha, requireApproval = true } = {}) {
   if (record.schemaVersion !== 1) throw new Error("Audit record schemaVersion must be 1");
   if (typeof record.targetRef !== "string" || record.targetRef.trim() === "") {
     throw new Error("Audit record targetRef must be non-empty");
+  }
+  if (typeof record.baseRef !== "string" || record.baseRef.trim() === "") {
+    throw new Error("Audit record baseRef must be non-empty");
+  }
+  if (typeof record.owner !== "string" || record.owner.trim() === "") {
+    throw new Error("Audit record owner must be non-empty");
   }
   if (!SHA_PATTERN.test(record.auditedSha)) {
     throw new Error("Audit record auditedSha must be a full Git commit SHA");
@@ -74,16 +82,20 @@ function validateRecord(record, { expectedSha, requireApproval = true } = {}) {
 }
 
 function parseArguments(argv) {
-  const options = { selfTest: false, verify: undefined, write: undefined, targetRef: undefined, status: "candidate", approvedBy: "", approvalReference: "", evidence: [] };
+  const options = { selfTest: false, allowCandidate: false, verify: undefined, expectedSha: undefined, write: undefined, targetRef: undefined, baseRef: undefined, owner: undefined, status: "candidate", approvedBy: "", approvalReference: "", evidence: [] };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--self-test") options.selfTest = true;
-    else if (argument === "--verify" || argument === "--write" || argument === "--target-ref" || argument === "--status" || argument === "--approved-by" || argument === "--approval-reference" || argument === "--evidence") {
+    else if (argument === "--allow-candidate") options.allowCandidate = true;
+    else if (argument === "--verify" || argument === "--expected-sha" || argument === "--write" || argument === "--target-ref" || argument === "--base-ref" || argument === "--owner" || argument === "--status" || argument === "--approved-by" || argument === "--approval-reference" || argument === "--evidence") {
       const value = argv[++index];
       if (!value) throw new Error(`${argument} requires a value`);
       if (argument === "--verify") options.verify = value;
+      if (argument === "--expected-sha") options.expectedSha = value;
       if (argument === "--write") options.write = value;
       if (argument === "--target-ref") options.targetRef = value;
+      if (argument === "--base-ref") options.baseRef = value;
+      if (argument === "--owner") options.owner = value;
       if (argument === "--status") options.status = value;
       if (argument === "--approved-by") options.approvedBy = value;
       if (argument === "--approval-reference") options.approvalReference = value;
@@ -95,13 +107,17 @@ function parseArguments(argv) {
 
 function recordFromOptions(options, root = repoRoot) {
   if (!options.targetRef) throw new Error("--target-ref is required with --write");
+  if (!options.baseRef) throw new Error("--base-ref is required with --write");
+  if (!options.owner) throw new Error("--owner is required with --write");
   const evidence = options.evidence.map((value) => ({ name: value, result: "pass" }));
   if (evidence.length === 0) throw new Error("--evidence is required with --write");
   return {
     schemaVersion: 1,
     targetRef: options.targetRef,
+    baseRef: options.baseRef,
     auditedSha: currentSha(root),
     auditedAt: new Date().toISOString(),
+    owner: options.owner,
     status: options.status,
     approvedBy: options.approvedBy,
     approvalReference: options.approvalReference,
@@ -115,8 +131,10 @@ function selfTest() {
     const record = {
       schemaVersion: 1,
       targetRef: "candidate",
+      baseRef: "base",
       auditedSha: "0123456789abcdef0123456789abcdef01234567",
       auditedAt: "2026-08-30T00:00:00.000Z",
+      owner: "auditor",
       status: "approved",
       approvedBy: "reviewer",
       approvalReference: "evidence-1",
@@ -148,7 +166,10 @@ if (options.selfTest) {
   selfTest();
 } else if (options.verify) {
   const record = JSON.parse(readFileSync(resolve(repoRoot, options.verify), "utf8"));
-  validateRecord(record, { expectedSha: currentSha() });
+  validateRecord(record, {
+    expectedSha: options.expectedSha ?? currentSha(),
+    requireApproval: !options.allowCandidate,
+  });
   console.log(`Public-consumption audit record matches ${record.auditedSha}`);
 } else if (options.write) {
   const record = recordFromOptions(options);
