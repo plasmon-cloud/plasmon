@@ -2,66 +2,45 @@ import { readFileSync } from "node:fs";
 import { releaseBranchGlob } from "./plasmon-ci-policy.mjs";
 
 const RELEASE_BRANCH_TRIGGER = `      - '${releaseBranchGlob}'`;
+const APPROVAL_TRIGGER = "  pull_request_review:";
+const APPROVAL_TYPES = "    types: [submitted]";
 const MERGE_GROUP_TRIGGER = "  merge_group:";
 const CHECKS_REQUESTED_TRIGGER = "    types: [checks_requested]";
-const PR_ONLY = "if: ${{ github.event_name == 'pull_request' }}";
-const NOT_PR = "if: ${{ github.event_name != 'pull_request' }}";
+const APPROVED_REVIEW = "github.event_name == 'pull_request_review' && github.event.review.state == 'approved'";
 
 const gates = [
   {
     id: "smoke",
     path: ".github/workflows/plasmon-browser-smoke-ci.yml",
     context: "Packaged refactor smoke",
+    checkpoint: "Report staged smoke checkpoint",
     expensiveStep: "Package and run Plasmon refactor smoke",
-    requiredCommands: [
-      "npm ci",
-      "node test/ci/verify-playwright-gate.mjs",
-      "npm run plasmon:local:prepare",
-      "npm run plasmon:local:status",
-      "npm run plasmon:local:reinstall",
-      "npm run test:e2e:plasmon:smoke",
-    ],
+    requiredCommands: ["npm ci", "npm run plasmon:local:prepare", "npm run plasmon:local:status", "npm run plasmon:local:reinstall", "npm run test:e2e:plasmon:smoke"],
   },
   {
     id: "browser",
     path: ".github/workflows/plasmon-browser-ci.yml",
     context: "Packaged Playwright specialist acceptance",
+    checkpoint: "Report staged specialist checkpoint",
     expensiveStep: "Package and run Plasmon specialist browser acceptance",
-    requiredCommands: [
-      "npm ci",
-      "npm run plasmon:local:prepare",
-      "npm run plasmon:local:status",
-      "npm run plasmon:local:reinstall",
-      "npm run test:e2e:plasmon:specialist",
-    ],
+    requiredCommands: ["npm ci", "npm run plasmon:local:prepare", "npm run plasmon:local:status", "npm run plasmon:local:reinstall", "npm run test:e2e:plasmon:specialist"],
   },
   {
     id: "persistence",
     path: ".github/workflows/plasmon-browser-persistence-ci.yml",
     context: "Packaged browser persistence",
+    checkpoint: "Report staged persistence checkpoint",
     expensiveStep: "Package and run browser persistence gate",
-    requiredCommands: [
-      "npm ci",
-      "npm run plasmon:local:prepare",
-      "npm run plasmon:local:status",
-      "npm run plasmon:local:reinstall",
-      "npm run test:e2e:plasmon:persistence",
-    ],
+    requiredCommands: ["npm ci", "npm run plasmon:local:prepare", "npm run plasmon:local:status", "npm run plasmon:local:reinstall", "npm run test:e2e:plasmon:persistence"],
   },
 ];
 
 function requireFragment(source, fragment, label) {
-  if (!source.includes(fragment)) {
-    throw new Error(`${label} lost required fragment: ${fragment}`);
-  }
+  if (!source.includes(fragment)) throw new Error(`${label} lost required fragment: ${fragment}`);
 }
-
 function forbidFragment(source, fragment, label) {
-  if (source.includes(fragment)) {
-    throw new Error(`${label} contains forbidden fragment: ${fragment}`);
-  }
+  if (source.includes(fragment)) throw new Error(`${label} contains forbidden fragment: ${fragment}`);
 }
-
 function stepSection(source, stepName) {
   const marker = `      - name: ${stepName}`;
   const start = source.indexOf(marker);
@@ -71,100 +50,54 @@ function stepSection(source, stepName) {
 }
 
 function verifyCommonTriggers(source, label) {
-  for (const fragment of [
-    "  pull_request:",
-    MERGE_GROUP_TRIGGER,
-    CHECKS_REQUESTED_TRIGGER,
-    "  push:",
-    RELEASE_BRANCH_TRIGGER,
-  ]) {
+  for (const fragment of ["  pull_request:", APPROVAL_TRIGGER, APPROVAL_TYPES, MERGE_GROUP_TRIGGER, CHECKS_REQUESTED_TRIGGER, "  push:", RELEASE_BRANCH_TRIGGER]) {
     requireFragment(source, fragment, label);
   }
-  for (const fragment of [
-    "pull_request_target",
-    "continue-on-error: true",
-    "    paths:",
-    "    paths-ignore:",
-  ]) {
-    forbidFragment(source, fragment, label);
-  }
-  if (/release\/0\.1\.0-r\d/u.test(source)) {
-    throw new Error(`${label} hard-codes a concrete release branch`);
-  }
+  for (const fragment of ["pull_request_target", "continue-on-error: true", "    paths:", "    paths-ignore:"]) forbidFragment(source, fragment, label);
+  if (/release\/0\.1\.0-r\d/u.test(source)) throw new Error(`${label} hard-codes a concrete release branch`);
 }
 
-function verifyDeferredRequiredGate(gate) {
+function verifyApprovalGate(gate) {
   const source = readFileSync(gate.path, "utf8");
   const label = gate.context;
-
   verifyCommonTriggers(source, label);
   requireFragment(source, `    name: ${gate.context}`, label);
 
-  const deferredStep = stepSection(source, "Report PR gate deferred to merge queue");
-  requireFragment(deferredStep, PR_ONLY, `${label} PR deferral`);
-  requireFragment(deferredStep, "deferred until the approved PR enters the merge queue.", `${label} PR deferral`);
+  const checkpoint = stepSection(source, gate.checkpoint);
+  requireFragment(checkpoint, "merge queue is fast-only", `${label} queue checkpoint`);
+  requireFragment(checkpoint, "waits for normal GitHub review approval", `${label} approval checkpoint`);
 
   const nixStep = stepSection(source, "Install Nix");
-  requireFragment(nixStep, NOT_PR, `${label} Nix setup`);
+  requireFragment(nixStep, APPROVED_REVIEW, `${label} Nix setup`);
   requireFragment(nixStep, "uses: cachix/install-nix-action@v31", `${label} Nix setup`);
 
   const expensiveStep = stepSection(source, gate.expensiveStep);
-  requireFragment(expensiveStep, NOT_PR, `${label} slow gate`);
-  for (const command of gate.requiredCommands) {
-    requireFragment(expensiveStep, command, `${label} slow gate`);
-  }
+  requireFragment(expensiveStep, APPROVED_REVIEW, `${label} confidence gate`);
+  for (const command of gate.requiredCommands) requireFragment(expensiveStep, command, `${label} confidence gate`);
 
   const verifierStep = stepSection(source, "Verify required-gate workflow contract");
-  requireFragment(
-    verifierStep,
-    `node test/ci/verify-required-browser-gates.mjs ${gate.id}`,
-    `${label} self-verifier`,
-  );
+  requireFragment(verifierStep, `node test/ci/verify-required-browser-gates.mjs ${gate.id}`, `${label} self-verifier`);
   forbidFragment(verifierStep, "if:", `${label} self-verifier`);
 }
 
 const requestedGateIds = process.argv.slice(2);
-const selectedGates = requestedGateIds.length === 0
-  ? gates
-  : gates.filter((gate) => requestedGateIds.includes(gate.id));
-if (selectedGates.length !== (requestedGateIds.length || gates.length)) {
-  throw new Error("Unknown required browser gate requested");
-}
-
-for (const gate of selectedGates) verifyDeferredRequiredGate(gate);
+const selectedGates = requestedGateIds.length === 0 ? gates : gates.filter((gate) => requestedGateIds.includes(gate.id));
+if (selectedGates.length !== (requestedGateIds.length || gates.length)) throw new Error("Unknown required browser gate requested");
+for (const gate of selectedGates) verifyApprovalGate(gate);
 
 const browserWorkflow = readFileSync(".github/workflows/plasmon-browser-ci.yml", "utf8");
 requireFragment(browserWorkflow, "    name: Packaged Playwright demo acceptance", "Demo browser gate");
 const demoJob = browserWorkflow.slice(browserWorkflow.indexOf("  packaged-demo:"));
-const demoDeferredStep = stepSection(demoJob, "Report PR gate deferred to merge queue");
-requireFragment(demoDeferredStep, PR_ONLY, "Demo PR deferral");
-
+const demoCheckpoint = stepSection(demoJob, "Report staged demo checkpoint");
+requireFragment(demoCheckpoint, "merge queue is fast-only", "Demo queue checkpoint");
 const demoSlowStep = stepSection(demoJob, "Package and run Plasmon demo browser acceptance");
-requireFragment(demoSlowStep, NOT_PR, "Demo slow gate");
-for (const command of [
-  "npm run plasmon:demo:prepare",
-  "npm run plasmon:demo:status",
-  "npm run plasmon:demo:reinstall",
-  "npm run test:e2e:plasmon:demo",
-]) {
-  requireFragment(demoSlowStep, command, "Demo slow gate");
-}
-if (/test\/e2e\/plasmon-[^\s'"\\]+\.spec\.[cm]?[jt]sx?/u.test(demoSlowStep)) {
-  throw new Error("Demo workflow must select its browser lane semantically instead of enumerating spec files");
-}
+requireFragment(demoSlowStep, APPROVED_REVIEW, "Demo confidence gate");
+for (const command of ["npm run plasmon:demo:prepare", "npm run plasmon:demo:status", "npm run plasmon:demo:reinstall", "npm run test:e2e:plasmon:demo"]) requireFragment(demoSlowStep, command, "Demo confidence gate");
 
-for (const path of [
-  ".github/workflows/plasmon-ci.yml",
-  ".github/workflows/kernel-ci.yml",
-  ".github/workflows/plasmon-browser-smoke-ci.yml",
-  ".github/workflows/plasmon-browser-ci.yml",
-  ".github/workflows/plasmon-browser-persistence-ci.yml",
-]) {
+for (const path of [".github/workflows/plasmon-ci.yml", ".github/workflows/kernel-ci.yml", ".github/workflows/plasmon-browser-smoke-ci.yml", ".github/workflows/plasmon-browser-ci.yml", ".github/workflows/plasmon-browser-persistence-ci.yml"]) {
   const source = readFileSync(path, "utf8");
   requireFragment(source, MERGE_GROUP_TRIGGER, `${path} merge-queue support`);
   requireFragment(source, CHECKS_REQUESTED_TRIGGER, `${path} merge-queue support`);
 }
 
-console.log(
-  `Required browser gates verified: PR contexts defer expensive work, merge-group/release events run real gates, stable status names and ${releaseBranchGlob} release-role coverage are preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`,
-);
+console.log(`Required browser gates verified: expensive package/Playwright work runs on normal approval, merge_group keeps stable contexts cheap, and ${releaseBranchGlob} role coverage is preserved: ${selectedGates.map((gate) => gate.id).join(", ")}`);

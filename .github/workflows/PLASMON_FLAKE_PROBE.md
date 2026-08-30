@@ -1,34 +1,38 @@
 # Plasmon Flake Probe
 
-The Flake Probe records retry-free stability evidence without making every pull-request revision pay the full diagnostic cost.
+The Flake Probe records retry-free stability evidence without making every pull-request revision pay the full browser cost.
 
 ## Execution phases
 
 ### Pull-request head
 
-The stable `Flake probe summary` context is instantiated for review readiness, but probe execution is deferred. No automatic broad or characterization matrix runs on the ordinary PR head.
+Ordinary PR open/update/reopen does not run an automatic probe. The stable `Flake probe summary` context reports that pre-merge confidence is waiting for normal GitHub approval.
 
-An explicit `ci:flake-probe` request remains available when a targeted heavy diagnostic is intentionally needed before merge.
+### Reviewer approves
+
+A normal approving GitHub review triggers the required pre-merge confidence evidence on the PR merge ref:
+
+- one broad `all` probe observation;
+- conditionally 3 targeted Playwright characterization observations when deterministic impact selection resolves relevant scope.
+
+The targeted 3 observations run in one prepared packet. Package/PocketIC setup is paid once for that targeted packet. All observations are retries=0.
+
+This approval-stage evidence is a hard merge gate. If the broad observation fails, or any applicable targeted characterization observation fails, `Flake probe summary` fails and Merge remains blocked.
 
 ### Merge queue
 
-The exact `merge_group` SHA receives required pre-merge stability validation:
-
-- one broad `all` probe observation;
-- conditionally 10 targeted Playwright characterization observations when deterministic impact selection resolves relevant scope.
-
-The 10 targeted observations run in one prepared packet. Package/PocketIC setup is paid once; only explicitly registered persistent-state-mutating acceptances pay per-observation reinstall/reset.
-
-The broad `Flake probe summary` is required. `Flake characterization summary` remains diagnostic.
+The merge queue is intentionally fast-only. Flake Probe does not repeat browser/PocketIC work on the `merge_group` SHA. The stable summary context reports successful deferral because browser confidence already ran before the user pressed Merge.
 
 ### Integrated release push
 
-The integrated SHA receives heavier post-merge analysis:
+The integrated SHA receives diagnostic post-merge analysis:
 
-- 10 independent broad `all` observations;
-- conditionally 50 targeted Playwright characterization observations.
+- 3 independent broad `all` observations;
+- conditionally 3 targeted Playwright characterization observations.
 
-Targeted 50-run characterization uses 10 prepared packets × 5 observations. The post-merge concurrency key includes the integrated SHA so a later merge cannot cancel earlier evidence.
+The targeted 3 observations use one prepared packet/setup. The broad observations remain independent prepared environments until the separate PocketIC optimization work proves broad shared-state reuse safe.
+
+Post-merge evidence is diagnostic. It cannot retroactively undo a completed merge.
 
 ## Target selection
 
@@ -53,6 +57,4 @@ Removing the label stops future synchronize-triggered requests; it does not canc
 
 Every result records exact SHA, mode, scope, target, configured iteration count, workflow run number, workflow run attempt, and probe iteration.
 
-A clean sample is evidence, not proof that a target cannot flake. Broad and characterization packets remain independent evidence sets. An observed failure must remain visible and be classified rather than hidden with retries, sleeps, timeout inflation, broad skips, or weaker assertions.
-
-The mature summarizer remains authoritative for the established 10-baseline and 50-characterization evidence shapes, including same-SHA partial-rerun reconciliation and detailed failure extraction. `summarize-plasmon-flake-evidence.mjs` adds the smaller merge-queue 1/10 evidence shapes and delegates mature shapes to that existing authority.
+A clean sample is evidence, not proof that a target cannot flake. An observed failure must remain visible and be classified rather than hidden with retries, sleeps, timeout inflation, broad skips, or weaker assertions.

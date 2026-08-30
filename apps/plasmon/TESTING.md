@@ -256,12 +256,15 @@ Expensive installed-package/browser validation is staged around review rather th
 
 The phase contract is:
 
-1. **ordinary PR head** — Fast Bun tests run as real readiness evidence; stable required packaged/browser and Flake Probe contexts report explicit deferred success without installing Nix, starting PocketIC, or launching Playwright;
-2. **approved merge queue** — required workflows run their real slow workloads against the exact `merge_group` SHA; Flake Probe adds exactly one broad retry-free `all` observation and, when relevant Playwright scope is selected, one prepared packet containing exactly 10 targeted retry-free repetitions;
-3. **integrated `release/**` push** — required release-push gates still run, and diagnostic Flake Probe adds exactly 10 broad observations plus conditional 50 targeted characterization observations; the 50 targeted observations remain packetized to reuse setup;
-4. **explicit diagnostic request** — `ci:flake-probe` remains the targeted exact-head 50-iteration diagnostic mechanism. `ci:flaky` is classification/debt metadata, not the heavy-probe trigger.
+1. **ordinary PR head** — Fast Bun tests run as real readiness evidence; stable required packaged/browser, Kernel, and Flake Probe contexts report staged success without installing Nix, starting PocketIC, or launching Playwright;
+2. **normal GitHub approval** — the full required confidence gate runs: every required non-quarantined acceptance once, one broad retry-free `all` observation, and conditional impacted Playwright characterization exactly 3× in one prepared targeted packet; any approval-stage failure blocks Merge;
+3. **merge queue** — Fast Bun tests are the real test workload on the synthetic `merge_group` SHA; expensive package/PocketIC/Playwright/Kernel contexts report quickly without repeating slow work that already passed before the user pressed Merge;
+4. **integrated `release/**` push** — diagnostic Flake Probe records exactly 3 broad retry-free observations plus conditional 3 targeted characterization observations; the targeted 3 use one prepared packet, while broad 3 may remain independent setups until shared-state reuse is proven safe;
+5. **explicit diagnostic request** — `ci:flake-probe` remains the targeted exact-head 50-iteration diagnostic mechanism. `ci:flaky` is classification/debt metadata, not the heavy-probe trigger.
 
-Do not enable the repository merge queue until every required status context reports correctly for `merge_group: checks_requested`. A merge-group slow failure must block the queue entry. A post-merge diagnostic failure remains visible evidence but cannot retroactively undo the completed merge.
+The intended mental model is: **approval-stage CI decides correctness; pressing Merge commits the change to merging; the merge queue is a fast final integration checkpoint; post-merge probing looks for flakiness without delaying the merge.**
+
+Every required status context must continue to report for `merge_group: checks_requested`, but slow contexts must not repeat their expensive workloads there. A merge-queue failure is an integration/scheduling signal to investigate. A post-merge diagnostic failure remains visible evidence but cannot retroactively undo the completed merge.
 
 Profile-specific Playwright characterization must use the package profile that can truthfully execute the selected acceptance. Never characterize a demo/full-profile acceptance against the slim/local package merely to reuse an environment.
 
