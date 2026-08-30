@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: experiment-cmd-${{ github.ref }}
@@ -21,7 +21,6 @@ jobs:
       - name: Checkout experiment
         uses: actions/checkout@v6
         with:
-          ref: experiment/cmd
           fetch-depth: 0
 
       - name: Set up Node
@@ -34,32 +33,6 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-
-      - name: Apply pending finishing slice
-        if: ${{ hashFiles('tools/experiment_cmd_finish.py') != '' }}
-        run: python3 tools/experiment_cmd_finish.py
-
-      - name: Reconcile canonical scripting fixture
-        if: ${{ hashFiles('tools/experiment_cmd_finish.py') != '' }}
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('apps/plasmon/src/scripting/experiment.test.ts')
-          text = path.read_text()
-          old = '    const destination = await env.services.scripting.transpileCmdFile("/Documents/demo.cmd");'
-          new = '    const scripting = new ScriptingService({ os: env.os });\n    const destination = await scripting.transpileCmdFile("/Documents/demo.cmd");'
-          if old not in text:
-              raise SystemExit('expected stale scripting fixture reference not found')
-          path.write_text(text.replace(old, new))
-          PY
-
-      - name: Prepare pending dogfood polish
-        if: ${{ hashFiles('tools/prepare_experiment_cmd_polish.py') != '' }}
-        run: python3 tools/prepare_experiment_cmd_polish.py
-
-      - name: Apply pending dogfood polish
-        if: ${{ hashFiles('tools/experiment_cmd_polish.py') != '' }}
-        run: python3 tools/experiment_cmd_polish.py
 
       - name: Install dependencies
         run: npm ci
@@ -82,26 +55,3 @@ jobs:
 
       - name: Diff hygiene
         run: git diff --check
-
-      - name: Commit verified finishing slice
-        if: ${{ hashFiles('tools/experiment_cmd_finish.py') != '' }}
-        run: |
-          set -euxo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm tools/experiment_cmd_finish.py
-          git add -A
-          git commit -m 'Experiment: adopt canonical OsApi and v1 commands'
-          git push origin HEAD:experiment/cmd
-
-      - name: Commit verified dogfood polish
-        if: ${{ hashFiles('tools/experiment_cmd_polish.py') != '' }}
-        run: |
-          set -euxo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm -f tools/experiment_cmd_polish.py
-          if [ -f tools/prepare_experiment_cmd_polish.py ]; then git rm -f tools/prepare_experiment_cmd_polish.py; fi
-          git add -A
-          git commit -m 'Experiment: polish terminal and script workflows'
-          git push origin HEAD:experiment/cmd
