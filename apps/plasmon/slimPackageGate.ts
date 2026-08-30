@@ -13,9 +13,9 @@ const mainBundleUrl = new URL("./dist/web/main.js", import.meta.url);
 
 const REQUIRED_WORKER_PATHS = [
   "System/Program Files/MonacoEditor/editor.worker.js",
-  "runtime/monaco/editor.worker.js",
   "runtime/monaco/worker-sources.js",
 ] as const;
+const REDUNDANT_SLIM_WORKER_MIRROR = "runtime/monaco/editor.worker.js";
 
 const FORBIDDEN_WORKERS = [
   "json.worker.js",
@@ -38,6 +38,34 @@ const FORBIDDEN_ARCHIVE_ROOTS = [
 
 const FORBIDDEN_GAME_EXTENSIONS = [".jsdos", ".dosz", ".nes", ".rom"] as const;
 
+const NON_RUNTIME_PACKAGE_SUFFIXES = [
+  ".md",
+  ".mdx",
+  ".map",
+  ".ts",
+  ".tsx",
+  ".jsx",
+  ".scss",
+  ".sass",
+  ".less",
+  ".snap",
+  ".log",
+] as const;
+const NON_RUNTIME_PACKAGE_SEGMENTS = new Set([
+  ".github",
+  "__tests__",
+  "coverage",
+  "docs",
+  "src",
+  "test",
+  "tests",
+]);
+const NON_RUNTIME_PACKAGE_BASENAME_PREFIXES = [
+  "changelog",
+  "contributing",
+  "readme",
+] as const;
+
 // File names remain in shared demo helper source even when demo activation is
 // compiled off. These markers come from the actual repository-owned payloads,
 // so their absence proves the demo file bytes were not embedded in Slim.
@@ -51,11 +79,47 @@ function fail(message: string): never {
   throw new Error(`Slim package gate failed: ${message}`);
 }
 
-export async function verifySlimPackage(): Promise<{ archive: string; bytes: number }> {
+function assertSlimProfile(): void {
   const policy = resolvePackageProfile();
   if (policy.requestedProfile !== "slim" || !policy.isSlim || policy.isDemo) {
     fail(`expected explicit non-demo PLASMON_PACKAGE_PROFILE=slim, got ${policy.requestedProfile}`);
   }
+}
+
+export function assertSlimRuntimePackagePath(relativePath: string): void {
+  const normalized = relativePath.replaceAll("\\", "/");
+  const lower = normalized.toLowerCase();
+  const segments = lower.split("/");
+  const basename = segments.at(-1) ?? lower;
+
+  if (segments.some((segment) => NON_RUNTIME_PACKAGE_SEGMENTS.has(segment))) {
+    fail(`non-runtime package input is forbidden: ${normalized}`);
+  }
+  if (NON_RUNTIME_PACKAGE_SUFFIXES.some((suffix) => lower.endsWith(suffix))) {
+    fail(`non-runtime package input is forbidden: ${normalized}`);
+  }
+  if (/\.(?:spec|test)\.[^/]+$/u.test(lower)) {
+    fail(`non-runtime package input is forbidden: ${normalized}`);
+  }
+  if (
+    NON_RUNTIME_PACKAGE_BASENAME_PREFIXES.some(
+      (prefix) => basename === prefix || basename.startsWith(`${prefix}.`),
+    )
+  ) {
+    fail(`non-runtime package input is forbidden: ${normalized}`);
+  }
+}
+
+export async function verifySlimPackageInput(): Promise<string[]> {
+  assertSlimProfile();
+  const archiveFiles = (await readdir(distRootUrl, { recursive: true }))
+    .map((file) => file.replaceAll("\\", "/"));
+  for (const file of archiveFiles) assertSlimRuntimePackagePath(file);
+  return archiveFiles;
+}
+
+export async function verifySlimPackage(): Promise<{ archive: string; bytes: number }> {
+  const archiveFiles = await verifySlimPackageInput();
 
   const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as NeutronManifest;
   const archive = packageArchiveFilename(manifest.id, manifest.version);
@@ -64,10 +128,6 @@ export async function verifySlimPackage(): Promise<{ archive: string; bytes: num
     fail(`${archive} is ${archiveStats.size} bytes; limit is strictly less than ${SLIM_MAX_BYTES}`);
   }
 
-  // pack.ts archives the complete dist/ tree, so exclusions are checked against
-  // that exact input boundary rather than only against browser-facing dist/web.
-  const archiveFiles = (await readdir(distRootUrl, { recursive: true }))
-    .map((file) => file.replaceAll("\\", "/"));
   const webFiles = (await readdir(distWebUrl, { recursive: true }))
     .map((file) => file.replaceAll("\\", "/"));
   const webFileSet = new Set(webFiles);
@@ -76,6 +136,10 @@ export async function verifySlimPackage(): Promise<{ archive: string; bytes: num
     if (!webFileSet.has(required)) fail(`missing required Monaco transport member ${required}`);
     const member = await stat(new URL(required, distWebUrl));
     if (member.size === 0) fail(`required Monaco transport member is empty: ${required}`);
+  }
+
+  if (webFileSet.has(REDUNDANT_SLIM_WORKER_MIRROR)) {
+    fail(`redundant Slim Monaco worker mirror present: ${REDUNDANT_SLIM_WORKER_MIRROR}`);
   }
 
   for (const worker of FORBIDDEN_WORKERS) {
@@ -111,5 +175,10 @@ export async function verifySlimPackage(): Promise<{ archive: string; bytes: num
 }
 
 if (import.meta.main) {
-  await verifySlimPackage();
+  if (process.argv.includes("--input")) {
+    const archiveFiles = await verifySlimPackageInput();
+    console.log(`Slim package input: ${archiveFiles.length} dist entries verified before packing`);
+  } else {
+    await verifySlimPackage();
+  }
 }
