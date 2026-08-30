@@ -3,7 +3,7 @@
 Status: current normative cross-subsystem architecture  
 Scope: filesystem-visible resources, Desktop, Start/Search opening, shortcuts, installed-application projections, Trash, hidden resources, and Program Files
 
-This document states the durable cross-subsystem rules. Implementation details belong to the owning subsystem README/AGENTS files and contracts. Historical design sequencing, branch snapshots, agent ownership, and superseded research are preserved under [`history/`](history/).
+This document states the durable cross-subsystem rules. Implementation details belong to the owning subsystem README/AGENTS files and contracts.
 
 ## Core model
 
@@ -144,12 +144,3 @@ The current Program Files contract is documented in [`../src/os/fs/README.md`](.
 - Neutron adapter boundary: [`../src/os/neutron/README.md`](../src/os/neutron/README.md)
 
 When a scoped current README/contract is more specific than this cross-subsystem overview, follow the scoped current authority and update this document if the cross-cutting rule changed.
-
-## Historical provenance
-
-The original filesystem/Desktop design handoff and its games correction are preserved verbatim under history:
-
-- [`history/FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md`](history/FILESYSTEM_DESKTOP_UX_ARCHITECTURE.md)
-- [`history/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md`](history/FILESYSTEM_DESKTOP_UX_GAMES_CORRECTION.md)
-
-Those records explain prior design reasoning and implementation sequencing but are not required to understand or modify the current architecture.

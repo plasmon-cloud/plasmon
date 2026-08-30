@@ -51,15 +51,6 @@
       }
     },
     {
-      "path": "apps/plasmon/docs/history",
-      "kind": "documentation-history",
-      "readme": "local",
-      "agents": {
-        "mode": "inherited",
-        "from": "apps/plasmon/AGENTS.md"
-      }
-    },
-    {
       "path": "apps/plasmon/src",
       "kind": "source-root",
       "readme": "local",
