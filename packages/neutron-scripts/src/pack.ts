@@ -12,33 +12,6 @@ import { packageArchiveFilename } from "neutron-tools/src/package_archive.js";
 
 const msgpack = msgpack5();
 const REMOVED_PACKAGE_BUILD_METADATA_PATH = ".neutron-build.json";
-const NON_RUNTIME_PACKAGE_SUFFIXES = [
-  ".md",
-  ".mdx",
-  ".map",
-  ".ts",
-  ".tsx",
-  ".jsx",
-  ".scss",
-  ".sass",
-  ".less",
-  ".snap",
-  ".log",
-] as const;
-const NON_RUNTIME_PACKAGE_SEGMENTS = new Set([
-  ".github",
-  "__tests__",
-  "coverage",
-  "docs",
-  "src",
-  "test",
-  "tests",
-]);
-const NON_RUNTIME_PACKAGE_BASENAME_PREFIXES = [
-  "changelog",
-  "contributing",
-  "readme",
-] as const;
 // const defaultIgnore = `
 // /*
 // !dist
@@ -62,12 +35,8 @@ export async function readFile(filePath: string): Promise<Uint8Array> {
 }
 
 export function compressFileToUint8Array(fileBuffer: Buffer): Uint8Array {
-  // The archive format already stores each member as an independent gzip
-  // stream. Use zlib's strongest deflate setting for packaged artifacts: this
-  // changes only build time, not the bytes consumers receive after gunzip.
-  const compressedBuffer = zlib.gzipSync(fileBuffer, {
-    level: zlib.constants.Z_BEST_COMPRESSION,
-  });
+  // Compress file
+  const compressedBuffer = zlib.gzipSync(fileBuffer);
 
   // Convert to Uint8Array
   const uint8Array = new Uint8Array(
@@ -120,26 +89,6 @@ function archivePath(rootPath: string, filePath: string): string {
   return relativePath.split(path.sep).join("/");
 }
 
-export function assertRuntimePackagePath(relativePath: string): void {
-  const normalized = relativePath.replaceAll("\\", "/");
-  const lower = normalized.toLowerCase();
-  const segments = lower.split("/");
-  const basename = segments.at(-1) ?? lower;
-
-  if (segments.some((segment) => NON_RUNTIME_PACKAGE_SEGMENTS.has(segment))) {
-    throw new Error(`Non-runtime package input is forbidden: ${normalized}`);
-  }
-  if (NON_RUNTIME_PACKAGE_SUFFIXES.some((suffix) => lower.endsWith(suffix))) {
-    throw new Error(`Non-runtime package input is forbidden: ${normalized}`);
-  }
-  if (/\.(?:spec|test)\.[^/]+$/u.test(lower)) {
-    throw new Error(`Non-runtime package input is forbidden: ${normalized}`);
-  }
-  if (NON_RUNTIME_PACKAGE_BASENAME_PREFIXES.some((prefix) => basename === prefix || basename.startsWith(`${prefix}.`))) {
-    throw new Error(`Non-runtime package input is forbidden: ${normalized}`);
-  }
-}
-
 export async function walkDir(
   dirPath: string,
   rootPath: string,
@@ -168,9 +117,8 @@ export async function walkDir(
     } else if (stats.isFile()) {
       // if (!ig.ignores(rel)) {
       //   console.log(rel);
-      const relativePath = archivePath(rootPath, res);
-      assertRuntimePackagePath(relativePath);
       const contents = await readFile(res);
+      const relativePath = archivePath(rootPath, res);
       Object.defineProperty(flatStructure, relativePath, {
         configurable: true,
         enumerable: true,
