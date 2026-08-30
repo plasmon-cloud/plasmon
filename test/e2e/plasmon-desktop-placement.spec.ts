@@ -4,7 +4,7 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 /**
- * #192 keeps allocation/reconciliation policy in pure Bun coverage. This real
+ * Allocation/reconciliation policy stays in pure Bun coverage. This real
  * browser gate proves only the adapter fact: a packaged Desktop FileEntry is
  * rendered at the authoritative left/top position supplied by that policy.
  */
@@ -18,19 +18,19 @@ test("— packaged Desktop renders authoritative placement offsets", async ({ pa
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #192; the gate still exercises the real packaged Desktop adapter",
+        reason: "Kernel-owned installed-app iframe warning is outside this placement gate; the gate still exercises the real packaged Desktop adapter",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside Desktop placement",
+        reason: "Tracked product URL-resolution defect is outside Desktop placement",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside Desktop placement",
+        reason: "Tracked product URL-resolution defect is outside Desktop placement",
       },
     ],
   });
