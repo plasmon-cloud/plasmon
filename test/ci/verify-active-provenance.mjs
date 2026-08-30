@@ -44,7 +44,7 @@ const contentRules = Object.freeze([
   ["PR tag", /@pr-\d+\b/iu],
   ["release-numbered tag", /@r\d+(?:[-_][a-z0-9_-]+)?\b/iu],
   ["standalone R2/R3 release-era token", /\b[rR][23]\b/u],
-  ["Issue-numbered test title", /\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["'`]#\d+\b/iu],
+  ["work-item number in test title", /\b(?:test|it|describe)(?:\.(?:only|skip|todo))?\s*\(\s*["'`][^"'`\r\n]*#\d{2,}\b/iu],
   ["Issue-numbered active artifact/resource", /\bissue[-_ ]\d+\b/iu],
   ["PR-numbered active artifact/resource", /\bpr[-_ ]\d+\b/iu],
   ["Issue prose reference", /\bissue\s*#?\d+\b/iu],
@@ -210,7 +210,7 @@ function selfTest() {
   const releaseTag = `@r${"2"}-quarantine`;
   const legacyReleaseBranchA = ["release", `0.1.0-r${"2"}`].join("/");
   const legacyReleaseBranchB = ["release", `0.1.0-r${"3"}`].join("/");
-  const testTitle = `test("#${"999"} behavior", () => {})`;
+  const testTitle = `test("behavior from #${"999"} remains forbidden", () => {})`;
   const artifact = `issue-${"999"}-graphite.png`;
   const diagnostic = `console.log("::error title=#${"999"} stale work item::failure")`;
 
@@ -236,7 +236,7 @@ function selfTest() {
       `camelCase work-item test suffix: test/${camelCaseTest}`,
       "Issue tag:",
       "release-numbered tag:",
-      "Issue-numbered test title:",
+      "work-item number in test title:",
       "Issue-numbered active artifact/resource:",
       "work-item number in active Actions diagnostic:",
       `concrete release branch coupling: ${numberedSpec}:4:`,
