@@ -119,9 +119,9 @@ describe("PlasmonDiagnosticService", () => {
     const retained = retainNewestDiagnosticLines(text, 128, 96);
 
     expect(new TextEncoder().encode(retained).byteLength).toBeLessThanOrEqual(128);
-    expect(retained).toStartWith(prefix);
+    expect(retained.startsWith(prefix)).toBe(true);
     expect(retained).toContain("runtime.start.failed");
-    expect(retained).toEndWith(" …[TRUNCATED]\n");
+    expect(retained.endsWith(" …[TRUNCATED]\n")).toBe(true);
     expect(retained).not.toContain("�");
   });
 
