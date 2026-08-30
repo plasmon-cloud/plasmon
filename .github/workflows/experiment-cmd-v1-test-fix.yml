@@ -34,40 +34,47 @@ jobs:
           path = Path('apps/plasmon/src/scripting/v1-regression.test.ts')
           text = path.read_text()
 
-          old = '''      const sorted = await session.shell.pipeline([session.commands.echo(["a\\\\nc\\\\nb"]), session.commands.sort(["-r"])]).run();
-                expect(sorted.exitCode).toBe(0);
-          
-                const uniq = await session.shell.pipeline([session.commands.uniq(["-c"])]).run();
-                expect(uniq.stdout).toBe("");
-          '''
-          new = '''      await env.os.fs.writeText("/Documents/sort.txt", "a\\nc\\nb\\n");
-                const sorted = await session.shell.pipeline([session.commands.sort(["-r", "/Documents/sort.txt"])]).run();
-                expect(sorted).toEqual({ exitCode: 0, stdout: "c\\nb\\na\\n", stderr: "" });
-          
-                await env.os.fs.writeText("/Documents/uniq.txt", "a\\na\\nb\\nb\\nb\\nc\\n");
-                const uniq = await session.shell.pipeline([session.commands.uniq(["-c", "/Documents/uniq.txt"])]).run();
-                expect(uniq).toEqual({ exitCode: 0, stdout: "2 a\\n3 b\\n1 c\\n", stderr: "" });
-          '''
-          if old not in text:
-              raise SystemExit('sort/uniq regression block changed unexpectedly')
-          text = text.replace(old, new, 1)
+          start = text.index('  test("wc, sort, uniq, and tee option behavior composes predictably"')
+          end = text.index('  test("unknown commands, argument arity, and exit status validation use shell-like statuses"', start)
+          replacement = '''  test("wc, sort, uniq, and tee option behavior composes predictably", async () => {
+            await withSession(async (session, env) => {
+              const wc = await session.shell.pipeline([session.commands.echo(["one", "two"]), session.commands.wc(["-lwc"])]).run();
+              expect(wc.stdout).toBe("1 2 8\\n");
 
-          old = '''      for (const args of [["-1"], ["256"], ["abc"], ["1", "2"]]) {
-                try {
-                  await session.shell.pipeline([session.commands.exit(args)]).run();
-                  throw new Error("invalid exit must terminate with status 2");
-                } catch (error) {
-                  expect(error).toBeInstanceOf(CommandExit);
-                  expect((error as CommandExit).exitCode).toBe(2);
-                }
-              }
-          '''
-          new = '''      for (const args of [["-1"], ["256"], ["abc"], ["1", "2"]]) {
+              await env.os.fs.writeText("/Documents/sort.txt", "a\\nc\\nb\\n");
+              const sorted = await session.shell.pipeline([session.commands.sort(["-r", "/Documents/sort.txt"])]).run();
+              expect(sorted).toEqual({ exitCode: 0, stdout: "c\\nb\\na\\n", stderr: "" });
+
+              await env.os.fs.writeText("/Documents/uniq.txt", "a\\na\\nb\\nb\\nb\\nc\\n");
+              const uniq = await session.shell.pipeline([session.commands.uniq(["-c", "/Documents/uniq.txt"])]).run();
+              expect(uniq).toEqual({ exitCode: 0, stdout: "2 a\\n3 b\\n1 c\\n", stderr: "" });
+
+              await env.os.fs.writeText("/Documents/tee.txt", "before\\n");
+              const tee = await session.shell.pipeline([session.commands.echo(["after"]), session.commands.tee(["-a", "/Documents/tee.txt"])]).run();
+              expect(tee.stdout).toBe("after\\n");
+              expect(await env.os.fs.readText("/Documents/tee.txt")).toBe("before\\nafter\\n");
+            });
+          });
+
+'''
+          text = text[:start] + replacement + text[end:]
+
+          start = text.index('  test("unknown commands, argument arity, and exit status validation use shell-like statuses"')
+          end = text.index('});\n\ndescribe(".cmd/.run service and transpiler regressions"', start)
+          replacement = '''  test("unknown commands, argument arity, and exit status validation use shell-like statuses", async () => {
+            await withSession(async (session) => {
+              const unknown = await session.shell.pipeline([session.commands.command("definitely-not-a-command")]).run();
+              expect(unknown.exitCode).toBe(127);
+              expect(unknown.stderr).toContain("command not found");
+              expect((await session.shell.pipeline([session.commands.pwd(["extra"])]).run()).exitCode).toBe(2);
+              expect((await session.shell.pipeline([session.commands.ps(["extra"])]).run()).exitCode).toBe(2);
+
+              for (const args of [["-1"], ["256"], ["abc"], ["1", "2"]]) {
                 const invalidExit = await session.shell.pipeline([session.commands.exit(args)]).run();
                 expect(invalidExit.exitCode).toBe(2);
                 expect(invalidExit.stderr).toBe("exit: expected status 0-255\\n");
               }
-          
+
               for (const [args, expectedStatus] of [[[], 0], [["255"], 255]] as const) {
                 try {
                   await session.shell.pipeline([session.commands.exit(args)]).run();
@@ -77,10 +84,10 @@ jobs:
                   expect((error as CommandExit).exitCode).toBe(expectedStatus);
                 }
               }
-          '''
-          if old not in text:
-              raise SystemExit('exit regression block changed unexpectedly')
-          text = text.replace(old, new, 1)
+            });
+          });
+'''
+          text = text[:start] + replacement + text[end:]
           path.write_text(text)
           PY
           git rm .github/workflows/experiment-cmd-v1-test-fix.yml
