@@ -30,7 +30,9 @@ import {
   type RepositoryState,
 } from "../fs/index.ts";
 import {
+  DiagnosticSettingsStore,
   PlasmonDiagnosticService,
+  resolveDiagnosticSettingsCapabilities,
   type DiagnosticLogger,
   type DiagnosticService,
 } from "../diagnostics/index.ts";
@@ -79,13 +81,14 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile } from "./packageProfile.ts";
+import { isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
   fsEvents: FsEventSource;
   filesystem: FilesystemCoreServices;
   diagnostics: DiagnosticService;
+  diagnosticSettings: DiagnosticSettingsStore;
   process: ProcessController;
   windows: WindowManager;
   windowPlacement: NativeWindowPlacementController;
@@ -108,6 +111,11 @@ export interface CreatePlasmonServicesOptions {
   windows?: WindowManager;
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
+  /**
+   * Capability seam for the separately owned remote incident sink. #655 never
+   * installs a provider; callers may enable policy only when that sink exists.
+   */
+  remoteIncidentSinkAvailable?: boolean;
 }
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
@@ -170,6 +178,7 @@ function registerNativeApplications(
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
   diagnostics: DiagnosticService,
+  diagnosticSettings: DiagnosticSettingsStore,
   log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
@@ -185,7 +194,7 @@ function registerNativeApplications(
     nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
   }
 
-  const contentLoaders = createContentAppLoaders({ hiddenVisibility });
+  const contentLoaders = createContentAppLoaders({ hiddenVisibility, diagnosticSettings });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) {
@@ -234,6 +243,16 @@ export function createPlasmonServices(
       if (filesystem) await filesystem.ready;
     },
     onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
+  });
+  const diagnosticSettings = new DiagnosticSettingsStore(
+    rawFs,
+    resolveDiagnosticSettingsCapabilities({
+      slimProfile: isSlimProfile,
+      remoteIncidentSinkAvailable: options.remoteIncidentSinkAvailable ?? false,
+    }),
+  );
+  diagnosticSettings.subscribe(({ fileMinLevel, consoleMinLevel }) => {
+    diagnostics.setSinkMinimumLevels({ fileMinLevel, consoleMinLevel });
   });
   const filesystemLog = diagnostics.for("filesystem");
   const processLog = diagnostics.for("process");
@@ -333,6 +352,7 @@ export function createPlasmonServices(
     fileClipboard,
     hiddenVisibility,
     diagnostics,
+    diagnosticSettings,
     nativeAppLog,
   );
 
@@ -348,7 +368,15 @@ export function createPlasmonServices(
   });
   const fs = filesystem.fs;
   void filesystem.ready
-    .then((initialization) => {
+    .then(async (initialization) => {
+      try {
+        await diagnosticSettings.load();
+      } catch (error) {
+        filesystemLog.warn("diagnostics.settings.restore.failed", {
+          message: "Persisted diagnostic sink settings could not be restored; safe defaults remain active",
+          errorType: diagnosticErrorType(error),
+        });
+      }
       filesystemLog.notice("filesystem.bootstrap.ready", {
         message: "Filesystem bootstrap completed",
       });
@@ -378,6 +406,7 @@ export function createPlasmonServices(
     fsEvents: fs,
     filesystem,
     diagnostics,
+    diagnosticSettings,
     process,
     windows,
     windowPlacement,
