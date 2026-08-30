@@ -15,24 +15,80 @@ const cmdNode: FsNode = {
   metadata: {},
 };
 
-test(".cmd context menu exposes the injected Transpile to .run action", () => {
+const runNode: FsNode = {
+  ...cmdNode,
+  id: "file:run",
+  name: "demo.run",
+  mime: "application/typescript",
+};
+
+function renderMenu(node: FsNode | null, overrides: Partial<React.ComponentProps<typeof FileManagerContextMenu>> = {}) {
   const actions: string[] = [];
   render(
     <div>
       <FileManagerContextMenu
-        state={{ x: 0, y: 0, nodeId: cmdNode.id }}
-        node={cmdNode}
+        state={{ x: 0, y: 0, nodeId: node?.id ?? null }}
+        node={node}
         canOpenWith={true}
         canDownload={true}
-        canTranspileCmd={true}
+        canTranspileCmd={node?.name.toLowerCase().endsWith(".cmd") ?? false}
+        canRunScript={node?.name.toLowerCase().endsWith(".cmd") || node?.name.toLowerCase().endsWith(".run") || false}
+        canEditScript={true}
         canCreateShortcut={true}
         operationRunning={false}
         canPaste={false}
         onAction={(action) => actions.push(action)}
+        {...overrides}
       />
     </div>,
   );
-  const action = screen.getByRole("menuitem", { name: "Transpile to .run" });
-  fireEvent.click(action);
-  expect(actions).toContain("transpileRun");
+  return actions;
+}
+
+test(".cmd context menu exposes Run, Edit, and Transpile to .run", () => {
+  const actions = renderMenu(cmdNode);
+  expect(screen.queryByRole("menuitem", { name: "Open", exact: true })).toBeNull();
+
+  fireEvent.click(screen.getByRole("menuitem", { name: "Run", exact: true }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Edit", exact: true }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Transpile to .run", exact: true }));
+
+  expect(actions).toEqual(["runScript", "editScript", "transpileRun"]);
+});
+
+test(".run context menu is executable/editable but does not offer transpilation", () => {
+  const actions = renderMenu(runNode);
+  expect(screen.getByRole("menuitem", { name: "Run", exact: true })).toBeTruthy();
+  expect(screen.getByRole("menuitem", { name: "Edit", exact: true })).toBeTruthy();
+  expect(screen.queryByRole("menuitem", { name: "Transpile to .run", exact: true })).toBeNull();
+
+  fireEvent.click(screen.getByRole("menuitem", { name: "Run", exact: true }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Edit", exact: true }));
+  expect(actions).toEqual(["runScript", "editScript"]);
+});
+
+test("Edit is disabled when the script editor authority is unavailable", () => {
+  const actions = renderMenu(cmdNode, { canEditScript: false });
+  const edit = screen.getByRole("menuitem", { name: "Edit", exact: true });
+  expect((edit as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(edit);
+  expect(actions).toEqual([]);
+});
+
+test("ordinary non-script resources retain Open instead of Run/Edit", () => {
+  const actions = renderMenu({ ...cmdNode, id: "file:text", name: "notes.txt", mime: "text/plain" }, {
+    canRunScript: false,
+    canTranspileCmd: false,
+  });
+  expect(screen.queryByRole("menuitem", { name: "Run", exact: true })).toBeNull();
+  expect(screen.queryByRole("menuitem", { name: "Edit", exact: true })).toBeNull();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Open", exact: true }));
+  expect(actions).toEqual(["open"]);
+});
+
+test("background menu creates both command and run scripts explicitly", () => {
+  const actions = renderMenu(null);
+  fireEvent.click(screen.getByRole("menuitem", { name: "New Command Script (.cmd)", exact: true }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "New Run Script (.run)", exact: true }));
+  expect(actions).toEqual(["newCmd", "newRun"]);
 });
