@@ -78,7 +78,10 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile } from "./packageProfile.ts";
+import {
+  packagedRuntimeSelection,
+  type PackagedRuntimeSelection,
+} from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -107,6 +110,8 @@ export interface CreatePlasmonServicesOptions {
   windows?: WindowManager;
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
+  /** Explicit package-composition input. Production callers use the build-defined packaged selection. */
+  runtimeSelection?: PackagedRuntimeSelection;
 }
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
@@ -181,18 +186,18 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  runtimeSelection: PackagedRuntimeSelection,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  // Game/emulator payloads and handlers are intentionally omitted from every
-  // shipped package profile, so opening a game cannot create missing-runtime
-  // requests. The source/runtime tests exercise those handlers directly.
-  if (isGameRuntimeProfile) {
+  if (runtimeSelection.emulatorJs) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+  }
 
+  if (runtimeSelection.jsDos) {
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
@@ -236,9 +241,10 @@ function registerNativeApplications(
  * FsService rather than foreground browser storage.
  *
  * Tests may inject only true external/runtime boundaries (for example an
- * in-memory persistence repository, a mock Neutron bridge, or deterministic window
- * manager). Registration, associations, opening, filesystem policy, process
- * behavior, diagnostics, and all other OS semantics remain the same production composition.
+ * in-memory persistence repository, a mock Neutron bridge, deterministic window
+ * manager, or explicit package runtime selection). Registration, associations,
+ * opening, filesystem policy, process behavior, diagnostics, and all other OS
+ * semantics remain the same production composition.
  *
  * The returned public fs is the filesystem-core facade: it waits for migration
  * and bootstrap to finish and applies dot-hidden listing semantics. The core
@@ -341,6 +347,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    options.runtimeSelection ?? packagedRuntimeSelection,
   );
 
   filesystem = createFilesystemCore({
