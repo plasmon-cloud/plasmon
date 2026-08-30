@@ -2,6 +2,7 @@ import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  MANUAL_CHARACTERIZATION_PACKET_SIZE,
   PRE_MERGE_CHARACTERIZATION_COUNT,
   POST_MERGE_CHARACTERIZATION_COUNT,
   TARGETED_CHARACTERIZATION_PACKET_SIZE,
@@ -20,6 +21,9 @@ const targetedPlaywrightTargets = new Set([
 
 export function packetSizeForProbe({ iteration_count, target, mode }) {
   if (!targetedPlaywrightTargets.has(target)) return 1;
+  if (mode === "manual" && iteration_count === 50) {
+    return MANUAL_CHARACTERIZATION_PACKET_SIZE;
+  }
   if (mode === "characterization" && iteration_count === PRE_MERGE_CHARACTERIZATION_COUNT) {
     return PRE_MERGE_CHARACTERIZATION_COUNT;
   }
@@ -78,7 +82,7 @@ export function buildProbeMatrix(env = process.env) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const outputIndex = process.argv.indexOf("--github-output");
-  const outputPath = outputIndex === -1 ? null : process.argv[outputIndex + 1];
+  const outputPath = outputIndex === -1 ? null : outputIndex + 1 < process.argv.length ? process.argv[outputIndex + 1] : null;
   const line = `matrix=${JSON.stringify(buildProbeMatrix())}\n`;
   if (outputPath) appendFileSync(outputPath, line);
   else process.stdout.write(line);
