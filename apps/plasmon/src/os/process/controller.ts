@@ -78,6 +78,7 @@ export class NativeProcessController implements ProcessController {
       title: app.name,
       icon: app.icon,
       state: "starting",
+      ...(operation ? { operation } : {}),
     });
 
     try {
@@ -131,9 +132,6 @@ export class NativeProcessController implements ProcessController {
       return false;
     }
 
-    // A handler may resolve the request synchronously. In that case its
-    // complete/cancel callback already owns the outcome and stale decisions
-    // from this invocation must not act again.
     if (this.pendingCloses.get(id) !== token) return this.store.get(id) === null;
 
     if (decision === "allow") {
@@ -145,8 +143,6 @@ export class NativeProcessController implements ProcessController {
       return false;
     }
 
-    // "defer" keeps the process running until request.complete() or
-    // request.cancel() resolves this exact close attempt.
     return false;
   }
 
@@ -220,23 +216,16 @@ export class NativeProcessController implements ProcessController {
 
   private cleanupFailedStartup(id: ProcessId): void {
     try {
-      // WindowManager.create() is synchronous, but an implementation can still
-      // fail after it has allocated/announced a window and before returning its
-      // id. The unique ProcessId lets Process reconcile only state created for
-      // this failed launch without reaching into Windowing internals.
       const ownedWindows = this.windows.list().filter((window) => window.processId === id);
       for (const window of ownedWindows) {
         try {
           this.windows.close(window.id);
         } catch {
-          // Preserve the original startup failure. Windowing owns its internal
-          // error semantics; Process can only make best-effort cleanup through
-          // the public close contract here.
+          // Preserve the original startup failure; Windowing owns its internal error semantics.
         }
       }
     } catch {
-      // Preserve the original startup failure if Windowing inspection itself
-      // fails; Process bookkeeping must still be removed below.
+      // Preserve the original startup failure if Windowing inspection itself fails.
     } finally {
       this.removeProcess(id);
     }
