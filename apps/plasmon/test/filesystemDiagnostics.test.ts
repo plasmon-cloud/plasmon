@@ -11,6 +11,36 @@ function recordsFor(
   return { records, stop: subscribe((record) => records.push(record)) };
 }
 
+test("association default read failure emits one privacy-safe owning-boundary event", async () => {
+  const env = createHeadlessPlasmonEnvironment();
+  try {
+    await env.ready;
+    const { records, stop } = recordsFor((listener) => env.diagnostics.subscribe(listener));
+    const failingFs = new Proxy(env.services.fs, {
+      get(target, property, receiver) {
+        if (property !== "resolvePath") return Reflect.get(target, property, receiver);
+        return async () => {
+          throw new TypeError("SECRET association read failure at /PRIVATE/read-path.txt");
+        };
+      },
+    }) as FsService;
+    const store = new FsServiceAssociationDefaultStore(failingFs, undefined, env.diagnostics);
+
+    try {
+      await expect(store.get("extension:.private")).rejects.toThrow("SECRET association read failure");
+      const event = records.find((record) => record.event === "associations.defaults.read.failed");
+      expect(event?.subsystem).toBe("associations");
+      expect(event?.context).toEqual({ errorType: "TypeError" });
+      expect(JSON.stringify(event)).not.toContain("SECRET association read failure");
+      expect(JSON.stringify(event)).not.toContain("PRIVATE/read-path.txt");
+    } finally {
+      stop();
+    }
+  } finally {
+    env.dispose();
+  }
+});
+
 test("association default write failure emits one privacy-safe owning-boundary event", async () => {
   const env = createHeadlessPlasmonEnvironment();
   try {
