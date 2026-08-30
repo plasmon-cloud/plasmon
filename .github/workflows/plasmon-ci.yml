@@ -6,6 +6,8 @@ on:
       - version-0.1.0-os
       - 'release/**'
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 permissions:
@@ -40,9 +42,16 @@ jobs:
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
           node test/ci/verify-required-browser-gates.mjs
 
+      - name: Verify active provenance policy
+        run: |
+          set -euxo pipefail
+          node test/ci/verify-active-provenance.mjs --self-test
+          node test/ci/verify-active-provenance.mjs
+
       - name: Verify flake-probe workflow contract
         run: |
           set -euxo pipefail
+          node test/ci/verify-flake-foundations.mjs
           node test/ci/verify-flake-probe.mjs
           node test/ci/verify-labeled-flake-probe.mjs
           node test/ci/verify-flake-summary-human.mjs

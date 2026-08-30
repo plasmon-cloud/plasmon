@@ -92,7 +92,7 @@ export default function JsDosPlayer({ processId, target, fs, process }: NativeAp
         if (!active) return "allow";
         void waitForJsDosSave(async () => {
           // Capture the representative frame at the same explicit save boundary,
-          // but attach it only after the authoritative #64 save succeeds.
+          // but attach it only after the authoritative progress save succeeds.
           const previewPromise = captureJsDosPreview(root).catch(() => null);
           const saved = await active.save();
           const preview = await previewPromise;
