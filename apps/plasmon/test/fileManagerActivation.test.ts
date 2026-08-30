@@ -98,7 +98,7 @@ test("FileManager activation uses canonical policy for associated files, shortcu
     await activateFileManagerNode(environment.services.filesystem.open, photos);
     opened = environment.processes().at(-1);
     expect(opened?.handlerId).toBe("native:photos");
-    expect(opened?.target).toEqual({});
+    expect(opened?.target.nodeId).toBe(photos.id);
     if (opened) environment.services.process.close(opened.id);
 
     const neutronApp = await environment.node("/Apps/Activation Demo.neutron");
