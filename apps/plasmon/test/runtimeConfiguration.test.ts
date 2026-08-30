@@ -115,8 +115,8 @@ describe("runtime configuration authority", () => {
       const path = await writeConfiguration(directory, "bad-runtime", ["unknown-runtime"]);
       await expect(loadRuntimeConfiguration(path)).rejects.toThrow("Unknown optional runtime id: unknown-runtime");
 
-      for (const inheritedRuntimeId of ["toString", "__proto__"] as const) {
-        const inheritedPath = await writeConfiguration(directory, `bad-${inheritedRuntimeId.toLowerCase()}`, [inheritedRuntimeId]);
+      for (const [index, inheritedRuntimeId] of ["toString", "__proto__"].entries()) {
+        const inheritedPath = await writeConfiguration(directory, `bad-inherited-${index}`, [inheritedRuntimeId]);
         await expect(loadRuntimeConfiguration(inheritedPath)).rejects.toThrow(
           `Unknown optional runtime id: ${inheritedRuntimeId}`,
         );
