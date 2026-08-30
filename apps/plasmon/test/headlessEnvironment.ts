@@ -6,6 +6,7 @@ import type {
 } from "../src/os/contracts/index.ts";
 import type { OsApi } from "../src/os/api/index.ts";
 import { createPlasmonOsApi } from "../src/os/api/adapter.ts";
+import type { DiagnosticService } from "../src/os/diagnostics/index.ts";
 import { MemoryFsRepository } from "../src/os/fs/index.ts";
 import {
   createPlasmonServices,
@@ -25,6 +26,8 @@ export interface HeadlessPlasmonEnvironment {
   readonly services: PlasmonServices;
   /** The same production semantic OS API intended for non-test automation consumers. */
   readonly os: OsApi;
+  /** The same production diagnostic stream used by Plasmon; not a test-only logger. */
+  readonly diagnostics: DiagnosticService;
   readonly repository: MemoryFsRepository;
   readonly neutron: MockNeutronBridge;
   readonly neutronMessages: readonly string[];
@@ -46,12 +49,14 @@ export interface HeadlessPlasmonEnvironment {
  * Only true environment boundaries are replaced: filesystem persistence is
  * in-memory, Neutron is the existing preview bridge, and window identifiers /
  * viewport are deterministic. Filesystem policy, bootstrap, associations,
- * opening, native app registration, process behavior, and window behavior all
- * come from the same production implementations used by PlasmonOS.
+ * opening, native app registration, process behavior, diagnostics, and window
+ * behavior all come from the same production implementations used by PlasmonOS.
  *
- * The production createPlasmonOsApi() adapter is exposed as env.os. The
- * headless harness does not implement a second semantic OS facade; test-only
- * powers, if added later, belong beside env.os rather than inside it.
+ * The production createPlasmonOsApi() adapter is exposed as env.os, and the
+ * production DiagnosticService is exposed as env.diagnostics for deterministic
+ * observation of events that Product code itself emits. The headless harness
+ * does not implement a second semantic OS or logging facade; test-only powers,
+ * if added later, belong beside these production authorities.
  *
  * Service construction assembles but does not launch the Start reconciliation
  * runtime. Pure/headless tests can therefore stage fixtures and invoke
@@ -85,6 +90,7 @@ export function createHeadlessPlasmonEnvironment(
   return {
     services,
     os,
+    diagnostics: services.diagnostics,
     repository,
     neutron,
     neutronMessages,
