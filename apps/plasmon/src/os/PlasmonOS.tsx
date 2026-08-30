@@ -91,6 +91,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                         registry={services.nativeApps}
                         process={services.process}
                         fs={services.fs}
+                        diagnostics={services.diagnostics}
                         nativeWindow={nativeWindow}
                         fallback={<div className="plasmon-os-host-state" role="status">Loading {title}…</div>}
                         missingFallback={<div className="plasmon-os-host-state" role="alert">Application host is unavailable.</div>}
