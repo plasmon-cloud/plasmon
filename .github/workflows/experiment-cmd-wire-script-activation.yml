@@ -1,0 +1,82 @@
+name: Experiment Cmd Wire Script Activation
+
+on:
+  push:
+    branches: [experiment/cmd]
+    paths:
+      - .github/workflows/experiment-cmd-wire-script-activation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/cmd
+          fetch-depth: 0
+      - name: Wire explicit cmd/run activation into File Manager
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/plasmon/src/os/file-manager/FileManager.tsx')
+          text = path.read_text()
+
+          anchor = 'import { readSharedShortcut } from "./shortcut.ts";\n'
+          replacement = anchor + 'import { activateExecutableScript, isExecutableScriptNode } from "./script-activation.ts";\n'
+          if replacement not in text:
+              if anchor not in text:
+                  raise SystemExit('script activation import anchor not found')
+              text = text.replace(anchor, replacement, 1)
+
+          old_block = '''    if (action === "runScript") {
+              closeContextMenu();
+              if (!openService || !canRunScript) return;
+              void openService.open("native:terminal", { nodeId: contextNode.id })
+                .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+              return;
+            }'''
+          new_block = '''    if (action === "runScript") {
+              closeContextMenu();
+              if (!openService || !canRunScript) return;
+              void activateExecutableScript(openService, contextNode)
+                .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+              return;
+            }'''
+          if old_block in text:
+              text = text.replace(old_block, new_block, 1)
+          elif new_block not in text:
+              raise SystemExit('runScript action block not found')
+
+          old_open = '        onOpen={(node) => void commands.openNode(node)}\n'
+          new_open = '''        onOpen={(node) => {
+                  if (openService && isExecutableScriptNode(node)) {
+                    void activateExecutableScript(openService, node)
+                      .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+                    return;
+                  }
+                  void commands.openNode(node);
+                }}
+          '''
+          if old_open in text:
+              text = text.replace(old_open, new_open, 1)
+          elif 'if (openService && isExecutableScriptNode(node))' not in text:
+              raise SystemExit('File Manager onOpen anchor not found')
+
+          path.write_text(text)
+          PY
+      - name: Commit production wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/plasmon/src/os/file-manager/FileManager.tsx
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No source change needed"
+            exit 0
+          fi
+          git commit -m "Fix cmd and run double-click activation"
+          git push origin HEAD:experiment/cmd
