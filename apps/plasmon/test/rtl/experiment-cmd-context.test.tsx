@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, expect, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import type { FsNode } from "../../src/os/contracts/index.ts";
 import { FileManagerContextMenu } from "../../src/os/file-manager/FileManagerContextMenu.tsx";
@@ -45,6 +45,8 @@ function renderMenu(node: FsNode | null, overrides: Partial<ComponentProps<typeo
   );
   return actions;
 }
+
+afterEach(cleanup);
 
 test(".cmd context menu exposes Run, Edit, and Transpile to .run", () => {
   const actions = renderMenu(cmdNode);
