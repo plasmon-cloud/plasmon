@@ -31,7 +31,7 @@ describe("Monaco worker-boundary diagnostics", () => {
     }).MonacoEnvironment.getWorker;
 
     expect(() => getWorker("", "typescript")).toThrow(
-      "Missing packaged Monaco worker source: editor.worker.js",
+      "Missing packaged Monaco worker source: ts.worker.js",
     );
     expect(records).toEqual([
       expect.objectContaining({
@@ -41,7 +41,7 @@ describe("Monaco worker-boundary diagnostics", () => {
         context: {
           runtime: "Monaco",
           stage: "worker-source",
-          workerFile: "editor.worker.js",
+          workerFile: "ts.worker.js",
           errorType: "Error",
         },
       }),
