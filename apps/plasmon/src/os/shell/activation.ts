@@ -1,4 +1,4 @@
-import type { FsNode } from "../contracts/index.ts";
+import type { FsNode, HandlerId, OpenTarget } from "../contracts/index.ts";
 import {
   executeOpenResourceCommand,
   openResourceCommand,
@@ -10,6 +10,18 @@ import type { ShellSearchResult } from "./search.ts";
 export interface ShellFilesystemOpener extends ResourceOpenCommandAuthority {}
 
 export type FilesystemSearchResult = Extract<ShellSearchResult, { node: FsNode }>;
+
+export interface ShellApplicationOpener {
+  open(handlerId: HandlerId, target: OpenTarget): Promise<unknown>;
+}
+
+export const SHELL_SETTINGS_HANDLER_ID: HandlerId = "native:settings";
+
+/** Shell Settings is an application command, so it opens the canonical app without content. */
+export async function activateShellSettings(opener: ShellApplicationOpener): Promise<void> {
+  const result = await opener.open(SHELL_SETTINGS_HANDLER_ID, {});
+  if (result === null) throw new Error("Settings is not registered with the native process runtime");
+}
 
 /**
  * Start owns folder navigation inside /System/Start Menu, but actual filesystem

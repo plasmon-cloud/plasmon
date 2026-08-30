@@ -136,7 +136,9 @@ export function extractRequiredZipEntries(
   const result = new Map<string, Uint8Array>();
   for (const asset of requiredAssets) {
     validateRelativeAssetPath(asset);
-    const entry = byName.get(asset);
+    // The pinned js-dos release packages its browser files below `dist/`,
+    // while the materialized runtime exposes the catalog's logical paths.
+    const entry = byName.get(asset) ?? byName.get(`dist/${asset}`);
     if (!entry || entry.name.endsWith("/")) {
       throw new Error(`Prepared js-dos release is missing required asset ${asset}`);
     }

@@ -18,6 +18,13 @@ export interface RecycleBinRestoreResult {
   renamed: boolean;
 }
 
+export function recycleBinKindLabel(kind: FsNodeKind): string {
+  if (kind === "directory") return "Folder";
+  if (kind === "file") return "File";
+  if (kind === "shortcut") return "Shortcut";
+  return "Atom";
+}
+
 export function recycleBinItem(entry: TrashEntry): RecycleBinItem {
   return {
     id: entry.node.id,

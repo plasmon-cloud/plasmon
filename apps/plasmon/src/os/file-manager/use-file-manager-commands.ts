@@ -7,7 +7,11 @@ import {
   type SetStateAction,
 } from "react";
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
-import type { DiagnosticService } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import { activateFileManagerNode, type FileManagerOpenAuthority } from "./activation.ts";
 import { pasteClipboardCollisionAware } from "./clipboard.ts";
 import {
@@ -92,7 +96,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
     onOpenDirectory,
     confirmDelete,
   } = options;
-  const log = diagnostics?.for("filemanager") ?? null;
+  const log = diagnostics?.for(DiagnosticSubsystem.FileManager) ?? null;
 
   const selectedNodes = () => {
     const ids = selection.ids;
@@ -182,7 +186,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       const result = await deleteFilesystemNodes(trashAuthority, items);
       const unexpectedFailures = result.failures.filter((failure) => !isExpectedDeleteFailure(failure.message));
       if (unexpectedFailures.length > 0) {
-        log?.warn("filemanager.delete.partial", {
+        log?.warn(DiagnosticEvent.FileManager.DeletePartial, {
           total: items.length,
           succeeded: result.deletedIds.length,
           failed: unexpectedFailures.length,
@@ -195,7 +199,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       if (failure) setError(failure);
     } catch (cause: unknown) {
       if (!isExpectedPolicyFailure(cause)) {
-        log?.warn("filemanager.delete.failed", {
+        log?.warn(DiagnosticEvent.FileManager.DeleteFailed, {
           total: items.length,
           errorType: diagnosticErrorType(cause),
         });
@@ -233,7 +237,7 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
       await refresh();
     } catch (cause: unknown) {
       if (!isExpectedPolicyFailure(cause)) {
-        log?.warn("filemanager.paste.failed", {
+        log?.warn(DiagnosticEvent.FileManager.PasteFailed, {
           mode: snapshot.mode,
           total: snapshot.ids.length,
           errorType: diagnosticErrorType(cause),
@@ -311,8 +315,8 @@ export function useFileManagerCommands(options: UseFileManagerCommandsOptions) {
         succeeded: imported.length,
         failed: failures.length,
       };
-      if (imported.length > 0) log?.warn("filemanager.import.partial", fields);
-      else log?.warn("filemanager.import.failed", fields);
+      if (imported.length > 0) log?.warn(DiagnosticEvent.FileManager.ImportPartial, fields);
+      else log?.warn(DiagnosticEvent.FileManager.ImportFailed, fields);
     }
     await refresh();
     if (imported.length > 0) {

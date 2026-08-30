@@ -1,5 +1,10 @@
 import type { FsService, HandlerId, JsonValue, NodeId } from "../contracts/index.ts";
-import type { DiagnosticLogger, DiagnosticService } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import type { AssociationDefaultStore } from "./defaults.ts";
 
 export const FS_ASSOCIATION_DEFAULTS_METADATA_KEY = "plasmon.association.defaults.v1";
@@ -45,7 +50,7 @@ function diagnosticErrorType(error: unknown): string {
 export class FsServiceAssociationDefaultStore implements AssociationDefaultStore {
   private readonly fs: FsService;
   private readonly metadataKey: string;
-  private readonly log: DiagnosticLogger | null;
+  private readonly log: DiagnosticLogger<typeof DiagnosticSubsystem.Associations> | null;
   private loaded: LoadedDefaults | null = null;
   private loadPromise: Promise<LoadedDefaults> | null = null;
   private writeTail: Promise<void> = Promise.resolve();
@@ -57,7 +62,7 @@ export class FsServiceAssociationDefaultStore implements AssociationDefaultStore
   ) {
     this.fs = fs;
     this.metadataKey = metadataKey;
-    this.log = diagnostics?.for("associations") ?? null;
+    this.log = diagnostics?.for(DiagnosticSubsystem.Associations) ?? null;
   }
 
   private async load(): Promise<LoadedDefaults> {
@@ -80,7 +85,7 @@ export class FsServiceAssociationDefaultStore implements AssociationDefaultStore
         },
         (error: unknown) => {
           this.loadPromise = null;
-          this.log?.warn("associations.defaults.read.failed", {
+          this.log?.warn(DiagnosticEvent.Associations.DefaultsReadFailed, {
             errorType: diagnosticErrorType(error),
           });
           throw error;
@@ -107,7 +112,7 @@ export class FsServiceAssociationDefaultStore implements AssociationDefaultStore
         });
       } catch (error) {
         this.invalidateLoadedState();
-        this.log?.warn("associations.defaults.write.failed", {
+        this.log?.warn(DiagnosticEvent.Associations.DefaultsWriteFailed, {
           errorType: diagnosticErrorType(error),
         });
         throw error;

@@ -5,7 +5,11 @@ import {
   offerAppInstall,
   openAppTile,
 } from "neutron-tools/app";
-import type { DiagnosticLogger } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../diagnostics/index.ts";
 import type { VanillaNeutronApi } from "./types.ts";
 
 export const MAX_CONCURRENT_FRONTEND_CALLS_PER_ENDPOINT = 8;
@@ -30,10 +34,10 @@ export type FrontendCallAdmission = <T>(
 
 export interface FrontendCallAdmissionOptions {
   now?: () => number;
-  diagnosticLogger?: () => DiagnosticLogger | null;
+  diagnosticLogger?: () => DiagnosticLogger<typeof DiagnosticSubsystem.Neutron> | null;
 }
 
-let sharedDiagnosticLogger: DiagnosticLogger | null = null;
+let sharedDiagnosticLogger: DiagnosticLogger<typeof DiagnosticSubsystem.Neutron> | null = null;
 
 /**
  * Attach the canonical production logger to the one shared caller-endpoint
@@ -41,7 +45,7 @@ let sharedDiagnosticLogger: DiagnosticLogger | null = null;
  * exist; callers must not create a second admission semaphore merely to log it.
  */
 export function setFrontendCallAdmissionDiagnosticLogger(
-  logger: DiagnosticLogger | null,
+  logger: DiagnosticLogger<typeof DiagnosticSubsystem.Neutron> | null,
 ): void {
   sharedDiagnosticLogger = logger;
 }
@@ -66,7 +70,10 @@ export function createFrontendCallAdmission(
   }
 
   const now = options.now ?? Date.now;
-  const logDebug = (event: string, context: Record<string, unknown>): void => {
+  const logDebug = (
+    event: Parameters<DiagnosticLogger<typeof DiagnosticSubsystem.Neutron>["debug"]>[0],
+    context: Record<string, unknown>,
+  ): void => {
     try {
       options.diagnosticLogger?.()?.debug(event, context);
     } catch {
@@ -90,7 +97,7 @@ export function createFrontendCallAdmission(
     }
 
     const queuedAtMs = now();
-    logDebug("neutron.frontend-call.queued", {
+    logDebug(DiagnosticEvent.Neutron.FrontendCallQueued, {
       callId,
       name,
       active,
@@ -116,7 +123,7 @@ export function createFrontendCallAdmission(
     // this reservation, a newly arriving call can barge into the gap and the
     // resumed waiter can raise active above the configured maximum.
     start(next.callId, next.name);
-    logDebug("neutron.frontend-call.admitted", {
+    logDebug(DiagnosticEvent.Neutron.FrontendCallAdmitted, {
       callId: next.callId,
       name: next.name,
       waitMs: now() - next.queuedAtMs,
@@ -132,7 +139,7 @@ export function createFrontendCallAdmission(
     activeCalls.delete(callId);
     active -= 1;
     if (queued) {
-      logDebug("neutron.frontend-call.completed", {
+      logDebug(DiagnosticEvent.Neutron.FrontendCallCompleted, {
         callId,
         name: current?.name,
         durationMs: current === undefined ? undefined : now() - current.startedAtMs,

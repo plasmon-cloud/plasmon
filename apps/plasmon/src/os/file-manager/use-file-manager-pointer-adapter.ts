@@ -7,6 +7,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
+import { deleteFailureMessage, type FileManagerTrashAuthority } from "./delete.ts";
 import {
   captureMarqueeRectangles,
   clearSelection,
@@ -35,6 +36,11 @@ import {
   type DragPreviewRect,
 } from "./drag-preview.ts";
 import type { FileOperationState } from "./operation-state.ts";
+import {
+  canDropNodesToRecycleBin,
+  isRecycleBinDropTarget,
+  moveDroppedNodesToRecycleBin,
+} from "./trash-drop.ts";
 import type { FileManagerPresentation } from "./render-state.ts";
 
 export interface MarqueeVisual {
@@ -46,6 +52,7 @@ export interface MarqueeVisual {
 
 interface UseFileManagerPointerAdapterOptions {
   fs: FsService;
+  trashAuthority: FileManagerTrashAuthority;
   nodes: readonly FsNode[];
   orderedIds: readonly NodeId[];
   selection: SelectionState;
@@ -90,6 +97,7 @@ interface DragDropCandidate {
 }
 
 interface ActiveDropTarget {
+  kind: "directory" | "trash";
   node: FsNode;
   element: HTMLElement;
 }
@@ -140,6 +148,7 @@ function nextAnimationFrame(): Promise<void> {
 export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapterOptions) {
   const {
     fs,
+    trashAuthority,
     nodes,
     orderedIds,
     selection,
@@ -348,16 +357,11 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         seenEntries.add(entry);
         const id = entry.dataset.fmNodeId;
         if (!id) return null;
-        const candidateId = directoryDropCandidateId([
-          {
-            kind: "entry",
-            nodeId: id,
-            nodeKind: entry.dataset.fmKind as FsNode["kind"] | undefined,
-          },
-        ], active.ids);
-        // A visible resource entry blocks its containing directory surface. A
-        // normal file therefore means "no target" instead of "drop in folder".
-        return candidateId ? { id: candidateId, element: entry, kind: "entry" } : null;
+        // Any visible entry blocks its containing directory surface. The
+        // canonical resolver below decides whether it is a directory, Recycle
+        // Bin target, or an ordinary non-target resource.
+        if (active.ids.includes(id)) return null;
+        return { id, element: entry, kind: "entry" };
       }
 
       const surface = element.closest<HTMLElement>("[data-fm-directory-id]");
@@ -376,14 +380,22 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
   const resolveCanonicalDropTarget = async (
     active: EntryDragState,
     candidate: DragDropCandidate | null,
-  ): Promise<FsNode | null> => {
+  ): Promise<Omit<ActiveDropTarget, "element"> | null> => {
     if (!candidate) return null;
     const source = sourceNodesFor(active);
     if (source.length !== active.ids.length) return null;
     try {
       const target = await fs.stat(candidate.id);
+      if (
+        candidate.kind === "entry"
+        && await isRecycleBinDropTarget(fs, target)
+        && canDropNodesToRecycleBin(source)
+      ) {
+        return { kind: "trash", node: target };
+      }
+      if (target.kind !== "directory") return null;
       await validateDirectoryDrop(fs, source, target);
-      return target;
+      return { kind: "directory", node: target };
     } catch {
       return null;
     }
@@ -410,7 +422,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
         || dropCandidateRef.current.element !== candidate.element
         || dropCandidateRef.current.kind !== candidate.kind
       ) return;
-      if (target) setActiveDropTarget({ node: target, element: candidate.element });
+      if (target) setActiveDropTarget({ ...target, element: candidate.element });
       applyDragVisual();
     });
   };
@@ -553,9 +565,9 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const candidate = dragCandidateAtPoint(active, event.clientX, event.clientY);
     const resolved = dropTargetRef.current;
     const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element
-      ? resolved.node
+      ? resolved
       : await resolveCanonicalDropTarget(active, candidate);
-    const placementCommit = target?.kind === "directory" && candidate?.id === target.id
+    const placementCommit = target?.kind === "directory" && candidate?.id === target.node.id
       ? handoffIncomingPlacement(active, candidate, dx, dy)
       : null;
 
@@ -574,6 +586,21 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
     const ids = [...outcome.ids];
     const source = sourceNodesFor(active);
     try {
+      if (target?.kind === "trash") {
+        removeDragPreview();
+        const result = await moveDroppedNodesToRecycleBin(trashAuthority, source);
+        let completionError = deleteFailureMessage(result.failures);
+        try {
+          await refresh();
+        } catch (refreshCause: unknown) {
+          const refreshMessage = `refresh failed: ${errorMessage(refreshCause)}`;
+          completionError = completionError
+            ? `${completionError} (${refreshMessage})`
+            : refreshMessage;
+        }
+        setError(completionError);
+        return;
+      }
       if (target?.kind === "directory") {
         if (!placementCommit) removeDragPreview();
         if (!operationState.begin("move", source.length)) {
@@ -582,7 +609,7 @@ export function useFileManagerPointerAdapter(options: UseFileManagerPointerAdapt
           return;
         }
         try {
-          await moveNodesToDirectory(fs, source, target, {
+          await moveNodesToDirectory(fs, source, target.node, {
             onItemStart: (index, node) => operationState.startItem(index, node.name),
             onItemSuccess: () => operationState.succeedItem(),
             onItemFailure: (_index, node, cause) => operationState.failItem(node.name, errorMessage(cause)),

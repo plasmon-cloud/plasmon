@@ -180,7 +180,7 @@ test("FileManager, Start, and Search share canonical filesystem-open outcomes", 
           start: photosShortcut,
           search: photos,
         },
-        expected: { handlerId: "native:photos", nodeId: photos.id },
+        expected: { handlerId: "native:photos", nodeId: null },
       },
     ];
 

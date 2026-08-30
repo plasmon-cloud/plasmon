@@ -78,6 +78,13 @@ const archive = createZip([
   { name: "emulators/wdosbox.js", bytes: js },
   { name: "emulators/wdosbox.wasm", bytes: wasm },
 ]);
+const distArchive = createZip([
+  { name: "dist/js-dos.js", bytes: js },
+  { name: "dist/js-dos.css", bytes: css, compression: 0 },
+  { name: "dist/emulators/emulators.js", bytes: js },
+  { name: "dist/emulators/wdosbox.js", bytes: js },
+  { name: "dist/emulators/wdosbox.wasm", bytes: wasm },
+]);
 
 test("js-dos materializer extracts only the declared exact ZIP entries", () => {
   const required = [
@@ -91,6 +98,20 @@ test("js-dos materializer extracts only the declared exact ZIP entries", () => {
   expect([...extracted.keys()]).toEqual([...required]);
   expect(extracted.get("js-dos.js")).toEqual(js);
   expect(extracted.get("js-dos.css")).toEqual(css);
+  expect(extracted.get("emulators/wdosbox.wasm")).toEqual(wasm);
+});
+
+test("js-dos materializer resolves the pinned release's dist-prefixed assets", () => {
+  const required = [
+    "js-dos.js",
+    "js-dos.css",
+    "emulators/emulators.js",
+    "emulators/wdosbox.js",
+    "emulators/wdosbox.wasm",
+  ] as const;
+  const extracted = extractRequiredZipEntries(distArchive, required);
+  expect([...extracted.keys()]).toEqual([...required]);
+  expect(extracted.get("js-dos.js")).toEqual(js);
   expect(extracted.get("emulators/wdosbox.wasm")).toEqual(wasm);
 });
 
