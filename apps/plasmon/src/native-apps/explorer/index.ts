@@ -20,7 +20,7 @@ export * from "./history.ts";
 export const explorerAppDefinition: NativeAppDefinition = {
   id: "native:explorer",
   handlerId: "native:explorer",
-  name: "Files",
+  name: "File Manager",
   icon: SYSTEM_ICON_ASSETS["file-manager"],
   singleton: false,
   defaultWindow: { width: 960, height: 650, minWidth: 640, minHeight: 420 },
