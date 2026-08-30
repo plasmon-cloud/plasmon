@@ -49,6 +49,7 @@ const contentRules = Object.freeze([
   ["PR-numbered active artifact/resource", /\bpr[-_ ]\d+\b/iu],
   ["Issue prose reference", /\bissue\s*#?\d+\b/iu],
   ["PR prose reference", /\bpull request\s*#?\d+\b|\bPR\s*#?\d+\b/iu],
+  ["work-item number in active Actions diagnostic", /::(?:error|warning|notice)\s+title=[^:\r\n]*#\d{2,}\b/iu],
   ["concrete release branch coupling", /\brelease\/\d+\.\d+\.\d+(?:-[A-Za-z0-9._-]+)?\b/u],
   ["release-era identifier", /\bR\d+_[A-Z][A-Z0-9_]*\b/u],
   ["submission-fix provenance", /\bsubmission\s+fix\b/iu],
@@ -211,6 +212,7 @@ function selfTest() {
   const legacyReleaseBranchB = ["release", `0.1.0-r${"3"}`].join("/");
   const testTitle = `test("#${"999"} behavior", () => {})`;
   const artifact = `issue-${"999"}-graphite.png`;
+  const diagnostic = `console.log("::error title=#${"999"} stale work item::failure")`;
 
   const fixtureRoot = mkdtempSync(resolve(tmpdir(), "plasmon-active-provenance-"));
   try {
@@ -223,6 +225,7 @@ function selfTest() {
       `const legacyBranchA = "${legacyReleaseBranchA}";`,
       `const legacyBranchB = "${legacyReleaseBranchB}";`,
       `const evidence = "${artifact}";`,
+      diagnostic,
     ].join("\n"));
     writeFileSync(resolve(fixtureRoot, "test", camelCaseTest), "export {};\n");
 
@@ -235,6 +238,7 @@ function selfTest() {
       "release-numbered tag:",
       "Issue-numbered test title:",
       "Issue-numbered active artifact/resource:",
+      "work-item number in active Actions diagnostic:",
       `concrete release branch coupling: ${numberedSpec}:4:`,
       `concrete release branch coupling: ${numberedSpec}:5:`,
     ];
