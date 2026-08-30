@@ -23,6 +23,13 @@ async function launchPlasmon(page: import("@playwright/test").Page) {
   return { plasmon, kernelUrl };
 }
 
+async function closeTerminalDialog(
+  terminalWindow: import("@playwright/test").FrameLocator | import("@playwright/test").Locator,
+) {
+  await terminalWindow.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(terminalWindow).toBeHidden();
+}
+
 test("packaged experiment executes .cmd through .run and exposes .run TypeScript completion", async ({ page, request }) => {
   const { plasmon, kernelUrl } = await launchPlasmon(page);
 
@@ -81,6 +88,14 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
 
   const cmdEntry = fileList.locator('[data-fm-node-id]', { hasText: "Experiment Smoke.cmd" }).first();
   await expect(cmdEntry).toBeVisible();
+
+  // Normal file activation must execute .cmd instead of opening it as generic text.
+  await cmdEntry.dblclick();
+  const cmdTerminal = plasmon.getByRole("dialog", { name: "Terminal" }).last();
+  await expect(cmdTerminal.getByRole("log")).toContainText("Running /Experiment Smoke.cmd", { timeout: 20_000 });
+  await expect(cmdTerminal.getByRole("log")).toContainText("Hello from Plasmon", { timeout: 30_000 });
+  await closeTerminalDialog(cmdTerminal);
+
   await cmdEntry.click({ button: "right" });
   const cmdMenu = plasmon.getByRole("menu").last();
   await expect(cmdMenu.getByRole("menuitem", { name: "Run", exact: true })).toBeVisible();
@@ -99,8 +114,18 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
       `Explorer did not project the generated .run. alerts=${JSON.stringify(alerts)} visibleNames=${JSON.stringify(visibleNames)}; ${cause instanceof Error ? cause.message : String(cause)}`,
     );
   }
+
+  // Normal file activation must execute the transpiled .run through the same TypeScript runtime.
+  await runEntry.dblclick();
+  const runTerminal = plasmon.getByRole("dialog", { name: "Terminal" }).last();
+  await expect(runTerminal.getByRole("log")).toContainText("Running /Experiment Smoke.run", { timeout: 20_000 });
+  await expect(runTerminal.getByRole("log")).toContainText("Hello from Plasmon", { timeout: 30_000 });
+  await closeTerminalDialog(runTerminal);
+
   await runEntry.click({ button: "right" });
-  await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const runMenu = plasmon.getByRole("menu").last();
+  await expect(runMenu.getByRole("menuitem", { name: "Run", exact: true })).toBeVisible();
+  await runMenu.getByRole("menuitem", { name: "Edit", exact: true }).click();
 
   const editorWindow = plasmon.getByRole("dialog", { name: "Experiment Smoke.run" }).last();
   await expect(editorWindow).toBeVisible({ timeout: 20_000 });
