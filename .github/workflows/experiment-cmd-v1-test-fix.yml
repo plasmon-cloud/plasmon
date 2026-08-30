@@ -92,7 +92,7 @@ jobs:
           PY
           git rm .github/workflows/experiment-cmd-v1-test-fix.yml
       - run: npm ci
-      - name: Run full Plasmon test suite
+      - name: Verify R3 inventory and full Plasmon test suite
         run: npm --workspace neutron-plasmon test
       - name: Hygiene
         run: git diff --check
@@ -100,6 +100,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/plasmon/src/scripting/v1-regression.test.ts
+          git add apps/plasmon/src/scripting/v1-regression.test.ts test/ci/plasmon-test-inventory.mjs
           git commit -am "Test: strengthen cmd v1 regression matrix"
           git push origin HEAD:experiment/cmd
