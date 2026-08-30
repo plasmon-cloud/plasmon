@@ -3,8 +3,8 @@ import { buildProbeMatrix, packetSizeForProbe } from "./build-plasmon-flake-prob
 import { browserLanes } from "./plasmon-test-inventory.mjs";
 import { isolationForProbe, PERSISTENT_STATE_RESET_FILES } from "./plasmon-playwright-isolation.mjs";
 import {
-  MERGE_QUEUE_CHARACTERIZATION_COUNT,
-  MERGE_QUEUE_PROBE_COUNT,
+  PRE_MERGE_CHARACTERIZATION_COUNT,
+  PRE_MERGE_PROBE_COUNT,
   POST_MERGE_CHARACTERIZATION_COUNT,
   POST_MERGE_PROBE_COUNT,
   TARGETED_CHARACTERIZATION_PACKET_SIZE,
@@ -45,30 +45,30 @@ function matrixEnv({ primaryCount, primaryMode, charCount, characterize }) {
   };
 }
 
-if (packetSizeForProbe({ mode: "characterization", iteration_count: MERGE_QUEUE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== MERGE_QUEUE_CHARACTERIZATION_COUNT) {
-  throw new Error("merge-queue characterization must use one prepared packet");
+if (packetSizeForProbe({ mode: "characterization", iteration_count: PRE_MERGE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== PRE_MERGE_CHARACTERIZATION_COUNT) {
+  throw new Error("approval-stage characterization must use one prepared packet");
 }
 if (packetSizeForProbe({ mode: "characterization", iteration_count: POST_MERGE_CHARACTERIZATION_COUNT, target: "exact-set" }) !== TARGETED_CHARACTERIZATION_PACKET_SIZE) {
-  throw new Error("post-merge characterization must use bounded repeated packets");
+  throw new Error("post-merge targeted characterization must use one prepared packet");
 }
-for (const count of [MERGE_QUEUE_PROBE_COUNT, POST_MERGE_PROBE_COUNT, POST_MERGE_CHARACTERIZATION_COUNT]) {
+for (const count of [PRE_MERGE_PROBE_COUNT, POST_MERGE_PROBE_COUNT]) {
   if (packetSizeForProbe({ mode: "baseline", iteration_count: count, target: "all" }) !== 1) {
     throw new Error(`broad all ${count}-iteration probe must remain one execution per job`);
   }
 }
 
-const mergePackets = buildProbeMatrix(matrixEnv({
-  primaryCount: MERGE_QUEUE_PROBE_COUNT,
+const preMergePackets = buildProbeMatrix(matrixEnv({
+  primaryCount: PRE_MERGE_PROBE_COUNT,
   primaryMode: "merge-validation",
-  charCount: MERGE_QUEUE_CHARACTERIZATION_COUNT,
+  charCount: PRE_MERGE_CHARACTERIZATION_COUNT,
   characterize: true,
 })).include;
-if (mergePackets.length !== 2) throw new Error(`merge queue must schedule two packets; saw ${mergePackets.length}`);
-const mergePrimary = mergePackets.find((packet) => packet.mode === "merge-validation");
-const mergeCharacterization = mergePackets.find((packet) => packet.mode === "characterization");
-if (mergePrimary?.repetitions !== MERGE_QUEUE_PROBE_COUNT) throw new Error("merge broad packet lost one-execution semantics");
-if (mergeCharacterization?.repetitions !== MERGE_QUEUE_CHARACTERIZATION_COUNT || mergeCharacterization?.start_iteration !== 1 || mergeCharacterization?.end_iteration !== MERGE_QUEUE_CHARACTERIZATION_COUNT) {
-  throw new Error("merge characterization must cover its full iteration range in one prepared packet");
+if (preMergePackets.length !== 2) throw new Error(`approval-stage confidence must schedule two packets; saw ${preMergePackets.length}`);
+const preMergePrimary = preMergePackets.find((packet) => packet.mode === "merge-validation");
+const preMergeCharacterization = preMergePackets.find((packet) => packet.mode === "characterization");
+if (preMergePrimary?.repetitions !== PRE_MERGE_PROBE_COUNT) throw new Error("approval broad packet lost one-execution semantics");
+if (preMergeCharacterization?.repetitions !== PRE_MERGE_CHARACTERIZATION_COUNT || preMergeCharacterization?.start_iteration !== 1 || preMergeCharacterization?.end_iteration !== PRE_MERGE_CHARACTERIZATION_COUNT) {
+  throw new Error("approval characterization must cover all 3 observations in one prepared packet");
 }
 
 const postMergePackets = buildProbeMatrix(matrixEnv({
@@ -79,18 +79,17 @@ const postMergePackets = buildProbeMatrix(matrixEnv({
 })).include;
 const broadPackets = postMergePackets.filter((packet) => packet.mode === "baseline");
 const characterizationPackets = postMergePackets.filter((packet) => packet.mode === "characterization");
-const expectedCharacterizationPackets = POST_MERGE_CHARACTERIZATION_COUNT / TARGETED_CHARACTERIZATION_PACKET_SIZE;
 if (broadPackets.length !== POST_MERGE_PROBE_COUNT || broadPackets.some((packet) => packet.repetitions !== 1)) {
-  throw new Error("post-merge broad probes must remain independent observations");
+  throw new Error("post-merge broad probes must remain independent observations pending shared-PocketIC optimization");
 }
-if (characterizationPackets.length !== expectedCharacterizationPackets || characterizationPackets.some((packet) => packet.repetitions !== TARGETED_CHARACTERIZATION_PACKET_SIZE)) {
-  throw new Error("post-merge characterization packetization no longer matches policy");
+if (characterizationPackets.length !== 1 || characterizationPackets[0]?.repetitions !== POST_MERGE_CHARACTERIZATION_COUNT) {
+  throw new Error("post-merge targeted 3 must use one prepared characterization packet");
 }
 const coveredIterations = characterizationPackets.flatMap((packet) =>
   Array.from({ length: packet.repetitions }, (_, index) => packet.start_iteration + index),
 );
 if (coveredIterations.join(",") !== Array.from({ length: POST_MERGE_CHARACTERIZATION_COUNT }, (_, index) => index + 1).join(",")) {
-  throw new Error("post-merge characterization packets must cover every iteration exactly once");
+  throw new Error("post-merge characterization packet must cover every iteration exactly once");
 }
 
 for (const resetFile of PERSISTENT_STATE_RESET_FILES) {
@@ -140,4 +139,4 @@ for (const fragment of ["--workers=1", "--retries=0", "--grep-invert @quarantine
   requireFragment(flakeRunner, fragment, "flake runner");
 }
 
-console.log("Playwright packet lifecycle verified from shared policy and inventory: merge queue uses one broad execution plus one prepared characterization packet; post-merge uses independent broad observations plus bounded repeated characterization packets; setup reuse, state reset, retries=0, workers=1, and quarantine exclusion are preserved");
+console.log("Playwright packet lifecycle verified: approval confidence uses one broad execution plus one prepared 3x characterization packet; post-merge uses three independent broad observations plus one prepared 3x targeted packet; setup reuse, state reset, retries=0, workers=1, and quarantine exclusion are preserved");

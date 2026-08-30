@@ -6,6 +6,8 @@ on:
       - version-0.1.0-os
       - 'release/**'
   pull_request:
+  pull_request_review:
+    types: [submitted]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -14,8 +16,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: plasmon-browser-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: plasmon-browser-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   packaged-browser:
@@ -32,20 +34,24 @@ jobs:
       - name: Verify required-gate workflow contract
         run: node test/ci/verify-required-browser-gates.mjs browser
 
-      - name: Report PR gate deferred to merge queue
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Report staged specialist checkpoint
+        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
-          echo "Packaged Playwright specialist acceptance is deferred until the approved PR enters the merge queue."
-          echo "The required check is intentionally satisfied on the PR head; the real package/browser gate runs on merge_group."
+          case "${{ github.event_name }}" in
+            pull_request) echo "Specialist acceptance waits for normal GitHub review approval." ;;
+            merge_group) echo "Specialist acceptance already passed before Merge; merge queue is fast-only." ;;
+            push) echo "Specialist acceptance already passed before merge; post-merge Flake Probe owns stability analysis." ;;
+            pull_request_review) echo "This review was not an approval; no expensive Specialist work is started." ;;
+          esac
 
       - name: Install Nix
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon specialist browser acceptance
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -81,7 +87,7 @@ jobs:
           '
 
       - name: Upload Specialist Playwright report
-        if: ${{ always() && github.event_name != 'pull_request' }}
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-specialist-report-${{ github.run_attempt }}
@@ -100,20 +106,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Report PR gate deferred to merge queue
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Report staged demo checkpoint
+        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
-          echo "Packaged Playwright demo acceptance is deferred until the approved PR enters the merge queue."
-          echo "The real full-profile package/browser gate runs on merge_group."
+          case "${{ github.event_name }}" in
+            pull_request) echo "Demo acceptance waits for normal GitHub review approval." ;;
+            merge_group) echo "Demo acceptance already passed before Merge; merge queue is fast-only." ;;
+            push) echo "Demo acceptance already passed before merge; post-merge Flake Probe owns stability analysis." ;;
+            pull_request_review) echo "This review was not an approval; no expensive Demo work is started." ;;
+          esac
 
       - name: Install Nix
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon demo browser acceptance
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -150,7 +160,7 @@ jobs:
           '
 
       - name: Upload Demo Playwright report
-        if: ${{ always() && github.event_name != 'pull_request' }}
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')) }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-demo-report-${{ github.run_attempt }}

@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  MERGE_QUEUE_CHARACTERIZATION_COUNT,
+  PRE_MERGE_CHARACTERIZATION_COUNT,
   POST_MERGE_CHARACTERIZATION_COUNT,
   TARGETED_CHARACTERIZATION_PACKET_SIZE,
 } from "./plasmon-flake-probe-policy.mjs";
@@ -20,8 +20,8 @@ const targetedPlaywrightTargets = new Set([
 
 export function packetSizeForProbe({ iteration_count, target, mode }) {
   if (!targetedPlaywrightTargets.has(target)) return 1;
-  if (mode === "characterization" && iteration_count === MERGE_QUEUE_CHARACTERIZATION_COUNT) {
-    return MERGE_QUEUE_CHARACTERIZATION_COUNT;
+  if (mode === "characterization" && iteration_count === PRE_MERGE_CHARACTERIZATION_COUNT) {
+    return PRE_MERGE_CHARACTERIZATION_COUNT;
   }
   if (iteration_count === POST_MERGE_CHARACTERIZATION_COUNT) {
     return TARGETED_CHARACTERIZATION_PACKET_SIZE;

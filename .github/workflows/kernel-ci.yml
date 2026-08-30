@@ -6,6 +6,8 @@ on:
       - main
       - 'release/**'
   pull_request:
+  pull_request_review:
+    types: [submitted]
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -33,47 +35,36 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Push/main, release integration, merge queue, and manual runs preserve the full Kernel lane.
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "run_kernel=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          kernel_relevant() {
-            case "$1" in
-              apps/plasmon/*|test/e2e/plasmon-golden-path.spec.ts|README.md|AGENTS.md|LICENSE|doc/*|.github/workflows/README.md)
-                return 1
-                ;;
-              *)
-                return 0
-                ;;
-            esac
-          }
-
-          ! kernel_relevant "apps/plasmon/src/index.tsx"
-          ! kernel_relevant "test/e2e/plasmon-golden-path.spec.ts"
-          ! kernel_relevant "doc/testing-and-verification.md"
-          kernel_relevant "apps/kernel/package.json"
-          kernel_relevant ".github/workflows/kernel-ci.yml"
-
-          base_sha="${{ github.event.pull_request.base.sha }}"
-          head_sha="${{ github.event.pull_request.head.sha }}"
-          git diff --name-only "$base_sha" "$head_sha" > /tmp/kernel-changed-files.txt
-          cat /tmp/kernel-changed-files.txt
-
-          run_kernel=false
-          while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            if kernel_relevant "$path"; then
-              run_kernel=true
-              break
-            fi
-          done < /tmp/kernel-changed-files.txt
-
-          echo "run_kernel=$run_kernel" >> "$GITHUB_OUTPUT"
-          if [ "$run_kernel" != "true" ]; then
-            echo "No kernel-relevant changes; required kernel job will be skipped."
-          fi
+          case "${{ github.event_name }}" in
+            pull_request|merge_group)
+              echo "run_kernel=false" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            pull_request_review)
+              if [ "${{ github.event.review.state }}" = "approved" ]; then
+                echo "run_kernel=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "run_kernel=false" >> "$GITHUB_OUTPUT"
+              fi
+              exit 0
+              ;;
+            push)
+              if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                echo "run_kernel=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "run_kernel=false" >> "$GITHUB_OUTPUT"
+              fi
+              exit 0
+              ;;
+            workflow_dispatch)
+              echo "run_kernel=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+            *)
+              echo "unsupported Kernel CI event" >&2
+              exit 1
+              ;;
+          esac
 
   kernel:
     name: kernel

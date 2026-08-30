@@ -50,11 +50,7 @@ function canUseMatureSummarizer(mode, count) {
 }
 
 function delegateToMatureSummarizer() {
-  const result = spawnSync(
-    process.execPath,
-    ["test/ci/summarize-flake-probe.mjs", ...args],
-    { encoding: "utf8", env: process.env },
-  );
+  const result = spawnSync(process.execPath, ["test/ci/summarize-flake-probe.mjs", ...args], { encoding: "utf8", env: process.env });
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");
   process.exit(result.status ?? 1);
@@ -73,9 +69,7 @@ try {
 
   const identity = ["mode", "iteration_count", "sha", "target", "scope", "run_number"];
   for (const result of rawResults) {
-    for (const key of identity) {
-      if (result[key] !== first[key]) throw new Error(`probe result artifacts disagree on ${key}`);
-    }
+    for (const key of identity) if (result[key] !== first[key]) throw new Error(`probe result artifacts disagree on ${key}`);
   }
 
   const selected = new Map();
@@ -104,8 +98,10 @@ try {
   const failed = ordered.filter((result) => result.outcome !== "success");
   const passed = ordered.length - failed.length;
   const heading = mode === "merge-validation"
-    ? "## Plasmon merge-queue flake validation"
-    : `## Plasmon ${count}-iteration characterization probe`;
+    ? "## Plasmon approval-stage flake validation"
+    : mode === "baseline"
+      ? `## Plasmon post-merge ${count}-observation baseline`
+      : `## Plasmon ${count}-iteration characterization probe`;
   console.log(heading);
   console.log();
   console.log(`- Probe mode: \`${mode}\``);
@@ -125,16 +121,8 @@ try {
     target: first.target,
     iteration_count: count,
     run_number: Number(first.run_number),
-    iteration_results: ordered.map((result) => ({
-      iteration: result.iteration,
-      run_attempt: result.runAttempt,
-      outcome: result.outcome,
-    })),
-    superseded_results: superseded.map((result) => ({
-      iteration: result.iteration,
-      run_attempt: result.runAttempt,
-      outcome: result.outcome,
-    })),
+    iteration_results: ordered.map((result) => ({ iteration: result.iteration, run_attempt: result.runAttempt, outcome: result.outcome })),
+    superseded_results: superseded.map((result) => ({ iteration: result.iteration, run_attempt: result.runAttempt, outcome: result.outcome })),
     passed,
     failed_iterations: failed.map((result) => result.iteration),
     status: failed.length === 0 ? "stable-observed" : "failure-observed",
