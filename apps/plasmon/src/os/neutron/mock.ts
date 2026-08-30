@@ -49,7 +49,9 @@ export class MockNeutronBridge implements NeutronBridge {
   private readonly listeners = new Set<() => void>();
 
   constructor(options: MockNeutronBridgeOptions = {}) {
-    this.logger = options.logger ?? ((message) => console.info(message));
+    // Preview/test construction is silent by default. Tests or preview tooling
+    // that need these human-readable action messages inject an observer.
+    this.logger = options.logger ?? (() => undefined);
     this.elements = cloneExternalElements(options.elements ?? PREVIEW_ELEMENTS);
   }
 
