@@ -91,6 +91,12 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
     setUnsupported(null);
     setSource(null);
 
+    if (!target.nodeId && !target.url) {
+      setLoading(false);
+      process.setTitle(processId, "Video Player");
+      return () => { active = false; };
+    }
+
     void resolveVideoSource(target, fs)
       .then((resolved) => {
         if (!active) {
@@ -170,6 +176,9 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
         <NativeAppStateSurface style={styles.unsupported} role="alert">
           {unsupported}
         </NativeAppStateSurface>
+      )}
+      {!loading && !error && !unsupported && !source && (
+        <NativeAppStateSurface role="status">Open a video file or supported URL to start playback.</NativeAppStateSurface>
       )}
 
       {source?.kind === "video" && !unsupported && (

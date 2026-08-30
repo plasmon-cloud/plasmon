@@ -101,21 +101,24 @@ export function NativeWindow({
       window.clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-
-    if (onRequestClose) {
-      const accepted = onRequestClose(state.id, state.processId) !== false;
-      if (!accepted) setClosing(false);
-      return;
-    }
     manager.close(state.id);
-  }, [manager, onRequestClose, state.id, state.processId]);
+  }, [manager, state.id]);
 
   const requestClose = useCallback(() => {
     if (closingRef.current) return;
+
+    // Process-owned close negotiation must happen before Windowing changes the
+    // rendered state. A deferred/rejected lifecycle request therefore leaves
+    // the exact window visible while the application resolves its concern.
+    if (onRequestClose) {
+      onRequestClose(state.id, state.processId);
+      return;
+    }
+
     closingRef.current = true;
     setClosing(true);
     closeTimerRef.current = window.setTimeout(finalizeClose, CLOSE_FALLBACK_MS);
-  }, [finalizeClose]);
+  }, [finalizeClose, onRequestClose, state.id, state.processId]);
 
   const rootClassName = classNames(
     "plasmon-window",
