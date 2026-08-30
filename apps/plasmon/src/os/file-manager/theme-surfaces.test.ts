@@ -34,10 +34,12 @@ test("File Manager view dropdown consumes semantic states shared by every suppor
   ]);
   expect(themeSurfaces).toContain(".explorer-app__viewbar select option");
   expect(themeSurfaces).toContain("background: var(--plasmon-control-background)");
+  expect(themeSurfaces).toContain("background: var(--plasmon-panel-elevated)");
   expect(themeSurfaces).toContain("background: var(--plasmon-control-hover)");
-  expect(themeSurfaces).toContain("background: var(--plasmon-selection)");
+  expect(themeSurfaces).toContain("background: var(--plasmon-accent)");
   expect(themeSurfaces).toContain("color: var(--plasmon-text-primary)");
   expect(themeSurfaces).toContain("color: var(--plasmon-text-disabled)");
+  expect(themeSurfaces).toContain("color: var(--plasmon-accent-ink)");
   expect(themeSurfaces).toContain("outline: 2px solid var(--plasmon-focus-ring)");
   expect(themeSurfaces).not.toMatch(/(?:background|color|border(?:-color)?):\s*(?:#|rgb|hsl|white\b|black\b)/iu);
 });
