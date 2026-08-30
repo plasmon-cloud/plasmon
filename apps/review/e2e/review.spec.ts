@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { login, openReview } from "./harness.ts";
 
-const TEST_PLAN = `# r2 Human Acceptance\n\n- [ ] Explorer Back returns to the prior folder\n  1. Open Explorer.\n  2. Navigate into Documents and then a child folder.\n  3. Press Back.\n  Expected: Explorer returns to Documents.\n\n- [ ] Markdown files open in Markdown\n  1. Open Explorer.\n  2. Double-click a Markdown file.\n  Expected: Markdown opens the selected file.`;
+const TEST_PLAN = `# Human Acceptance Review\n\n- [ ] Explorer Back returns to the prior folder\n  1. Open Explorer.\n  2. Navigate into Documents and then a child folder.\n  3. Press Back.\n  Expected: Explorer returns to Documents.\n\n- [ ] Markdown files open in Markdown\n  1. Open Explorer.\n  2. Double-click a Markdown file.\n  Expected: Markdown opens the selected file.`;
 
 test("packaged Review first-run makes the human acceptance workflow obvious", async ({ page }, testInfo) => {
   await login(page);
@@ -22,10 +22,10 @@ test("packaged Review first-run makes the human acceptance workflow obvious", as
 
   await page.emulateMedia({ colorScheme: "light" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "review-395-first-run-light");
+  await attachBrowserScreenshot(page, testInfo, "review-first-run-light");
   await page.emulateMedia({ colorScheme: "dark" });
   await expectReadable(harness.review.locator(".review-app"), 4.5);
-  await attachBrowserScreenshot(page, testInfo, "review-395-first-run-dark");
+  await attachBrowserScreenshot(page, testInfo, "review-first-run-dark");
 });
 
 test("packaged Review pastes a plan, resumes human progress, and submits without Files", async ({ page }, testInfo) => {
@@ -35,11 +35,11 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
 
   await harness.review.getByRole("button", { name: "Paste AI test plan" }).first().click();
   const dialog = harness.review.getByRole("dialog", { name: "Paste AI test plan" });
-  await dialog.getByLabel("Review name").fill("r2 Human Acceptance");
+  await dialog.getByLabel("Review name").fill("Human Acceptance Review");
   await dialog.getByLabel("Test plan").fill(TEST_PLAN);
   await dialog.getByRole("button", { name: "Create Review from plan" }).click();
 
-  await expect(harness.review.locator(".review-workspace").getByRole("heading", { name: "r2 Human Acceptance" })).toBeVisible();
+  await expect(harness.review.locator(".review-workspace").getByRole("heading", { name: "Human Acceptance Review" })).toBeVisible();
   await expect(harness.review.getByText("0 of 2 checks reviewed by you.")).toBeVisible();
   await expect(harness.review.getByText("2 Remaining", { exact: true })).toBeVisible();
 
@@ -55,7 +55,7 @@ test("packaged Review pastes a plan, resumes human progress, and submits without
   await expect(harness.review.getByText("1 Fail", { exact: true })).toBeVisible();
   await expect(harness.review.getByText("1 Remaining", { exact: true })).toBeVisible();
   await expect(harness.review.locator(".submission-state")).toContainText("Current changes are not submitted");
-  await attachBrowserScreenshot(page, testInfo, "review-395-recorded-failure");
+  await attachBrowserScreenshot(page, testInfo, "review-recorded-failure");
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await login(page);

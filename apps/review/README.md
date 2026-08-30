@@ -53,7 +53,7 @@ Top-level Markdown bullets or checkboxes become acceptance checks. Indented line
 Example:
 
 ```markdown
-# r2 Human Acceptance
+# Human Acceptance Review
 
 - [ ] Explorer Back returns to the prior folder
   1. Open Explorer.
@@ -130,7 +130,7 @@ Submission bookkeeping is provider-local operational metadata and does not creat
 
 ## Package and verification
 
-This change is Review package version `101` (`review.v0.1.1.neutron`). Review v100 remains historical r2 package bytes; changed bytes are not republished under the old version.
+This change is Review package version `101` (`review.v0.1.1.neutron`). The previous package bytes remain historical; changed bytes are not republished under the old version.
 
 Run:
 

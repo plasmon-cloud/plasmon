@@ -1,8 +1,8 @@
 # Active provenance policy
 
-Active Plasmon source, tests, CI, package/build metadata, scripts, fixtures, selectors, diagnostics, and current documentation describe product behavior and stable architecture. GitHub work items own implementation history and coordination provenance; Git history is the repository's archive for superseded release/refactor material.
+Active product source, tests, CI, package/build metadata, scripts, fixtures, selectors, diagnostics, and current documentation describe product behavior and stable architecture. GitHub work items own implementation history and coordination provenance; Git history is the repository's archive for superseded release/refactor material.
 
-`verify-active-provenance.mjs` enforces that boundary without a browser. It scans active Plasmon production/source/test paths, build and package metadata, current Plasmon documentation, repository test tooling, GitHub Actions workflow material, and package scripts for work-item-derived paths, test identities, tags, artifacts, comments, standalone numbered release-era tokens, and concrete versioned release-branch coupling.
+`verify-active-provenance.mjs` enforces that boundary without a browser. It scans active Plasmon and Review production/source/test paths, build and package metadata, current documentation, repository test tooling, GitHub Actions workflow material, and package scripts for work-item-derived paths, test identities, tags, artifacts, comments, standalone numbered release-era tokens, and concrete versioned release-branch coupling.
 
 The guard has no migration baseline. New violations fail immediately.
 

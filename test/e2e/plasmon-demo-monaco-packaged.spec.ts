@@ -96,7 +96,7 @@ test(
       try {
         await openedWindow.getByRole("button", { name: "Close", exact: true }).click();
         await expect(nativeWindows).toHaveCount(before, { timeout: 10_000 });
-        await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+        await page.evaluate(() => Promise.resolve());
       } finally {
         disposalBoundary = false;
       }

@@ -57,7 +57,7 @@ test("submitted Markdown carries independent human results and failure evidence"
   const engine = new ReviewEngine(persistence, { now: () => ++n, id: (kind) => `${kind}-${++n}` });
   const created = await engine.createAtom({
     commandId: "create",
-    title: "r2 acceptance",
+    title: "acceptance review",
     actor,
     items: [{ title: "Explorer Back works", descriptionMarkdown: "Open Documents, enter Games, press Back.\nExpected: Documents is restored." }],
   });
@@ -90,7 +90,7 @@ test("submitted Markdown carries independent human results and failure evidence"
   });
 
   const output = exportReviewMarkdown(await engine.getAtom(created.atomId));
-  expect(output).toContain("# r2 acceptance");
+  expect(output).toContain("# acceptance review");
   expect(output).toContain("- [ ] Explorer Back works");
   expect(output).toContain("How to test / expected behavior");
   expect(output).toContain("Review status: mixed");

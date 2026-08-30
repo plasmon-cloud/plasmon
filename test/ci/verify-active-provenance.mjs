@@ -21,6 +21,15 @@ const activeInputs = Object.freeze([
   "apps/plasmon/public",
   "apps/plasmon/src",
   "apps/plasmon/test",
+  "apps/review/AGENTS.md",
+  "apps/review/README.md",
+  "apps/review/build.ts",
+  "apps/review/e2e",
+  "apps/review/neutron.json",
+  "apps/review/package.json",
+  "apps/review/playwright.config.ts",
+  "apps/review/src",
+  "apps/review/test",
   "test",
   ".github/workflows",
   "package.json",
@@ -84,6 +93,27 @@ const explicitClassifications = Object.freeze([
     linePattern: /"repairIssue"\s*:\s*\d+/u,
     reason: "The active quarantine entry may retain one bounded GitHub repair owner while the executable selector, test title, tag, and CI behavior remain semantic and release-neutral.",
   }),
+  Object.freeze({
+    id: "public-audit-target-ref",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"targetRef": "agent\/issue-670"/u,
+    reason: "The committed public-consumption audit record names the implementation ref it audited; this is review metadata, not an active test or product identity.",
+  }),
+  Object.freeze({
+    id: "public-audit-base-ref",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"baseRef": "release\/0\.1\.0-r2r3"/u,
+    reason: "The committed public-consumption audit record names the combined release ref used for its exact-head audit; this is review metadata, not release-coupled behavior.",
+  }),
+  Object.freeze({
+    id: "public-audit-owner",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"owner": "agent\/issue-670"/u,
+    reason: "The committed public-consumption audit record identifies its accountable audit owner; this is review metadata, not an active test or product identity.",
+  }),
 ]);
 
 function slash(path) {
@@ -108,10 +138,14 @@ function isText(path) {
   return textExtensions.has(extname(path).toLowerCase());
 }
 
-function isTestOrCiPath(path) {
+function isActiveCheckedPath(path) {
   return path.startsWith("test/")
     || path.startsWith(".github/workflows/")
+    || path.startsWith("apps/plasmon/src/")
     || path.startsWith("apps/plasmon/test/")
+    || path.startsWith("apps/review/src/")
+    || path.startsWith("apps/review/test/")
+    || path.startsWith("apps/review/e2e/")
     || /\.(?:test|spec)\.[cm]?[jt]sx?$/u.test(path)
     || path.endsWith("package.json");
 }
@@ -148,7 +182,7 @@ export function scanActiveProvenance({ root = repoRoot, inputs = activeInputs } 
     .sort((a, b) => a.localeCompare(b));
 
   for (const path of files) {
-    if (isTestOrCiPath(path)) {
+    if (isActiveCheckedPath(path)) {
       for (const [label, rule] of pathRules) {
         if (rule.test(path)) failures.push(`${label}: ${path}`);
       }
@@ -218,6 +252,8 @@ function selfTest() {
   const fixtureRoot = mkdtempSync(resolve(tmpdir(), "plasmon-active-provenance-"));
   try {
     mkdirSync(resolve(fixtureRoot, "test/e2e"), { recursive: true });
+    mkdirSync(resolve(fixtureRoot, "apps/review/src"), { recursive: true });
+    writeFileSync(resolve(fixtureRoot, "apps/review/src", "issue-999.scss"), ".review {}\n");
     writeFileSync(resolve(fixtureRoot, "test", workItemPath), "export {};\n");
     writeFileSync(resolve(fixtureRoot, numberedSpec), [
       testTitle,
@@ -230,8 +266,9 @@ function selfTest() {
     ].join("\n"));
     writeFileSync(resolve(fixtureRoot, "test", camelCaseTest), "export {};\n");
 
-    const fixtureFailures = scanActiveProvenance({ root: fixtureRoot, inputs: ["test"] });
+    const fixtureFailures = scanActiveProvenance({ root: fixtureRoot, inputs: ["test", "apps/review/src"] });
     const expectedFailures = [
+      `Issue-numbered active path: apps/review/src/issue-999.scss`,
       `Issue-numbered active path: test/${workItemPath}`,
       `numbered Plasmon browser spec: ${numberedSpec}`,
       `camelCase work-item test suffix: test/${camelCaseTest}`,
@@ -273,7 +310,7 @@ function selfTest() {
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
     throw new Error("guard self-test lost the bounded quarantine repair-owner classification");
   }
-  if (explicitClassifications.length !== 4) {
+  if (explicitClassifications.length !== 7) {
     throw new Error("guard self-test expected the complete explicit classification inventory to remain narrowly bounded");
   }
 

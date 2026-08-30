@@ -467,15 +467,25 @@ test("a persisted Files tile waits for its credentialless background on cold rel
   await createTextFile(files, "/Workspace", filename, content);
 
   let delayedBackground = false;
+  let releaseBackground!: () => void;
+  const backgroundGate = new Promise<void>((resolve) => {
+    releaseBackground = resolve;
+  });
   await page.route("**/app/files/service.html*", async (route) => {
     if (!delayedBackground) {
       delayedBackground = true;
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      await backgroundGate;
     }
     await route.continue();
   });
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  const backgroundRequest = page.waitForRequest(
+    (request) => request.url().includes("/app/files/service.html"),
+  );
+  const reload = page.reload({ waitUntil: "domcontentloaded" });
+  await backgroundRequest;
+  releaseBackground();
+  await reload;
   await loginAsDeveloper(page, runtime);
   files = filesFrame(page);
   await ensureFilesReady(page, files);
@@ -723,9 +733,8 @@ async function initializeVaultIfNeeded(
   };
 
   let observed = await readState();
-  const deadline = Date.now() + 120_000;
-  while (observed === "waiting" && Date.now() < deadline) {
-    await page.waitForTimeout(100);
+  if (observed === "waiting") {
+    await expect.poll(readState, { timeout: 120_000 }).not.toBe("waiting");
     observed = await readState();
   }
   if (observed === "ready") return;
@@ -781,9 +790,8 @@ async function openVaultAutomatically(
     return "waiting";
   };
   let observed = await readState();
-  const deadline = Date.now() + 120_000;
-  while (observed === "waiting" && Date.now() < deadline) {
-    await page.waitForTimeout(100);
+  if (observed === "waiting") {
+    await expect.poll(readState, { timeout: 120_000 }).not.toBe("waiting");
     observed = await readState();
   }
   if (observed !== "ready") {

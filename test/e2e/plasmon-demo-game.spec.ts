@@ -9,12 +9,24 @@ import {
 } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import {
+  expectPlasmonReady,
+  PLASMON_ACTION_TIMEOUT_MS,
+} from "./plasmon-ready.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 const FIXTURE_PARAM = "plasmon-fixture";
 const FIXTURE_VALUE = "demo-game";
 const DEMO_ARTWORK_PATH = "static/plasmon/artwork/plasmon-demo.svg";
+const SAVED_PREVIEW_TIMEOUT_MS = 10_000;
+
+/**
+ * js-dos starts an external runtime after the native window is ready. This is
+ * the only long browser bound in this spec, and it waits on production-owned
+ * readiness signals rather than sleeping or polling implementation details.
+ */
+const JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS = 60_000;
 
 async function activateFileManagerEntry(entry: Locator): Promise<void> {
   await entry.click();
@@ -92,43 +104,43 @@ async function savePackagedDemoGame(
   const frame = page.locator(`iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`).first();
   await expect(frame).toBeAttached();
   const app = page.frameLocator(`iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`).first();
-  await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
+  await expectPlasmonReady(app);
   const activeAppUrl = new URL(await app.locator("html").evaluate(() => window.location.href));
   expect(activeAppUrl.searchParams.get(FIXTURE_PARAM)).toBe(FIXTURE_VALUE);
   await page.unroute(fixtureRoute, redirectInitialPlasmonDocument);
 
   const rootShortcut = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
-  await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+  await expect(rootShortcut).toBeVisible();
   await activateFileManagerEntry(rootShortcut);
   const explorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(explorer).toBeVisible({ timeout: 20_000 });
+  await expect(explorer).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const games = explorer.locator("[data-fm-node-id]", { hasText: "Games" }).first();
   await expect(games).toBeVisible();
   await activateFileManagerEntry(games);
   const gamesExplorer = app.getByRole("dialog", { name: "Games" }).last();
-  await expect(gamesExplorer).toBeVisible({ timeout: 20_000 });
+  await expect(gamesExplorer).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const demo = gamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
-  await expect(demo).toBeVisible({ timeout: 20_000 });
+  await expect(demo).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
 
   if (options.verifyStaticArtwork) {
     const artwork = demo.locator("img.plasmon-media-thumbnail").first();
     await expect(artwork).toHaveAttribute("src", DEMO_ARTWORK_PATH);
-    await expect.poll(() => artwork.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0), { timeout: 20_000 }).toBeGreaterThan(0);
+    await expect.poll(() => artwork.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0), { timeout: PLASMON_ACTION_TIMEOUT_MS }).toBeGreaterThan(0);
   }
 
   await activateFileManagerEntry(demo);
   const gameWindow = app.getByRole("dialog", { name: "js-dos" }).last();
-  await expect(gameWindow).toBeVisible({ timeout: 20_000 });
+  await expect(gameWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const player = gameWindow.getByLabel("DOS game");
   try {
-    await expect(player).toHaveAttribute("data-jsdos-ready", "true", { timeout: 60_000 });
+    await expect(player).toHaveAttribute("data-jsdos-ready", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
   } catch (error) {
     const runtimeStatus = await gameWindow.locator('[role="status"], [role="alert"]').allTextContents();
     const canvases = await player.locator("canvas").count();
     const original = error instanceof Error ? error.message : String(error);
     throw new Error([original, `js-dos runtime status: ${JSON.stringify(runtimeStatus)}`, `js-dos canvas count: ${canvases}`, `browser console warnings/errors: ${JSON.stringify(consoleErrors)}`, `failed browser requests: ${JSON.stringify(failedRequests)}`, `page errors: ${JSON.stringify(pageErrors)}`].join("\n"));
   }
-  await expect(player.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+  await expect(player.locator("canvas").first()).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
 
   expect(consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'")), "js-dos must not emit the sandbox-incompatible StorageManager.estimate error").toEqual([]);
   expect(consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed")), "js-dos must not emit the sandbox-denied storage-directory error").toEqual([]);
@@ -136,19 +148,19 @@ async function savePackagedDemoGame(
   await player.click();
   await page.keyboard.press("Space");
   await gameWindow.getByRole("button", { name: "Close" }).click();
-  await expect(gameWindow).not.toBeVisible({ timeout: 20_000 });
+  await expect(gameWindow).not.toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await gamesExplorer.getByRole("button", { name: "Close" }).click();
-  await expect(gamesExplorer).not.toBeVisible({ timeout: 20_000 });
+  await expect(gamesExplorer).not.toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   await activateFileManagerEntry(rootShortcut);
   const savedRootExplorer = app.getByRole("dialog", { name: "This Plasmon" }).last();
-  await expect(savedRootExplorer).toBeVisible({ timeout: 20_000 });
+  await expect(savedRootExplorer).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const savedGames = savedRootExplorer.locator("[data-fm-node-id]", { hasText: "Games" }).first();
   await expect(savedGames).toBeVisible();
   await activateFileManagerEntry(savedGames);
   const savedGamesExplorer = app.getByRole("dialog", { name: "Games" }).last();
-  await expect(savedGamesExplorer).toBeVisible({ timeout: 20_000 });
+  await expect(savedGamesExplorer).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   const savedDemo = savedGamesExplorer.locator("[data-fm-node-id]", { hasText: "Plasmon Demo.jsdos" }).first();
-  await expect(savedDemo).toBeVisible({ timeout: 20_000 });
+  await expect(savedDemo).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
   return { app, savedDemo, pageErrors, consoleErrors };
 }
 
@@ -160,11 +172,11 @@ test(
     const { app, savedDemo, pageErrors, consoleErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: true });
     await activateFileManagerEntry(savedDemo);
     const reopenedWindow = app.getByRole("dialog", { name: "js-dos" }).last();
-    await expect(reopenedWindow).toBeVisible({ timeout: 20_000 });
+    await expect(reopenedWindow).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
     const reopenedPlayer = reopenedWindow.getByLabel("DOS game");
-    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-progress-restored", "true", { timeout: 60_000 });
-    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-ready", "true", { timeout: 60_000 });
-    await expect(reopenedPlayer.locator("canvas").first()).toBeVisible({ timeout: 30_000 });
+    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-progress-restored", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
+    await expect(reopenedPlayer).toHaveAttribute("data-jsdos-ready", "true", { timeout: JS_DOS_EXTERNAL_STARTUP_TIMEOUT_MS });
+    await expect(reopenedPlayer.locator("canvas").first()).toBeVisible({ timeout: PLASMON_ACTION_TIMEOUT_MS });
     expect(consoleErrors.filter((message) => message.includes("Failed to execute 'estimate' on 'StorageManager'"))).toEqual([]);
     expect(consoleErrors.filter((message) => message.includes("Storage directory access is denied because the context is sandboxed"))).toEqual([]);
     expect(pageErrors).toEqual([]);
@@ -181,8 +193,8 @@ test(
   async ({ page, request }) => {
     const { savedDemo, pageErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: false });
     const savePreview = savedDemo.locator("img.plasmon-media-thumbnail").first();
-    await expect(savePreview).toHaveAttribute("src", /^blob:/, { timeout: 20_000 });
-    await expect.poll(() => savePreview.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0), { timeout: 20_000 }).toBeGreaterThan(0);
+    await expect(savePreview).toHaveAttribute("src", /^blob:/, { timeout: SAVED_PREVIEW_TIMEOUT_MS });
+    await expect.poll(() => savePreview.evaluate((image) => image instanceof HTMLImageElement ? image.naturalWidth : 0), { timeout: SAVED_PREVIEW_TIMEOUT_MS }).toBeGreaterThan(0);
     expect(pageErrors).toEqual([]);
   },
 );
