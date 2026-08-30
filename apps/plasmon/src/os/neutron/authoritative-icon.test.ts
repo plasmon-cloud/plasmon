@@ -14,7 +14,7 @@ function api(overrides: Partial<VanillaNeutronApi> = {}): VanillaNeutronApi {
 }
 
 describe("authoritative installed Neutron icon metadata", () => {
-  test("apps.describe non-conventional tile icon reaches ExternalElement.icon through the existing #171 resolver", async () => {
+  test("apps.describe non-conventional tile icon reaches ExternalElement.icon through the canonical resolver", async () => {
     const resolutions: Array<[string, string | undefined]> = [];
     const bridge = new VanillaNeutronBridge({
       lifecycleTargets: {},

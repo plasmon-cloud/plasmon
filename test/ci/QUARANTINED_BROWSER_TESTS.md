@@ -16,6 +16,6 @@ The surrounding packaged js-dos open/save/reopen acceptance remains required. St
 
 A quarantine change must update the machine-readable inventory and the exact Playwright test together. The inventory records only current executable state: semantic identity, active state, current debt classification, repair owner, and exit criteria.
 
-Historical workflow runs, old pull-request heads, previous release sequencing, and resolved incident narratives belong in their GitHub work items or explicit historical evidence, not in executable configuration or active test identity.
+Historical workflow runs, old pull-request heads, previous release sequencing, and resolved incident narratives belong in their GitHub work items or Git history, not in executable configuration or active test identity.
 
 Restoration requires deliberately removing the exact `@quarantine` marker and inventory entry before collecting retry-free evidence. Do not use retries, sleeps, blanket timeout increases, broad warning allowances, fallback pass conditions, or suite-level skips as restoration evidence.
