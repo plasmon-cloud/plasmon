@@ -1,5 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { DiagnosticLogger } from "../../os/diagnostics/index.ts";
+import {
+  DiagnosticStage,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../../os/diagnostics/index.ts";
 import type { NativeAppComponent, NativeAppComponentProps } from "../../os/process/runtime.ts";
 import { logEmulatorJsHandledFailure } from "./diagnostics.ts";
 import { assertNesRom, resolveEmulatorJsHostUrl } from "./runtime.ts";
@@ -54,7 +58,9 @@ function markPhase(container: HTMLDivElement | null, phase: string, error?: unkn
 }
 
 /** Build the runtime host with one scoped observer for handled adapter failures. */
-export function createEmulatorJsPlayer(diagnosticLogger?: DiagnosticLogger): NativeAppComponent {
+export function createEmulatorJsPlayer(
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeEmulatorJs>,
+): NativeAppComponent {
   return function EmulatorJsPlayer({ target, fs }: NativeAppComponentProps) {
     const runtimeContainerRef = useRef<HTMLDivElement>(null);
     const [rom, setRom] = useState<LoadedRom | null>(null);
@@ -106,7 +112,7 @@ export function createEmulatorJsPlayer(diagnosticLogger?: DiagnosticLogger): Nat
       if (!container) {
         logEmulatorJsHandledFailure(diagnosticLogger, {
           kind: "start",
-          stage: "runtime-container",
+          stage: DiagnosticStage.RuntimeContainer,
         });
         setState("error");
         setDetail("EmulatorJS runtime container is unavailable");
@@ -166,7 +172,7 @@ export function createEmulatorJsPlayer(diagnosticLogger?: DiagnosticLogger): Nat
             startTimeout = null;
             logEmulatorJsHandledFailure(diagnosticLogger, {
               kind: "start",
-              stage: "runtime-start",
+              stage: DiagnosticStage.RuntimeStart,
               reason: "timeout",
             });
             fail("EmulatorJS did not start within 60 seconds");
@@ -200,7 +206,7 @@ export function createEmulatorJsPlayer(diagnosticLogger?: DiagnosticLogger): Nat
         if (message.phase === "error") {
           logEmulatorJsHandledFailure(diagnosticLogger, {
             kind: "protocol",
-            stage: "runtime-message",
+            stage: DiagnosticStage.RuntimeMessage,
             error: message.error,
           });
           fail(typeof message.error === "string" ? message.error : "EmulatorJS runtime error");
@@ -215,7 +221,7 @@ export function createEmulatorJsPlayer(diagnosticLogger?: DiagnosticLogger): Nat
         if (!initialized) {
           logEmulatorJsHandledFailure(diagnosticLogger, {
             kind: "start",
-            stage: "host-ready",
+            stage: DiagnosticStage.HostReady,
             reason: "timeout",
           });
           fail("EmulatorJS packaged host did not initialize within 10 seconds");

@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { PlasmonDiagnosticService, type DiagnosticRecord } from "../diagnostics/index.ts";
+import {
+  DiagnosticOperation,
+  DiagnosticStage,
+  PlasmonDiagnosticService,
+  type DiagnosticRecord,
+} from "../diagnostics/index.ts";
 import { MemoryFsRepository, PersistentFsService } from "../fs/index.ts";
 import type { VanillaNeutronApi } from "./types.ts";
 import { VanillaNeutronBridge } from "./vanilla.ts";
@@ -42,8 +47,8 @@ describe("Neutron boundary diagnostics", () => {
         subsystem: "neutron",
         event: "neutron.discovery.failed",
         context: {
-          operation: "kernel:apps.list",
-          stage: "discovery",
+          operation: DiagnosticOperation.Discover,
+          stage: DiagnosticStage.Discovery,
           errorType: "TypeError",
         },
       }),
@@ -59,7 +64,7 @@ describe("Neutron boundary diagnostics", () => {
     await expect(invalid.loadElements()).rejects.toThrow("invalid apps.list response");
     expect(second.records[0]).toMatchObject({
       event: "neutron.discovery.invalid",
-      context: { operation: "kernel:apps.list", stage: "parse", errorType: "Error" },
+      context: { operation: DiagnosticOperation.Discover, stage: DiagnosticStage.Parse, errorType: "Error" },
     });
   });
 
@@ -89,8 +94,8 @@ describe("Neutron boundary diagnostics", () => {
       level: "error",
       subsystem: "neutron",
       context: {
-        operation: "kernel:workspace.open_tile",
-        stage: "kernel-open-tile",
+        operation: DiagnosticOperation.Open,
+        stage: DiagnosticStage.KernelOpenTile,
         appId: "sheet",
         appVersion: 403,
         errorType: "TypeError",
@@ -116,8 +121,8 @@ describe("Neutron boundary diagnostics", () => {
     expect(records[0]).toMatchObject({
       event: "neutron.install.failed",
       context: {
-        operation: "kernel:apps.offer_install",
-        stage: "kernel-install-offer",
+        operation: DiagnosticOperation.Install,
+        stage: DiagnosticStage.KernelInstallOffer,
         errorType: "Error",
       },
     });

@@ -3,7 +3,7 @@ import type {
   HandlerDefinition,
   NativeAppDefinition,
 } from "../../os/contracts/index.ts";
-import type { DiagnosticLogger } from "../../os/diagnostics/index.ts";
+import { DiagnosticSubsystem, type DiagnosticLogger } from "../../os/diagnostics/index.ts";
 import type { NativeAppLoader } from "../../os/process/runtime.ts";
 
 const icon = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='10' fill='%23171b20' stroke='%236a7482'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='monospace' font-size='22' font-weight='700' fill='%23f2f2f2'%3EDOS%3C/text%3E%3C/svg%3E";
@@ -48,7 +48,9 @@ export const jsDosRuntimeDefinition: NativeAppDefinition = {
   associations: jsDosAssociationRules,
 };
 
-export function createJsDosRuntimeLoader(diagnosticLogger?: DiagnosticLogger): NativeAppLoader {
+export function createJsDosRuntimeLoader(
+  diagnosticLogger?: DiagnosticLogger<typeof DiagnosticSubsystem.RuntimeJsDos>,
+): NativeAppLoader {
   return async () => {
     const module = await import("./JsDosPlayer.tsx");
     return { default: module.createJsDosPlayer(diagnosticLogger) };

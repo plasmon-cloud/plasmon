@@ -17,7 +17,11 @@ import type {
   ProcessController,
 } from "../contracts/index.ts";
 import { claimFirstPartyContextMenu } from "../context-menu-boundary.ts";
-import type { DiagnosticService } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import {
   FileOperationClipboard,
   emptySelection,
@@ -119,7 +123,7 @@ export function FileManager({
   const [operation, setOperation] = useState<FileOperationSnapshot>(() => operationState.snapshot());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cancelDownloadPreparationRef = useRef<() => void>(() => {});
-  const fileManagerLog = useMemo(() => diagnostics?.for("filemanager") ?? null, [diagnostics]);
+  const fileManagerLog = useMemo(() => diagnostics?.for(DiagnosticSubsystem.FileManager) ?? null, [diagnostics]);
 
   const closeContextMenu = () => {
     cancelDownloadPreparationRef.current();
@@ -158,8 +162,8 @@ export function FileManager({
       succeeded: operation.succeededItems,
       failed: operation.failedItems,
     };
-    if (operation.succeededItems > 0) fileManagerLog.warn("filemanager.move.partial", fields);
-    else fileManagerLog.warn("filemanager.move.failed", fields);
+    if (operation.succeededItems > 0) fileManagerLog.warn(DiagnosticEvent.FileManager.MovePartial, fields);
+    else fileManagerLog.warn(DiagnosticEvent.FileManager.MoveFailed, fields);
   }, [fileManagerLog, operation]);
 
   useEffect(() => {

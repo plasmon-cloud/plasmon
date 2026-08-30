@@ -60,7 +60,7 @@ test("a contained native-host crash remains host-owned and is not reported again
     })).toHaveLength(1);
     expect(observed.records({
       subsystem: "runtime",
-      event: "runtime.uncaught_error",
+      event: "runtime.uncaught-error",
       level: "error",
     })).toHaveLength(0);
   } finally {

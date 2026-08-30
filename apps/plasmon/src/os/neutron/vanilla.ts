@@ -6,7 +6,12 @@ import {
   openAppTile,
 } from "neutron-tools/app";
 import type { ExternalElement, NeutronBridge } from "../contracts/neutron.ts";
-import type { DiagnosticLogger } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticOperation,
+  DiagnosticStage,
+  type DiagnosticLogger,
+} from "../diagnostics/index.ts";
 import {
   declaredElementIconPath,
   resolveElementIcon,
@@ -209,10 +214,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
         this.readRuntimeSnapshot(),
       ]);
     } catch (error) {
-      this.log?.error("neutron.discovery.failed", {
+      this.log?.error(DiagnosticEvent.Neutron.DiscoveryFailed, {
         message: "Neutron application discovery failed",
-        operation: "kernel:apps.list",
-        stage: "discovery",
+        operation: DiagnosticOperation.Discover,
+        stage: DiagnosticStage.Discovery,
         errorType: errorType(error),
       });
       throw error;
@@ -222,10 +227,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
     try {
       hints = parseInstalledElementHints(listed);
     } catch (error) {
-      this.log?.error("neutron.discovery.invalid", {
+      this.log?.error(DiagnosticEvent.Neutron.DiscoveryInvalid, {
         message: "Neutron application discovery returned an invalid response",
-        operation: "kernel:apps.list",
-        stage: "parse",
+        operation: DiagnosticOperation.Discover,
+        stage: DiagnosticStage.Parse,
         errorType: errorType(error),
       });
       throw error;
@@ -250,10 +255,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
       element = (await this.loadElements()).find((candidate) => candidate.id === appId);
     }
     if (!element) {
-      this.log?.error("neutron.open.invalid", {
+      this.log?.error(DiagnosticEvent.Neutron.OpenInvalid, {
         message: "Neutron Element is not installed",
         appId,
-        stage: "element-lookup",
+        stage: DiagnosticStage.ElementLookup,
       });
       throw new Error(`Unknown Neutron Element: ${appId}`);
     }
@@ -262,10 +267,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
       ? element.tiles.find((candidate) => candidate.id === options.tileId)
       : element.tiles[0];
     if (!tile) {
-      this.log?.error("neutron.open.invalid", {
+      this.log?.error(DiagnosticEvent.Neutron.OpenInvalid, {
         message: "Neutron Element does not expose the requested launch tile",
         appId: element.id,
-        stage: "tile-selection",
+        stage: DiagnosticStage.TileSelection,
         ...(element.version === undefined ? {} : { appVersion: element.version }),
       });
       const detail = options.tileId ? ` tile ${options.tileId}` : " a launchable tile";
@@ -280,10 +285,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
         ...(options.view === undefined ? {} : { view: options.view }),
       });
     } catch (error) {
-      this.log?.error("neutron.open.failed", {
+      this.log?.error(DiagnosticEvent.Neutron.OpenFailed, {
         message: "Kernel rejected the Neutron Element launch operation",
-        operation: "kernel:workspace.open_tile",
-        stage: "kernel-open-tile",
+        operation: DiagnosticOperation.Open,
+        stage: DiagnosticStage.KernelOpenTile,
         appId: element.id,
         ...(element.version === undefined ? {} : { appVersion: element.version }),
         errorType: errorType(error),
@@ -299,10 +304,10 @@ export class VanillaNeutronBridge implements NeutronBridge {
     try {
       await this.api.offerAppInstall({ kind: "package_url", url });
     } catch (error) {
-      this.log?.error("neutron.install.failed", {
+      this.log?.error(DiagnosticEvent.Neutron.InstallFailed, {
         message: "Kernel rejected a Neutron package install offer",
-        operation: "kernel:apps.offer_install",
-        stage: "kernel-install-offer",
+        operation: DiagnosticOperation.Install,
+        stage: DiagnosticStage.KernelInstallOffer,
         errorType: errorType(error),
       });
       throw error;
