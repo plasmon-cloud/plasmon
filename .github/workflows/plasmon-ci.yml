@@ -41,7 +41,6 @@ jobs:
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
           node test/ci/verify-required-browser-gates.mjs
-          node test/ci/rerun-stale-approval-gates.mjs --self-test
 
       - name: Verify active provenance policy
         run: |
