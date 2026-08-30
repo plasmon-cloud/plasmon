@@ -1,4 +1,4 @@
-import type { FsService } from "../contracts/index.ts";
+import type { DiagnosticOperationContext, FsService } from "../contracts/index.ts";
 import { OWNERSHIP_METADATA_KEY } from "../fs/resourcePolicy.ts";
 import {
   createDiagnosticLogger,
@@ -25,6 +25,8 @@ export interface DiagnosticEventInput {
   event: string;
   message: string;
   correlationId?: string;
+  operationId?: string;
+  parentOperationId?: string;
   context?: Record<string, unknown>;
   error?: unknown;
 }
@@ -36,13 +38,34 @@ export interface DiagnosticRecord {
   event: string;
   message: string;
   correlationId?: string;
+  operationId?: string;
+  parentOperationId?: string;
   context?: Record<string, unknown>;
   error?: DiagnosticError;
+}
+
+export interface DiagnosticOperationStartOptions {
+  /** Explicit root identity for continuation from an external/owning boundary. */
+  correlationId?: string;
+  /** Explicit operation identity when an owning boundary already created it. */
+  operationId?: string;
+}
+
+export interface DiagnosticOperation {
+  readonly context: DiagnosticOperationContext;
+  /** Scope a logger that automatically carries this immutable operation context. */
+  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger;
+  /** Create a meaningful nested operation while preserving the root correlation. */
+  child(operationId?: string): DiagnosticOperation;
 }
 
 export interface DiagnosticService {
   /** Canonical producer API. Scope once per subsystem, then emit stable named events. */
   for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger;
+  /** Begin an explicit root operation; no mutable ambient/current operation is used. */
+  startOperation(options?: DiagnosticOperationStartOptions): DiagnosticOperation;
+  /** Continue an explicitly supplied operation context across an async/service boundary. */
+  continueOperation(context: DiagnosticOperationContext): DiagnosticOperation;
   /** Low-level structured ingestion seam used by scoped loggers and focused tests. */
   emit(input: DiagnosticEventInput): DiagnosticRecord;
   subscribe(listener: (record: DiagnosticRecord) => void): () => void;
@@ -67,6 +90,8 @@ export interface PlasmonDiagnosticServiceOptions {
   console?: DiagnosticConsole | null;
   maxBytes?: number;
   retainBytes?: number;
+  /** Optional deterministic operation-id source for focused tests. */
+  operationIdFactory?: () => string;
   onSinkError?: (error: unknown) => void;
 }
 
@@ -156,6 +181,12 @@ function normalizeRecord(input: DiagnosticEventInput, timestamp: number): Diagno
     ...(input.correlationId
       ? { correlationId: redactDiagnosticText(input.correlationId.trim()) }
       : {}),
+    ...(input.operationId
+      ? { operationId: redactDiagnosticText(input.operationId.trim()) }
+      : {}),
+    ...(input.parentOperationId
+      ? { parentOperationId: redactDiagnosticText(input.parentOperationId.trim()) }
+      : {}),
     ...(input.context ? { context: sanitizeDiagnosticContext(input.context) } : {}),
     ...(input.error !== undefined ? { error: sanitizeError(input.error) } : {}),
   };
@@ -181,6 +212,8 @@ export function formatDiagnosticRecord(record: DiagnosticRecord): string {
     record.message,
   ];
   if (record.correlationId) parts.push(`correlation=${record.correlationId}`);
+  if (record.operationId) parts.push(`operation=${record.operationId}`);
+  if (record.parentOperationId) parts.push(`parentOperation=${record.parentOperationId}`);
   if (record.context) parts.push(`context=${stableJson(record.context)}`);
   if (record.error) parts.push(`error=${stableJson(record.error)}`);
   return `${parts.join(" | ")}\n`;
@@ -262,6 +295,41 @@ function emitToConsole(target: DiagnosticConsole, record: DiagnosticRecord): voi
   else target.error(line);
 }
 
+function defaultOperationId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  return `diagnostic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+class PlasmonDiagnosticOperation implements DiagnosticOperation {
+  readonly context: DiagnosticOperationContext;
+
+  constructor(
+    private readonly service: PlasmonDiagnosticService,
+    context: DiagnosticOperationContext,
+  ) {
+    this.context = Object.freeze({ ...context });
+  }
+
+  for(subsystem: string, defaults: DiagnosticLoggerDefaults = {}): DiagnosticLogger {
+    return this.service.for(subsystem, {
+      ...defaults,
+      correlationId: this.context.correlationId,
+      operationId: this.context.operationId,
+      ...(this.context.parentOperationId
+        ? { parentOperationId: this.context.parentOperationId }
+        : {}),
+    });
+  }
+
+  child(operationId?: string): DiagnosticOperation {
+    return new PlasmonDiagnosticOperation(this.service, {
+      correlationId: this.context.correlationId,
+      operationId: operationId?.trim() || this.service.nextOperationId(),
+      parentOperationId: this.context.operationId,
+    });
+  }
+}
+
 export class PlasmonDiagnosticService implements DiagnosticService {
   private readonly listeners = new Set<(record: DiagnosticRecord) => void>();
   private readonly path: string;
@@ -271,6 +339,7 @@ export class PlasmonDiagnosticService implements DiagnosticService {
   private readonly console: DiagnosticConsole | null;
   private readonly maxBytes: number;
   private readonly retainBytes: number;
+  private readonly operationIdFactory: () => string;
   private persistenceTail: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: PlasmonDiagnosticServiceOptions) {
@@ -281,10 +350,26 @@ export class PlasmonDiagnosticService implements DiagnosticService {
     this.console = options.console === undefined ? globalThis.console : options.console;
     this.maxBytes = options.maxBytes ?? DEFAULT_SYSTEM_LOG_MAX_BYTES;
     this.retainBytes = options.retainBytes ?? DEFAULT_SYSTEM_LOG_RETAIN_BYTES;
+    this.operationIdFactory = options.operationIdFactory ?? defaultOperationId;
   }
 
   for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger {
     return createDiagnosticLogger(this, subsystem, defaults);
+  }
+
+  startOperation(options: DiagnosticOperationStartOptions = {}): DiagnosticOperation {
+    const correlationId = options.correlationId?.trim() || this.nextOperationId();
+    const operationId = options.operationId?.trim() || this.nextOperationId();
+    return new PlasmonDiagnosticOperation(this, { correlationId, operationId });
+  }
+
+  continueOperation(context: DiagnosticOperationContext): DiagnosticOperation {
+    return new PlasmonDiagnosticOperation(this, context);
+  }
+
+  /** Internal ID source shared by root and child operation objects. */
+  nextOperationId(): string {
+    return this.operationIdFactory();
   }
 
   emit(input: DiagnosticEventInput): DiagnosticRecord {
