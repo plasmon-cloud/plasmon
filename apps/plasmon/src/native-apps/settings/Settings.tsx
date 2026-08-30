@@ -6,6 +6,12 @@ import type {
   ProcessController,
   ProcessId,
 } from "../../os/contracts/index.ts";
+import {
+  DIAGNOSTIC_LEVELS,
+  type DiagnosticLevel,
+  type DiagnosticSettings,
+  type DiagnosticSettingsStore,
+} from "../../os/diagnostics/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import { NativeAppContentSurface, NativeAppPanel } from "../../os/visual/index.ts";
 import {
@@ -22,6 +28,7 @@ export interface SettingsDependencies {
   getTaskbarMode?: () => string;
   setTaskbarMode?: (mode: string) => void;
   hiddenVisibility?: HiddenVisibilityPreferenceStore;
+  diagnosticSettings?: DiagnosticSettingsStore;
 }
 
 export interface SettingsHostProps {
@@ -39,6 +46,11 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
     );
     const [hiddenVisibilityReady, setHiddenVisibilityReady] = useState(!dependencies.hiddenVisibility);
     const [hiddenVisibilityError, setHiddenVisibilityError] = useState<string | null>(null);
+    const [diagnosticSettings, setDiagnosticSettings] = useState<DiagnosticSettings | null>(
+      () => dependencies.diagnosticSettings?.getSnapshot() ?? null,
+    );
+    const [diagnosticSettingsReady, setDiagnosticSettingsReady] = useState(!dependencies.diagnosticSettings);
+    const [diagnosticSettingsError, setDiagnosticSettingsError] = useState<string | null>(null);
 
     useEffect(() => {
       process.setTitle(processId, "Settings");
@@ -70,8 +82,48 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
       };
     }, []);
 
+    useEffect(() => {
+      const store = dependencies.diagnosticSettings;
+      if (!store) return undefined;
+      let active = true;
+      const unsubscribe = store.subscribe((settings) => {
+        if (active) setDiagnosticSettings(settings);
+      });
+      void store.load()
+        .then((settings) => {
+          if (!active) return;
+          setDiagnosticSettings(settings);
+          setDiagnosticSettingsReady(true);
+          setDiagnosticSettingsError(null);
+        })
+        .catch((cause: unknown) => {
+          if (!active) return;
+          setDiagnosticSettingsReady(true);
+          setDiagnosticSettingsError(cause instanceof Error ? cause.message : String(cause));
+        });
+      return () => {
+        active = false;
+        unsubscribe();
+      };
+    }, []);
+
     const theme = dependencies.getThemeName?.();
     const taskbar = dependencies.getTaskbarMode?.();
+    const remoteReportingAvailable = dependencies.diagnosticSettings?.getCapabilities().remoteReporting ?? false;
+
+    const saveDiagnosticSetting = (
+      optimistic: DiagnosticSettings,
+      operation: Promise<void>,
+    ): void => {
+      const store = dependencies.diagnosticSettings;
+      if (!store) return;
+      setDiagnosticSettings(optimistic);
+      setDiagnosticSettingsError(null);
+      void operation.catch((cause: unknown) => {
+        setDiagnosticSettings(store.getSnapshot());
+        setDiagnosticSettingsError(cause instanceof Error ? cause.message : String(cause));
+      });
+    };
 
     return (
       <NativeAppContentSurface style={styles.root} aria-label="Settings">
@@ -117,6 +169,90 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
             </>
           ) : (
             <p>Global hidden-file visibility is unavailable.</p>
+          )}
+        </NativeAppPanel>
+
+        <NativeAppPanel style={styles.card} aria-labelledby="diagnostics-heading">
+          <h2 id="diagnostics-heading" style={styles.subheading}>Diagnostics</h2>
+          {dependencies.diagnosticSettings && diagnosticSettings ? (
+            <>
+              <label style={styles.controlRow}>
+                System log minimum level
+                <select
+                  aria-label="System log minimum level"
+                  style={styles.select}
+                  value={diagnosticSettings.fileMinLevel}
+                  disabled={!diagnosticSettingsReady}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                    const store = dependencies.diagnosticSettings;
+                    if (!store) return;
+                    const fileMinLevel = event.currentTarget.value as DiagnosticLevel;
+                    saveDiagnosticSetting(
+                      { ...diagnosticSettings, fileMinLevel },
+                      store.setFileMinLevel(fileMinLevel),
+                    );
+                  }}
+                >
+                  {DIAGNOSTIC_LEVELS.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={styles.controlRow}>
+                Browser console minimum level
+                <select
+                  aria-label="Browser console minimum level"
+                  style={styles.select}
+                  value={diagnosticSettings.consoleMinLevel}
+                  disabled={!diagnosticSettingsReady}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                    const store = dependencies.diagnosticSettings;
+                    if (!store) return;
+                    const consoleMinLevel = event.currentTarget.value as DiagnosticLevel;
+                    saveDiagnosticSetting(
+                      { ...diagnosticSettings, consoleMinLevel },
+                      store.setConsoleMinLevel(consoleMinLevel),
+                    );
+                  }}
+                >
+                  {DIAGNOSTIC_LEVELS.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </label>
+              <p style={styles.helpText}>
+                Missing or invalid values use safe defaults: info for /System/system.log and warn for the browser console.
+              </p>
+              {remoteReportingAvailable && diagnosticSettings.remoteReportingEnabled !== undefined ? (
+                <>
+                  <label style={styles.checkboxRow}>
+                    <input
+                      type="checkbox"
+                      checked={diagnosticSettings.remoteReportingEnabled}
+                      disabled={!diagnosticSettingsReady}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                        const store = dependencies.diagnosticSettings;
+                        if (!store) return;
+                        const remoteReportingEnabled = event.currentTarget.checked;
+                        saveDiagnosticSetting(
+                          { ...diagnosticSettings, remoteReportingEnabled },
+                          store.setRemoteReportingEnabled(remoteReportingEnabled),
+                        );
+                      }}
+                    />
+                    Enable remote incident reporting
+                  </label>
+                  <p style={styles.helpText}>
+                    This controls only the separately provided remote incident sink. Local diagnostics remain enabled.
+                  </p>
+                </>
+              ) : null}
+              {diagnosticSettingsError ? (
+                <p role="alert">Diagnostic setting could not be saved: {diagnosticSettingsError}</p>
+              ) : null}
+            </>
+          ) : (
+            <p>Diagnostic sink controls are unavailable.</p>
           )}
         </NativeAppPanel>
 
