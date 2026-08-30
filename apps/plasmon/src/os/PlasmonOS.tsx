@@ -50,6 +50,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
       openService={services.openService}
       startMenu={services.startMenu}
       hiddenVisibility={services.hiddenVisibility}
+      shellPreferences={services.shellPreferences}
     >
       <AltTabBoundary process={services.process} windows={services.windows}>
         <div className="plasmon-os-workspace">

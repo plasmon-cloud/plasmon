@@ -11,7 +11,7 @@ import type {
   ProcessController,
   ProcessId,
 } from "../../os/contracts/index.ts";
-import { normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
+import { browserNavigationCommand, normalizeHttpUrl, openExternalUrl, resolveBrowserTarget } from "./url.ts";
 
 export interface BrowserProps {
   processId: ProcessId;
@@ -32,6 +32,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
     title: "Browser",
   });
   const [address, setAddress] = useState(target.url ?? "");
+  const [navigationError, setNavigationError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,6 +40,12 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
     void resolveBrowserTarget(target, fs)
       .then((location) => {
         if (!active) return;
+        if (!location) {
+          setAddress("");
+          setState({ status: "ready", url: "", title: "Browser" });
+          process.setTitle(processId, "Browser");
+          return;
+        }
         setAddress(location.url);
         setState({ status: "loading", ...location });
         process.setTitle(processId, location.title || "Browser");
@@ -57,16 +64,16 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
 
   const navigate = (event: FormEvent) => {
     event.preventDefault();
-    const normalized = normalizeHttpUrl(address);
-    if (!normalized) {
-      setState({
-        status: "error",
-        message: "Enter a complete http:// or https:// URL",
-        url: address,
-      });
+    const command = browserNavigationCommand(address);
+    if (!command) {
+      setNavigationError("Enter a complete http:// or https:// URL");
       return;
     }
-    process.setTarget(processId, { url: normalized });
+    setNavigationError(null);
+    setAddress(command.location.url);
+    setState({ status: "loading", ...command.location });
+    process.setTitle(processId, command.location.title || "Browser");
+    process.setTarget(processId, command.target);
   };
 
   const external = () => {
@@ -103,6 +110,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
       <div style={styles.notice}>
         Some sites block embedded browsing. Use “Open externally” when a page refuses to load here.
       </div>
+      {navigationError ? <div style={styles.validationError} role="alert">{navigationError}</div> : null}
       {state.status === "error" ? (
         <div style={styles.error} role="alert">{state.message}</div>
       ) : state.url ? (
@@ -126,7 +134,7 @@ export default function Browser({ processId, target, fs, process }: BrowserProps
           />
         </div>
       ) : (
-        <div style={styles.empty}>No web address is available.</div>
+        <div style={styles.empty}>Enter an http:// or https:// address to browse.</div>
       )}
     </section>
   );
@@ -207,6 +215,12 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: "none",
     color: "var(--plasmon-text-secondary)",
     background: "color-mix(in srgb, var(--plasmon-window-background) 88%, transparent)",
+  },
+  validationError: {
+    padding: "6px 10px",
+    color: "var(--plasmon-danger)",
+    background: "color-mix(in srgb, var(--plasmon-danger) 10%, var(--plasmon-window-background))",
+    borderBottom: "1px solid var(--plasmon-border-subtle)",
   },
   error: {
     display: "grid",
