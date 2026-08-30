@@ -35,6 +35,7 @@ import {
 } from "../diagnostics/index.ts";
 import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
+import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
@@ -255,9 +256,10 @@ function registerNativeApplications(
 export function createPlasmonServices(
   options: CreatePlasmonServicesOptions = {},
 ): PlasmonServices {
+  const filesystemMode = options.filesystemRepository ? null : detectFilesystemFrontendMode();
   const rawFs = options.filesystemRepository
     ? new PersistentFsService(options.filesystemRepository)
-    : createFilesystemService();
+    : createFilesystemService(filesystemMode ?? undefined);
   let filesystem: FilesystemCoreServices | null = null;
   const diagnostics = new PlasmonDiagnosticService({
     fs: rawFs,
@@ -270,6 +272,9 @@ export function createPlasmonServices(
   const filesystemLog = diagnostics.for("filesystem");
   const processLog = diagnostics.for("process");
   const windowLog = diagnostics.for("windowing");
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  }
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
   const windowPlacement = new NativeWindowPlacementController(
