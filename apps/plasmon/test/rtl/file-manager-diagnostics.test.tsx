@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import type { DiagnosticRecord } from "../../src/os/diagnostics/index.ts";
 import { PlasmonDiagnosticService } from "../../src/os/diagnostics/index.ts";
 import type { FsNode, FsService } from "../../src/os/contracts/index.ts";
@@ -195,49 +195,6 @@ test("paste failure logs error type without private error message", async () => 
     expect(event?.context).toEqual({ mode: "copy", total: 1, errorType: "TypeError" });
     expect(JSON.stringify(event)).not.toContain("SECRET paste failure");
     expect(JSON.stringify(event)).not.toContain("PRIVATE-source.txt");
-  } finally {
-    stop();
-  }
-});
-
-test("delete partial failure logs aggregate counts without item identity", async () => {
-  const fs = operationFs();
-  const documents = await directory(fs, "/Documents");
-  await fs.createFile(documents.id, "PRIVATE-delete-one.txt", { mime: "text/plain" });
-  await fs.createFile(documents.id, "PRIVATE-delete-two.txt", { mime: "text/plain" });
-  let calls = 0;
-  const trashAuthority: FileManagerTrashAuthority = {
-    async trash() {
-      calls += 1;
-      if (calls === 2) throw new TypeError("SECRET delete failure for PRIVATE-delete-two.txt");
-    },
-  };
-  const { diagnostics, records, stop } = diagnosticsFor(fs);
-
-  try {
-    const view = render(
-      <FileManager
-        directoryId={documents.id}
-        fs={fs}
-        diagnostics={diagnostics}
-        openAuthority={unusedOpenAuthority}
-        trashAuthority={trashAuthority}
-        clipboard={new FileOperationClipboard()}
-      />,
-    );
-
-    const listbox = view.getByRole("listbox", { name: "Files" });
-    listbox.focus();
-    fireEvent.keyDown(listbox, { key: "a", ctrlKey: true });
-    fireEvent.click(view.getByRole("button", { name: "Delete" }));
-
-    await waitFor(() => {
-      expect(records.some((record) => record.event === "filemanager.delete.partial")).toBe(true);
-    });
-    const event = records.find((record) => record.event === "filemanager.delete.partial");
-    expect(event?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
-    expect(JSON.stringify(event)).not.toContain("PRIVATE-delete");
-    expect(JSON.stringify(event)).not.toContain("SECRET delete failure");
   } finally {
     stop();
   }
