@@ -14,6 +14,8 @@ jobs:
   measure:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      EXPERIMENT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout experiment head
         uses: actions/checkout@v6
@@ -38,38 +40,51 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          archive_path() {
+            echo "$1/apps/plasmon/plasmon.v0.1.0.neutron"
+          }
           package_size() {
-            local tree="$1" profile="$2" log="/tmp/$1-$2.log"
-            if ! (cd "$tree" && nix develop --command bash -lc "PLASMON_PACKAGE_PROFILE=$profile npm --workspace neutron-plasmon run package" >"$log" 2>&1); then
+            local tree="$1" profile="$2" remote="$3" log="/tmp/$1-$profile-$remote.log"
+            local command="PLASMON_PACKAGE_PROFILE=$profile npm --workspace neutron-plasmon run package"
+            if [[ "$remote" == "remote" ]]; then
+              command="PLASMON_PACKAGE_PROFILE=$profile PLASMON_REMOTE_INCIDENT_EXPERIMENT=1 PLASMON_ROLLBAR_CLIENT_TOKEN=ci-package-probe-token PLASMON_BUILD_SHA=$EXPERIMENT_SHA npm --workspace neutron-plasmon run package"
+            fi
+            if ! (cd "$tree" && nix develop --command bash -lc "$command" >"$log" 2>&1); then
               cat "$log" >&2
               return 1
             fi
-            local archive="$tree/apps/plasmon/plasmon.v0.1.0.neutron"
+            local archive
+            archive=$(archive_path "$tree")
             if [[ ! -f "$archive" ]]; then
               cat "$log" >&2
               echo "missing expected archive: $archive" >&2
               return 1
             fi
             stat -c%s "$archive"
-            rm -f "$archive"
           }
 
-          BASE_SLIM=$(package_size base slim)
-          HEAD_SLIM=$(package_size head slim)
-          BASE_FULL=$(package_size base full)
-          HEAD_FULL=$(package_size head full)
+          BASE_SLIM=$(package_size base slim local)
+          rm -f "$(archive_path base)"
+          HEAD_SLIM=$(package_size head slim local)
+          cp "$(archive_path head)" /tmp/head-slim.neutron
+          rm -f "$(archive_path head)"
+          BASE_FULL=$(package_size base full local)
+          rm -f "$(archive_path base)"
+          HEAD_FULL_REMOTE=$(package_size head full remote)
+          rm -f "$(archive_path head)"
           DELTA_SLIM=$((HEAD_SLIM - BASE_SLIM))
-          DELTA_FULL=$((HEAD_FULL - BASE_FULL))
+          DELTA_FULL_REMOTE=$((HEAD_FULL_REMOTE - BASE_FULL))
 
           {
             echo '## Rollbar experiment package-size evidence'
             echo
-            echo '| Profile | Base bytes | Experiment bytes | Delta bytes |'
+            echo '| Build | Base bytes | Experiment bytes | Delta bytes |'
             echo '| --- | ---: | ---: | ---: |'
-            echo "| slim | $BASE_SLIM | $HEAD_SLIM | $DELTA_SLIM |"
-            echo "| full | $BASE_FULL | $HEAD_FULL | $DELTA_FULL |"
+            echo "| slim, local diagnostics only | $BASE_SLIM | $HEAD_SLIM | $DELTA_SLIM |"
+            echo "| full, remote experiment enabled | $BASE_FULL | $HEAD_FULL_REMOTE | $DELTA_FULL_REMOTE |"
             echo
-            echo "Slim contract: experiment archive must remain strictly < 1900000 bytes."
+            echo "Slim contract: normal slim archive must remain strictly < 1900000 bytes and contain no remote-reporting payload."
+            echo "Full remote delta is informational only."
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
           {
@@ -77,20 +92,56 @@ jobs:
             echo "HEAD_SLIM=$HEAD_SLIM"
             echo "DELTA_SLIM=$DELTA_SLIM"
             echo "BASE_FULL=$BASE_FULL"
-            echo "HEAD_FULL=$HEAD_FULL"
-            echo "DELTA_FULL=$DELTA_FULL"
+            echo "HEAD_FULL_REMOTE=$HEAD_FULL_REMOTE"
+            echo "DELTA_FULL_REMOTE=$DELTA_FULL_REMOTE"
           } >> "$GITHUB_ENV"
 
           echo "PLASMON_PACKAGE_BASE_SLIM=$BASE_SLIM"
           echo "PLASMON_PACKAGE_HEAD_SLIM=$HEAD_SLIM"
           echo "PLASMON_PACKAGE_DELTA_SLIM=$DELTA_SLIM"
           echo "PLASMON_PACKAGE_BASE_FULL=$BASE_FULL"
-          echo "PLASMON_PACKAGE_HEAD_FULL=$HEAD_FULL"
-          echo "PLASMON_PACKAGE_DELTA_FULL=$DELTA_FULL"
+          echo "PLASMON_PACKAGE_HEAD_FULL_REMOTE=$HEAD_FULL_REMOTE"
+          echo "PLASMON_PACKAGE_DELTA_FULL_REMOTE=$DELTA_FULL_REMOTE"
 
-      - name: Verify explicit source-map policy stays outside package input
+      - name: Prove slim rejects remote reporting
+        working-directory: head
+        shell: bash
+        run: |
+          set -euo pipefail
+          if nix develop --command bash -lc "PLASMON_PACKAGE_PROFILE=slim PLASMON_REMOTE_INCIDENT_EXPERIMENT=1 PLASMON_ROLLBAR_CLIENT_TOKEN=ci-package-probe-token PLASMON_BUILD_SHA=$EXPERIMENT_SHA npm --workspace neutron-plasmon run package" >/tmp/slim-remote.log 2>&1; then
+            echo "Slim unexpectedly accepted PLASMON_REMOTE_INCIDENT_EXPERIMENT=1" >&2
+            exit 1
+          fi
+          cat /tmp/slim-remote.log
+          grep -q "Slim package profile excludes remote incident reporting" /tmp/slim-remote.log
+
+      - name: Prove slim artifact contains no remote payload
+        working-directory: head
+        shell: bash
+        run: |
+          set -euo pipefail
+          nix develop --command node -e '
+            const fs = require("node:fs");
+            const zlib = require("node:zlib");
+            const msgpack = require("msgpack5")();
+            const archive = msgpack.decode(fs.readFileSync("/tmp/head-slim.neutron"));
+            const forbidden = /rollbar|api\.rollbar\.com|remote[- ]incident|remoteIncident|RemoteIncidentSink|RollbarRemoteIncidentSink/i;
+            const hits = [];
+            for (const [path, compressed] of Object.entries(archive)) {
+              const text = zlib.gunzipSync(Buffer.from(compressed)).toString("utf8");
+              if (forbidden.test(path) || forbidden.test(text)) hits.push(path);
+            }
+            if (hits.length > 0) {
+              console.error(`Slim archive contains remote-reporting payload in: ${hits.join(", ")}`);
+              process.exit(1);
+            }
+            console.log("Slim archive contains no Rollbar/remote-incident runtime payload");
+          '
+
+      - name: Verify explicit source-map policy stays outside full package input
         working-directory: head
         env:
+          PLASMON_PACKAGE_PROFILE: full
           PLASMON_REMOTE_SOURCE_MAPS: "1"
           PLASMON_REMOTE_SOURCES_CONTENT: include
           PLASMON_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -107,6 +158,6 @@ jobs:
       - name: Enforce slim package contract
         shell: bash
         run: |
-          echo "Measured experimental slim archive: $HEAD_SLIM bytes"
+          echo "Measured normal slim archive: $HEAD_SLIM bytes"
           echo "Required: strictly less than 1900000 bytes"
           test "$HEAD_SLIM" -lt 1900000
