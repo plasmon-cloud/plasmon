@@ -180,6 +180,7 @@ export function FileManager({
 
   const pointer = useFileManagerPointerAdapter({
     fs,
+    trashAuthority,
     nodes: directory.nodes,
     orderedIds: renderState.orderedIds,
     selection,
