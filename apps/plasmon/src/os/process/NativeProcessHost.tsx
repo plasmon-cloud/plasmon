@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type ErrorInfo,
   type ReactNode,
@@ -23,6 +24,7 @@ export interface NativeProcessHostProps {
   fallback?: ReactNode;
   missingFallback?: ReactNode;
   errorFallback?: ReactNode | ((error: unknown) => ReactNode);
+  onMissingLoader?: (appId: string) => void;
   onError?: (error: unknown, info: ErrorInfo) => void;
 }
 
@@ -102,10 +104,12 @@ export function NativeProcessHost({
   fallback = null,
   missingFallback = null,
   errorFallback = null,
+  onMissingLoader,
   onError,
 }: NativeProcessHostProps) {
   const [, forceRender] = useReducer((value: number) => value + 1, 0);
   const [contextMenu, setContextMenu] = useState<ContextMenuFallbackState | null>(null);
+  const reportedMissingLoader = useRef<string | null>(null);
   useEffect(() => process.subscribe(forceRender), [process]);
 
   useEffect(() => {
@@ -124,10 +128,21 @@ export function NativeProcessHost({
 
   const record = process.list().find((item) => item.id === processId) ?? null;
   const appId = record?.appId ?? null;
+  const hasLoader = appId !== null && registry.hasLoader(appId);
   const HostedApplication = useMemo(() => {
-    if (!appId || !registry.hasLoader(appId)) return null;
+    if (!appId || !hasLoader) return null;
     return lazy(async () => ({ default: await registry.loadComponent(appId) }));
-  }, [appId, registry]);
+  }, [appId, hasLoader, registry]);
+
+  useEffect(() => {
+    if (!appId || hasLoader) {
+      reportedMissingLoader.current = null;
+      return;
+    }
+    if (reportedMissingLoader.current === appId) return;
+    reportedMissingLoader.current = appId;
+    onMissingLoader?.(appId);
+  }, [appId, hasLoader, onMissingLoader]);
 
   if (!record || !HostedApplication) return <>{missingFallback}</>;
 

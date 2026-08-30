@@ -5,6 +5,7 @@ import {
   offerAppInstall,
   openAppTile,
 } from "neutron-tools/app";
+import type { DiagnosticLogger } from "../diagnostics/index.ts";
 import type { VanillaNeutronApi } from "./types.ts";
 
 export const MAX_CONCURRENT_FRONTEND_CALLS_PER_ENDPOINT = 8;
@@ -27,6 +28,24 @@ export type FrontendCallAdmission = <T>(
   operation: () => Promise<T>,
 ) => Promise<T>;
 
+export interface FrontendCallAdmissionOptions {
+  now?: () => number;
+  diagnosticLogger?: () => DiagnosticLogger | null;
+}
+
+let sharedDiagnosticLogger: DiagnosticLogger | null = null;
+
+/**
+ * Attach the canonical production logger to the one shared caller-endpoint
+ * admission lane. Construction remains silent until diagnostics can truthfully
+ * exist; callers must not create a second admission semaphore merely to log it.
+ */
+export function setFrontendCallAdmissionDiagnosticLogger(
+  logger: DiagnosticLogger | null,
+): void {
+  sharedDiagnosticLogger = logger;
+}
+
 /**
  * Bound Plasmon's normal frontend-tool traffic at the same authority boundary
  * Kernel uses for admission: one caller endpoint, regardless of which Plasmon
@@ -40,11 +59,20 @@ export type FrontendCallAdmission = <T>(
  */
 export function createFrontendCallAdmission(
   maximum = MAX_CONCURRENT_FRONTEND_CALLS_PER_ENDPOINT,
+  options: FrontendCallAdmissionOptions = {},
 ): FrontendCallAdmission {
   if (!Number.isSafeInteger(maximum) || maximum < 1) {
     throw new Error("Frontend call concurrency must be a positive integer");
   }
 
+  const now = options.now ?? Date.now;
+  const logDebug = (event: string, context: Record<string, unknown>): void => {
+    try {
+      options.diagnosticLogger?.()?.debug(event, context);
+    } catch {
+      // Admission must remain correct even if an injected observer is defective.
+    }
+  };
   let active = 0;
   let nextCallId = 0;
   const waiters: Waiter[] = [];
@@ -52,7 +80,7 @@ export function createFrontendCallAdmission(
 
   const start = (callId: number, name: string): void => {
     active += 1;
-    activeCalls.set(callId, { callId, name, startedAtMs: Date.now() });
+    activeCalls.set(callId, { callId, name, startedAtMs: now() });
   };
 
   const acquire = (name: string, callId: number): Promise<boolean> => {
@@ -61,8 +89,8 @@ export function createFrontendCallAdmission(
       return Promise.resolve(false);
     }
 
-    const queuedAtMs = Date.now();
-    console.debug("[plasmon.neutron] queued frontend tool call", {
+    const queuedAtMs = now();
+    logDebug("neutron.frontend-call.queued", {
       callId,
       name,
       active,
@@ -88,10 +116,10 @@ export function createFrontendCallAdmission(
     // this reservation, a newly arriving call can barge into the gap and the
     // resumed waiter can raise active above the configured maximum.
     start(next.callId, next.name);
-    console.debug("[plasmon.neutron] admitted queued frontend tool call", {
+    logDebug("neutron.frontend-call.admitted", {
       callId: next.callId,
       name: next.name,
-      waitMs: Date.now() - next.queuedAtMs,
+      waitMs: now() - next.queuedAtMs,
       active,
       queued: waiters.length,
       maximum,
@@ -104,10 +132,10 @@ export function createFrontendCallAdmission(
     activeCalls.delete(callId);
     active -= 1;
     if (queued) {
-      console.debug("[plasmon.neutron] completed queued frontend tool call", {
+      logDebug("neutron.frontend-call.completed", {
         callId,
         name: current?.name,
-        durationMs: current === undefined ? undefined : Date.now() - current.startedAtMs,
+        durationMs: current === undefined ? undefined : now() - current.startedAtMs,
         active,
         queued: waiters.length,
         maximum,
@@ -127,7 +155,10 @@ export function createFrontendCallAdmission(
   };
 }
 
-export const admitFrontendToolCall = createFrontendCallAdmission();
+export const admitFrontendToolCall = createFrontendCallAdmission(
+  MAX_CONCURRENT_FRONTEND_CALLS_PER_ENDPOINT,
+  { diagnosticLogger: () => sharedDiagnosticLogger },
+);
 
 /** Normal Kernel calls used by the production vanilla bridge share the same
  * caller-endpoint admission lane as hosted filesystem RPC. */

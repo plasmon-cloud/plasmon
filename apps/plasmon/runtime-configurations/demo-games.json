@@ -1,0 +1,8 @@
+{
+  "format": "plasmon-runtime-config-v1",
+  "id": "demo-games",
+  "runtimes": [
+    "js-dos",
+    "emulatorjs"
+  ]
+}
