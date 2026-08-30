@@ -132,7 +132,9 @@ test("Base and Slim exclude heavyweight game/demo payloads and emit the exact re
   const workerPaths = webFiles.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
   expect(workerPaths).toEqual([
     ...monacoWorkers.map((worker) => `System/Program Files/MonacoEditor/${worker}`),
-    ...monacoWorkers.map((worker) => `runtime/monaco/${worker}`),
+    ...(packagePolicy.monacoProfile === "slim"
+      ? []
+      : monacoWorkers.map((worker) => `runtime/monaco/${worker}`)),
   ].sort());
 
   const transportScript = await readFile(new URL("../dist/web/runtime/monaco/worker-sources.js", import.meta.url), "utf8");
@@ -143,10 +145,13 @@ test("Base and Slim exclude heavyweight game/demo payloads and emit the exact re
 
   for (const worker of monacoWorkers) {
     const canonical = await readFile(new URL(`../dist/web/System/Program Files/MonacoEditor/${worker}`, import.meta.url), "utf8");
-    const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
     expect(canonical.length).toBeGreaterThan(0);
-    expect(runtime).toBe(canonical);
     expect(sources[worker]).toBe(canonical);
+
+    if (packagePolicy.monacoProfile !== "slim") {
+      const runtime = await readFile(new URL(`../dist/web/runtime/monaco/${worker}`, import.meta.url), "utf8");
+      expect(runtime).toBe(canonical);
+    }
   }
 
   const mainBundle = await readFile(mainBundleUrl, "utf8");
