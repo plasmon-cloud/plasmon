@@ -104,8 +104,8 @@ const explicitClassifications = Object.freeze([
     id: "public-audit-base-ref",
     path: "test/ci/public-consumption-audit.json",
     kind: "audit-record-metadata",
-    linePattern: /"baseRef": "version-0\.1\.0-os-r3"/u,
-    reason: "The committed public-consumption audit record names the base ref used for its exact-head audit; this is review metadata, not release-coupled behavior.",
+    linePattern: /"baseRef": "release\/0\.1\.0-r2r3"/u,
+    reason: "The committed public-consumption audit record names the combined release ref used for its exact-head audit; this is review metadata, not release-coupled behavior.",
   }),
   Object.freeze({
     id: "public-audit-owner",

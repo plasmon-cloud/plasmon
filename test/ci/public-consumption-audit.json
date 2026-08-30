@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "targetRef": "agent/issue-670",
-  "baseRef": "version-0.1.0-os-r3",
-  "auditedSha": "5fe2c77bbfebe8ba9c8c7970f678e44f32ea3de1",
-  "auditedAt": "2026-08-30T06:01:00.000Z",
+  "baseRef": "release/0.1.0-r2r3",
+  "auditedSha": "a47c0599ac38e92dcbda41c678bd722d263d2e7c",
+  "auditedAt": "2026-08-30T15:25:00.000Z",
   "owner": "agent/issue-670",
   "status": "candidate",
   "approvedBy": "",
