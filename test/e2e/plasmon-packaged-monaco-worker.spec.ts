@@ -125,7 +125,7 @@ test("slim packaged Monaco executes the installed editor-worker through the opaq
   ]);
   expect(mirror.ok(), "slim Monaco URL-safe editor-worker mirror must remain installed").toBe(true);
   expect(transport.ok(), "opaque-origin Monaco worker transport must be served from the installed package").toBe(true);
-  expect(missingMirrorTypescript.ok(), "slim r2 must not expose a shadow ts.worker.js mirror").toBe(false);
+  expect(missingMirrorTypescript.ok(), "slim profile must not expose a shadow ts.worker.js mirror").toBe(false);
   expect(retired.ok(), "the retired top-level Monaco worker path must not remain packaged").toBe(false);
 
   const mirrorBytes = await mirror.body();
