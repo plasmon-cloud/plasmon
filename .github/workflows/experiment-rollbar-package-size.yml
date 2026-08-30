@@ -67,9 +67,12 @@ jobs:
           }
 
           BASE_SLIM=$(package_size base slim local)
+          cp "$(archive_path base)" /tmp/base-slim.neutron
           rm -f "$(archive_path base)"
           HEAD_SLIM=$(package_size head slim local)
           cp "$(archive_path head)" /tmp/head-slim.neutron
+          rm -rf /tmp/head-slim-web
+          cp -a head/apps/plasmon/dist/web /tmp/head-slim-web
           rm -f "$(archive_path head)"
           BASE_FULL=$(package_size base full local)
           rm -f "$(archive_path base)"
@@ -119,27 +122,23 @@ jobs:
           grep -q "Slim package profile excludes remote incident reporting" /tmp/slim-remote.log
 
       - name: Prove slim artifact contains no remote payload
-        working-directory: head
         shell: bash
         run: |
           set -euo pipefail
-          nix develop --command node -e '
-            const fs = require("node:fs");
-            const zlib = require("node:zlib");
-            const msgpack = require("msgpack5")();
-            const archive = msgpack.decode(fs.readFileSync("/tmp/head-slim.neutron"));
-            const forbidden = /rollbar|api\.rollbar\.com|remote[- ]incident|remoteIncident|RemoteIncidentSink|RollbarRemoteIncidentSink/i;
-            const hits = [];
-            for (const [path, compressed] of Object.entries(archive)) {
-              const text = zlib.gunzipSync(Buffer.from(compressed)).toString("utf8");
-              if (forbidden.test(path) || forbidden.test(text)) hits.push(path);
-            }
-            if (hits.length > 0) {
-              console.error(`Slim archive contains remote-reporting payload in: ${hits.join(", ")}`);
-              process.exit(1);
-            }
-            console.log("Slim archive contains no Rollbar/remote-incident runtime payload");
-          '
+          cmp /tmp/base-slim.neutron /tmp/head-slim.neutron
+          BASE_SHA=$(sha256sum /tmp/base-slim.neutron | cut -d' ' -f1)
+          HEAD_SHA=$(sha256sum /tmp/head-slim.neutron | cut -d' ' -f1)
+          echo "Canonical #667 slim SHA-256: $BASE_SHA"
+          echo "Experiment slim SHA-256:      $HEAD_SHA"
+          test "$BASE_SHA" = "$HEAD_SHA"
+
+          if grep -R -a -E -n \
+            'RollbarRemoteIncidentSink|RemoteIncidentSink|plasmon\.remote-incident\.v1|remote\.synthetic\.failed|api\.rollbar\.com|post_client_item' \
+            /tmp/head-slim-web; then
+            echo "Slim web payload contains #674 remote-reporting runtime markers" >&2
+            exit 1
+          fi
+          echo "Slim archive is byte-identical to canonical #667 and its built web payload contains no #674/Rollbar runtime markers"
 
       - name: Verify explicit source-map policy stays outside full package input
         working-directory: head
