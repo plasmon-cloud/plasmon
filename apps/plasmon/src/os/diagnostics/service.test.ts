@@ -50,6 +50,45 @@ describe("PlasmonDiagnosticService", () => {
     expect(text).toContain('context={"revision":"42","seeded":3}');
   });
 
+  test("scoped producer helpers preserve severity, subsystem, reserved metadata, and safe context", async () => {
+    const fs = createFs();
+    const diagnostics = new PlasmonDiagnosticService({
+      fs,
+      console: null,
+      fileMinLevel: "debug",
+    });
+    const observed: string[] = [];
+    diagnostics.subscribe((record) => observed.push(`${record.level}:${record.subsystem}:${record.event}`));
+    const log = diagnostics.for("filesystem");
+
+    const record = log.error("file.write.failed", {
+      message: "Filesystem write failed",
+      correlationId: "open-42",
+      path: "/Documents/example.txt",
+      attempt: 2,
+      error: new Error("disk unavailable"),
+    });
+    log.info("file.move.completed", { count: 3 });
+    await diagnostics.flush();
+
+    expect(log.subsystem).toBe("filesystem");
+    expect(record.level).toBe("error");
+    expect(record.subsystem).toBe("filesystem");
+    expect(record.event).toBe("file.write.failed");
+    expect(record.message).toBe("Filesystem write failed");
+    expect(record.correlationId).toBe("open-42");
+    expect(record.context).toEqual({ attempt: 2, path: "/Documents/example.txt" });
+    expect(record.error?.message).toBe("disk unavailable");
+    expect(observed).toEqual([
+      "error:filesystem:file.write.failed",
+      "info:filesystem:file.move.completed",
+    ]);
+    const text = await readSystemLog(fs);
+    expect(text).toContain("file.write.failed");
+    expect(text).toContain("file.move.completed");
+    expect(text).toContain('context={"attempt":2,"path":"/Documents/example.txt"}');
+  });
+
   test("redacts sensitive keys and common token forms before any sink sees them", async () => {
     const fs = createFs();
     const consoleLines: string[] = [];

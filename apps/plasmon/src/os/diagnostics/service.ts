@@ -35,7 +35,31 @@ export interface DiagnosticRecord {
   error?: DiagnosticError;
 }
 
+/**
+ * Ergonomic producer fields. `message`, `correlationId`, and `error` are
+ * reserved metadata; every other property becomes sanitized event context.
+ */
+export interface DiagnosticLogFields {
+  message?: string;
+  correlationId?: string;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+export interface DiagnosticLogger {
+  readonly subsystem: string;
+  debug(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+  info(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+  notice(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+  warn(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+  error(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+  critical(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+}
+
 export interface DiagnosticService {
+  /** Canonical producer API for Product subsystems. */
+  for(subsystem: string): DiagnosticLogger;
+  /** Low-level structured emission used by the producer adapter and bounded integration seams. */
   emit(input: DiagnosticEventInput): DiagnosticRecord;
   subscribe(listener: (record: DiagnosticRecord) => void): () => void;
   flush(): Promise<void>;
@@ -151,6 +175,41 @@ function normalizeRecord(input: DiagnosticEventInput, timestamp: number): Diagno
     ...(input.context ? { context: sanitizeDiagnosticContext(input.context) } : {}),
     ...(input.error !== undefined ? { error: sanitizeError(input.error) } : {}),
   };
+}
+
+function emitScoped(
+  diagnostics: DiagnosticService,
+  subsystem: string,
+  level: DiagnosticLevel,
+  event: string,
+  fields: DiagnosticLogFields | undefined,
+): DiagnosticRecord {
+  const { message, correlationId, error, ...context } = fields ?? {};
+  return diagnostics.emit({
+    level,
+    subsystem,
+    event,
+    message: typeof message === "string" && message.trim() ? message : event,
+    ...(typeof correlationId === "string" && correlationId.trim() ? { correlationId } : {}),
+    ...(Object.keys(context).length > 0 ? { context } : {}),
+    ...(error !== undefined ? { error } : {}),
+  });
+}
+
+export function createDiagnosticLogger(
+  diagnostics: DiagnosticService,
+  subsystem: string,
+): DiagnosticLogger {
+  const scopedSubsystem = cleanToken(subsystem, "unknown");
+  return Object.freeze({
+    subsystem: scopedSubsystem,
+    debug: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "debug", event, fields),
+    info: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "info", event, fields),
+    notice: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "notice", event, fields),
+    warn: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "warn", event, fields),
+    error: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "error", event, fields),
+    critical: (event, fields) => emitScoped(diagnostics, scopedSubsystem, "critical", event, fields),
+  });
 }
 
 function stableJson(value: unknown): string {
@@ -273,6 +332,10 @@ export class PlasmonDiagnosticService implements DiagnosticService {
     this.console = options.console === undefined ? globalThis.console : options.console;
     this.maxBytes = options.maxBytes ?? DEFAULT_SYSTEM_LOG_MAX_BYTES;
     this.retainBytes = options.retainBytes ?? DEFAULT_SYSTEM_LOG_RETAIN_BYTES;
+  }
+
+  for(subsystem: string): DiagnosticLogger {
+    return createDiagnosticLogger(this, subsystem);
   }
 
   emit(input: DiagnosticEventInput): DiagnosticRecord {
