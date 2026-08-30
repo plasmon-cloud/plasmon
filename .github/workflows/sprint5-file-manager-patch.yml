@@ -1,0 +1,119 @@
+name: Sprint 5 File Manager patch
+
+on:
+  push:
+    branches:
+      - sprint5/file-manager-demo-fixes
+    paths:
+      - .sprint5-file-manager-patch
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sprint5/file-manager-demo-fixes
+          fetch-depth: 1
+      - name: Apply bounded source edits
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement, found {count}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          pointer = "apps/plasmon/src/os/file-manager/use-file-manager-pointer-adapter.ts"
+          replace_once(
+              pointer,
+              'import type { FsNode, FsService, NodeId } from "../contracts/index.ts";\n',
+              'import type { FsNode, FsService, NodeId } from "../contracts/index.ts";\nimport { deleteFailureMessage, type FileManagerTrashAuthority } from "./delete.ts";\n',
+          )
+          replace_once(
+              pointer,
+              'import type { FileOperationState } from "./operation-state.ts";\n',
+              'import type { FileOperationState } from "./operation-state.ts";\nimport {\n  canDropNodesToRecycleBin,\n  isRecycleBinDropTarget,\n  moveDroppedNodesToRecycleBin,\n} from "./trash-drop.ts";\n',
+          )
+          replace_once(
+              pointer,
+              'interface UseFileManagerPointerAdapterOptions {\n  fs: FsService;\n',
+              'interface UseFileManagerPointerAdapterOptions {\n  fs: FsService;\n  trashAuthority: FileManagerTrashAuthority;\n',
+          )
+          replace_once(
+              pointer,
+              'interface ActiveDropTarget {\n  node: FsNode;\n  element: HTMLElement;\n}\n',
+              'interface ActiveDropTarget {\n  kind: "directory" | "trash";\n  node: FsNode;\n  element: HTMLElement;\n}\n',
+          )
+          replace_once(
+              pointer,
+              '  const {\n    fs,\n    nodes,\n',
+              '  const {\n    fs,\n    trashAuthority,\n    nodes,\n',
+          )
+          replace_once(
+              pointer,
+              '''        const candidateId = directoryDropCandidateId([\n          {\n            kind: "entry",\n            nodeId: id,\n            nodeKind: entry.dataset.fmKind as FsNode["kind"] | undefined,\n          },\n        ], active.ids);\n        // A visible resource entry blocks its containing directory surface. A\n        // normal file therefore means "no target" instead of "drop in folder".\n        return candidateId ? { id: candidateId, element: entry, kind: "entry" } : null;\n''',
+              '''        // Any visible entry blocks its containing directory surface. The\n        // canonical resolver below decides whether it is a directory, Recycle\n        // Bin target, or an ordinary non-target resource.\n        if (active.ids.includes(id)) return null;\n        return { id, element: entry, kind: "entry" };\n''',
+          )
+          replace_once(
+              pointer,
+              '''  const resolveCanonicalDropTarget = async (\n    active: EntryDragState,\n    candidate: DragDropCandidate | null,\n  ): Promise<FsNode | null> => {\n    if (!candidate) return null;\n    const source = sourceNodesFor(active);\n    if (source.length !== active.ids.length) return null;\n    try {\n      const target = await fs.stat(candidate.id);\n      await validateDirectoryDrop(fs, source, target);\n      return target;\n    } catch {\n      return null;\n    }\n  };\n''',
+              '''  const resolveCanonicalDropTarget = async (\n    active: EntryDragState,\n    candidate: DragDropCandidate | null,\n  ): Promise<Omit<ActiveDropTarget, "element"> | null> => {\n    if (!candidate) return null;\n    const source = sourceNodesFor(active);\n    if (source.length !== active.ids.length) return null;\n    try {\n      const target = await fs.stat(candidate.id);\n      if (\n        candidate.kind === "entry"\n        && await isRecycleBinDropTarget(fs, target)\n        && canDropNodesToRecycleBin(source)\n      ) {\n        return { kind: "trash", node: target };\n      }\n      if (target.kind !== "directory") return null;\n      await validateDirectoryDrop(fs, source, target);\n      return { kind: "directory", node: target };\n    } catch {\n      return null;\n    }\n  };\n''',
+          )
+          replace_once(
+              pointer,
+              '      if (target) setActiveDropTarget({ node: target, element: candidate.element });\n',
+              '      if (target) setActiveDropTarget({ ...target, element: candidate.element });\n',
+          )
+          replace_once(
+              pointer,
+              '''    const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element\n      ? resolved.node\n      : await resolveCanonicalDropTarget(active, candidate);\n    const placementCommit = target?.kind === "directory" && candidate?.id === target.id\n      ? handoffIncomingPlacement(active, candidate, dx, dy)\n      : null;\n''',
+              '''    const target = candidate && resolved?.node.id === candidate.id && resolved.element === candidate.element\n      ? resolved\n      : await resolveCanonicalDropTarget(active, candidate);\n    const placementCommit = target?.kind === "directory" && candidate?.id === target.node.id\n      ? handoffIncomingPlacement(active, candidate, dx, dy)\n      : null;\n''',
+          )
+          replace_once(
+              pointer,
+              '''    try {\n      if (target?.kind === "directory") {\n''',
+              '''    try {\n      if (target?.kind === "trash") {\n        removeDragPreview();\n        const result = await moveDroppedNodesToRecycleBin(trashAuthority, source);\n        let completionError = deleteFailureMessage(result.failures);\n        try {\n          await refresh();\n        } catch (refreshCause: unknown) {\n          const refreshMessage = `refresh failed: ${errorMessage(refreshCause)}`;\n          completionError = completionError\n            ? `${completionError} (${refreshMessage})`\n            : refreshMessage;\n        }\n        setError(completionError);\n        return;\n      }\n      if (target?.kind === "directory") {\n''',
+          )
+          replace_once(
+              pointer,
+              '          await moveNodesToDirectory(fs, source, target, {\n',
+              '          await moveNodesToDirectory(fs, source, target.node, {\n',
+          )
+
+          manager = "apps/plasmon/src/os/file-manager/FileManager.tsx"
+          replace_once(
+              manager,
+              '  const pointer = useFileManagerPointerAdapter({\n    fs,\n    nodes: directory.nodes,\n',
+              '  const pointer = useFileManagerPointerAdapter({\n    fs,\n    trashAuthority,\n    nodes: directory.nodes,\n',
+          )
+
+          recycle = "apps/plasmon/src/native-apps/recycle-bin/RecycleBin.tsx"
+          replace_once(
+              recycle,
+              'import {\n  RecycleBinModel,\n  subscribeRecycleBinInvalidation,\n',
+              'import {\n  RecycleBinModel,\n  recycleBinKindLabel,\n  subscribeRecycleBinInvalidation,\n',
+          )
+          replace_once(
+              recycle,
+              '<small>{item.kind}</small>',
+              '<small>{recycleBinKindLabel(item.kind)}</small>',
+          )
+          PY
+          git diff --check
+      - name: Commit patch
+        run: |
+          git config user.name "plasmon-sprint5-agent"
+          git config user.email "plasmon-sprint5-agent@users.noreply.github.com"
+          git add apps/plasmon/src/os/file-manager/FileManager.tsx \
+                  apps/plasmon/src/os/file-manager/use-file-manager-pointer-adapter.ts \
+                  apps/plasmon/src/native-apps/recycle-bin/RecycleBin.tsx
+          git commit -m "Wire Recycle Bin drag-to-trash presentation"
+          git push origin HEAD:sprint5/file-manager-demo-fixes
