@@ -9,6 +9,7 @@ import type {
   OpenService,
   ProcessController,
 } from "../contracts/index.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 import { reconcileCoreDesktopSeeds } from "./defaultSeeds.ts";
 import {
   TrashService,
@@ -33,6 +34,7 @@ export interface FilesystemCoreOptions {
   associations: AssociationRegistry;
   openService: OpenService;
   process: ProcessController;
+  diagnostics?: DiagnosticService;
   durableSeeds?: readonly FilesystemSeedSpec[];
   demoSeeds?: readonly FilesystemSeedSpec[];
 }
@@ -64,6 +66,15 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
+function isExpectedTrashFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /protected and cannot be|installed application; use Uninstall|already in Recycle Bin|Filesystem root cannot be deleted|Recycle Bin item was not found/u.test(error.message);
+}
+
 /**
  * Composes filesystem policy without changing FsService persistence contracts.
  * Bootstrap uses the raw service; public consumers receive a gated/protected
@@ -74,6 +85,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
   const managed = new ProtectedManagedFsService(options.fs);
   const projections = new StableNeutronProjectionService(options.fs);
   const privilegedTrash = new TrashService(options.fs);
+  const filesystemLog = options.diagnostics?.for("filesystem") ?? null;
   let disposed = false;
   let stopNeutron: () => void = () => undefined;
   let reconcileTail: Promise<void> = Promise.resolve();
@@ -119,20 +131,68 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
         await ready;
         await reconcileNeutron();
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        filesystemLog?.warn("filesystem.neutron-projection.failed", {
+          stage: "invalidation",
+          errorType: diagnosticErrorType(error),
+        });
+      });
   });
 
   const trash: FilesystemTrashService = {
-    trash: async (nodeId) => { await ready; return privilegedTrash.trash(nodeId); },
+    trash: async (nodeId) => {
+      await ready;
+      try {
+        return await privilegedTrash.trash(nodeId);
+      } catch (error) {
+        if (!isExpectedTrashFailure(error)) {
+          filesystemLog?.error("filesystem.trash.failed", {
+            errorType: diagnosticErrorType(error),
+          });
+        }
+        throw error;
+      }
+    },
     list: async () => { await ready; return privilegedTrash.list(); },
     restore: async (nodeId, fallbackPath) => {
       await ready;
-      return fallbackPath === undefined
-        ? privilegedTrash.restore(nodeId)
-        : privilegedTrash.restore(nodeId, fallbackPath);
+      try {
+        return fallbackPath === undefined
+          ? await privilegedTrash.restore(nodeId)
+          : await privilegedTrash.restore(nodeId, fallbackPath);
+      } catch (error) {
+        if (!isExpectedTrashFailure(error)) {
+          filesystemLog?.error("filesystem.trash.restore.failed", {
+            errorType: diagnosticErrorType(error),
+          });
+        }
+        throw error;
+      }
     },
-    permanentlyDelete: async (nodeId) => { await ready; await privilegedTrash.permanentlyDelete(nodeId); },
-    empty: async () => { await ready; return privilegedTrash.empty(); },
+    permanentlyDelete: async (nodeId) => {
+      await ready;
+      try {
+        await privilegedTrash.permanentlyDelete(nodeId);
+      } catch (error) {
+        if (!isExpectedTrashFailure(error)) {
+          filesystemLog?.error("filesystem.trash.permanent-delete.failed", {
+            errorType: diagnosticErrorType(error),
+          });
+        }
+        throw error;
+      }
+    },
+    empty: async () => {
+      await ready;
+      try {
+        return await privilegedTrash.empty();
+      } catch (error) {
+        filesystemLog?.error("filesystem.trash.empty.failed", {
+          errorType: diagnosticErrorType(error),
+        });
+        throw error;
+      }
+    },
   };
 
   const open = new FilesystemOpenDispatcher({
