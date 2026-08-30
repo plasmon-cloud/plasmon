@@ -20,6 +20,7 @@ import type {
   ProcessId,
   OpenTarget,
 } from "../../os/contracts/index.ts";
+import type { DiagnosticService } from "../../os/diagnostics/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
   DEFAULT_FILE_MANAGER_PREFERENCES,
@@ -49,6 +50,7 @@ export interface ExplorerAppProps {
   trashAuthority: FileManagerTrashAuthority;
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  diagnostics?: DiagnosticService;
 }
 
 function labelForPath(path: string): string {
@@ -90,6 +92,7 @@ export function ExplorerApp({
   trashAuthority,
   clipboard: providedClipboard,
   hiddenVisibility,
+  diagnostics,
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const preferenceStore = useMemo(() => new FileManagerPreferenceStore(fs), [fs]);
@@ -376,6 +379,7 @@ export function ExplorerApp({
               openAuthority={openAuthority}
               trashAuthority={trashAuthority}
               {...(fsEvents ? { fsEvents } : {})}
+              {...(diagnostics ? { diagnostics } : {})}
               associations={associations}
               openService={openService}
               process={process}

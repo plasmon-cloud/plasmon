@@ -1,4 +1,5 @@
 import type { FsService, HandlerId, JsonValue, NodeId } from "../contracts/index.ts";
+import type { DiagnosticLogger, DiagnosticService } from "../diagnostics/index.ts";
 import type { AssociationDefaultStore } from "./defaults.ts";
 
 export const FS_ASSOCIATION_DEFAULTS_METADATA_KEY = "plasmon.association.defaults.v1";
@@ -37,16 +38,26 @@ function serializeDefaults(defaults: ReadonlyMap<string, HandlerId>): JsonValue 
   };
 }
 
+function diagnosticErrorType(error: unknown): string {
+  return error instanceof Error ? error.name || "Error" : typeof error;
+}
+
 export class FsServiceAssociationDefaultStore implements AssociationDefaultStore {
   private readonly fs: FsService;
   private readonly metadataKey: string;
+  private readonly log: DiagnosticLogger | null;
   private loaded: LoadedDefaults | null = null;
   private loadPromise: Promise<LoadedDefaults> | null = null;
   private writeTail: Promise<void> = Promise.resolve();
 
-  constructor(fs: FsService, metadataKey = FS_ASSOCIATION_DEFAULTS_METADATA_KEY) {
+  constructor(
+    fs: FsService,
+    metadataKey = FS_ASSOCIATION_DEFAULTS_METADATA_KEY,
+    diagnostics?: DiagnosticService,
+  ) {
     this.fs = fs;
     this.metadataKey = metadataKey;
+    this.log = diagnostics?.for("associations") ?? null;
   }
 
   private async load(): Promise<LoadedDefaults> {
@@ -69,6 +80,9 @@ export class FsServiceAssociationDefaultStore implements AssociationDefaultStore
         },
         (error: unknown) => {
           this.loadPromise = null;
+          this.log?.warn("associations.defaults.read.failed", {
+            errorType: diagnosticErrorType(error),
+          });
           throw error;
         },
       );
@@ -93,6 +107,9 @@ export class FsServiceAssociationDefaultStore implements AssociationDefaultStore
         });
       } catch (error) {
         this.invalidateLoadedState();
+        this.log?.warn("associations.defaults.write.failed", {
+          errorType: diagnosticErrorType(error),
+        });
         throw error;
       }
 

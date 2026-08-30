@@ -41,7 +41,7 @@ export function useFileManagerDirectoryState(
   const refreshQueueRef = useRef(new SerializedRefreshQueue());
   const refreshScopeRef = useRef(0);
 
-  const refresh = useCallback(async () => {
+  const refreshDirectory = useCallback(async (clearErrorOnSuccess: boolean) => {
     const scope = refreshScopeRef.current;
 
     await refreshQueueRef.current.request(async () => {
@@ -62,7 +62,7 @@ export function useFileManagerDirectoryState(
         setSelection((selection) =>
           reconcileSelection(selection, new Set(listed.map((node) => node.id))),
         );
-        setError(null);
+        if (clearErrorOnSuccess) setError(null);
       } catch (cause: unknown) {
         if (
           scope !== refreshScopeRef.current
@@ -78,6 +78,11 @@ export function useFileManagerDirectoryState(
     });
   }, [directoryId, fs, setSelection, sort]);
 
+  const refresh = useCallback(
+    () => refreshDirectory(true),
+    [refreshDirectory],
+  );
+
   useEffect(() => {
     const scope = refreshScopeRef.current;
     void refresh();
@@ -90,9 +95,9 @@ export function useFileManagerDirectoryState(
   useEffect(() => {
     if (!fsEvents) return undefined;
     return fsEvents.subscribe((event) => {
-      if (isFsEventRelevant(event, directoryId)) void refresh();
+      if (isFsEventRelevant(event, directoryId)) void refreshDirectory(false);
     });
-  }, [directoryId, fsEvents, refresh]);
+  }, [directoryId, fsEvents, refreshDirectory]);
 
   return { nodes, loading, error, setError, refresh };
 }
