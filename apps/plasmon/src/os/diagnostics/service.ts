@@ -1,5 +1,10 @@
 import type { FsService } from "../contracts/index.ts";
 import { OWNERSHIP_METADATA_KEY } from "../fs/resourcePolicy.ts";
+import {
+  createDiagnosticLogger,
+  type DiagnosticLogger,
+  type DiagnosticLoggerDefaults,
+} from "./logger.ts";
 
 export const SYSTEM_LOG_PATH = "/System/system.log";
 export const SYSTEM_LOG_MIME = "text/plain";
@@ -36,6 +41,9 @@ export interface DiagnosticRecord {
 }
 
 export interface DiagnosticService {
+  /** Canonical producer API. Scope once per subsystem, then emit stable named events. */
+  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger;
+  /** Low-level structured ingestion seam used by scoped loggers and focused tests. */
   emit(input: DiagnosticEventInput): DiagnosticRecord;
   subscribe(listener: (record: DiagnosticRecord) => void): () => void;
   flush(): Promise<void>;
@@ -279,6 +287,10 @@ export class PlasmonDiagnosticService implements DiagnosticService {
     this.console = options.console === undefined ? globalThis.console : options.console;
     this.maxBytes = options.maxBytes ?? DEFAULT_SYSTEM_LOG_MAX_BYTES;
     this.retainBytes = options.retainBytes ?? DEFAULT_SYSTEM_LOG_RETAIN_BYTES;
+  }
+
+  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger {
+    return createDiagnosticLogger(this, subsystem, defaults);
   }
 
   emit(input: DiagnosticEventInput): DiagnosticRecord {

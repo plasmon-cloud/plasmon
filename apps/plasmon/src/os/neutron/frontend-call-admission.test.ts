@@ -1,6 +1,25 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
+import { createDiagnosticLogger } from "../diagnostics/logger.ts";
+import type { DiagnosticEventInput, DiagnosticRecord } from "../diagnostics/service.ts";
 import { createFrontendCallAdmission } from "./frontend-call-admission.ts";
+
+function captureDiagnosticLogger(inputs: DiagnosticEventInput[]) {
+  return createDiagnosticLogger({
+    emit(input): DiagnosticRecord {
+      inputs.push(input);
+      return {
+        timestamp: 0,
+        level: input.level,
+        subsystem: input.subsystem,
+        event: input.event,
+        message: input.message,
+        ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+        ...(input.context ? { context: input.context } : {}),
+      };
+    },
+  }, "neutron");
+}
 
 test("frontend admission never exceeds the configured caller-endpoint limit", async () => {
   const admit = createFrontendCallAdmission(2);
@@ -86,4 +105,46 @@ test("a released slot is reserved for the oldest queued call before a newcomer c
   await second;
   await third;
   assert.deepEqual(order, ["first", "second", "third"]);
+});
+
+test("queued-call lifecycle uses the canonical scoped diagnostic logger", async () => {
+  const inputs: DiagnosticEventInput[] = [];
+  let now = 100;
+  const admit = createFrontendCallAdmission(1, {
+    now: () => now,
+    diagnosticLogger: () => captureDiagnosticLogger(inputs),
+  });
+  let releaseFirst: (() => void) | undefined;
+
+  const first = admit("kernel:apps.list", async () => {
+    await new Promise<void>((resolve) => { releaseFirst = resolve; });
+  });
+  const second = admit("plasmon.fs.stat", async () => undefined);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.equal(inputs.length, 1);
+  assert.equal(inputs[0]?.subsystem, "neutron");
+  assert.equal(inputs[0]?.event, "neutron.frontend-call.queued");
+  assert.deepEqual(inputs[0]?.context, {
+    callId: 2,
+    name: "plasmon.fs.stat",
+    active: 1,
+    queued: 1,
+    maximum: 1,
+    activeCalls: [{ callId: 1, name: "kernel:apps.list", startedAtMs: 100 }],
+  });
+
+  now = 125;
+  releaseFirst?.();
+  await first;
+  await second;
+
+  assert.deepEqual(inputs.map((input) => input.event), [
+    "neutron.frontend-call.queued",
+    "neutron.frontend-call.admitted",
+    "neutron.frontend-call.completed",
+  ]);
+  assert.equal(inputs[1]?.context?.waitMs, 25);
+  assert.equal(inputs[2]?.context?.durationMs, 0);
 });
