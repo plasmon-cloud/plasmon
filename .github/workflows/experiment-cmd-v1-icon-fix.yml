@@ -1,0 +1,50 @@
+name: Experiment Cmd V1 Icon Fix
+
+on:
+  push:
+    branches: [experiment/cmd]
+    paths:
+      - .github/workflows/experiment-cmd-v1-icon-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: experiment/cmd
+          fetch-depth: 0
+      - name: Apply bounded fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          icon_path = Path("apps/plasmon/src/os/visual/owned-icon-art.tsx")
+          text = icon_path.read_text()
+          needle = '''    case "pin":\n      glyph = <>\n'''
+          replacement = '''    case "terminal":\n      glyph = <>\n        <rect x="12" y="15" width="40" height="34" rx="5" fill={slot.secondary} opacity=".42" stroke={slot.accent} strokeWidth="2" />\n        <path d="m19 25 8 7-8 7" fill="none" stroke={slot.highlight} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />\n        <path d="M32 40h13" stroke={slot.highlight} strokeWidth="4" strokeLinecap="round" />\n      </>;\n      break;\n    case "pin":\n      glyph = <>\n'''
+          if needle not in text:
+              raise SystemExit("OwnedSystemIcon insertion point changed")
+          icon_path.write_text(text.replace(needle, replacement, 1))
+
+          smoke_path = Path("test/e2e/experiment-cmd-runtime.spec.ts")
+          smoke = smoke_path.read_text()
+          old = '''  await expect(terminalTask.locator('img[src*="terminal.svg"]')).toBeVisible();\n'''
+          new = '''  const renderedTerminalIcon = terminalTask.locator('[data-plasmon-owned-icon="system:terminal"]');\n  await expect(renderedTerminalIcon).toBeVisible();\n  await expect(renderedTerminalIcon.locator("path")).toHaveCount(2);\n'''
+          if old not in smoke:
+              raise SystemExit("Packaged icon assertion changed")
+          smoke_path.write_text(smoke.replace(old, new, 1))
+
+          workflow = Path(".github/workflows/experiment-cmd-v1-icon-fix.yml")
+          workflow.unlink()
+      - name: Commit fix
+        run: |
+          git config user.name "KT"
+          git config user.email "37081025+3E4B54@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Experiment: render and verify Terminal icon"
+          git push origin HEAD:experiment/cmd
