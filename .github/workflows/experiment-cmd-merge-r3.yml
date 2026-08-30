@@ -11,14 +11,15 @@ permissions:
   contents: write
 
 jobs:
-  inspect-merge:
+  merge-r3:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
           ref: experiment/cmd
           fetch-depth: 0
-      - name: Inspect merge conflicts
+      - name: Merge R3 and resolve bounded conflicts
         run: |
           set -euxo pipefail
           git config user.name 'github-actions[bot]'
@@ -26,19 +27,115 @@ jobs:
           git fetch origin release/0.1.0-r3
           set +e
           git merge --no-commit --no-ff origin/release/0.1.0-r3
-          status=$?
+          merge_status=$?
           set -e
-          if [ "$status" -ne 0 ]; then
-            git diff --name-only --diff-filter=U > /tmp/experiment-cmd-r3-conflicts.txt
-            git merge --abort
-            cp /tmp/experiment-cmd-r3-conflicts.txt .github/experiment-cmd-r3-conflicts.txt
-            git add .github/experiment-cmd-r3-conflicts.txt
-            git commit -m 'CI: record R3 merge conflicts for cmd experiment'
-            git push origin HEAD:experiment/cmd
-            exit 0
+          if [ "$merge_status" -eq 0 ]; then
+            echo 'Expected the known bounded conflicts, but merge was conflict-free.' >&2
+            exit 1
           fi
-          git merge --abort
-          printf '%s\n' 'NO_CONFLICTS' > .github/experiment-cmd-r3-conflicts.txt
-          git add .github/experiment-cmd-r3-conflicts.txt
-          git commit -m 'CI: record conflict-free R3 merge for cmd experiment'
+
+          actual="$(git diff --name-only --diff-filter=U | sort)"
+          expected="$(printf '%s\n' \
+            apps/plasmon/build.ts \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts \
+            apps/plasmon/src/os/integration/services.ts | sort)"
+          if [ "$actual" != "$expected" ]; then
+            echo 'Unexpected R3 merge conflict set:' >&2
+            printf '%s\n' "$actual" >&2
+            exit 1
+          fi
+
+          git checkout --theirs -- \
+            apps/plasmon/build.ts \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts \
+            apps/plasmon/src/os/integration/services.ts
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if text.count(old) != 1:
+                  raise SystemExit(f"expected exactly one {label}; found {text.count(old)}")
+              return text.replace(old, new, 1)
+
+          build = Path('apps/plasmon/build.ts')
+          text = build.read_text()
+          text = replace_once(
+              text,
+              '''const slimMonacoEntryPoints = monacoEntryPoints.filter(({ out }) =>\n  out === "System/Program Files/MonacoEditor/editor.worker"\n);''',
+              '''const slimMonacoEntryPoints = monacoEntryPoints.filter(({ out }) =>\n  out.endsWith("/editor.worker") || out.endsWith("/ts.worker")\n);''',
+              'R3 slim Monaco entry-point policy',
+          )
+          build.write_text(text)
+
+          environment = Path('apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.ts')
+          text = environment.read_text()
+          text = replace_once(
+              text,
+              '  if (slim) return "editor.worker.js";',
+              '''  if (slim) {\n    if (label === "typescript" || label === "javascript") return "ts.worker.js";\n    return "editor.worker.js";\n  }''',
+              'R3 slim Monaco worker routing',
+          )
+          environment.write_text(text)
+
+          test = Path('apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts')
+          test.write_text('''import { expect, test } from "bun:test";\nimport {\n  monacoWorkerBootstrapSource,\n  monacoWorkerFile,\n  monacoWorkerPath,\n} from "./monacoEnvironment.ts";\n\ntest("slim Monaco retains TypeScript services required by .run", () => {\n  for (const label of ["typescript", "javascript"]) {\n    expect(monacoWorkerFile(label, true)).toBe("ts.worker.js");\n  }\n  for (const label of ["editorWorkerService", "json", "css", "scss", "less", "html", "handlebars", "razor"]) {\n    expect(monacoWorkerFile(label, true)).toBe("editor.worker.js");\n  }\n\n  expect(monacoWorkerPath("typescript", true)).toBe(\n    "./System/Program Files/MonacoEditor/ts.worker.js",\n  );\n  expect(monacoWorkerBootstrapSource(\n    "javascript",\n    { "ts.worker.js": "packaged TypeScript worker bytes" },\n    true,\n  )).toBe("packaged TypeScript worker bytes");\n});\n\ntest("slim Monaco fails closed when its packaged TypeScript worker source is absent", () => {\n  expect(() => monacoWorkerBootstrapSource("typescript", {}, true)).toThrow(\n    "Missing packaged Monaco worker source: ts.worker.js",\n  );\n});\n\ntest("Base Monaco routes each language family to its dedicated packaged worker", () => {\n  expect(monacoWorkerFile("editorWorkerService", false)).toBe("editor.worker.js");\n  expect(monacoWorkerFile("typescript", false)).toBe("ts.worker.js");\n  expect(monacoWorkerFile("javascript", false)).toBe("ts.worker.js");\n  expect(monacoWorkerFile("json", false)).toBe("json.worker.js");\n  expect(monacoWorkerFile("css", false)).toBe("css.worker.js");\n  expect(monacoWorkerFile("scss", false)).toBe("css.worker.js");\n  expect(monacoWorkerFile("less", false)).toBe("css.worker.js");\n  expect(monacoWorkerFile("html", false)).toBe("html.worker.js");\n  expect(monacoWorkerFile("handlebars", false)).toBe("html.worker.js");\n  expect(monacoWorkerFile("razor", false)).toBe("html.worker.js");\n});\n''')
+
+          services = Path('apps/plasmon/src/os/integration/services.ts')
+          text = services.read_text()
+          text = replace_once(
+              text,
+              '''import { IntegratedOpenService } from "./openService.ts";\nimport { isGameRuntimeProfile } from "./packageProfile.ts";''',
+              '''import { IntegratedOpenService } from "./openService.ts";\nimport { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";\nimport { createPlasmonOsApi } from "../api/adapter.ts";\nimport { ScriptingService } from "../../scripting/service.ts";\nimport {\n  createTerminalNativeLoader,\n  terminalAppDefinition,\n  terminalAssociationRules,\n  terminalHandler,\n} from "../../native-apps/terminal/index.ts";''',
+              'R3 integration import seam',
+          )
+          text = replace_once(
+              text,
+              '''    hiddenVisibility,\n    nativeAppLog,\n  );\n\n  filesystem = createFilesystemCore({''',
+              '''    hiddenVisibility,\n    nativeAppLog,\n  );\n  if (!isCoreProfile) {\n    associations.registerHandler(terminalHandler);\n    for (const rule of terminalAssociationRules) associations.registerRule(rule);\n    nativeApps.register(terminalAppDefinition);\n  }\n\n  filesystem = createFilesystemCore({''',
+              'native registration seam',
+          )
+          tail_start = text.find('  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {')
+          if tail_start < 0:
+              raise SystemExit('R3 start-menu return seam not found')
+          text = text[:tail_start] + '''  const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {\n    diagnostics: shellLog,\n  });\n  const services: PlasmonServices = {\n    fs,\n    fsEvents: fs,\n    filesystem,\n    diagnostics,\n    process,\n    windows,\n    windowPlacement,\n    neutron,\n    authorization: createAuthorizationService(),\n    nativeApps,\n    associations,\n    openService,\n    fileClipboard,\n    startMenu,\n    hiddenVisibility,\n  };\n\n  // Scripting consumes the same canonical production OsApi used by headless tests.\n  const scripting = new ScriptingService({ os: createPlasmonOsApi({ services }) });\n  nativeApps.setLoader(\n    explorerAppDefinition.id,\n    createExplorerNativeLoader({\n      fsEvents: fs,\n      associations,\n      openService,\n      openAuthority: fileManagerOpenAuthority,\n      trashAuthority: fileManagerTrashAuthority,\n      clipboard: fileClipboard,\n      hiddenVisibility,\n      transpileCmdFile: async (nodeId) => scripting.transpileCmdFile(await fs.pathOf(nodeId)),\n    }),\n  );\n  if (!isCoreProfile) {\n    nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));\n  }\n\n  return services;\n}\n'''
+          services.write_text(text)
+          PY
+
+          git add \
+            apps/plasmon/build.ts \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.ts \
+            apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts \
+            apps/plasmon/src/os/integration/services.ts
+          test -z "$(git diff --name-only --diff-filter=U)"
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install dependencies
+        run: npm ci
+      - name: Plasmon fast suite
+        run: npm --workspace neutron-plasmon test
+      - name: Build Base
+        run: npm --workspace neutron-plasmon run build
+      - name: Build Slim with run compiler worker
+        env:
+          PLASMON_PACKAGE_PROFILE: slim
+        run: npm --workspace neutron-plasmon run build
+      - name: Verify merge and push
+        run: |
+          set -euxo pipefail
+          test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/editor.worker.js'
+          test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/ts.worker.js'
+          git diff --check
+          git rm .github/workflows/experiment-cmd-merge-r3.yml .github/experiment-cmd-r3-conflicts.txt
+          git add -A
+          git status --short
+          git commit -m 'Merge release/0.1.0-r3 into experiment/cmd'
           git push origin HEAD:experiment/cmd
