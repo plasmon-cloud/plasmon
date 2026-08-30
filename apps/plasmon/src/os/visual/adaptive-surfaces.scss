@@ -1,0 +1,33 @@
+/*
+ * These surfaces sit against content the active theme does not control: a
+ * user-selected wallpaper or transparent pixels in media. Keep the treatment
+ * semantic and theme-aware here instead of branching on individual themes.
+ */
+.plasmon-shell {
+  --plasmon-wallpaper-label-ink: #fff;
+  --plasmon-wallpaper-label-shadow:
+    0 1px 2px rgb(0 0 0 / 92%),
+    0 0 4px rgb(0 0 0 / 68%);
+  --plasmon-transparency-surface:
+    color-mix(in srgb, var(--plasmon-window-background) 92%, var(--plasmon-text-primary) 8%);
+  --plasmon-transparency-check:
+    color-mix(in srgb, var(--plasmon-window-background) 82%, var(--plasmon-text-primary) 18%);
+}
+
+.plasmon-shell .fm-entry--desktop:not(.is-renaming) .fm-entry__name,
+.plasmon-shell .fm-entry--desktop .fm-entry__expanded-name {
+  color: var(--plasmon-wallpaper-label-ink);
+  text-shadow: var(--plasmon-wallpaper-label-shadow);
+}
+
+.plasmon-icon-frame--thumbnail,
+.plasmon-native-app-surface[data-photos-display-mode] img {
+  background-color: var(--plasmon-transparency-surface);
+  background-image:
+    linear-gradient(45deg, var(--plasmon-transparency-check) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--plasmon-transparency-check) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--plasmon-transparency-check) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--plasmon-transparency-check) 75%);
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  background-size: 8px 8px;
+}
