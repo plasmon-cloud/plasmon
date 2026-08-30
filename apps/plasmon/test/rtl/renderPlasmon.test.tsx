@@ -69,17 +69,17 @@ describe("renderPlasmon", () => {
 
       const taskbar = app.getByRole("navigation", { name: "Taskbar" });
       const activeFiles = await within(taskbar).findByRole("button", {
-        name: /^Files; Active and focused/,
+        name: /^File Explorer; Active and focused/,
       });
       await app.user.click(activeFiles);
       await waitFor(() => expect(app.environment.windows()[0]?.minimized).toBe(true));
 
       const runningFiles = await within(taskbar).findByRole("button", {
-        name: /^Files; Running/,
+        name: /^File Explorer; Running/,
       });
       await app.user.click(runningFiles);
       await waitFor(() => expect(app.environment.windows()[0]?.minimized).toBe(false));
-      await within(taskbar).findByRole("button", { name: /^Files; Active and focused/ });
+      await within(taskbar).findByRole("button", { name: /^File Explorer; Active and focused/ });
     } finally {
       app.dispose();
     }

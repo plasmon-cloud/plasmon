@@ -117,7 +117,7 @@ test(
   const primaryId = await primary.getAttribute("data-window-id");
   if (!primaryId) throw new Error("Primary Explorer native window has no stable window id");
   const primaryWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${primaryId}"]`);
-  await expect(primaryWindow).toHaveAccessibleName("This Plasmon");
+  await expect(primaryWindow).toHaveAccessibleName("This Plasmon — File Explorer");
   await primaryWindow.locator(".plasmon-window__controls").getByRole("button", { name: "Minimize" }).click();
   await expect(primaryWindow).toHaveAttribute("aria-hidden", "true");
 
@@ -130,9 +130,9 @@ test(
   const siblingWindow = plasmon.locator(`.plasmon-window-layer [data-window-id="${siblingId}"]`);
 
   await expect(siblingWindow.getByRole("textbox", { name: "Address" })).toHaveValue("/");
-  await expect(siblingWindow).toHaveAccessibleName("This Plasmon");
+  await expect(siblingWindow).toHaveAccessibleName("This Plasmon — File Explorer");
 
-  const filesGroup = taskbar.getByRole("button", { name: /^Files;.*2 windows$/ });
+  const filesGroup = taskbar.getByRole("button", { name: /^File Explorer;.*2 windows$/ });
   await expect(filesGroup).toHaveCount(1);
 
   // A multi-member task remains app-scoped for Pin/Unpin and must not guess
@@ -148,28 +148,28 @@ test(
   await filesGroup.click();
   await expect(groupedContextMenu).toHaveCount(0);
 
-  const chooser = plasmon.getByRole("region", { name: "Files windows" });
+  const chooser = plasmon.getByRole("region", { name: "File Explorer windows" });
   await expect(chooser).toBeVisible();
-  await expect(chooser.getByRole("button", { name: "This Plasmon; Minimized" })).toBeVisible();
-  await expect(chooser.getByRole("button", { name: "This Plasmon; Active" })).toBeVisible();
-  await chooser.getByRole("button", { name: "This Plasmon; Minimized" }).click();
+  await expect(chooser.getByRole("button", { name: "This Plasmon — File Explorer; Minimized" })).toBeVisible();
+  await expect(chooser.getByRole("button", { name: "This Plasmon — File Explorer; Active" })).toBeVisible();
+  await chooser.getByRole("button", { name: "This Plasmon — File Explorer; Minimized" }).click();
   await expect(chooser).toHaveCount(0);
   await expect(primaryWindow).not.toHaveAttribute("aria-hidden", "true");
   await expect(primaryWindow).toHaveClass(/plasmon-window--active/);
   await expect(siblingWindow).not.toHaveClass(/plasmon-window--active/);
 
   await filesGroup.click();
-  const reopenedChooser = plasmon.getByRole("region", { name: "Files windows" });
+  const reopenedChooser = plasmon.getByRole("region", { name: "File Explorer windows" });
   await expect(reopenedChooser).toBeVisible();
-  await reopenedChooser.getByRole("button", { name: "This Plasmon; Running" }).click();
+  await reopenedChooser.getByRole("button", { name: "This Plasmon — File Explorer; Running" }).click();
   await expect(siblingWindow).toHaveClass(/plasmon-window--active/);
 
   // A chooser member carries its canonical Process identity, so its context
   // menu exposes Close and delegates only that member to ProcessController.
   await filesGroup.click();
-  const closeChooser = plasmon.getByRole("region", { name: "Files windows" });
+  const closeChooser = plasmon.getByRole("region", { name: "File Explorer windows" });
   await expect(closeChooser).toBeVisible();
-  const siblingMember = closeChooser.getByRole("button", { name: "This Plasmon; Active" });
+  const siblingMember = closeChooser.getByRole("button", { name: "This Plasmon — File Explorer; Active" });
   await siblingMember.click({ button: "right" });
   await expect(closeChooser).toHaveCount(0);
 
@@ -182,8 +182,8 @@ test(
   await expect(siblingWindow).toHaveCount(0);
   await expect(primaryWindow).toHaveCount(1);
   await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 10_000 });
-  await expect(taskbar.getByRole("button", { name: /^Files;/ })).toHaveCount(1);
-  await expect(taskbar.getByRole("button", { name: /^Files;.*2 windows$/ })).toHaveCount(0);
+  await expect(taskbar.getByRole("button", { name: /^File Explorer;/ })).toHaveCount(1);
+  await expect(taskbar.getByRole("button", { name: /^File Explorer;.*2 windows$/ })).toHaveCount(0);
 
   await primaryWindow.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
   await expect(nativeWindows).toHaveCount(initialWindowCount, { timeout: 10_000 });
