@@ -93,6 +93,27 @@ const explicitClassifications = Object.freeze([
     linePattern: /"repairIssue"\s*:\s*\d+/u,
     reason: "The active quarantine entry may retain one bounded GitHub repair owner while the executable selector, test title, tag, and CI behavior remain semantic and release-neutral.",
   }),
+  Object.freeze({
+    id: "public-audit-target-ref",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"targetRef": "agent\/issue-670"/u,
+    reason: "The committed public-consumption audit record names the implementation ref it audited; this is review metadata, not an active test or product identity.",
+  }),
+  Object.freeze({
+    id: "public-audit-base-ref",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"baseRef": "version-0\.1\.0-os-r3"/u,
+    reason: "The committed public-consumption audit record names the base ref used for its exact-head audit; this is review metadata, not release-coupled behavior.",
+  }),
+  Object.freeze({
+    id: "public-audit-owner",
+    path: "test/ci/public-consumption-audit.json",
+    kind: "audit-record-metadata",
+    linePattern: /"owner": "agent\/issue-670"/u,
+    reason: "The committed public-consumption audit record identifies its accountable audit owner; this is review metadata, not an active test or product identity.",
+  }),
 ]);
 
 function slash(path) {
@@ -289,7 +310,7 @@ function selfTest() {
   if (!allowedLine("test/ci/plasmon-quarantine.json", '      "repairIssue": 304,')) {
     throw new Error("guard self-test lost the bounded quarantine repair-owner classification");
   }
-  if (explicitClassifications.length !== 4) {
+  if (explicitClassifications.length !== 7) {
     throw new Error("guard self-test expected the complete explicit classification inventory to remain narrowly bounded");
   }
 
