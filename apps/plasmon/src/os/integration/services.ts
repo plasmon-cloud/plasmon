@@ -74,12 +74,13 @@ import {
   createRecycleBinNativeLoader,
   recycleBinAppDefinition,
 } from "../../native-apps/recycle-bin/index.ts";
+import { installMonacoEnvironment } from "../../native-apps/shared/monaco/monacoEnvironment.ts";
 import {
   FakeResourceAuthorizationService,
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile } from "./packageProfile.ts";
+import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -178,11 +179,17 @@ function registerNativeApplications(
   if (isGameRuntimeProfile) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+    nativeApps.registerWithLoader(
+      emulatorJsRuntimeDefinition,
+      createEmulatorJsRuntimeLoader(diagnostics.for("runtime.emulatorjs")),
+    );
 
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+    nativeApps.registerWithLoader(
+      jsDosRuntimeDefinition,
+      createJsDosRuntimeLoader(diagnostics.for("runtime.jsdos")),
+    );
   }
 
   const contentLoaders = createContentAppLoaders({ hiddenVisibility });
@@ -240,9 +247,15 @@ export function createPlasmonServices(
   const windowLog = diagnostics.for("windowing");
   const nativeAppLog = diagnostics.for("native-app");
   const shellLog = diagnostics.for("shell");
-  if (filesystemMode === "hosted") {
-    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  const neutronLog = diagnostics.for("neutron");
+
+  if (typeof window !== "undefined" && !isCoreProfile) {
+    installMonacoEnvironment(globalThis, diagnostics.for("runtime.monaco"));
   }
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(neutronLog);
+  }
+
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
   const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
@@ -261,7 +274,9 @@ export function createPlasmonServices(
       });
     },
   });
-  const neutron = options.neutron ?? createNeutronBridge();
+  const neutron = options.neutron ?? createNeutronBridge({
+    vanilla: { diagnosticLogger: neutronLog },
+  });
   const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({
     defaults: createAssociationDefaultStore(rawFs, diagnostics),

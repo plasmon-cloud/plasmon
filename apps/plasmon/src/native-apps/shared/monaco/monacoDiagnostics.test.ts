@@ -1,13 +1,7 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { describe, expect, test } from "bun:test";
 import { PlasmonDiagnosticService, type DiagnosticRecord } from "../../../os/diagnostics/index.ts";
 import { MemoryFsRepository, PersistentFsService } from "../../../os/fs/index.ts";
-import {
-  installMonacoEnvironment,
-  monacoWorkerBootstrapSource,
-  setMonacoDiagnosticLogger,
-} from "./monacoEnvironment.ts";
+import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 
 function diagnosticsHarness() {
   const diagnostics = new PlasmonDiagnosticService({
@@ -17,23 +11,28 @@ function diagnosticsHarness() {
   });
   const records: DiagnosticRecord[] = [];
   diagnostics.subscribe((record) => records.push(record));
-  setMonacoDiagnosticLogger(diagnostics.for("runtime.monaco"));
-  return records;
+  return { log: diagnostics.for("runtime.monaco"), records };
 }
 
-afterEach(() => setMonacoDiagnosticLogger(null));
-
-describe("Monaco failure diagnostics", () => {
-  test("reports missing packaged worker source without serializing worker bytes", () => {
-    const records = diagnosticsHarness();
+describe("Monaco worker-boundary diagnostics", () => {
+  test("missing packaged worker source emits one bounded handled-failure event", () => {
+    const { log, records } = diagnosticsHarness();
     const privateWorkerSource = "PRIVATE_MONACO_WORKER_SOURCE_662";
+    const target = {
+      origin: "null",
+      __PLASMON_MONACO_WORKER_SOURCES__: {
+        "unrelated.worker.js": privateWorkerSource,
+      },
+    } as unknown as typeof globalThis;
 
-    expect(() => monacoWorkerBootstrapSource(
-      "typescript",
-      { "unrelated.worker.js": privateWorkerSource },
-      true,
-    )).toThrow("Missing packaged Monaco worker source: editor.worker.js");
+    installMonacoEnvironment(target, log);
+    const getWorker = (target as unknown as {
+      MonacoEnvironment: { getWorker: (moduleId: string, label: string) => Worker };
+    }).MonacoEnvironment.getWorker;
 
+    expect(() => getWorker("", "typescript")).toThrow(
+      "Missing packaged Monaco worker source: editor.worker.js",
+    );
     expect(records).toEqual([
       expect.objectContaining({
         level: "error",
@@ -43,14 +42,15 @@ describe("Monaco failure diagnostics", () => {
           runtime: "Monaco",
           stage: "worker-source",
           workerFile: "editor.worker.js",
+          errorType: "Error",
         },
       }),
     ]);
     expect(JSON.stringify(records)).not.toContain(privateWorkerSource);
   });
 
-  test("reports synchronous Worker construction failure without the underlying error payload", () => {
-    const records = diagnosticsHarness();
+  test("synchronous Worker construction failure is observed without its private message", () => {
+    const { log, records } = diagnosticsHarness();
     const originalWorker = globalThis.Worker;
     const privateRuntimeDetail = "PRIVATE_MONACO_WORKER_ERROR_662";
     class FailingWorker {
@@ -62,7 +62,7 @@ describe("Monaco failure diagnostics", () => {
     try {
       (globalThis as { Worker: typeof Worker }).Worker = FailingWorker as unknown as typeof Worker;
       const target = { origin: "https://plasmon.invalid" } as unknown as typeof globalThis;
-      installMonacoEnvironment(target);
+      installMonacoEnvironment(target, log);
       const getWorker = (target as unknown as {
         MonacoEnvironment: { getWorker: (moduleId: string, label: string) => Worker };
       }).MonacoEnvironment.getWorker;
@@ -83,13 +83,5 @@ describe("Monaco failure diagnostics", () => {
       },
     });
     expect(JSON.stringify(records)).not.toContain(privateRuntimeDetail);
-  });
-
-  test("the shared host binds its runtime-import failure catch to the canonical logger without diagnostic props", () => {
-    const host = readFileSync(resolve(import.meta.dir, "MonacoEditorHost.tsx"), "utf8");
-    expect(host).toContain('getMonacoDiagnosticLogger()?.error("runtime.monaco.start.failed"');
-    expect(host).not.toContain("DiagnosticOperationContext");
-    expect(host).not.toContain("diagnostics?:");
-    expect(host).not.toContain("operation?:");
   });
 });

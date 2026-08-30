@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { setEmulatorJsDiagnosticLogger } from "../native-apps/emulatorjs/diagnostics.ts";
-import { setJsDosDiagnosticLogger } from "../native-apps/jsdos/diagnostics.ts";
-import { setMonacoDiagnosticLogger } from "../native-apps/shared/monaco/monacoEnvironment.ts";
 import { Desktop } from "./desktop/index.ts";
 import { NativeProcessHost } from "./process/index.ts";
 import { AltTabBoundary } from "./shell/AltTabBoundary.tsx";
@@ -25,15 +22,6 @@ function diagnosticErrorType(error: unknown): string {
  */
 export function PlasmonOS({ services: provided }: PlasmonOSProps) {
   const services = useMemo(() => provided ?? createPlasmonServices(), [provided]);
-  const runtimeLogs = useMemo(() => ({
-    monaco: services.diagnostics.for("runtime.monaco"),
-    jsDos: services.diagnostics.for("runtime.jsdos"),
-    emulatorJs: services.diagnostics.for("runtime.emulatorjs"),
-  }), [services.diagnostics]);
-  // Runtime adapters are internal composition seams, not Product API parameters.
-  setMonacoDiagnosticLogger(runtimeLogs.monaco);
-  setJsDosDiagnosticLogger(runtimeLogs.jsDos);
-  setEmulatorJsDiagnosticLogger(runtimeLogs.emulatorJs);
   const nativeAppLog = useMemo(
     () => services.diagnostics.for("native-app"),
     [services.diagnostics],

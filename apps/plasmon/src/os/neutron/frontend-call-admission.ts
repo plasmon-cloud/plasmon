@@ -46,11 +46,6 @@ export function setFrontendCallAdmissionDiagnosticLogger(
   sharedDiagnosticLogger = logger;
 }
 
-/** Reuse the same scoped Neutron logger for adjacent boundary failures. */
-export function getFrontendCallAdmissionDiagnosticLogger(): DiagnosticLogger | null {
-  return sharedDiagnosticLogger;
-}
-
 /**
  * Bound Plasmon's normal frontend-tool traffic at the same authority boundary
  * Kernel uses for admission: one caller endpoint, regardless of which Plasmon

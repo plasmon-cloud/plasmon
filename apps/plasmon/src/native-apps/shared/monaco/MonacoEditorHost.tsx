@@ -12,7 +12,7 @@ import {
   type OwnedEditorModel,
 } from "./editorModel.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
-import { getMonacoDiagnosticLogger, installMonacoEnvironment } from "./monacoEnvironment.ts";
+import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 import { PLASMON_MONACO_THEME_NAME, plasmonMonacoThemeData } from "./monacoTheme.ts";
 
 export const MONACO_ENGINE_NAME = "Monaco";
@@ -57,11 +57,6 @@ type MonacoApi = typeof import("monaco-editor");
 type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
 type MonacoModel = import("monaco-editor").editor.ITextModel;
 type MonacoDisposable = import("monaco-editor").IDisposable;
-
-function errorType(error: unknown): string {
-  if (error instanceof Error) return error.name || "Error";
-  return error === null ? "null" : typeof error;
-}
 
 function configureSlimLanguageServices(monaco: MonacoApi): void {
   if (!isSlimMonacoProfile) return;
@@ -228,13 +223,6 @@ export function MonacoEditorHost({
       .catch((reason: unknown) => {
         if (!cancelled) {
           const message = reason instanceof Error ? reason.message : String(reason);
-          getMonacoDiagnosticLogger()?.error("runtime.monaco.start.failed", {
-            message: "Monaco editor runtime failed to initialize",
-            runtime: "Monaco",
-            profile: isSlimMonacoProfile ? "slim" : "full",
-            stage: "editor-initialize",
-            errorType: errorType(reason),
-          });
           setLoading(false);
           setModelLanguage(null);
           setModelUri(null);
