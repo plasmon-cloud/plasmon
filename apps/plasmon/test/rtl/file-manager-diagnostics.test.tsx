@@ -105,17 +105,18 @@ test("move partial failure emits one bounded diagnostic and no lifecycle noise",
       operationState.complete();
     });
 
-    const event = records.find((record) => record.event === "filemanager.move.partial");
-    expect(event?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
-    expect(JSON.stringify(event)).not.toContain("PRIVATE-");
-    expect(JSON.stringify(event)).not.toContain("SECRET move detail");
+    const events = records.filter((record) => record.event === "filemanager.move.partial");
+    expect(events).toHaveLength(1);
+    expect(events[0]?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
+    expect(JSON.stringify(events[0])).not.toContain("PRIVATE-");
+    expect(JSON.stringify(events[0])).not.toContain("SECRET move detail");
     expect(records.some((record) => /\.(?:started|completed)$/u.test(record.event))).toBe(false);
   } finally {
     stop();
   }
 });
 
-test("import partial failure logs counts without filename or error text", async () => {
+test("import partial failure logs one bounded event without filename or error text", async () => {
   const fs = operationFs();
   const documents = await directory(fs, "/Documents");
   const operationState = new FileOperationState();
@@ -147,16 +148,17 @@ test("import partial failure logs counts without filename or error text", async 
     });
     await act(async () => { await terminal; });
 
-    const event = records.find((record) => record.event === "filemanager.import.partial");
-    expect(event?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
-    expect(JSON.stringify(event)).not.toContain("PRIVATE-import-name.txt");
+    const events = records.filter((record) => record.event === "filemanager.import.partial");
+    expect(events).toHaveLength(1);
+    expect(events[0]?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
+    expect(JSON.stringify(events[0])).not.toContain("PRIVATE-import-name.txt");
     expect(records.some((record) => /\.(?:started|completed)$/u.test(record.event))).toBe(false);
   } finally {
     stop();
   }
 });
 
-test("paste failure logs error type without private error message", async () => {
+test("paste failure logs one bounded event without private error message", async () => {
   const baseFs = operationFs();
   const documents = await directory(baseFs, "/Documents");
   const desktop = await directory(baseFs, "/Desktop");
@@ -191,10 +193,11 @@ test("paste failure logs error type without private error message", async () => 
     fireEvent.click(view.getByRole("button", { name: "Paste" }));
     await act(async () => { await terminal; });
 
-    const event = records.find((record) => record.event === "filemanager.paste.failed");
-    expect(event?.context).toEqual({ mode: "copy", total: 1, errorType: "TypeError" });
-    expect(JSON.stringify(event)).not.toContain("SECRET paste failure");
-    expect(JSON.stringify(event)).not.toContain("PRIVATE-source.txt");
+    const events = records.filter((record) => record.event === "filemanager.paste.failed");
+    expect(events).toHaveLength(1);
+    expect(events[0]?.context).toEqual({ mode: "copy", total: 1, errorType: "TypeError" });
+    expect(JSON.stringify(events[0])).not.toContain("SECRET paste failure");
+    expect(JSON.stringify(events[0])).not.toContain("PRIVATE-source.txt");
   } finally {
     stop();
   }
