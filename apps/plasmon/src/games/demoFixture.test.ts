@@ -11,6 +11,7 @@ import { MockNeutronBridge } from "../os/neutron/index.ts";
 import { NativeWindowManager } from "../os/windowing/index.ts";
 import {
   DEMO_GAME_FIXTURE_PATH,
+  loadPackagedDemoGameSeed,
   loadPackagedDemoGameSeeds,
   packagedDemoGameRequested,
 } from "./demoFixture.ts";
@@ -18,7 +19,7 @@ import { createPlasmonDemoGameBundle } from "./demoFixtureBundle.ts";
 
 const pageUrl = "https://example.test/app/plasmon/index.html";
 
-test("normal boot does not load or seed the packaged demo game", async () => {
+test("normal Base boot does not load or seed the packaged demo game", async () => {
   let fetches = 0;
   const seeds = await loadPackagedDemoGameSeeds(pageUrl, async () => {
     fetches += 1;
@@ -30,19 +31,16 @@ test("normal boot does not load or seed the packaged demo game", async () => {
   expect(seeds).toEqual([]);
 });
 
-test("the explicit demo-game flag resolves one package asset into the demo-seed authority", async () => {
+test("Demo product loader resolves the package-owned game into the ordinary seed authority", async () => {
   let fetched: string | null = null;
-  const flagged = `${pageUrl}?plasmon-fixture=demo-game`;
-  const seeds = await loadPackagedDemoGameSeeds(flagged, async (input) => {
+  const seed = await loadPackagedDemoGameSeed(pageUrl, async (input) => {
     fetched = input.toString();
     return new Response(Uint8Array.from([0x50, 0x4b, 0x03, 0x04]));
   });
 
-  expect(packagedDemoGameRequested(flagged)).toBe(true);
   expect(fetched).toBe("https://example.test/app/plasmon/fixtures/PlasmonDemo.jsdos");
   expect(DEMO_GAME_FIXTURE_PATH).toBe("/Games/Plasmon Demo.jsdos");
-  expect(seeds).toHaveLength(1);
-  expect(seeds[0]).toMatchObject({
+  expect(seed).toMatchObject({
     key: "games.demo.plasmon-v1",
     seedClass: "demo-temporary",
     parentPath: "/Games",
@@ -50,14 +48,28 @@ test("the explicit demo-game flag resolves one package asset into the demo-seed 
     kind: "file",
     mime: "application/x-jsdos",
   });
-  expect(Array.from(seeds[0]?.bytes ?? [])).toEqual([0x50, 0x4b, 0x03, 0x04]);
+  expect(Array.from(seed.bytes ?? [])).toEqual([0x50, 0x4b, 0x03, 0x04]);
 });
 
-test("the explicit packaged fixture survives hosted filesystem transport and opens through the production js-dos association", async () => {
-  const bundle = createPlasmonDemoGameBundle();
+test("the explicit Specialist flag reuses the same package asset and seed authority", async () => {
   const flagged = `${pageUrl}?plasmon-fixture=demo-game`;
-  const seeds = await loadPackagedDemoGameSeeds(
-    flagged,
+  const seeds = await loadPackagedDemoGameSeeds(flagged, async () =>
+    new Response(Uint8Array.from([0x50, 0x4b, 0x03, 0x04]))
+  );
+
+  expect(packagedDemoGameRequested(flagged)).toBe(true);
+  expect(seeds).toHaveLength(1);
+  expect(seeds[0]).toMatchObject({
+    key: "games.demo.plasmon-v1",
+    parentPath: "/Games",
+    name: "Plasmon Demo.jsdos",
+  });
+});
+
+test("Demo game reconciliation is idempotent and opens through the production js-dos association", async () => {
+  const bundle = createPlasmonDemoGameBundle();
+  const seed = await loadPackagedDemoGameSeed(
+    pageUrl,
     async () => new Response(bundle.slice()),
   );
 
@@ -66,16 +78,13 @@ test("the explicit packaged fixture survives hosted filesystem transport and ope
   const server = new FsRpcServer(backgroundFs);
   const foregroundFs = new FsRpcClient((name, args) => server.call(name, args));
 
-  await bootstrapFilesystem(foregroundFs, { demoSeeds: seeds });
-
-  const transported = await foregroundFs.resolvePath(DEMO_GAME_FIXTURE_PATH);
-  expect(transported).toMatchObject({
-    name: "Plasmon Demo.jsdos",
-    kind: "file",
-    mime: "application/x-jsdos",
-  });
-  if (!transported) throw new Error("Hosted demo fixture was not created");
-  expect(Array.from(await foregroundFs.read(transported.id))).toEqual(Array.from(bundle));
+  await bootstrapFilesystem(foregroundFs, { demoSeeds: [seed] });
+  const first = await foregroundFs.resolvePath(DEMO_GAME_FIXTURE_PATH);
+  if (!first) throw new Error("Demo game seed was not created");
+  await bootstrapFilesystem(foregroundFs, { demoSeeds: [seed] });
+  const second = await foregroundFs.resolvePath(DEMO_GAME_FIXTURE_PATH);
+  expect(second?.id).toBe(first.id);
+  expect(Array.from(await foregroundFs.read(first.id))).toEqual(Array.from(bundle));
 
   const neutron = new MockNeutronBridge({ elements: [] });
   let nextWindowId = 0;
@@ -88,18 +97,19 @@ test("the explicit packaged fixture survives hosted filesystem transport and ope
     filesystemRepository: repository,
     neutron,
     windows,
+    runtimeSelection: { jsDos: true, emulatorJs: true },
   });
 
   try {
     await services.filesystem.ready;
     const node = await services.fs.resolvePath(DEMO_GAME_FIXTURE_PATH);
     expect(node).toMatchObject({
-      id: transported.id,
+      id: first.id,
       name: "Plasmon Demo.jsdos",
       kind: "file",
       mime: "application/x-jsdos",
     });
-    if (!node) throw new Error("Composed demo fixture was not visible in filesystem inventory");
+    if (!node) throw new Error("Composed demo game was not visible in filesystem inventory");
 
     const handlers = (await services.associations.resolve(node)).map(({ id }) => id);
     expect(handlers[0]).toBe("runtime:js-dos");
