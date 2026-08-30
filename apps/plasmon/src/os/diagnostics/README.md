@@ -15,7 +15,7 @@ log.error("file.write.failed", {
 });
 ```
 
-`message`, `error`, and `correlationId` are reserved fields. Any other fields become structured context. An explicit `context` object is merged with those fields. If `message` is omitted, the stable event name is also used as the human-readable fallback. Callers do not pre-redact data; the diagnostic authority sanitizes every record before any sink or subscriber observes it.
+`message`, `error`, `correlationId`, `operationId`, and `parentOperationId` are reserved fields. Any other fields become structured context. An explicit `context` object is merged with those fields. If `message` is omitted, the stable event name is also used as the human-readable fallback. Callers do not pre-redact data; the diagnostic authority sanitizes every record before any sink or subscriber observes it.
 
 ```text
 production subsystem
@@ -38,10 +38,29 @@ DiagnosticService
 - Event names are stable machine identities, lowercase dot-separated phrases such as `filesystem.bootstrap.ready`, `process.start.failed`, or `file.write.failed`. Do not use UI prose, Issue numbers, release names, or temporary implementation vocabulary as event identities.
 - Include a `message` only when it makes the record more useful to a human than the event name alone.
 - Put useful bounded metadata in structured fields. Never log document/file contents, credentials, tokens, cookies, capabilities, authorization headers, private keys, ROM/game payloads, or arbitrary state dumps.
-- Pass failures as `error`; do not stringify stacks or error objects in subsystem code.
-- Pass operation correlation through `correlationId`. Do not invent separate tracing/logging stores. The correlation propagation contract is extended by the tracing owner, while the event field remains stable here.
+- Pass failures as `error` when the error itself is safe diagnostic material; do not stringify stacks or error objects in subsystem code. Higher-level tracing adapters should prefer bounded classifications when a lower-level error may contain sensitive paths/content.
 - Do not replace actionable user-facing errors with logging. Diagnostics record what happened; the owning Product surface still decides what the user must see.
 - Do not call BugSnag or any future remote sink from subsystem code. Remote reporting consumes the same sanitized canonical stream.
+
+## Operation correlation
+
+One user/system operation may cross filesystem, association/open routing, Process, Windowing, Neutron, and runtime owners. Correlation uses an explicit immutable `DiagnosticOperationContext`, not a mutable global or async-local "current ID":
+
+```ts
+const operation = diagnostics.startOperation();
+const log = operation.for("open");
+
+log.info("open.request.started");
+await nextService.open(target, operation.context);
+```
+
+- `correlationId` identifies the root operation and remains stable across participating subsystem events.
+- `operationId` identifies the current operation/span. Use `operation.child()` only when a nested operation is materially useful; the child keeps the root correlation and records `parentOperationId`.
+- Continue an incoming context with `diagnostics.continueOperation(context)`. Pass `operation.context` explicitly across Plasmon-owned async/service boundaries.
+- Operation-scoped loggers automatically include correlation/operation metadata. A specific event may explicitly override reserved fields when an integration boundary genuinely requires it.
+- Never store a process-wide mutable "current correlation ID". Concurrent operations must remain independent by construction.
+- Correlation metadata does not authorize extra data collection. Do not add paths, names, contents, capabilities, secrets, or broad state merely because an operation now has an ID.
+- `/System/system.log`, console output, deterministic subscribers, and future remote reporting all consume the same normalized `DiagnosticRecord`, so trace identity is identical across sinks.
 
 ## Direct console policy
 
@@ -55,17 +74,17 @@ Tests may use console output as test infrastructure when appropriate; the produc
 
 - `/System/system.log` is the durable Plasmon-local representation. It is stored through the existing Plasmon filesystem authority; browser console output is never the authoritative copy.
 - Event emission is failure-isolated. A logging, console, remote-sink, or subscriber failure must not fail the Product operation that produced the diagnostic event.
-- The file is line-oriented and human-readable, while retaining stable severity/subsystem/event/correlation/context fields.
+- The file is line-oriented and human-readable, while retaining stable severity/subsystem/event/correlation/operation/context fields.
 - Retention is bounded by bytes. When the high-water mark is exceeded, the oldest complete lines are removed until the retained target is reached. A single oversized newest record preserves its prefix/event identity, truncates on Unicode-safe boundaries, and carries an explicit truncation marker.
 - Sensitive context keys and common bearer/query-token forms are redacted before any sink or subscriber receives the normalized record. Diagnostics are not permission to dump private state.
 - File and console minimum levels are separate policy so dogfood/test builds can be more verbose without changing event producers.
 
 ## Testing contract
 
-When a test claim is that production code emitted diagnostics, subscribe to the production `DiagnosticService` exposed by the real composition (`env.diagnostics`) and assert stable event/subsystem/correlation fields. Do not create a parallel test logger and do not infer diagnostics indirectly from UI prose.
+When a test claim is that production code emitted diagnostics, subscribe to the production `DiagnosticService` exposed by the real composition (`env.diagnostics`) and assert stable event/subsystem/correlation/operation fields. Do not create a parallel test logger and do not infer diagnostics indirectly from UI prose.
 
 Logging evidence complements behavioral assertions; it does not replace them. BrowserHealth/page errors remain failures even if the same problem also appears in diagnostics.
 
 ## Scope boundary
 
-This subsystem owns the canonical sanitized Plasmon diagnostic stream and local sinks. Remote error monitoring, settings-controlled sink policy, correlation propagation, CI artifact retention, and broad subsystem instrumentation extend this stream without creating another producer API. Kernel-wide logging remains Neutron-owned.
+This subsystem owns the canonical sanitized Plasmon diagnostic stream, explicit operation context helpers, and local sinks. Remote error monitoring, settings-controlled sink policy, CI artifact retention, and broad subsystem instrumentation extend this stream without creating another producer API. Kernel-wide logging remains Neutron-owned.
