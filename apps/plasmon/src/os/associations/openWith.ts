@@ -1,6 +1,7 @@
 import type {
   AssociationRegistry,
   AtomDescriptor,
+  DiagnosticOperationContext,
   FsNode,
   HandlerDefinition,
   HandlerId,
@@ -83,12 +84,17 @@ export class OpenWithServiceModel {
     };
   }
 
-  async open(node: FsNode, handlerId: HandlerId, contentProbe?: Uint8Array): Promise<void> {
+  async open(
+    node: FsNode,
+    handlerId: HandlerId,
+    contentProbe?: Uint8Array,
+    operation?: DiagnosticOperationContext,
+  ): Promise<void> {
     const model = await this.model(node, contentProbe);
     if (!model.candidates.some((candidate) => candidate.handler.id === handlerId)) {
       throw new Error(`Handler ${handlerId} is not compatible with ${node.name}`);
     }
-    await this.openService.open(handlerId, model.target);
+    await this.openService.open(handlerId, model.target, operation);
   }
 
   async setDefault(node: FsNode, handlerId: HandlerId, contentProbe?: Uint8Array): Promise<string> {
