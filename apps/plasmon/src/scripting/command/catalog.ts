@@ -15,7 +15,7 @@ export interface ShellCommandHelp {
 export const SHELL_COMMAND_HELP: readonly ShellCommandHelp[] = [
   { name: "pwd", usage: "pwd", summary: "print the current directory" },
   { name: "cd", usage: "cd [PATH]", summary: "change the current directory" },
-  { name: "ls", usage: "ls [-alh] [PATH]", summary: "list directory contents", details: "Flags may be combined, for example ls -lah.", options: [{ flag: "-a", summary: "include hidden entries" }, { flag: "-l", summary: "show resource type and size" }, { flag: "-h", summary: "format sizes for people; meaningful with -l" }] },
+  { name: "ls", usage: "ls [-alh] [PATH]", summary: "list directory contents", details: "Flags may be combined, for example ls -la or ls -lah.", options: [{ flag: "-a", summary: "include hidden entries" }, { flag: "-l", summary: "show resource type and size" }, { flag: "-la", summary: "long listing including hidden entries" }, { flag: "-h", summary: "format sizes for people; meaningful with -l" }] },
   { name: "cat", usage: "cat [-n] [FILE ...]", summary: "print files or piped input", options: [{ flag: "-n", summary: "number output lines" }] },
   { name: "echo", usage: "echo [TEXT ...]", summary: "write text to standard output" },
   { name: "touch", usage: "touch FILE ...", summary: "create empty files that do not already exist", details: "Existing files are left unchanged; Plasmon does not emulate Unix timestamp mutation here." },
