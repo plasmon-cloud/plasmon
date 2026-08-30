@@ -36,7 +36,7 @@ test.afterEach(async ({ browserName }, testInfo) => {
   if (testInfo.retry < testInfo.project.retries) return;
   const failure = testInfo.error?.message ?? `status=${testInfo.status}`;
   console.log(
-    `::error title=#391 ${browserName} slim Monaco worker acceptance::${workflowCommandValue(failure)}`,
+    `::error title=${browserName} slim Monaco worker acceptance::${workflowCommandValue(failure)}`,
   );
 });
 
