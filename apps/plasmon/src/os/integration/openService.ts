@@ -1,5 +1,6 @@
 import type {
   AssociationRegistry,
+  DiagnosticOperationContext,
   HandlerId,
   NativeAppRegistry,
   NeutronBridge,
@@ -7,6 +8,7 @@ import type {
   OpenTarget,
   ProcessController,
 } from "../contracts/index.ts";
+import type { DiagnosticService } from "../diagnostics/index.ts";
 
 export type ExternalUrlOpener = (url: string, target: string, features: string) => unknown;
 
@@ -15,6 +17,7 @@ export interface IntegratedOpenServiceOptions {
   associations: AssociationRegistry;
   process: ProcessController;
   neutron: NeutronBridge;
+  diagnostics?: DiagnosticService;
   externalOpener?: ExternalUrlOpener | null;
 }
 
@@ -47,6 +50,7 @@ export class IntegratedOpenService implements OpenService {
   private readonly associations: AssociationRegistry;
   private readonly process: ProcessController;
   private readonly neutron: NeutronBridge;
+  private readonly diagnostics: DiagnosticService | null;
   private readonly externalOpener: ExternalUrlOpener | null;
 
   constructor(options: IntegratedOpenServiceOptions) {
@@ -54,46 +58,64 @@ export class IntegratedOpenService implements OpenService {
     this.associations = options.associations;
     this.process = options.process;
     this.neutron = options.neutron;
+    this.diagnostics = options.diagnostics ?? null;
     this.externalOpener = options.externalOpener === undefined
       ? defaultExternalOpener()
       : options.externalOpener;
   }
 
-  async open(handlerId: HandlerId, target: OpenTarget): Promise<void> {
-    const nativeApp = this.nativeApps.getByHandler(handlerId);
-    if (nativeApp) {
-      const processId = await this.process.open(handlerId, target);
-      if (processId === null) {
-        throw new Error(`Native handler is registered but could not be launched: ${handlerId}`);
+  async open(
+    handlerId: HandlerId,
+    target: OpenTarget,
+    operation?: DiagnosticOperationContext,
+  ): Promise<void> {
+    const log = operation && this.diagnostics
+      ? this.diagnostics.continueOperation(operation).for("open")
+      : null;
+    log?.debug("open.handler.started", { handlerId });
+
+    try {
+      const nativeApp = this.nativeApps.getByHandler(handlerId);
+      if (nativeApp) {
+        const processId = await this.process.open(handlerId, target, operation);
+        if (processId === null) {
+          throw new Error(`Native handler is registered but could not be launched: ${handlerId}`);
+        }
+        log?.info("open.handler.completed", { handlerId, processId, kind: "native" });
+        return;
       }
-      return;
+
+      const handler = this.associations.getHandler(handlerId);
+      if (!handler) throw new Error(`Unknown handler: ${handlerId}`);
+
+      if (handler.kind === "native") {
+        throw new Error(`Native handler has no registered application: ${handlerId}`);
+      }
+
+      if (handler.kind === "external") {
+        if (!target.url) throw new Error(`${handler.name} requires a URL target`);
+        const url = normalizeExternalUrl(target.url);
+        if (!url) throw new Error("External URLs must use http:// or https://");
+        if (!this.externalOpener) throw new Error("Opening an external browser tab is unavailable in this environment");
+        this.externalOpener(url, "_blank", "noopener,noreferrer");
+        log?.info("open.handler.completed", { handlerId, kind: "external" });
+        return;
+      }
+
+      const appId = neutronAppId(handlerId);
+      if (!appId) throw new Error(`Neutron handler must use a neutron:<appId> identifier: ${handlerId}`);
+
+      if (target.nodeId || target.atom) {
+        throw new Error(
+          "Opening a Plasmon-local resource in a Neutron Element requires the future cooperative resource adapter",
+        );
+      }
+
+      await this.neutron.openElement(appId);
+      log?.info("open.handler.completed", { handlerId, kind: "neutron" });
+    } catch (error) {
+      log?.error("open.handler.failed", { handlerId, error });
+      throw error;
     }
-
-    const handler = this.associations.getHandler(handlerId);
-    if (!handler) throw new Error(`Unknown handler: ${handlerId}`);
-
-    if (handler.kind === "native") {
-      throw new Error(`Native handler has no registered application: ${handlerId}`);
-    }
-
-    if (handler.kind === "external") {
-      if (!target.url) throw new Error(`${handler.name} requires a URL target`);
-      const url = normalizeExternalUrl(target.url);
-      if (!url) throw new Error("External URLs must use http:// or https://");
-      if (!this.externalOpener) throw new Error("Opening an external browser tab is unavailable in this environment");
-      this.externalOpener(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    const appId = neutronAppId(handlerId);
-    if (!appId) throw new Error(`Neutron handler must use a neutron:<appId> identifier: ${handlerId}`);
-
-    if (target.nodeId || target.atom) {
-      throw new Error(
-        "Opening a Plasmon-local resource in a Neutron Element requires the future cooperative resource adapter",
-      );
-    }
-
-    await this.neutron.openElement(appId);
   }
 }
