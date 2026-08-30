@@ -54,11 +54,11 @@ test("— packaged Start omits managed Settings and Properties while keeping Exp
     await expect(plasmon.getByText("Loading Start Menu…")).toHaveCount(0, { timeout: 30_000 });
 
     const startItems = panel.locator("[data-start-item]");
-    await expect(startItems.filter({ hasText: "Files" })).toBeVisible({ timeout: 30_000 });
+    await expect(startItems.filter({ hasText: "File Explorer" })).toBeVisible({ timeout: 30_000 });
     const itemNames = await startItems.locator("strong").allTextContents();
-    // `native:explorer` is the Explorer application identity; its current
-    // product-facing native-app name is `Files`.
-    expect(itemNames).toContain("Files");
+    // `native:explorer` is the stable internal Explorer application identity;
+    // its product-facing native-app name is `File Explorer`.
+    expect(itemNames).toContain("File Explorer");
     expect(itemNames).not.toContain("Settings");
     expect(itemNames).not.toContain("Properties");
     expect(itemNames).toContain("Accessories");
@@ -74,10 +74,10 @@ test("— packaged Start omits managed Settings and Properties while keeping Exp
     await expect(panel.locator("[data-start-item]")).not.toHaveCount(0);
     await panel.getByRole("button", { name: "← Back" }).click();
 
-    // Explorer (`native:explorer`, displayed as Files) remains an intended Start
-    // application, and activation must use the real packaged filesystem-backed
+    // Explorer (`native:explorer`, displayed as File Explorer) remains an intended
+    // Start application, and activation must use the real packaged filesystem-backed
     // Start/open path.
-    const explorer = panel.locator("[data-start-item]").filter({ hasText: "Files" });
+    const explorer = panel.locator("[data-start-item]").filter({ hasText: "File Explorer" });
     await explorer.click();
     await expect(plasmon.getByLabel("File Explorer")).toBeVisible({ timeout: 10_000 });
 
