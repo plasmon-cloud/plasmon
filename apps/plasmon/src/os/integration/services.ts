@@ -38,6 +38,10 @@ import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
+import {
+  ShellPreferenceStore,
+  ShellPreferencesController,
+} from "../shell/preferences.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
   FsServiceWindowPlacementStore,
@@ -97,6 +101,7 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  shellPreferences: ShellPreferencesController;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -186,6 +191,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  shellPreferences: ShellPreferencesController,
   log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
@@ -204,7 +210,7 @@ function registerNativeApplications(
     nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
   }
 
-  const contentLoaders = createContentAppLoaders({ hiddenVisibility });
+  const contentLoaders = createContentAppLoaders({ hiddenVisibility, shellPreferences });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) {
@@ -292,6 +298,7 @@ export function createPlasmonServices(
     setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
   }
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
+  const shellPreferences = new ShellPreferencesController(new ShellPreferenceStore(rawFs));
   const windows = options.windows ?? new NativeWindowManager();
   const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
     onRestoreRejected: (reason) => {
@@ -386,6 +393,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    shellPreferences,
     nativeAppLog,
   );
 
@@ -441,5 +449,6 @@ export function createPlasmonServices(
     fileClipboard,
     startMenu,
     hiddenVisibility,
+    shellPreferences,
   };
 }
