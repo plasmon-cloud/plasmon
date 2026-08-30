@@ -16,6 +16,8 @@ function captureEmitter(inputs: DiagnosticEventInput[]): DiagnosticEmitter {
         event: input.event,
         message: input.message,
         ...(input.correlationId ? { correlationId: input.correlationId } : {}),
+        ...(input.operationId ? { operationId: input.operationId } : {}),
+        ...(input.parentOperationId ? { parentOperationId: input.parentOperationId } : {}),
         ...(input.context ? { context: input.context } : {}),
       } as DiagnosticRecord;
     },
@@ -70,10 +72,12 @@ describe("createDiagnosticLogger", () => {
     ]);
   });
 
-  test("supports correlation and safe default context without overriding call fields", () => {
+  test("supports operation defaults and explicit per-event correlation override", () => {
     const inputs: DiagnosticEventInput[] = [];
     const log = createDiagnosticLogger(captureEmitter(inputs), "open", {
       correlationId: "open-42",
+      operationId: "operation-42",
+      parentOperationId: "operation-root",
       context: { origin: "desktop", attempt: 1 },
     });
 
@@ -82,18 +86,24 @@ describe("createDiagnosticLogger", () => {
       handlerId: "native:text",
     });
     log.error("open.handler.failed", {
-      correlationId: "open-child-1",
+      correlationId: "explicit-correlation",
+      operationId: "explicit-operation",
+      parentOperationId: "explicit-parent",
       context: { phase: "launch" },
       handlerId: "native:text",
     });
 
     expect(inputs[0]?.correlationId).toBe("open-42");
+    expect(inputs[0]?.operationId).toBe("operation-42");
+    expect(inputs[0]?.parentOperationId).toBe("operation-root");
     expect(inputs[0]?.context).toEqual({
       origin: "desktop",
       attempt: 2,
       handlerId: "native:text",
     });
-    expect(inputs[1]?.correlationId).toBe("open-child-1");
+    expect(inputs[1]?.correlationId).toBe("explicit-correlation");
+    expect(inputs[1]?.operationId).toBe("explicit-operation");
+    expect(inputs[1]?.parentOperationId).toBe("explicit-parent");
     expect(inputs[1]?.context).toEqual({
       origin: "desktop",
       attempt: 1,
