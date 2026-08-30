@@ -15,7 +15,7 @@ function setupWindow() {
   return { manager, state };
 }
 
-test("lifecycle-owned close stays rendered while Process defers the request", () => {
+test("lifecycle-owned close preserves the same rendered window while Process defers the request", () => {
   const { manager, state } = setupWindow();
   let closeRequests = 0;
   const view = render(
@@ -37,9 +37,13 @@ test("lifecycle-owned close stays rendered while Process defers the request", ()
     fireEvent.click(view.getByRole("button", { name: "Close" }));
 
     expect(closeRequests).toBe(1);
+    expect(dialog.isConnected).toBe(true);
+    expect(view.getByRole("dialog", { name: "Text Editor" })).toBe(dialog);
     expect(dialog.classList.contains("plasmon-window--closing")).toBe(false);
     expect(dialog.textContent).toContain("Unsaved document");
-    expect(manager.list()).toHaveLength(1);
+    expect(manager.list()).toEqual([
+      expect.objectContaining({ id: state.id, processId: state.processId }),
+    ]);
   } finally {
     view.unmount();
     manager.dispose();
