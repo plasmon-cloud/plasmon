@@ -74,11 +74,27 @@ async function openFileManagerAtConfig(app: FrameLocator, nativeWindows: Locator
 
   const fileManagerWindow = nativeWindows.last();
   const address = fileManagerWindow.getByLabel("Address");
+  const files = fileManagerWindow.getByRole("listbox", { name: "Files" });
   await expect(address).toBeVisible();
-  await address.fill(CONFIG_DIRECTORY);
-  await address.press("Enter");
-  const configEntry = fileManagerWindow.locator("[data-fm-node-id]", { hasText: CONFIG_FILE }).first();
-  await expect(configEntry).toBeVisible();
+  await expect(files).toBeVisible();
+
+  const systemEntry = files.locator("[data-fm-node-id]", { hasText: "System" }).first();
+  await expect(systemEntry).toBeVisible({ timeout: 15_000 });
+  await systemEntry.dblclick();
+  await expect(address).toHaveValue("/System", { timeout: 15_000 });
+
+  const programFilesEntry = files.locator("[data-fm-node-id]", { hasText: "Program Files" }).first();
+  await expect(programFilesEntry).toBeVisible({ timeout: 15_000 });
+  await programFilesEntry.dblclick();
+  await expect(address).toHaveValue("/System/Program Files", { timeout: 15_000 });
+
+  const monacoEntry = files.locator("[data-fm-node-id]", { hasText: "MonacoEditor" }).first();
+  await expect(monacoEntry).toBeVisible({ timeout: 15_000 });
+  await monacoEntry.dblclick();
+  await expect(address).toHaveValue(CONFIG_DIRECTORY, { timeout: 15_000 });
+
+  const configEntry = files.locator("[data-fm-node-id]", { hasText: CONFIG_FILE }).first();
+  await expect(configEntry).toBeVisible({ timeout: 15_000 });
   return configEntry;
 }
 
