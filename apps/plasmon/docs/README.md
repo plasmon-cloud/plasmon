@@ -70,6 +70,7 @@ Documentation automation is limited to machine-provable contracts: declared boun
 | `apps/plasmon/src/os/associations` | os-subsystem | local | local |
 | `apps/plasmon/src/os/contracts` | os-subsystem | local | local |
 | `apps/plasmon/src/os/desktop` | os-subsystem | local | local |
+| `apps/plasmon/src/os/diagnostics` | os-subsystem | local | inherited from `apps/plasmon/src/os/AGENTS.md` |
 | `apps/plasmon/src/os/file-manager` | os-subsystem | local | local |
 | `apps/plasmon/src/os/fs` | os-subsystem | local | local |
 | `apps/plasmon/src/os/integration` | os-subsystem | local | local |

@@ -29,6 +29,10 @@ import {
   type RepositoryCommit,
   type RepositoryState,
 } from "../fs/index.ts";
+import {
+  PlasmonDiagnosticService,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
@@ -83,6 +87,7 @@ export interface PlasmonServices {
   fs: FsService;
   fsEvents: FsEventSource;
   filesystem: FilesystemCoreServices;
+  diagnostics: DiagnosticService;
   process: ProcessController;
   windows: WindowManager;
   windowPlacement: NativeWindowPlacementController;
@@ -235,12 +240,13 @@ function registerNativeApplications(
  * Tests may inject only true external/runtime boundaries (for example an
  * in-memory persistence repository, a mock Neutron bridge, or deterministic window
  * manager). Registration, associations, opening, filesystem policy, process
- * behavior, and all other OS semantics remain the same production composition.
+ * behavior, diagnostics, and all other OS semantics remain the same production composition.
  *
  * The returned public fs is the filesystem-core facade: it waits for migration
  * and bootstrap to finish and applies dot-hidden listing semantics. The core
  * itself still mutates only through FsService primitives, so persistence remains
- * owned by the existing hosted/background boundary.
+ * owned by the existing hosted/background boundary. Diagnostics also persist
+ * through that raw authority after the filesystem readiness barrier.
  *
  * Runtime controllers are assembled here but started by the outer application
  * bootstrap before React renders. This keeps service construction deterministic
@@ -255,13 +261,29 @@ export function createPlasmonServices(
   const rawFs = options.filesystemRepository
     ? new PersistentFsService(options.filesystemRepository)
     : createFilesystemService();
+  let filesystem: FilesystemCoreServices | null = null;
+  const diagnostics = new PlasmonDiagnosticService({
+    fs: rawFs,
+    ready: async () => {
+      if (filesystem) await filesystem.ready;
+    },
+    onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
+  });
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
   const windowPlacement = new NativeWindowPlacementController(
     windows,
     new FsServiceWindowPlacementStore(rawFs),
     {
-      onPersistenceError: (error) => console.warn("Plasmon window placement persistence failed:", error),
+      onPersistenceError: (error) => {
+        diagnostics.emit({
+          level: "warn",
+          subsystem: "windowing",
+          event: "window.placement.persistence.failed",
+          message: "Window placement persistence failed",
+          error,
+        });
+      },
     },
   );
   const neutron = options.neutron ?? createNeutronBridge();
@@ -269,10 +291,33 @@ export function createPlasmonServices(
   const associations = new HandlerAssociationRegistry({ defaults: createAssociationDefaultStore(rawFs) });
   const process = new NativeProcessController(nativeApps, windows, undefined, {
     onWindowCreated: (appId, windowId) => windowPlacement.attach(appId, windowId),
+    onStartupError: (error, app) => {
+      diagnostics.emit({
+        level: "error",
+        subsystem: "process",
+        event: "process.start.failed",
+        message: `Failed to start ${app.name}`,
+        context: { appId: app.id, handlerId: app.handlerId },
+        error,
+      });
+    },
+    onCloseError: (error, record) => {
+      diagnostics.emit({
+        level: "error",
+        subsystem: "process",
+        event: "process.close.failed",
+        message: "Native process close handler failed",
+        context: {
+          appId: record.appId,
+          handlerId: record.handlerId,
+          processId: record.id,
+        },
+        error,
+      });
+    },
   });
   const openService = new IntegratedOpenService({ nativeApps, associations, process, neutron });
   const fileClipboard = new FileOperationClipboard();
-  let filesystem: FilesystemCoreServices | null = null;
 
   // Native Explorer registration happens before filesystem bootstrap so the
   // canonical dispatcher can discover the Explorer handler during core setup.
@@ -312,10 +357,46 @@ export function createPlasmonServices(
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
   const fs = filesystem.fs;
+  void filesystem.ready
+    .then((initialization) => {
+      diagnostics.emit({
+        level: "notice",
+        subsystem: "filesystem",
+        event: "filesystem.bootstrap.ready",
+        message: "Filesystem bootstrap completed",
+      });
+      if (initialization.neutronProjectionError) {
+        diagnostics.emit({
+          level: "warn",
+          subsystem: "filesystem",
+          event: "filesystem.neutron-projection.failed",
+          message: "Initial Neutron application projection reconciliation failed",
+          error: initialization.neutronProjectionError,
+        });
+      }
+    })
+    .catch((error) => {
+      diagnostics.emit({
+        level: "critical",
+        subsystem: "filesystem",
+        event: "filesystem.bootstrap.failed",
+        message: "Filesystem bootstrap failed",
+        error,
+      });
+    });
   const monacoRuntimeConfig = new MonacoRuntimeConfigService({
     fs,
     fsEvents: fs,
     programFiles: filesystem.programFiles,
+    onDiagnostic: (item) => {
+      diagnostics.emit({
+        level: "warn",
+        subsystem: "monaco-runtime-config",
+        event: `monaco.runtime-config.${item.code}`,
+        message: item.message,
+        context: { code: item.code },
+      });
+    },
   });
   nativeApps.setLoader(
     recycleBinAppDefinition.id,
@@ -327,6 +408,7 @@ export function createPlasmonServices(
     fs,
     fsEvents: fs,
     filesystem,
+    diagnostics,
     process,
     windows,
     windowPlacement,
