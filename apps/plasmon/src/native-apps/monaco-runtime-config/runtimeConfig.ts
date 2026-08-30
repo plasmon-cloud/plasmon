@@ -40,7 +40,7 @@ export interface MonacoRuntimeConfigServiceOptions {
   fs: FsService;
   fsEvents: FsEventSource;
   programFiles: ProgramFilesService;
-  onDiagnostic?: (diagnostic: MonacoRuntimeConfigDiagnostic) => void;
+  onDiagnostic: (diagnostic: MonacoRuntimeConfigDiagnostic) => void;
 }
 
 export interface MonacoRuntimeConfigStore {
@@ -297,11 +297,7 @@ export class MonacoRuntimeConfigService implements MonacoRuntimeConfigStore {
     const key = `${item.code}:${item.message}`;
     if (key === this.lastDiagnosticKey) return;
     this.lastDiagnosticKey = key;
-    if (this.options.onDiagnostic) {
-      this.options.onDiagnostic(item);
-      return;
-    }
-    console.warn(`[Monaco runtime config] ${item.code}: ${item.message}`);
+    this.options.onDiagnostic(item);
   }
 
   private isRelevantEvent(event: FsEvent): boolean {
