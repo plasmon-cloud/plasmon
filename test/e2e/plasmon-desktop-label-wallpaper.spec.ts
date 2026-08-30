@@ -5,6 +5,7 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
+const APP_READY_TIMEOUT_MS = 10_000;
 const COMPOSITIONS = [
   ["light", "Graphite", "plasmon-graphite", "Glacier Prism", "glacier-prism"],
   ["dark", "Glacier", "plasmon-glacier", "Midnight Orbit", "midnight-orbit"],
@@ -52,7 +53,7 @@ test("desktop label renders its explicit contrast treatment over representative 
     await page.locator(`[data-tid="launcher-tile-${APP_ID}-${TILE_ID}"]`).click();
 
     const appSelector = `iframe[data-app-id="${APP_ID}"][data-tile-id="${TILE_ID}"]`;
-    await expect(page.locator(appSelector)).toBeVisible({ timeout: 60_000 });
+    await page.locator(appSelector).waitFor({ state: "attached", timeout: APP_READY_TIMEOUT_MS });
     const app = page.frameLocator(appSelector);
     const shell = app.locator(".plasmon-shell");
     const wallpaper = app.locator(".plasmon-shell__wallpaper");
@@ -60,8 +61,8 @@ test("desktop label renders its explicit contrast treatment over representative 
     const entry = app.locator(".fm-entry--desktop:not(.is-renaming)").first();
     const label = entry.locator(".fm-entry__name");
 
-    await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
-    await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
+    await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: APP_READY_TIMEOUT_MS });
+    await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible();
 
     await app.getByRole("button", { name: "Start", exact: true }).click();
     const start = app.getByRole("region", { name: "Start menu" });
