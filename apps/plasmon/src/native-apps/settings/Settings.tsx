@@ -7,6 +7,14 @@ import type {
   ProcessId,
 } from "../../os/contracts/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
+import {
+  effectiveShellWallpaper,
+  SHELL_THEME_IDS,
+  SHELL_THEME_LABELS,
+  SHELL_WALLPAPER_IDS,
+  SHELL_WALLPAPER_LABELS,
+  type ShellPreferencesAuthority,
+} from "../../os/shell/preferences.ts";
 import { NativeAppContentSurface, NativeAppPanel } from "../../os/visual/index.ts";
 import {
   formatBytes,
@@ -22,6 +30,7 @@ export interface SettingsDependencies {
   getTaskbarMode?: () => string;
   setTaskbarMode?: (mode: string) => void;
   hiddenVisibility?: HiddenVisibilityPreferenceStore;
+  shellPreferences?: ShellPreferencesAuthority;
 }
 
 export interface SettingsHostProps {
@@ -39,6 +48,13 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
     );
     const [hiddenVisibilityReady, setHiddenVisibilityReady] = useState(!dependencies.hiddenVisibility);
     const [hiddenVisibilityError, setHiddenVisibilityError] = useState<string | null>(null);
+    const [shellSnapshot, setShellSnapshot] = useState(
+      () => dependencies.shellPreferences?.getSnapshot() ?? null,
+    );
+    const [shellPreferencesReady, setShellPreferencesReady] = useState(
+      () => dependencies.shellPreferences?.isReady() ?? false,
+    );
+    const [shellPreferencesError, setShellPreferencesError] = useState<string | null>(null);
 
     useEffect(() => {
       process.setTitle(processId, "Settings");
@@ -69,6 +85,30 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
         unsubscribe();
       };
     }, []);
+
+    useEffect(() => {
+      const authority = dependencies.shellPreferences;
+      if (!authority) return undefined;
+      setShellSnapshot(authority.getSnapshot());
+      setShellPreferencesReady(authority.isReady());
+      return authority.subscribe((next, ready) => {
+        setShellSnapshot(next);
+        setShellPreferencesReady(ready);
+      });
+    }, [dependencies.shellPreferences]);
+
+    const updateShellPreferences = (patch: Partial<Exclude<typeof shellSnapshot, null>>) => {
+      const authority = dependencies.shellPreferences;
+      if (!authority || !shellSnapshot || !shellPreferencesReady) return;
+      setShellPreferencesError(null);
+      void authority.save({ ...shellSnapshot, ...patch }).then((outcome) => {
+        if (!outcome.saved) {
+          setShellPreferencesError(outcome.error instanceof Error ? outcome.error.message : String(outcome.error));
+        }
+      }).catch((cause: unknown) => {
+        setShellPreferencesError(cause instanceof Error ? cause.message : String(cause));
+      });
+    };
 
     const theme = dependencies.getThemeName?.();
     const taskbar = dependencies.getTaskbarMode?.();
@@ -122,7 +162,52 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
 
         <NativeAppPanel style={styles.card} aria-labelledby="appearance-heading">
           <h2 id="appearance-heading" style={styles.subheading}>Appearance</h2>
-          {dependencies.setThemeName ? (
+          {shellSnapshot ? (
+            <>
+              <h3 style={styles.sectionHeading}>Theme</h3>
+              <div style={styles.optionGrid}>
+                {SHELL_THEME_IDS.map((themeId) => (
+                  <button
+                    key={themeId}
+                    type="button"
+                    disabled={!shellPreferencesReady}
+                    aria-pressed={shellSnapshot.themeId === themeId}
+                    onClick={() => updateShellPreferences({ themeId })}
+                  >
+                    {SHELL_THEME_LABELS[themeId]}
+                  </button>
+                ))}
+              </div>
+              <h3 style={styles.sectionHeading}>Wallpaper</h3>
+              <div style={styles.optionGrid}>
+                <button
+                  type="button"
+                  disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
+                  aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
+                  onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
+                >
+                  Follow theme
+                </button>
+                {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
+                  <button
+                    key={wallpaperId}
+                    type="button"
+                    disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
+                    aria-pressed={shellSnapshot.wallpaper.mode === "pinned" && shellSnapshot.wallpaper.id === wallpaperId}
+                    onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
+                  >
+                    {SHELL_WALLPAPER_LABELS[wallpaperId]}
+                  </button>
+                ))}
+              </div>
+              <h3 style={styles.sectionHeading}>Taskbar alignment</h3>
+              <div style={styles.optionGrid}>
+                <button type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "center"} onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}>Center</button>
+                <button type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "left"} onClick={() => updateShellPreferences({ taskbarAlignment: "left" })}>Left</button>
+              </div>
+              {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
+            </>
+          ) : dependencies.setThemeName ? (
             <label style={styles.controlRow}>
               Theme
               <select
@@ -138,7 +223,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
           ) : (
             <p>Theme controls will become available when Shell provides its settings callback.</p>
           )}
-          {dependencies.setTaskbarMode ? (
+          {!shellSnapshot && (dependencies.setTaskbarMode ? (
             <label style={styles.controlRow}>
               Taskbar
               <select
@@ -152,7 +237,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
             </label>
           ) : (
             <p>Taskbar preferences will become available when Shell provides its settings callback.</p>
-          )}
+          ))}
         </NativeAppPanel>
 
         <NativeAppPanel style={styles.card} aria-labelledby="associations-heading">
@@ -194,6 +279,16 @@ const styles: Record<string, CSSProperties> = {
   },
   card: {
     marginBottom: 14,
+  },
+  sectionHeading: {
+    margin: "14px 0 8px",
+    color: "var(--plasmon-text-primary)",
+    fontSize: 14,
+  },
+  optionGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
   },
   controlRow: {
     display: "flex",

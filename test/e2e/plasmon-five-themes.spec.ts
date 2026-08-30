@@ -159,7 +159,8 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Shell settings" });
+    await expect(nativeSettingsWindow).toHaveClass(/plasmon-window--active/);
+    const settings = nativeSettingsSurface;
     await expect(settings).toBeVisible();
 
     const observed = {
