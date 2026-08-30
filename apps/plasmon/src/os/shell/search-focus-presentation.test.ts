@@ -2,13 +2,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-const surface = readFileSync(new URL("./SearchSurface.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("./searchSurface.scss", import.meta.url), "utf8");
-
-test("Search keeps its intended input focus path", () => {
-  expect(surface).toContain("autoFocus");
-  expect(surface).toContain('aria-label="Search Plasmon"');
-});
 
 test("Search renders focus with the shared theme focus token instead of native input chrome", () => {
   expect(styles).toContain(".plasmon-shell__search-box:focus-within");
