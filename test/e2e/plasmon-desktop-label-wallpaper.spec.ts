@@ -5,10 +5,10 @@ import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
-const THEME_LABEL = "Graphite";
-const THEME_ID = "plasmon-graphite";
-const WALLPAPER_LABEL = "Glacier Prism";
-const WALLPAPER_ID = "glacier-prism";
+const COMPOSITIONS = [
+  ["light", "Graphite", "plasmon-graphite", "Glacier Prism", "glacier-prism"],
+  ["dark", "Glacier", "plasmon-glacier", "Midnight Orbit", "midnight-orbit"],
+] as const;
 
 async function expectWallpaperLabelTreatment(label: Locator): Promise<void> {
   await expect(label).toBeVisible();
@@ -34,7 +34,7 @@ async function expectWallpaperLabelTreatment(label: Locator): Promise<void> {
   expect(presentation.height).toBeGreaterThan(0);
 }
 
-test("desktop label renders with explicit contrast treatment over a representative light packaged wallpaper", async ({ page }) => {
+test("desktop label renders its explicit contrast treatment over representative light and dark packaged wallpapers", async ({ page }, testInfo) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, { firstPartyOrigins: [kernelUrl] });
@@ -57,7 +57,8 @@ test("desktop label renders with explicit contrast treatment over a representati
     const shell = app.locator(".plasmon-shell");
     const wallpaper = app.locator(".plasmon-shell__wallpaper");
     const desktop = app.locator(".plasmon-desktop");
-    const label = app.locator(".fm-entry--desktop:not(.is-renaming) .fm-entry__name").first();
+    const entry = app.locator(".fm-entry--desktop:not(.is-renaming)").first();
+    const label = entry.locator(".fm-entry__name");
 
     await expect(app.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 60_000 });
     await expect(shell).toHaveAttribute("aria-busy", "false", { timeout: 60_000 });
@@ -69,27 +70,34 @@ test("desktop label renders with explicit contrast treatment over a representati
     const settings = app.getByRole("region", { name: "Shell settings" });
     await expect(settings).toBeVisible();
 
-    await settings.getByRole("button", { name: WALLPAPER_LABEL, exact: true }).click();
-    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", WALLPAPER_ID);
-    await settings.getByRole("button", { name: THEME_LABEL, exact: true }).click();
-    await expect(shell).toHaveAttribute("data-plasmon-theme", THEME_ID);
-    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", WALLPAPER_ID);
+    for (const [name, themeLabel, themeId, wallpaperLabel, wallpaperId] of COMPOSITIONS) {
+      await settings.getByRole("button", { name: wallpaperLabel, exact: true }).click();
+      await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
+      await settings.getByRole("button", { name: themeLabel, exact: true }).click();
+      await expect(shell).toHaveAttribute("data-plasmon-theme", themeId);
+      await expect(shell).toHaveAttribute("data-plasmon-wallpaper", wallpaperId);
 
-    await expect(wallpaper).toBeVisible();
-    await expect(desktop).toBeVisible();
-    expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage))
-      .toContain(`${WALLPAPER_ID}.svg`);
-    expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
-      .toBe("rgba(0, 0, 0, 0)");
-    await expectWallpaperLabelTreatment(label);
+      await expect(wallpaper).toBeVisible();
+      await expect(desktop).toBeVisible();
+      expect(await wallpaper.evaluate((element) => getComputedStyle(element).backgroundImage))
+        .toContain(`${wallpaperId}.svg`);
+      expect(await desktop.evaluate((element) => getComputedStyle(element).backgroundColor))
+        .toBe("rgba(0, 0, 0, 0)");
+      await expectWallpaperLabelTreatment(label);
 
-    const labelBox = await label.boundingBox();
-    const wallpaperBox = await wallpaper.boundingBox();
-    if (!labelBox || !wallpaperBox) throw new Error("Desktop label/wallpaper composition has no browser geometry");
-    expect(labelBox.x).toBeGreaterThanOrEqual(wallpaperBox.x);
-    expect(labelBox.y).toBeGreaterThanOrEqual(wallpaperBox.y);
-    expect(labelBox.x + labelBox.width).toBeLessThanOrEqual(wallpaperBox.x + wallpaperBox.width);
-    expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(wallpaperBox.y + wallpaperBox.height);
+      const labelBox = await label.boundingBox();
+      const wallpaperBox = await wallpaper.boundingBox();
+      if (!labelBox || !wallpaperBox) throw new Error("Desktop label/wallpaper composition has no browser geometry");
+      expect(labelBox.x).toBeGreaterThanOrEqual(wallpaperBox.x);
+      expect(labelBox.y).toBeGreaterThanOrEqual(wallpaperBox.y);
+      expect(labelBox.x + labelBox.width).toBeLessThanOrEqual(wallpaperBox.x + wallpaperBox.width);
+      expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(wallpaperBox.y + wallpaperBox.height);
+
+      await testInfo.attach(`desktop-label-${name}.png`, {
+        body: await entry.screenshot({ animations: "disabled" }),
+        contentType: "image/png",
+      });
+    }
 
     health.assertClean();
   } finally {
