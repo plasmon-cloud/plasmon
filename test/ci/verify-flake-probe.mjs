@@ -152,7 +152,12 @@ for (const fragment of [
   "ci:flake-probe",
   "@quarantine",
 ]) requireFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
-for (const fragment of ["Issue #594", "R3 staged", "release/0.1.0-r3"]) {
+const retiredProvenanceFragments = [
+  ["Issue", "#594"].join(" "),
+  ["R3", "staged"].join(" "),
+  ["release", "0.1.0-r3"].join("/"),
+];
+for (const fragment of retiredProvenanceFragments) {
   forbidFragment(`${workflowReadme}\n${probeDoc}`, fragment, "durable CI documentation");
 }
 

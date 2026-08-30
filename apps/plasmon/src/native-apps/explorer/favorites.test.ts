@@ -5,7 +5,7 @@ import { MemoryFsRepository } from "../../os/fs/repository.ts";
 import { PersistentFsService } from "../../os/fs/service.ts";
 import { readDefaultExplorerFavorites } from "./favorites.ts";
 
-test("issue #182: default Favorites project the accepted root directories by NodeId", async () => {
+test("default Favorites project the accepted root directories by NodeId", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   await bootstrapFilesystem(fs);
 
@@ -32,7 +32,7 @@ test("issue #182: default Favorites project the accepted root directories by Nod
   assert.equal(customized.nodes.find((node) => node.name === "Projects")?.id, projects.id);
 });
 
-test("issue #182: a preserved legacy Downloads directory is not a default Favorite", async () => {
+test("a preserved legacy Downloads directory is not a default Favorite", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   const root = await fs.resolvePath("/");
   assert.ok(root);

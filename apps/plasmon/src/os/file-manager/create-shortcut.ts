@@ -58,7 +58,7 @@ export async function createFileManagerShortcut(
 /**
  * FileManager's Send to Desktop command is only a destination adapter around the
  * canonical shortcut primitive. The source resource is re-read by stable NodeId,
- * then the normal #44 creation path owns capability checks and shortcut creation.
+ * then the normal creation path owns capability checks and shortcut creation.
  */
 export async function sendFileManagerShortcutToDesktop(
   fs: FsService,

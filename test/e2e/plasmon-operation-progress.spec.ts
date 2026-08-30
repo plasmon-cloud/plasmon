@@ -54,7 +54,7 @@ async function openExplorer(app: FrameLocator) {
 }
 
 /**
- * #65 model/RTL coverage already proves success, partial failure, paste lifecycle,
+ * Model/RTL coverage already proves success, partial failure, paste lifecycle,
  * and duplicate-trigger protection. This packaged gate owns the remaining
  * acceptance boundary: a deliberately non-trivial real import must expose the
  * production accessible running state while actual filesystem writes are live.

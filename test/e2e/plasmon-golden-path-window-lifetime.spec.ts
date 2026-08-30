@@ -62,9 +62,9 @@ async function activateSelectedDesktopRoot(
   });
 }
 
-// #251 and #308 independently own the two acceptances below. They reproduced
-// the same pre-semantics second-Explorer setup failure, while their restoration
-// evidence remains independently owned.
+// The two acceptances below independently cover sibling-window lifetime and
+// Alt-Tab restoration. They reproduced the same pre-semantics second-Explorer
+// setup failure while retaining separate behavioral evidence.
 test(
   "packaged Plasmon repeatedly opens and closes reachable Explorer siblings",
   async ({ page }) => {

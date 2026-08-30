@@ -71,19 +71,19 @@ test("[demo profile] — packaged Photos expands inside Plasmon when browser ful
         kind: "console.warn",
         messageIncludes: "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute",
         urlPathPrefix: "/chunks/",
-        reason: "Kernel-owned installed-app iframe warning is outside #180; this gate exercises the real packaged Photos sandbox",
+        reason: "Kernel-owned installed-app iframe warning is outside this Photos gate; this gate exercises the real packaged Photos sandbox",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
+        reason: "Tracked product URL-resolution defect is outside Photos fullscreen fallback",
       },
       {
         kind: "requestfailed",
         message: "net::ERR_ABORTED",
         urlPathPrefix: "/static/plasmon/icons/",
-        reason: "Tracked product URL-resolution defect #190 is outside #180 Photos fullscreen fallback",
+        reason: "Tracked product URL-resolution defect is outside Photos fullscreen fallback",
       },
       {
         kind: "console.error",
@@ -95,7 +95,7 @@ test("[demo profile] — packaged Photos expands inside Plasmon when browser ful
         kind: "requestfailed",
         message: "net::ERR_BLOCKED_BY_ORB",
         urlPathPrefix: "/app/hello/static/icon.svg",
-        reason: "Known unrelated optional-app icon URL-resolution diagnostic outside #180 Photos fullscreen behavior",
+        reason: "Known unrelated optional-app icon URL-resolution diagnostic outside Photos fullscreen behavior",
       },
     ],
   });
@@ -124,7 +124,7 @@ test("[demo profile] — packaged Photos expands inside Plasmon when browser ful
     await expect(windowLayer).toBeVisible({ timeout: 30_000 });
 
     // Open the authored image through normal Search -> AssociationRegistry ->
-    // OpenService dispatch. #180 does not depend on Files import behavior.
+    // OpenService dispatch. Photos does not depend on Files import behavior.
     await plasmon.getByRole("button", { name: "Search" }).click();
     const search = plasmon.getByLabel("Search Plasmon");
     await expect(search).toBeVisible();
