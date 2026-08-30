@@ -9,8 +9,12 @@ export interface DiagnosticLogFields {
   message?: string;
   /** Optional error captured by the central sanitizer. */
   error?: unknown;
-  /** Optional operation correlation identifier. */
+  /** Optional root operation correlation identifier. */
   correlationId?: string;
+  /** Optional current operation/span identifier. */
+  operationId?: string;
+  /** Optional meaningful parent operation/span identifier. */
+  parentOperationId?: string;
   /** Optional explicitly grouped safe context. */
   context?: Record<string, unknown>;
   /** Additional fields become structured diagnostic context. */
@@ -19,6 +23,8 @@ export interface DiagnosticLogFields {
 
 export interface DiagnosticLoggerDefaults {
   correlationId?: string;
+  operationId?: string;
+  parentOperationId?: string;
   context?: Record<string, unknown>;
 }
 
@@ -47,6 +53,8 @@ function buildInput(
     message,
     error,
     correlationId,
+    operationId,
+    parentOperationId,
     context,
     ...additionalContext
   } = fields;
@@ -56,14 +64,18 @@ function buildInput(
     ...additionalContext,
   };
 
+  const resolvedCorrelationId = correlationId || defaults.correlationId;
+  const resolvedOperationId = operationId || defaults.operationId;
+  const resolvedParentOperationId = parentOperationId || defaults.parentOperationId;
+
   return {
     level,
     subsystem,
     event,
     message: message?.trim() || event,
-    ...(correlationId || defaults.correlationId
-      ? { correlationId: correlationId || defaults.correlationId }
-      : {}),
+    ...(resolvedCorrelationId ? { correlationId: resolvedCorrelationId } : {}),
+    ...(resolvedOperationId ? { operationId: resolvedOperationId } : {}),
+    ...(resolvedParentOperationId ? { parentOperationId: resolvedParentOperationId } : {}),
     ...(Object.keys(mergedContext).length > 0 ? { context: mergedContext } : {}),
     ...(error !== undefined ? { error } : {}),
   };
