@@ -6,16 +6,16 @@ import {
   fileManagerWindowTitle,
 } from "./identity.ts";
 
-test("File Manager keeps its internal native identity while presenting one product name", () => {
+test("File Explorer keeps its internal native identity while presenting one product name", () => {
   expect(explorerAppDefinition.id).toBe("native:explorer");
   expect(explorerAppDefinition.handlerId).toBe("native:explorer");
   expect(explorerAppDefinition.name).toBe(FILE_MANAGER_NAME);
-  expect(FILE_MANAGER_NAME).toBe("File Manager");
+  expect(FILE_MANAGER_NAME).toBe("File Explorer");
 });
 
-test("File Manager window titles retain the current location and canonical app name", () => {
+test("File Explorer window titles retain the current location and canonical app name", () => {
   expect(fileManagerLocationLabel("/")).toBe("This Plasmon");
-  expect(fileManagerWindowTitle("/")).toBe("This Plasmon — File Manager");
-  expect(fileManagerWindowTitle("/Documents")).toBe("Documents — File Manager");
-  expect(fileManagerWindowTitle("/System/Program Files")).toBe("Program Files — File Manager");
+  expect(fileManagerWindowTitle("/")).toBe("This Plasmon — File Explorer");
+  expect(fileManagerWindowTitle("/Documents")).toBe("Documents — File Explorer");
+  expect(fileManagerWindowTitle("/System/Program Files")).toBe("Program Files — File Explorer");
 });
