@@ -1,9 +1,12 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
+import type { DiagnosticOperationContext } from "../../../os/contracts/index.ts";
+import type { DiagnosticService } from "../../../os/diagnostics/index.ts";
 import { monacoActionId, type MonacoEditorCommand } from "./editorCommands.ts";
 import {
   createEditorSurfaceModelOwner,
@@ -46,6 +49,8 @@ export interface MonacoEditorHostProps {
   ariaLabel: string;
   minimap?: boolean;
   wordWrap?: boolean;
+  diagnostics?: DiagnosticService;
+  operation?: DiagnosticOperationContext;
   onChange: (value: string) => void;
   onCursorChange?: (state: MonacoCursorState) => void;
   onReadyChange?: (ready: boolean) => void;
@@ -57,6 +62,11 @@ type MonacoApi = typeof import("monaco-editor");
 type MonacoEditor = import("monaco-editor").editor.IStandaloneCodeEditor;
 type MonacoModel = import("monaco-editor").editor.ITextModel;
 type MonacoDisposable = import("monaco-editor").IDisposable;
+
+function errorKind(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  return error === null ? "null" : typeof error;
+}
 
 function configureSlimLanguageServices(monaco: MonacoApi): void {
   if (!isSlimMonacoProfile) return;
@@ -94,6 +104,8 @@ export function MonacoEditorHost({
   ariaLabel,
   minimap = false,
   wordWrap = false,
+  diagnostics,
+  operation,
   onChange,
   onCursorChange,
   onReadyChange,
@@ -115,6 +127,12 @@ export function MonacoEditorHost({
   const [loading, setLoading] = useState(true);
   const [modelLanguage, setModelLanguage] = useState<string | null>(null);
   const [modelUri, setModelUri] = useState<string | null>(null);
+  const log = useMemo(() => {
+    if (!diagnostics) return null;
+    return operation
+      ? diagnostics.continueOperation(operation).for("runtime.monaco")
+      : diagnostics.for("runtime.monaco");
+  }, [diagnostics, operation]);
 
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => { onCursorChangeRef.current = onCursorChange; }, [onCursorChange]);
@@ -135,9 +153,12 @@ export function MonacoEditorHost({
     onReadyChangeRef.current?.(false);
     onCommandApiChangeRef.current?.(null);
     onStateChangeRef.current?.({ phase: "loading", error: null });
-    installMonacoEnvironment();
 
-    void import("monaco-editor")
+    void Promise.resolve()
+      .then(() => {
+        installMonacoEnvironment();
+        return import("monaco-editor");
+      })
       .then((monaco) => {
         if (cancelled || !containerRef.current) return;
         const container = containerRef.current;
@@ -223,6 +244,13 @@ export function MonacoEditorHost({
       .catch((reason: unknown) => {
         if (!cancelled) {
           const message = reason instanceof Error ? reason.message : String(reason);
+          log?.error("runtime.monaco.start.failed", {
+            message: "Monaco editor runtime failed to initialize",
+            runtime: "Monaco",
+            profile: isSlimMonacoProfile ? "slim" : "full",
+            stage: "environment-or-editor-initialize",
+            errorKind: errorKind(reason),
+          });
           setLoading(false);
           setModelLanguage(null);
           setModelUri(null);
@@ -244,7 +272,7 @@ export function MonacoEditorHost({
       if (editorRef.current === editor) editorRef.current = null;
       if (modelRef.current === ownedModel?.model) modelRef.current = null;
     };
-  }, [modelKey]);
+  }, [log, modelKey]);
 
   useEffect(() => {
     const model = modelRef.current;
