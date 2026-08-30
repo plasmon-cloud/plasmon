@@ -47,8 +47,14 @@ export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): str
 }
 
 export function packageProfileForDeployment(manifestPath: string, workspace: string): string | undefined {
+  if (workspace !== PLASMON_WORKSPACE) return undefined;
+  if (manifestPath === PLASMON_LOCAL_MANIFEST || manifestPath === PLASMON_DEMO_MANIFEST) return "base";
+  return undefined;
+}
+
+export function demoOverlayForDeployment(manifestPath: string, workspace: string): string | undefined {
   return manifestPath === PLASMON_DEMO_MANIFEST && workspace === PLASMON_WORKSPACE
-    ? "demo"
+    ? "1"
     : undefined;
 }
 
@@ -123,9 +129,16 @@ function packageEnvironmentForDeployment(manifestPath: string, workspace: string
 
   const env: NodeJS.ProcessEnv = { ...process.env };
   delete env.PLASMON_PACKAGE_PROFILE;
+  delete env.PLASMON_DEMO_OVERLAY;
+
   const requestedProfile = process.env.PLASMON_PACKAGE_PROFILE?.trim();
   const profile = requestedProfile || packageProfileForDeployment(manifestPath, workspace);
   if (profile) env.PLASMON_PACKAGE_PROFILE = profile;
+
+  const requestedOverlay = process.env.PLASMON_DEMO_OVERLAY?.trim();
+  const demoOverlay = requestedOverlay || demoOverlayForDeployment(manifestPath, workspace);
+  if (demoOverlay) env.PLASMON_DEMO_OVERLAY = demoOverlay;
+
   return env;
 }
 
