@@ -35,8 +35,6 @@ jobs:
           expected="$(printf '%s\n' apps/plasmon/build.ts apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts apps/plasmon/src/os/integration/services.ts | sort)"
           test "$actual" = "$expected"
 
-          # Current R3 owns package/profile and diagnostics composition. The
-          # experiment owns the .run TS worker requirement and scripting wiring.
           git checkout --theirs -- apps/plasmon/build.ts apps/plasmon/src/os/integration/services.ts
           git checkout --ours -- apps/plasmon/src/native-apps/shared/monaco/monacoEnvironment.test.ts
 
@@ -90,8 +88,21 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: npm ci
-      - name: Plasmon fast suite
-        run: npm --workspace neutron-plasmon test
+      - name: Plasmon fast suite and capture failure
+        run: |
+          set +e
+          npm --workspace neutron-plasmon test > /tmp/plasmon-fast.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/plasmon-fast.log
+          if [ "$status" -ne 0 ]; then
+            git merge --abort
+            cp /tmp/plasmon-fast.log .github/experiment-cmd-r3-test-failure.txt
+            git add .github/experiment-cmd-r3-test-failure.txt
+            git commit -m 'CI: record cmd merge test failure'
+            git push origin HEAD:experiment/cmd
+            exit 78
+          fi
       - name: Base build
         run: npm --workspace neutron-plasmon run build
       - name: Slim build
@@ -104,7 +115,7 @@ jobs:
           test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/editor.worker.js'
           test -f 'apps/plasmon/dist/web/System/Program Files/MonacoEditor/ts.worker.js'
           git diff --check
-          git rm .github/workflows/experiment-cmd-merge-r3.yml .github/workflows/experiment-cmd-merge-r3-final.yml .github/experiment-cmd-r3-conflicts.txt
+          git rm -f .github/workflows/experiment-cmd-merge-r3.yml .github/workflows/experiment-cmd-merge-r3-final.yml .github/experiment-cmd-r3-conflicts.txt .github/experiment-cmd-r3-test-failure.txt || true
           git add -A
           git commit -m 'Merge release/0.1.0-r3 into experiment/cmd'
           git push origin HEAD:experiment/cmd
