@@ -1,0 +1,112 @@
+name: Experimental Rollbar Package Size
+
+on:
+  pull_request:
+    paths:
+      - apps/plasmon/**
+      - package-lock.json
+      - .github/workflows/experiment-rollbar-package-size.yml
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout experiment head
+        uses: actions/checkout@v6
+        with:
+          path: head
+          fetch-depth: 1
+      - name: Checkout exact PR base
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          fetch-depth: 1
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install exact dependency graphs
+        run: |
+          (cd base && nix develop --command npm ci)
+          (cd head && nix develop --command npm ci)
+      - name: Package and compare exact archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_size() {
+            local tree="$1" profile="$2" log="/tmp/$1-$2.log"
+            if ! (cd "$tree" && nix develop --command bash -lc "PLASMON_PACKAGE_PROFILE=$profile npm --workspace neutron-plasmon run package" >"$log" 2>&1); then
+              cat "$log" >&2
+              return 1
+            fi
+            local archive="$tree/apps/plasmon/plasmon.v0.1.0.neutron"
+            if [[ ! -f "$archive" ]]; then
+              cat "$log" >&2
+              echo "missing expected archive: $archive" >&2
+              return 1
+            fi
+            stat -c%s "$archive"
+            rm -f "$archive"
+          }
+
+          BASE_SLIM=$(package_size base slim)
+          HEAD_SLIM=$(package_size head slim)
+          BASE_FULL=$(package_size base full)
+          HEAD_FULL=$(package_size head full)
+          DELTA_SLIM=$((HEAD_SLIM - BASE_SLIM))
+          DELTA_FULL=$((HEAD_FULL - BASE_FULL))
+
+          {
+            echo '## Rollbar experiment package-size evidence'
+            echo
+            echo '| Profile | Base bytes | Experiment bytes | Delta bytes |'
+            echo '| --- | ---: | ---: | ---: |'
+            echo "| slim | $BASE_SLIM | $HEAD_SLIM | $DELTA_SLIM |"
+            echo "| full | $BASE_FULL | $HEAD_FULL | $DELTA_FULL |"
+            echo
+            echo "Slim contract: experiment archive must remain strictly < 1900000 bytes."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "BASE_SLIM=$BASE_SLIM"
+            echo "HEAD_SLIM=$HEAD_SLIM"
+            echo "DELTA_SLIM=$DELTA_SLIM"
+            echo "BASE_FULL=$BASE_FULL"
+            echo "HEAD_FULL=$HEAD_FULL"
+            echo "DELTA_FULL=$DELTA_FULL"
+          } >> "$GITHUB_ENV"
+
+          echo "PLASMON_PACKAGE_BASE_SLIM=$BASE_SLIM"
+          echo "PLASMON_PACKAGE_HEAD_SLIM=$HEAD_SLIM"
+          echo "PLASMON_PACKAGE_DELTA_SLIM=$DELTA_SLIM"
+          echo "PLASMON_PACKAGE_BASE_FULL=$BASE_FULL"
+          echo "PLASMON_PACKAGE_HEAD_FULL=$HEAD_FULL"
+          echo "PLASMON_PACKAGE_DELTA_FULL=$DELTA_FULL"
+
+      - name: Verify explicit source-map policy stays outside package input
+        working-directory: head
+        env:
+          PLASMON_REMOTE_SOURCE_MAPS: "1"
+          PLASMON_REMOTE_SOURCES_CONTENT: include
+          PLASMON_BUILD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm --workspace neutron-plasmon run build
+            test -s apps/plasmon/.remote-sourcemaps/main.js.map
+            test ! -e apps/plasmon/dist/web/main.js.map
+            grep -q '"'"'"sourcesContent"'"'"' apps/plasmon/.remote-sourcemaps/main.js.map
+            ! grep -q '"'"'sourceMappingURL='"'"' apps/plasmon/dist/web/main.js
+          '
+
+      - name: Enforce slim package contract
+        shell: bash
+        run: |
+          echo "Measured experimental slim archive: $HEAD_SLIM bytes"
+          echo "Required: strictly less than 1900000 bytes"
+          test "$HEAD_SLIM" -lt 1900000

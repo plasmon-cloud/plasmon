@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import copyStaticFiles from "esbuild-copy-static-files";
 import { sassPlugin } from "esbuild-sass-plugin";
 import { createHash } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
 import { resolvePackageProfile } from "./packageProfilePolicy.ts";
@@ -12,11 +12,29 @@ const mainOutfile = "./dist/web/main.js";
 const bundledCss = "./dist/web/main.bundle.css";
 const outputCss = "./dist/web/main.css";
 const outputIndex = "./dist/web/index.html";
+const remoteSourceMapRoot = "./.remote-sourcemaps";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
 const packagePolicy = resolvePackageProfile();
 const isSlimMonacoProfile = packagePolicy.monacoProfile === "slim";
 const isDemoProfile = packagePolicy.isDemo;
+const remoteIncidentExperiment = process.env.PLASMON_REMOTE_INCIDENT_EXPERIMENT === "1";
+const remoteSourceMaps = !devMode && process.env.PLASMON_REMOTE_SOURCE_MAPS === "1";
+const remoteSourcesContent = process.env.PLASMON_REMOTE_SOURCES_CONTENT;
+const rollbarClientToken = process.env.PLASMON_ROLLBAR_CLIENT_TOKEN ?? "";
+const buildSha = process.env.PLASMON_BUILD_SHA ?? process.env.GITHUB_SHA ?? "";
+const packageManifest = JSON.parse(await readFile(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
+
+if (remoteSourceMaps && remoteSourcesContent !== "include" && remoteSourcesContent !== "omit") {
+  throw new Error(
+    "PLASMON_REMOTE_SOURCE_MAPS=1 requires an explicit PLASMON_REMOTE_SOURCES_CONTENT=include|omit policy",
+  );
+}
+if (remoteIncidentExperiment && (!rollbarClientToken.trim() || !buildSha.trim())) {
+  throw new Error(
+    "PLASMON_REMOTE_INCIDENT_EXPERIMENT=1 requires PLASMON_ROLLBAR_CLIENT_TOKEN and exact PLASMON_BUILD_SHA/GITHUB_SHA",
+  );
+}
 
 const [demoTextSource, demoMarkdownSource, demoSvgSource] = isDemoProfile
   ? await Promise.all([
@@ -28,8 +46,24 @@ const [demoTextSource, demoMarkdownSource, demoSvgSource] = isDemoProfile
 
 async function stripRemoteDiagnostics(): Promise<void> {
   const source = await readFile(mainOutfile, "utf8");
-  const sanitized = source.replaceAll("https://react.dev/errors/", "#react-error-");
+  const sanitized = source
+    .replaceAll("https://react.dev/errors/", "#react-error-")
+    .replace(/\n?\/\/# sourceMappingURL=[^\n]+\n?$/u, "\n");
   if (sanitized !== source) await writeFile(mainOutfile, sanitized);
+}
+
+async function archiveRemoteSourceMaps(): Promise<void> {
+  if (!remoteSourceMaps) return;
+  const files = (await readdir("./dist/web", { recursive: true }))
+    .map((file) => file.replaceAll("\\", "/"))
+    .filter((file) => file.endsWith(".map"));
+  for (const relative of files) {
+    const source = `./dist/web/${relative}`;
+    const destination = `${remoteSourceMapRoot}/${relative}`;
+    const slash = destination.lastIndexOf("/");
+    await mkdir(destination.slice(0, slash), { recursive: true });
+    await rename(source, destination);
+  }
 }
 
 /**
@@ -82,7 +116,8 @@ const config: BuildOptions = {
   outdir: "./dist/web",
   bundle: true,
   minify: !devMode,
-  sourcemap: devMode ? "inline" : false,
+  sourcemap: devMode ? "inline" : remoteSourceMaps ? "external" : false,
+  ...(remoteSourceMaps ? { sourcesContent: remoteSourcesContent === "include" } : {}),
   // Public assets are copied verbatim into dist/web. Keep root-relative
   // /static URLs external so Sass/esbuild does not try to resolve them as
   // source-module imports before the public tree is copied.
@@ -103,6 +138,11 @@ const config: BuildOptions = {
     __PLASMON_DEMO_TEXT__: demoTextSource === undefined ? "undefined" : JSON.stringify(demoTextSource),
     __PLASMON_DEMO_MARKDOWN__: demoMarkdownSource === undefined ? "undefined" : JSON.stringify(demoMarkdownSource),
     __PLASMON_DEMO_SVG__: demoSvgSource === undefined ? "undefined" : JSON.stringify(demoSvgSource),
+    __PLASMON_ROLLBAR_CLIENT_TOKEN__: JSON.stringify(rollbarClientToken),
+    __PLASMON_BUILD_SHA__: JSON.stringify(buildSha),
+    __PLASMON_VERSION__: JSON.stringify(packageManifest.version),
+    __PLASMON_PACKAGE_PROFILE__: JSON.stringify(packagePolicy.requestedProfile),
+    __PLASMON_REMOTE_INCIDENT_EXPERIMENT__: JSON.stringify(remoteIncidentExperiment),
   },
   metafile: true,
   plugins: [
@@ -127,6 +167,7 @@ const config: BuildOptions = {
           });
           await mergeApplicationStyles();
           if (!devMode) await stripRemoteDiagnostics();
+          await archiveRemoteSourceMaps();
           await fingerprintEntryAssets();
         });
       },
@@ -135,6 +176,7 @@ const config: BuildOptions = {
 };
 
 await rm("./dist/web", { recursive: true, force: true });
+await rm(remoteSourceMapRoot, { recursive: true, force: true });
 
 if (args[0] === "watch") {
   const ctx = await esbuild.context(config);

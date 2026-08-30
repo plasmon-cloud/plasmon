@@ -1,0 +1,54 @@
+name: Experimental Rollbar Packaged Egress
+
+on:
+  pull_request:
+    paths:
+      - apps/plasmon/**
+      - test/e2e/plasmon-rollbar-egress-experiment.spec.ts
+      - package-lock.json
+      - .github/workflows/experiment-rollbar-egress.yml
+
+permissions:
+  contents: read
+
+jobs:
+  egress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package, install, launch, and probe Rollbar from Plasmon iframe
+        run: |
+          nix develop --command bash -lc '
+            set -euxo pipefail
+            npm ci
+            npm run plasmon:local:prepare
+            npm run plasmon:local:serve > /tmp/plasmon-rollbar-egress-pocketic.log 2>&1 &
+            server_pid=$!
+            trap '\''status=$?; kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/plasmon-rollbar-egress-pocketic.log || true; fi; exit "$status"'\'' EXIT
+
+            pocketic_ready=0
+            for attempt in $(seq 1 180); do
+              if ! kill -0 "$server_pid" 2>/dev/null; then
+                echo "PocketIC serve exited before becoming ready" >&2
+                cat /tmp/plasmon-rollbar-egress-pocketic.log >&2 || true
+                exit 1
+              fi
+              if grep -q "^PocketIC .* is ready$" /tmp/plasmon-rollbar-egress-pocketic.log 2>/dev/null; then
+                pocketic_ready=1
+                break
+              fi
+              sleep 1
+            done
+            test "$pocketic_ready" -eq 1
+
+            npm run plasmon:local:status
+            npm run plasmon:local:reinstall
+            playwright test test/e2e/plasmon-rollbar-egress-experiment.spec.ts
+          '
