@@ -356,7 +356,7 @@ export function createPlasmonServices(
     nativeAppLog,
   );
 
-  filesystem = createFilesystemCore({
+  const filesystemCore = createFilesystemCore({
     fs: rawFs,
     nativeApps,
     neutron,
@@ -366,15 +366,23 @@ export function createPlasmonServices(
     diagnostics,
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
+  let diagnosticSettingsRestoreError: unknown = null;
+  const ready = filesystemCore.ready.then(async (initialization) => {
+    try {
+      await diagnosticSettings.load();
+    } catch (error) {
+      diagnosticSettingsRestoreError = error;
+    }
+    return initialization;
+  });
+  filesystem = { ...filesystemCore, ready };
   const fs = filesystem.fs;
   void filesystem.ready
-    .then(async (initialization) => {
-      try {
-        await diagnosticSettings.load();
-      } catch (error) {
+    .then((initialization) => {
+      if (diagnosticSettingsRestoreError) {
         filesystemLog.warn("diagnostics.settings.restore.failed", {
           message: "Persisted diagnostic sink settings could not be restored; safe defaults remain active",
-          errorType: diagnosticErrorType(error),
+          errorType: diagnosticErrorType(diagnosticSettingsRestoreError),
         });
       }
       filesystemLog.notice("filesystem.bootstrap.ready", {
