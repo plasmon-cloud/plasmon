@@ -8,6 +8,7 @@
     "build": "bun monacoWorkerTransport.ts generate && bun build.ts && npm run mogen",
     "build:base": "PLASMON_PACKAGE_PROFILE=base npm run build",
     "build:demo": "PLASMON_PACKAGE_PROFILE=base PLASMON_DEMO_OVERLAY=1 npm run build",
+    "build:js-dos": "PLASMON_PACKAGE_PROFILE=base PLASMON_RUNTIME_CONFIGURATION=js-dos npm run build",
     "build:slim": "PLASMON_PACKAGE_PROFILE=slim npm run build",
     "dev": "bun monacoWorkerTransport.ts generate dev && bun build.ts dev",
     "docs:boundaries:check": "bun docs/documentation-boundaries.mjs check",
@@ -19,6 +20,7 @@
     "package": "npm run validate && npm run build && npm run mopack && npm run schema && bun ../../packages/neutron-scripts/src/pack.ts",
     "package:base": "PLASMON_PACKAGE_PROFILE=base npm run package",
     "package:demo": "PLASMON_PACKAGE_PROFILE=base PLASMON_DEMO_OVERLAY=1 npm run package",
+    "package:js-dos": "PLASMON_PACKAGE_PROFILE=base PLASMON_RUNTIME_CONFIGURATION=js-dos npm run package",
     "package:slim": "PLASMON_PACKAGE_PROFILE=slim npm run package:slim:inner",
     "package:slim:inner": "npm run validate && npm run build && npm run mopack && npm run schema && bun slimPackageGate.ts --input && bun ../../packages/neutron-scripts/src/pack.ts && bun slimPackageGate.ts",
     "watch": "bun monacoWorkerTransport.ts generate && bun build.ts watch",
@@ -28,6 +30,7 @@
     "test:ui": "bun test --preload ./test/setupHappyDom.ts ./test/rtl",
     "test:package": "npm run package:base && PLASMON_PACKAGE_PROFILE=base bun test ./test/package.test.ts",
     "test:package:base": "npm run test:package",
+    "test:package:js-dos": "npm run package:js-dos && PLASMON_PACKAGE_PROFILE=base PLASMON_RUNTIME_CONFIGURATION=js-dos bun test ./test/package.test.ts",
     "test:package:slim": "npm run package:slim && PLASMON_PACKAGE_PROFILE=slim bun test ./test/package.test.ts",
     "test:all": "npm run test:fast && npm run test:package"
   },

@@ -79,7 +79,10 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile } from "./packageProfile.ts";
+import {
+  packagedRuntimeSelection,
+  type PackagedRuntimeSelection,
+} from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -108,6 +111,8 @@ export interface CreatePlasmonServicesOptions {
   windows?: WindowManager;
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
+  /** Explicit package-composition input. Production callers use the build-defined packaged selection. */
+  runtimeSelection?: PackagedRuntimeSelection;
 }
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
@@ -169,17 +174,20 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  runtimeSelection: PackagedRuntimeSelection,
   diagnostics: DiagnosticService,
   log: DiagnosticLogger,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  if (isGameRuntimeProfile) {
+  if (runtimeSelection.emulatorJs) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+  }
 
+  if (runtimeSelection.jsDos) {
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
@@ -332,6 +340,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    options.runtimeSelection ?? packagedRuntimeSelection,
     diagnostics,
     nativeAppLog,
   );

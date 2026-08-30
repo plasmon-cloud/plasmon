@@ -10,6 +10,7 @@ import type { DiagnosticService } from "../src/os/diagnostics/index.ts";
 import { MemoryFsRepository } from "../src/os/fs/index.ts";
 import {
   createPlasmonServices,
+  type CreatePlasmonServicesOptions,
   type PlasmonServices,
 } from "../src/os/integration/services.ts";
 import { MockNeutronBridge } from "../src/os/neutron/index.ts";
@@ -20,6 +21,8 @@ export interface HeadlessPlasmonEnvironmentOptions {
   elements?: readonly ExternalElement[];
   /** Optional in-memory persistence boundary to reuse across reconstructed production compositions. */
   repository?: MemoryFsRepository;
+  /** Optional production runtime selection for package-composition acceptance tests. */
+  runtimeSelection?: CreatePlasmonServicesOptions["runtimeSelection"];
 }
 
 export interface HeadlessPlasmonEnvironment {
@@ -82,6 +85,7 @@ export function createHeadlessPlasmonEnvironment(
     filesystemRepository: repository,
     neutron,
     windows,
+    ...(options.runtimeSelection ? { runtimeSelection: options.runtimeSelection } : {}),
   });
   const os = createPlasmonOsApi({ services });
 

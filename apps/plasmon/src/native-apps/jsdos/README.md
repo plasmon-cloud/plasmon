@@ -1,21 +1,42 @@
 # js-dos runtime host
 
+This directory integrates js-dos as an association-backed optional content runtime. Runtime selection is independent from the Slim/Base package tier and from Demo content. Game bundles remain ordinary filesystem resources opened through AssociationRegistry/OpenService; this directory must not become a game-name dispatcher or parallel application catalog.
 
-This directory integrates the js-dos browser runtime and player as an
-association-backed content runtime. Every shipped Plasmon package profile
-omits this optional runtime and its game payload; this source remains deferred
-runtime/test evidence rather than a package request path.
+`runtime.ts` owns browser-side runtime loading, global readiness, packaged asset URLs, and the embedded volatile storage-compatibility lease. `JsDosPlayer.tsx` owns the rendered player surface and save-before-close lifecycle. `progress.ts` owns durable js-dos change-set persistence through canonical Plasmon filesystem state. Handler/application metadata is exported through `index.ts` and registered by OS integration only when js-dos is selected.
 
-`runtime.ts` owns browser-side runtime asset loading, global readiness, loader caching/retry, runtime configuration, and the embedded-only volatile storage compatibility lease. `JsDosPlayer.tsx` owns the rendered game/runtime surface. `progress.ts` owns the durable js-dos change-set mapping onto canonical Plasmon filesystem state. Handler/application metadata is exported through `index.ts` and registered by OS integration.
+## Runtime selection and package boundary
 
-Game bundles/content are data selected through the normal association/opening path. This directory should not become a game-name dispatcher or a parallel application catalog.
+The canonical optional-runtime catalog pins js-dos as:
+
+- runtime ID: `js-dos`;
+- version/revision: `8.4.1` / `v8.4.1`;
+- source: `https://github.com/caiiiycuk/js-dos/releases/download/v8.4.1/release.zip`;
+- integrity: `sha256-JhGGkruxgK7HjsFpfrHqayj/QQEBhwz6PmgwmRTH6qY=`;
+- delivery: preparation-time acquisition into the content-addressed runtime cache, followed by runtime-consumer materialization.
+
+Base with runtime configuration `none` contains no js-dos runtime payload and does not register `runtime:js-dos`. A Base package can select only js-dos with:
+
+```sh
+PLASMON_PACKAGE_PROFILE=base PLASMON_RUNTIME_CONFIGURATION=js-dos npm run package
+```
+
+The built-in `js-dos` selection and any custom configuration containing `js-dos` resolve through the same canonical runtime definition. Runtime configuration does not add another `PLASMON_PACKAGE_PROFILE` value.
+
+Slim cannot select js-dos. Any non-empty runtime selection is rejected before runtime acquisition/materialization, preserving the strict Slim package boundary.
 
 ## Installed package transport
 
-No shipped package profile registers js-dos or materializes
-`/System/Program Files/js-dos` or `runtime/jsdos/`. The source remains available
-for direct runtime tests, while opening a game in an installed package cannot
-create a missing-runtime request.
+When selected, preparation verifies the pinned release archive before `jsDosRuntimeMaterializer.ts` extracts exactly the catalog-declared runtime assets:
+
+- `js-dos.js`;
+- `js-dos.css`;
+- `emulators/emulators.js`;
+- `emulators/wdosbox.js`;
+- `emulators/wdosbox.wasm`.
+
+The materializer emits the same verified bytes beneath logical managed authority `/System/Program Files/js-dos` and the package-local browser transport `runtime/jsdos/`. Installed browser execution requests only the package-local transport; it never uses a mutable external runtime origin or performs first-use executable download.
+
+The preparation cache is build/deployment state, not user configuration or save state. Cached archives are reverified before use; offline preparation requires a valid cached artifact.
 
 ## Embedded storage compatibility
 
@@ -47,23 +68,14 @@ The `.changes` file is the accepted durable save representation for the js-dos r
 
 When a live js-dos canvas is available at the normal save-before-close boundary, `preview.ts` captures a bounded PNG frame while `player.save()` persists the authoritative change set. The screenshot is attached only after the save reports success.
 
-The preview lifecycle is deliberately presentation-only:
+The preview lifecycle is presentation-only: one preview is retained per save, save correctness never reads preview bytes, and preview publication failure cannot invalidate a successful progress save.
 
-- at most one sibling `<NodeId>.preview.png` image is retained per js-dos save; a later successful capture overwrites it instead of accumulating snapshots;
-- the preview image remains private filesystem state and the canonical `.changes` save record references it through validated `plasmon.resourcePreview` metadata;
-- after that canonical reference is written, the same validated preview reference is projected onto the visible game resource so ordinary FileManager/resource surfaces can show the latest saved frame without exposing the progress directory or creating a second save resource;
-- both references use the preview resource's stable `NodeId`, not a mutable path;
-- failure to project presentation metadata onto the visible game resource is non-authoritative and cannot turn a successful progress save into a failed save;
-- capture, canvas encoding, preview write, missing preview data, or image decoding failure never changes save validity or restore behavior;
-- FileManager resolves the reference through its existing shared thumbnail/Object-URL lifecycle and falls back normally when the preview cannot be loaded;
-- preview bytes are never inspected by `JsDosProgressStore.load()` and are not part of the save checksum/runtime compatibility contract.
+## Acceptance fixture
 
-This is not a generic screenshot service and does not require every runtime to support capture. js-dos owns the actual canvas capture because it owns that browser/runtime surface; the filesystem/Visual layers own only the bounded preview reference and shared presentation mechanics.
+The packaged browser acceptance may explicitly include the repository-authored `Plasmon Demo.jsdos` fixture without making that fixture normal Base or Demo content. The fixture contains no third-party game data. It creates `SCORE.DAT` only after receiving SPACE, so closing and reopening the same filesystem NodeId can prove that real keyboard input produced engine state which was saved through `FsService` and consumed on restore.
 
-## Refactor direction
-
-Keep runtime loading/configuration independent of file association and process/window policy. If additional emulators/runtimes are added, prefer a reusable packaged-runtime host abstraction only after a second real runtime demonstrates the same lifecycle; do not pre-design a generic emulator save framework from js-dos alone.
+The specialist browser acceptance also verifies that every required runtime asset is requested from the installed `runtime/jsdos/` package path, the real js-dos readiness event is reached, a visible non-zero canvas exists, save-before-close completes, and the same NodeId restores progress. No fixed sleeps or browser-local durable save authority are used for that proof.
 
 ## Testing
 
-Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, embedded storage compatibility, preview metadata/lifecycle, shared preview loading, and deterministic helpers. Use package/browser tests for script/style asset presence, runtime global initialization, failure/retry, canvas/input behavior, real save-before-close, screenshot capture/presentation, reopen/restore, sandbox storage compatibility, and actual playable startup because those claims depend on a browser engine and packaged assets.
+Use fast tests for registration/configuration, stable NodeId progress mapping, corruption/version fallback, embedded storage compatibility, preview metadata/lifecycle, shared preview loading, and deterministic helpers. Use package/browser tests only for claims that require installed assets and a real browser engine: runtime asset delivery, global initialization, canvas/input behavior, save-before-close, reopen/restore, sandbox compatibility, and playable startup.

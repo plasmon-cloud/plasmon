@@ -21,6 +21,7 @@ const result = spawnSync(
     'playwright',
     'test',
     '--workers=1',
+    '--retries=0',
     '--grep-invert',
     '@quarantine',
     ...tests,
