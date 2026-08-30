@@ -150,17 +150,27 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     },
 
     writeText: async (path: string, content: string): Promise<OsResource> => {
-      requireAbsolutePath(path);
-      let node = await services.fs.resolvePath(path);
-      if (!node) {
-        const { parent, name } = await requireParent(services, path);
-        node = await services.fs.createFile(parent.id, name, { mime: "text/plain" });
+      const operation = services.diagnostics.startOperation();
+      const log = operation.for("os-api");
+      log.debug("os.fs.write.started");
+      try {
+        requireAbsolutePath(path);
+        let node = await services.fs.resolvePath(path);
+        const created = node === null;
+        if (!node) {
+          const { parent, name } = await requireParent(services, path);
+          node = await services.fs.createFile(parent.id, name, { mime: "text/plain" });
+        }
+        const written = await services.fs.write(node.id, textEncoder.encode(content), {
+          offset: 0,
+          truncate: true,
+        });
+        log.info("os.fs.write.completed", { nodeId: written.id, created });
+        return toResource(services, written);
+      } catch (error) {
+        log.error("os.fs.write.failed", { error });
+        throw error;
       }
-      const written = await services.fs.write(node.id, textEncoder.encode(content), {
-        offset: 0,
-        truncate: true,
-      });
-      return toResource(services, written);
     },
 
     createDirectory: async (path: string): Promise<OsResource> => {
@@ -195,19 +205,35 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       list: () => services.windows.list().map(toWindow),
     },
     open: async (path: string): Promise<OpenResult> => {
-      const node = await requireNode(services, path);
-      const resource = await toResource(services, node);
-      const before = services.process.list();
-      await services.filesystem.open.openNode(node.id);
-      const process = processForRequestedResource(before, services.process.list(), node.id);
-      return {
-        resource,
-        ...(process ? {
-          handlerId: process.handlerId,
-          processId: process.id,
-          ...(process.windowId ? { windowId: process.windowId } : {}),
-        } : {}),
-      };
+      const operation = services.diagnostics.startOperation();
+      const log = operation.for("os-api");
+      log.debug("os.open.started");
+      try {
+        const node = await requireNode(services, path);
+        const resource = await toResource(services, node);
+        const before = services.process.list();
+        await services.filesystem.open.openNode(node.id, { operation: operation.context });
+        const process = processForRequestedResource(before, services.process.list(), node.id);
+        log.info("os.open.completed", {
+          nodeId: node.id,
+          ...(process ? {
+            handlerId: process.handlerId,
+            processId: process.id,
+            ...(process.windowId ? { windowId: process.windowId } : {}),
+          } : {}),
+        });
+        return {
+          resource,
+          ...(process ? {
+            handlerId: process.handlerId,
+            processId: process.id,
+            ...(process.windowId ? { windowId: process.windowId } : {}),
+          } : {}),
+        };
+      } catch (error) {
+        log.error("os.open.failed", { error });
+        throw error;
+      }
     },
   };
 }
