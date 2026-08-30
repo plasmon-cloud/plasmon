@@ -29,10 +29,16 @@ jobs:
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
-            echo 'CONFLICT_FILES_BEGIN'
-            git diff --name-only --diff-filter=U
-            echo 'CONFLICT_FILES_END'
-            exit "$status"
+            git diff --name-only --diff-filter=U > /tmp/experiment-cmd-r3-conflicts.txt
+            git merge --abort
+            cp /tmp/experiment-cmd-r3-conflicts.txt .github/experiment-cmd-r3-conflicts.txt
+            git add .github/experiment-cmd-r3-conflicts.txt
+            git commit -m 'CI: record R3 merge conflicts for cmd experiment'
+            git push origin HEAD:experiment/cmd
+            exit 0
           fi
-          echo 'Merge is conflict-free.'
           git merge --abort
+          printf '%s\n' 'NO_CONFLICTS' > .github/experiment-cmd-r3-conflicts.txt
+          git add .github/experiment-cmd-r3-conflicts.txt
+          git commit -m 'CI: record conflict-free R3 merge for cmd experiment'
+          git push origin HEAD:experiment/cmd
