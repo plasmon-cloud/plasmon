@@ -3,6 +3,7 @@ export const PRE_MERGE_CHARACTERIZATION_COUNT = 3;
 export const POST_MERGE_PROBE_COUNT = 3;
 export const POST_MERGE_CHARACTERIZATION_COUNT = 3;
 export const TARGETED_CHARACTERIZATION_PACKET_SIZE = 3;
+export const MANUAL_CHARACTERIZATION_PACKET_SIZE = 5;
 
 export const MANUAL_PROBE_COUNTS = Object.freeze([10, 50]);
 export const MANUAL_PROBE_TARGETS = Object.freeze([
