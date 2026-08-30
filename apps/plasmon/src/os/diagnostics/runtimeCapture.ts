@@ -50,14 +50,12 @@ function safeStack(error: unknown, name: string): string | undefined {
   return frames.length > 0 ? [name, ...frames].join("\n") : undefined;
 }
 
-function safeDiagnosticError(error: unknown): { name: string; message: string; stack?: string } {
+function safeDiagnosticError(error: unknown): Error {
   const name = safeErrorName(error);
-  const stack = safeStack(error, name);
-  return {
-    name,
-    message: "Unexpected uncaught runtime failure",
-    ...(stack ? { stack } : {}),
-  };
+  const projected = new Error("Unexpected uncaught runtime failure");
+  projected.name = name;
+  projected.stack = safeStack(error, name);
+  return projected;
 }
 
 function objectIdentity(value: unknown): object | null {
