@@ -140,6 +140,5 @@ jobs:
       - name: Propagate approval rerun to stale failed gates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node test/ci/rerun-stale-approval-gates.mjs
