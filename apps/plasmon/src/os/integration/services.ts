@@ -164,7 +164,6 @@ export function createAssociationDefaultStore(
 ): AssociationDefaultStore {
   return new FsServiceAssociationDefaultStore(fs, undefined, diagnostics);
 }
-}
 
 function registerNativeApplications(
   nativeApps: NativeApplicationRegistry,
