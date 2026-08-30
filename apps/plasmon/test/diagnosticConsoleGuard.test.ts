@@ -18,8 +18,21 @@ const exactBootstrapExceptions = new Map<string, readonly string[]>([
   [
     "os/integration/services.ts",
     [
+      // The filesystem does not yet exist, so the filesystem-backed sink cannot report this.
       'console.warn("Plasmon standalone filesystem storage fallback:"',
+      // A sink cannot recursively report its own failure through itself.
       'console.error("Plasmon diagnostic persistence failed:"',
+    ],
+  ],
+  [
+    "os/fs/background.ts",
+    [
+      // This privileged surface owns the persistence authority used by system.log.
+      // Routing its storage/publish failures back through that same filesystem
+      // would create a recursion/dependency cycle, so these are emergency-only.
+      'console.warn("Plasmon filesystem storage fallback:"',
+      'console.warn("Plasmon filesystem invalidation publication failed:"',
+      'console.warn("Plasmon filesystem revision exceeds Neutron app-state integer range")',
     ],
   ],
 ]);
