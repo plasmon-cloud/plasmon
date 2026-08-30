@@ -10,6 +10,8 @@ export type FileManagerContextMenuAction =
   | "open"
   | "openWith"
   | "download"
+  | "runScript"
+  | "editScript"
   | "transpileRun"
   | "cut"
   | "copy"
@@ -21,6 +23,8 @@ export type FileManagerContextMenuAction =
   | "newFolder"
   | "newText"
   | "newMarkdown"
+  | "newCmd"
+  | "newRun"
   | "import"
   | "paste";
 
@@ -36,6 +40,8 @@ interface FileManagerContextMenuProps {
   canOpenWith: boolean;
   canDownload: boolean;
   canTranspileCmd: boolean;
+  canRunScript: boolean;
+  canEditScript: boolean;
   canCreateShortcut: boolean;
   operationRunning: boolean;
   canPaste: boolean;
@@ -76,7 +82,14 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
     >
       {props.node ? (
         <>
-          <button type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
+          {props.canRunScript ? (
+            <>
+              <button type="button" role="menuitem" onClick={() => props.onAction("runScript")}>Run</button>
+              <button type="button" role="menuitem" disabled={!props.canEditScript} onClick={() => props.onAction("editScript")}>Edit</button>
+            </>
+          ) : (
+            <button type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
+          )}
           {props.node.kind !== "directory" ? (
             <button
               type="button"
@@ -119,6 +132,8 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           <button type="button" role="menuitem" onClick={() => props.onAction("newFolder")}>New Folder</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("newText")}>New Text Document</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("newMarkdown")}>New Markdown Document</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("newCmd")}>New Command Script (.cmd)</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("newRun")}>New Run Script (.run)</button>
           <button type="button" role="menuitem" disabled={props.operationRunning} onClick={() => props.onAction("import")}>Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
           <button type="button" role="menuitem" disabled={props.operationRunning || !props.canPaste} onClick={() => props.onAction("paste")}>Paste</button>

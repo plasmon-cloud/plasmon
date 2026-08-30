@@ -5,6 +5,7 @@ import type { RunContext } from "./context.ts";
 export interface RunExecutionResult {
   diagnostics: readonly string[];
   exitCode: number;
+  terminated: boolean;
 }
 
 const MODULE_EXECUTION_TIMEOUT_MS = 10_000;
@@ -54,10 +55,10 @@ export class RunRuntime {
     try {
       try {
         await withExecutionTimeout("compiled module import", import(url));
-        return { diagnostics: compiled.diagnostics, exitCode: 0 };
+        return { diagnostics: compiled.diagnostics, exitCode: 0, terminated: false };
       } catch (error) {
         if (error instanceof CommandExit) {
-          return { diagnostics: compiled.diagnostics, exitCode: error.exitCode };
+          return { diagnostics: compiled.diagnostics, exitCode: error.exitCode, terminated: true };
         }
         throw error;
       }

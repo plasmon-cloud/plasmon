@@ -23,16 +23,16 @@ export interface CreatePlasmonOsApiOptions {
 }
 
 function requireAbsolutePath(path: string): void {
-  if (!path.startsWith("/")) throw new Error(`OsApi requires an absolute path: ${path}`);
+  if (!path.startsWith("/")) throw new Error(`OS API requires an absolute path: ${path}`);
 }
 
 function splitAbsolutePath(path: string): { parentPath: string; name: string } {
   if (!path.startsWith("/") || path === "/" || path.endsWith("/")) {
-    throw new Error(`OsApi requires an absolute non-root path: ${path}`);
+    throw new Error(`OS API requires an absolute non-root path: ${path}`);
   }
   const separator = path.lastIndexOf("/");
   const name = path.slice(separator + 1);
-  if (!name) throw new Error(`OsApi path has no resource name: ${path}`);
+  if (!name) throw new Error(`OS API path has no resource name: ${path}`);
   return {
     parentPath: separator === 0 ? "/" : path.slice(0, separator),
     name,
@@ -79,13 +79,13 @@ async function requireNode(services: PlasmonServices, path: string): Promise<FsN
   requireAbsolutePath(path);
   await services.filesystem.ready;
   const node = await services.fs.resolvePath(path);
-  if (!node) throw new Error(`OsApi path does not exist: ${path}`);
+  if (!node) throw new Error(`OS API path does not exist: ${path}`);
   return node;
 }
 
 async function requireDirectory(services: PlasmonServices, path: string): Promise<FsNode> {
   const node = await requireNode(services, path);
-  if (node.kind !== "directory") throw new Error(`OsApi path is not a directory: ${path}`);
+  if (node.kind !== "directory") throw new Error(`OS API path is not a directory: ${path}`);
   return node;
 }
 
@@ -135,9 +135,9 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       return (await services.fs.resolvePath(path)) !== null;
     },
 
-    list: async (path: string): Promise<readonly OsResource[]> => {
+    list: async (path: string, listOptions?: { includeHidden?: boolean }): Promise<readonly OsResource[]> => {
       const directory = await requireDirectory(services, path);
-      const children = await services.fs.list(directory.id);
+      const children = await services.fs.list(directory.id, { includeHidden: listOptions?.includeHidden === true });
       return Promise.all(children.map((node) => toResource(services, node)));
     },
 
@@ -178,6 +178,11 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       return toResource(services, await services.fs.move(source.id, destination.id));
     },
 
+    rename: async (resourcePath: string, newName: string): Promise<OsResource> => {
+      const source = await requireNode(services, resourcePath);
+      return toResource(services, await services.fs.rename(source.id, newName));
+    },
+
     remove: async (path: string): Promise<void> => {
       const node = await requireNode(services, path);
       await services.filesystem.trash.trash(node.id);
@@ -202,6 +207,21 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
         resource,
         ...(process ? {
           handlerId: process.handlerId,
+          processId: process.id,
+          ...(process.windowId ? { windowId: process.windowId } : {}),
+        } : {}),
+      };
+    },
+    openWith: async (path: string, handlerId: string): Promise<OpenResult> => {
+      const node = await requireNode(services, path);
+      const resource = await toResource(services, node);
+      const before = services.process.list();
+      await services.openService.open(handlerId, { nodeId: node.id });
+      const process = openedProcess(before, services.process.list(), node.id);
+      return {
+        resource,
+        handlerId,
+        ...(process ? {
           processId: process.id,
           ...(process.windowId ? { windowId: process.windowId } : {}),
         } : {}),

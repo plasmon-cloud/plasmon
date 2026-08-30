@@ -19,10 +19,14 @@ export interface ScriptingSessionOptions {
   clear?: () => void;
 }
 
-export interface CmdExecutionResult {
-  runSource: string;
+export interface ScriptExecutionResult {
   diagnostics: readonly string[];
   exitCode: number;
+  terminated: boolean;
+}
+
+export interface CmdExecutionResult extends ScriptExecutionResult {
+  runSource: string;
 }
 
 export interface ScriptingServiceOptions {
@@ -63,31 +67,36 @@ export class ScriptingSession {
     this.activeAbort?.abort();
   }
 
-  async executeCmd(source: string, filename = "terminal.cmd"): Promise<CmdExecutionResult> {
-    this.commands.recordHistory(source);
-    const program = await this.parser.parse(source, filename);
-    const runSource = transpileCmdToRun(program);
+  private async executeRunSource(source: string, filename: string): Promise<ScriptExecutionResult> {
     const abort = new AbortController();
     this.activeAbort = abort;
     try {
       const execution = await this.runtime.execute(
-        runSource,
+        source,
         createRunContext(this.os, this.commands, {
           stdin: this.stdin,
           stdout: this.stdout,
           stderr: this.stderr,
           signal: abort.signal,
         }),
-        filename.replace(/\.cmd$/u, ".run"),
+        filename,
       );
-      return {
-        runSource,
-        diagnostics: execution.diagnostics,
-        exitCode: execution.exitCode,
-      };
+      return execution;
     } finally {
       if (this.activeAbort === abort) this.activeAbort = null;
     }
+  }
+
+  async executeCmd(source: string, filename = "terminal.cmd"): Promise<CmdExecutionResult> {
+    this.commands.recordHistory(source);
+    const program = await this.parser.parse(source, filename);
+    const runSource = transpileCmdToRun(program);
+    const execution = await this.executeRunSource(runSource, filename.replace(/\.cmd$/u, ".run"));
+    return { runSource, ...execution };
+  }
+
+  async executeRun(source: string, filename = "script.run"): Promise<ScriptExecutionResult> {
+    return this.executeRunSource(source, filename);
   }
 }
 

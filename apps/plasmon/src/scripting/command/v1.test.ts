@@ -105,6 +105,36 @@ describe(".cmd v1 command surface", () => {
     }
   });
 
+  test("dogfood shell options, touch, rename-style mv, and manuals behave familiarly", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+    try {
+      await env.ready;
+      const session = new CommandSession(env.os);
+      expect((await session.shell.pipeline([session.commands.mkdir(["-p", "/Documents/a/b"])]).run()).exitCode).toBe(0);
+      expect((await session.shell.pipeline([session.commands.touch(["/Documents/a/b/hello.txt"])]).run()).exitCode).toBe(0);
+      await env.os.fs.writeText("/Documents/.hidden.txt", "hidden");
+
+      const visible = await session.shell.pipeline([session.commands.ls(["/Documents"])]).run();
+      expect(visible.stdout).not.toContain(".hidden.txt");
+      const detailed = await session.shell.pipeline([session.commands.ls(["-lah", "/Documents"])]).run();
+      expect(detailed.stdout).toContain(".hidden.txt");
+      expect(detailed.stdout).toContain("a/");
+
+      const moved = await session.shell.pipeline([session.commands.mv(["/Documents/a/b/hello.txt", "/Documents/a/b/renamed.txt"])]).run();
+      expect(moved.exitCode).toBe(0);
+      expect(await env.os.fs.exists("/Documents/a/b/hello.txt")).toBe(false);
+      expect(await env.os.fs.exists("/Documents/a/b/renamed.txt")).toBe(true);
+
+      const manual = await session.shell.pipeline([session.commands.man(["ls"])]).run();
+      expect(manual.stdout).toContain("ls [-alh] [PATH]");
+      const help = await session.shell.pipeline([session.commands.help([])]).run();
+      expect(help.stdout).toContain("Commands are silent on success");
+      expect(help.stdout).not.toMatch(/^.*true.*false.*$/m);
+    } finally {
+      env.dispose();
+    }
+  });
+
   test("transpiler emits readable factories and fail-fast checks for frozen v1 commands", async () => {
     const program = await new SimpleCmdParser().parse(
       "cp source.txt /Documents\ncat source.txt | head -n 1 | tee first.txt\nexit 3",

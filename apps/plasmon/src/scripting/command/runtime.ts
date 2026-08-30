@@ -1,4 +1,5 @@
-import type { OsApi } from "../../os/api/index.ts";
+import type { OsApi, OsResource } from "../../os/api/index.ts";
+import { renderShellHelp } from "./catalog.ts";
 
 export interface CommandResult {
   exitCode: number;
@@ -19,6 +20,7 @@ export interface CommandFactory {
   ls(args?: readonly string[]): RunCommand;
   pwd(args?: readonly string[]): RunCommand;
   cd(args?: readonly string[]): RunCommand;
+  touch(args?: readonly string[]): RunCommand;
   mkdir(args?: readonly string[]): RunCommand;
   cp(args?: readonly string[]): RunCommand;
   mv(args?: readonly string[]): RunCommand;
@@ -33,7 +35,9 @@ export interface CommandFactory {
   clear(args?: readonly string[]): RunCommand;
   history(args?: readonly string[]): RunCommand;
   open(args?: readonly string[]): RunCommand;
+  edit(args?: readonly string[]): RunCommand;
   help(args?: readonly string[]): RunCommand;
+  man(args?: readonly string[]): RunCommand;
   true(args?: readonly string[]): RunCommand;
   false(args?: readonly string[]): RunCommand;
   exit(args?: readonly string[]): RunCommand;
@@ -48,13 +52,8 @@ export interface ShellApi {
   pipeline(commands: readonly RunCommand[]): CommandPipeline;
 }
 
-export interface TextReader {
-  read(): Promise<string>;
-}
-
-export interface TextWriter {
-  write(text: string): void;
-}
+export interface TextReader { read(): Promise<string>; }
+export interface TextWriter { write(text: string): void; }
 
 export interface CommandIo {
   stdin?: TextReader;
@@ -71,14 +70,12 @@ export class CommandExit extends Error {
   }
 }
 
-const SUPPORTED_COMMANDS = [
-  "pwd", "cd", "ls", "cat", "echo", "mkdir", "cp", "mv", "rm", "grep",
-  "head", "tail", "wc", "sort", "uniq", "tee", "ps", "clear", "history",
-  "open", "help", "true", "false", "exit",
-] as const;
-
 function result(exitCode: number, stdout = "", stderr = ""): CommandResult {
   return { exitCode, stdout, stderr };
+}
+
+function friendlyError(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).replace(/\bOsApi\b/gu, "OS API");
 }
 
 export function resolveCommandPath(cwd: string, value: string): string {
@@ -93,6 +90,15 @@ export function resolveCommandPath(cwd: string, value: string): string {
   return `/${parts.join("/")}`;
 }
 
+function parentPath(value: string): string {
+  const index = value.lastIndexOf("/");
+  return index <= 0 ? "/" : value.slice(0, index);
+}
+
+function baseName(value: string): string {
+  return value.split("/").filter(Boolean).at(-1) ?? "";
+}
+
 function commandFactory(name: string) {
   return (args: readonly string[] = []): RunCommand => ({ name, args: [...args] });
 }
@@ -105,31 +111,43 @@ function bufferedLines(text: string): string[] {
   return lines;
 }
 
+function numberLines(text: string): string {
+  const lines = bufferedLines(text);
+  return lines.length ? `${lines.map((line, index) => `${String(index + 1).padStart(6)}\t${line}`).join("\n")}\n` : "";
+}
+
 function firstOrLastLines(text: string, count: number, tail: boolean): string {
   if (count <= 0 || !text) return "";
   const chunks = text.match(/[^\n]*\n|[^\n]+$/gu) ?? [];
   return (tail ? chunks.slice(-count) : chunks.slice(0, count)).join("");
 }
 
-function parseCountedFileArgs(
-  command: string,
-  argv: readonly string[],
-): { count: number; file?: string } | { error: CommandResult } {
+function parseCountedFileArgs(command: string, argv: readonly string[]): { count: number; file?: string } | { error: CommandResult } {
   let count = 10;
   let index = 0;
   if (argv[index] === "-n") {
     const value = argv[index + 1];
-    if (value === undefined || !/^\d+$/u.test(value)) {
-      return { error: result(2, "", `${command}: -n requires a non-negative integer\n`) };
-    }
+    if (value === undefined || !/^\d+$/u.test(value)) return { error: result(2, "", `${command}: -n requires a non-negative integer\n`) };
     count = Number(value);
     index += 2;
   }
   const remaining = argv.slice(index);
-  if (remaining.length > 1 || remaining[0]?.startsWith("-")) {
-    return { error: result(2, "", `${command}: expected [-n N] [FILE]\n`) };
-  }
+  if (remaining.length > 1 || remaining[0]?.startsWith("-")) return { error: result(2, "", `${command}: expected [-n N] [FILE]\n`) };
   return { count, ...(remaining[0] === undefined ? {} : { file: remaining[0] }) };
+}
+
+function humanSize(size: number): string {
+  const units = ["B", "K", "M", "G"];
+  let value = size;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+  return unit === 0 ? `${value}${units[unit]}` : `${value.toFixed(value >= 10 ? 0 : 1)}${units[unit]}`;
+}
+
+function longListEntry(entry: OsResource, human: boolean): string {
+  const kind = entry.kind === "directory" ? "d" : entry.kind === "shortcut" ? "l" : entry.kind === "atom" ? "a" : "-";
+  const size = entry.kind === "directory" ? "-" : human ? humanSize(entry.size) : String(entry.size);
+  return `${kind} ${size.padStart(8)} ${entry.name}${entry.kind === "directory" ? "/" : ""}`;
 }
 
 /** Stateful shell session above OsApi. cwd, history, stdio and command behavior never enter OsApi. */
@@ -139,74 +157,42 @@ export class CommandSession {
   private cwdPath = "/";
   private readonly historyEntries: string[] = [];
 
-  constructor(
-    private readonly os: OsApi,
-    private readonly io: CommandIo = {},
-  ) {
+  constructor(private readonly os: OsApi, private readonly io: CommandIo = {}) {
     this.commands = {
       command: (name, args = []) => ({ name, args: [...args] }),
-      cat: commandFactory("cat"),
-      grep: commandFactory("grep"),
-      echo: commandFactory("echo"),
-      ls: commandFactory("ls"),
-      pwd: commandFactory("pwd"),
-      cd: commandFactory("cd"),
-      mkdir: commandFactory("mkdir"),
-      cp: commandFactory("cp"),
-      mv: commandFactory("mv"),
-      rm: commandFactory("rm"),
-      head: commandFactory("head"),
-      tail: commandFactory("tail"),
-      wc: commandFactory("wc"),
-      sort: commandFactory("sort"),
-      uniq: commandFactory("uniq"),
-      tee: commandFactory("tee"),
-      ps: commandFactory("ps"),
-      clear: commandFactory("clear"),
-      history: commandFactory("history"),
-      open: commandFactory("open"),
-      help: commandFactory("help"),
-      true: commandFactory("true"),
-      false: commandFactory("false"),
-      exit: commandFactory("exit"),
+      cat: commandFactory("cat"), grep: commandFactory("grep"), echo: commandFactory("echo"),
+      ls: commandFactory("ls"), pwd: commandFactory("pwd"), cd: commandFactory("cd"),
+      touch: commandFactory("touch"), mkdir: commandFactory("mkdir"), cp: commandFactory("cp"),
+      mv: commandFactory("mv"), rm: commandFactory("rm"), head: commandFactory("head"),
+      tail: commandFactory("tail"), wc: commandFactory("wc"), sort: commandFactory("sort"),
+      uniq: commandFactory("uniq"), tee: commandFactory("tee"), ps: commandFactory("ps"),
+      clear: commandFactory("clear"), history: commandFactory("history"), open: commandFactory("open"),
+      edit: commandFactory("edit"), help: commandFactory("help"), man: commandFactory("man"),
+      true: commandFactory("true"), false: commandFactory("false"), exit: commandFactory("exit"),
     };
-    this.shell = {
-      pipeline: (commands) => ({
-        run: () => this.runPipeline(commands),
-        writeTo: (path) => this.runPipeline(commands, path),
-      }),
-    };
+    this.shell = { pipeline: (commands) => ({ run: () => this.runPipeline(commands), writeTo: (path) => this.runPipeline(commands, path) }) };
   }
 
-  get cwd(): string {
-    return this.cwdPath;
-  }
+  get cwd(): string { return this.cwdPath; }
 
   recordHistory(source: string): void {
     const entry = source.trim();
     if (entry) this.historyEntries.push(entry);
   }
 
-  private path(value: string): string {
-    return resolveCommandPath(this.cwdPath, value);
-  }
+  private path(value: string): string { return resolveCommandPath(this.cwdPath, value); }
 
   private async textInput(command: string, file: string | undefined, input: string): Promise<CommandResult> {
     if (file === undefined) return result(0, input);
-    try {
-      return result(0, await this.os.fs.readText(this.path(file)));
-    } catch (error) {
-      return result(1, "", `${command}: ${error instanceof Error ? error.message : String(error)}\n`);
-    }
+    try { return result(0, await this.os.fs.readText(this.path(file))); }
+    catch (error) { return result(1, "", `${command}: ${friendlyError(error)}\n`); }
   }
 
   private async execute(command: RunCommand, input: string): Promise<CommandResult> {
     const argv = [...command.args];
     switch (command.name) {
-      case "true":
-        return result(0);
-      case "false":
-        return result(1);
+      case "true": return result(0);
+      case "false": return result(1);
       case "exit": {
         if (argv.length > 1 || (argv[0] !== undefined && !/^\d+$/u.test(argv[0]))) {
           this.io.stderr?.write("exit: expected zero or one non-negative integer status\n");
@@ -220,90 +206,171 @@ export class CommandSession {
         throw new CommandExit(status);
       }
       case "pwd":
-        return argv.length === 0
-          ? result(0, `${this.cwdPath}\n`)
-          : result(2, "", "pwd: this experiment accepts no arguments\n");
+        return argv.length === 0 ? result(0, `${this.cwdPath}\n`) : result(2, "", "pwd: expected no arguments\n");
       case "cd": {
         if (argv.length > 1) return result(2, "", "cd: expected zero or one path\n");
-        const path = this.path(argv[0] ?? "/");
+        const targetPath = this.path(argv[0] ?? "/");
         try {
-          const target = await this.os.fs.stat(path);
-          if (!target) return result(1, "", `cd: no such directory: ${path}\n`);
-          if (target.kind !== "directory") return result(1, "", `cd: not a directory: ${path}\n`);
+          const target = await this.os.fs.stat(targetPath);
+          if (!target) return result(1, "", `cd: no such directory: ${targetPath}\n`);
+          if (target.kind !== "directory") return result(1, "", `cd: not a directory: ${targetPath}\n`);
           this.cwdPath = target.path;
           return result(0);
-        } catch (error) {
-          return result(1, "", `cd: ${error instanceof Error ? error.message : String(error)}\n`);
-        }
+        } catch (error) { return result(1, "", `cd: ${friendlyError(error)}\n`); }
       }
       case "ls": {
-        if (argv.length > 1) return result(2, "", "ls: expected zero or one path\n");
-        if (argv[0]?.startsWith("-")) return result(2, "", "ls: options are not implemented in v1\n");
-        try {
-          const entries = await this.os.fs.list(this.path(argv[0] ?? this.cwdPath));
-          return result(0, entries.map((entry) => `${entry.name}${entry.kind === "directory" ? "/" : ""}`).join("\n") + (entries.length ? "\n" : ""));
-        } catch (error) {
-          return result(1, "", `ls: ${error instanceof Error ? error.message : String(error)}\n`);
+        const flags = new Set<string>();
+        const paths: string[] = [];
+        for (const value of argv) {
+          if (value === "--") continue;
+          if (value.startsWith("-") && value !== "-") {
+            for (const flag of value.slice(1)) {
+              if (!"alh".includes(flag)) return result(2, "", `ls: unsupported option -${flag}; try man ls\n`);
+              flags.add(flag);
+            }
+          } else paths.push(value);
         }
+        if (paths.length > 1) return result(2, "", "ls: expected at most one path\n");
+        try {
+          const entries = await this.os.fs.list(this.path(paths[0] ?? this.cwdPath), { includeHidden: flags.has("a") });
+          const rows = entries.map((entry) => flags.has("l") ? longListEntry(entry, flags.has("h")) : `${entry.name}${entry.kind === "directory" ? "/" : ""}`);
+          return result(0, rows.length ? `${rows.join("\n")}\n` : "");
+        } catch (error) { return result(1, "", `ls: ${friendlyError(error)}\n`); }
       }
       case "cat": {
-        if (argv.length === 0) return result(0, input);
-        try {
-          const chunks = await Promise.all(argv.map((path) => this.os.fs.readText(this.path(path))));
-          return result(0, chunks.join(""));
-        } catch (error) {
-          return result(1, "", `cat: ${error instanceof Error ? error.message : String(error)}\n`);
+        let numbered = false;
+        const files: string[] = [];
+        for (const value of argv) {
+          if (value === "-n") numbered = true;
+          else if (value.startsWith("-")) return result(2, "", `cat: unsupported option ${value}; try man cat\n`);
+          else files.push(value);
         }
+        try {
+          const text = files.length ? (await Promise.all(files.map((file) => this.os.fs.readText(this.path(file))))).join("") : input;
+          return result(0, numbered ? numberLines(text) : text);
+        } catch (error) { return result(1, "", `cat: ${friendlyError(error)}\n`); }
       }
-      case "echo":
-        return result(0, `${argv.join(" ")}\n`);
+      case "echo": return result(0, `${argv.join(" ")}\n`);
+      case "touch": {
+        if (argv.length === 0 || argv.some((value) => value.startsWith("-"))) return result(2, "", "touch: expected one or more file paths\n");
+        try {
+          for (const value of argv) {
+            const targetPath = this.path(value);
+            const existing = await this.os.fs.stat(targetPath);
+            if (!existing) await this.os.fs.writeText(targetPath, "");
+            else if (existing.kind === "directory") return result(1, "", `touch: is a directory: ${targetPath}\n`);
+          }
+          return result(0);
+        } catch (error) { return result(1, "", `touch: ${friendlyError(error)}\n`); }
+      }
       case "mkdir": {
-        if (argv.length === 0) return result(2, "", "mkdir: expected at least one path\n");
-        if (argv.some((path) => path.startsWith("-"))) return result(2, "", "mkdir: options are not implemented in v1\n");
-        try {
-          for (const path of argv) await this.os.fs.createDirectory(this.path(path));
-          return result(0);
-        } catch (error) {
-          return result(1, "", `mkdir: ${error instanceof Error ? error.message : String(error)}\n`);
+        let parents = false;
+        const values: string[] = [];
+        for (const value of argv) {
+          if (value === "-p") parents = true;
+          else if (value.startsWith("-")) return result(2, "", `mkdir: unsupported option ${value}; try man mkdir\n`);
+          else values.push(value);
         }
+        if (values.length === 0) return result(2, "", "mkdir: expected at least one path\n");
+        try {
+          for (const value of values) {
+            const targetPath = this.path(value);
+            if (!parents) { await this.os.fs.createDirectory(targetPath); continue; }
+            let current = "";
+            for (const segment of targetPath.split("/").filter(Boolean)) {
+              current += `/${segment}`;
+              const existing = await this.os.fs.stat(current);
+              if (!existing) await this.os.fs.createDirectory(current);
+              else if (existing.kind !== "directory") return result(1, "", `mkdir: not a directory: ${current}\n`);
+            }
+          }
+          return result(0);
+        } catch (error) { return result(1, "", `mkdir: ${friendlyError(error)}\n`); }
       }
-      case "cp":
+      case "cp": {
+        const values = argv.filter((value) => value !== "-r" && value !== "-R");
+        if (argv.some((value) => value.startsWith("-") && value !== "-r" && value !== "-R")) return result(2, "", "cp: only -r/-R is supported\n");
+        if (values.length !== 2) return result(2, "", "cp: expected SOURCE DESTDIR\n");
+        try { await this.os.fs.copy(this.path(values[0]!), this.path(values[1]!)); return result(0); }
+        catch (error) { return result(1, "", `cp: ${friendlyError(error)}\n`); }
+      }
       case "mv": {
-        if (argv.length !== 2 || argv.some((value) => value.startsWith("-"))) {
-          return result(2, "", `${command.name}: expected SOURCE DESTDIR; options are not implemented in v1\n`);
-        }
+        if (argv.length !== 2 || argv.some((value) => value.startsWith("-"))) return result(2, "", "mv: expected SOURCE DESTINATION\n");
         try {
-          const source = this.path(argv[0]!);
-          const destination = this.path(argv[1]!);
-          if (command.name === "cp") await this.os.fs.copy(source, destination);
-          else await this.os.fs.move(source, destination);
+          const sourcePath = this.path(argv[0]!);
+          const destinationPath = this.path(argv[1]!);
+          const source = await this.os.fs.stat(sourcePath);
+          if (!source) return result(1, "", `mv: no such file or directory: ${sourcePath}\n`);
+          const existingDestination = await this.os.fs.stat(destinationPath);
+          if (existingDestination?.kind === "directory") {
+            await this.os.fs.move(sourcePath, destinationPath);
+            return result(0);
+          }
+          if (existingDestination) return result(1, "", `mv: destination already exists: ${destinationPath}\n`);
+          const destinationParent = parentPath(destinationPath);
+          const destinationName = baseName(destinationPath);
+          const parent = await this.os.fs.stat(destinationParent);
+          if (!parent || parent.kind !== "directory") return result(1, "", `mv: destination directory does not exist: ${destinationParent}\n`);
+          let current = source;
+          if (parentPath(source.path) !== destinationParent) current = await this.os.fs.move(source.path, destinationParent);
+          if (current.name !== destinationName) await this.os.fs.rename(current.path, destinationName);
           return result(0);
-        } catch (error) {
-          return result(1, "", `${command.name}: ${error instanceof Error ? error.message : String(error)}\n`);
-        }
+        } catch (error) { return result(1, "", `mv: ${friendlyError(error)}\n`); }
       }
       case "rm": {
-        if (argv.length === 0) return result(2, "", "rm: expected at least one path\n");
-        if (argv.some((value) => value.startsWith("-"))) return result(2, "", "rm: options are not implemented in v1\n");
-        try {
-          for (const path of argv) await this.os.fs.remove(this.path(path));
-          return result(0);
-        } catch (error) {
-          return result(1, "", `rm: ${error instanceof Error ? error.message : String(error)}\n`);
+        let recursive = false;
+        let force = false;
+        const values: string[] = [];
+        for (const value of argv) {
+          if (value.startsWith("-") && value !== "-") {
+            for (const flag of value.slice(1)) {
+              if (flag === "r" || flag === "R") recursive = true;
+              else if (flag === "f") force = true;
+              else return result(2, "", `rm: unsupported option -${flag}; try man rm\n`);
+            }
+          } else values.push(value);
         }
+        if (values.length === 0) return result(2, "", "rm: expected at least one path\n");
+        try {
+          for (const value of values) {
+            const targetPath = this.path(value);
+            const target = await this.os.fs.stat(targetPath);
+            if (!target) { if (force) continue; return result(1, "", `rm: no such file or directory: ${targetPath}\n`); }
+            if (target.kind === "directory" && !recursive) return result(1, "", `rm: cannot remove directory without -r: ${targetPath}\n`);
+            await this.os.fs.remove(targetPath);
+          }
+          return result(0);
+        } catch (error) { return result(1, "", `rm: ${friendlyError(error)}\n`); }
       }
       case "grep": {
-        const [pattern, ...files] = argv;
-        if (pattern === undefined) return result(2, "", "grep: expected a pattern\n");
-        try {
-          const text = files.length
-            ? (await Promise.all(files.map((path) => this.os.fs.readText(this.path(path))))).join("\n")
-            : input;
-          const matches = text.split(/\r?\n/u).filter((line) => line.includes(pattern));
-          return matches.length ? result(0, `${matches.join("\n")}\n`) : result(1);
-        } catch (error) {
-          return result(1, "", `grep: ${error instanceof Error ? error.message : String(error)}\n`);
+        let ignoreCase = false;
+        let numbers = false;
+        const values: string[] = [];
+        for (const value of argv) {
+          if (value.startsWith("-") && value !== "-") {
+            for (const flag of value.slice(1)) {
+              if (flag === "i") ignoreCase = true;
+              else if (flag === "n") numbers = true;
+              else return result(2, "", `grep: unsupported option -${flag}; try man grep\n`);
+            }
+          } else values.push(value);
         }
+        const [pattern, ...files] = values;
+        if (pattern === undefined) return result(2, "", "grep: expected a pattern\n");
+        const needle = ignoreCase ? pattern.toLowerCase() : pattern;
+        try {
+          const sources = files.length ? await Promise.all(files.map(async (file) => ({ name: file, text: await this.os.fs.readText(this.path(file)) }))) : [{ name: "", text: input }];
+          const output: string[] = [];
+          for (const source of sources) {
+            source.text.split(/\r?\n/u).forEach((line, index) => {
+              const haystack = ignoreCase ? line.toLowerCase() : line;
+              if (!haystack.includes(needle)) return;
+              const prefix = `${files.length > 1 ? `${source.name}:` : ""}${numbers ? `${index + 1}:` : ""}`;
+              output.push(`${prefix}${line}`);
+            });
+          }
+          return output.length ? result(0, `${output.join("\n")}\n`) : result(1);
+        } catch (error) { return result(1, "", `grep: ${friendlyError(error)}\n`); }
       }
       case "head":
       case "tail": {
@@ -319,16 +386,11 @@ export class CommandSession {
         for (const value of argv) {
           if (value.startsWith("-") && value.length > 1) {
             for (const flag of value.slice(1)) {
-              if (flag !== "l" && flag !== "w" && flag !== "c") {
-                return result(2, "", "wc: v1 supports only -l, -w, and -c\n");
-              }
+              if (flag !== "l" && flag !== "w" && flag !== "c") return result(2, "", "wc: supports only -l, -w, and -c\n");
               flags.add(flag);
             }
-          } else if (file === undefined) {
-            file = value;
-          } else {
-            return result(2, "", "wc: expected at most one FILE\n");
-          }
+          } else if (file === undefined) file = value;
+          else return result(2, "", "wc: expected at most one FILE\n");
         }
         const source = await this.textInput("wc", file, input);
         if (source.exitCode !== 0) return source;
@@ -336,25 +398,28 @@ export class CommandSession {
         const lines = (text.match(/\n/gu) ?? []).length;
         const words = text.trim() ? text.trim().split(/\s+/u).length : 0;
         const bytes = new TextEncoder().encode(text).length;
-        const selected = flags.size === 0
-          ? [lines, words, bytes]
-          : [flags.has("l") ? lines : undefined, flags.has("w") ? words : undefined, flags.has("c") ? bytes : undefined].filter((value): value is number => value !== undefined);
+        const selected = flags.size === 0 ? [lines, words, bytes] : [flags.has("l") ? lines : undefined, flags.has("w") ? words : undefined, flags.has("c") ? bytes : undefined].filter((value): value is number => value !== undefined);
         return result(0, `${selected.join(" ")}\n`);
       }
       case "sort": {
-        if (argv.length > 1 || argv[0]?.startsWith("-")) return result(2, "", "sort: expected [FILE]; options are not implemented in v1\n");
-        const source = await this.textInput("sort", argv[0], input);
+        let reverse = false;
+        let file: string | undefined;
+        for (const value of argv) {
+          if (value === "-r") reverse = true;
+          else if (value.startsWith("-")) return result(2, "", `sort: unsupported option ${value}; try man sort\n`);
+          else if (file === undefined) file = value;
+          else return result(2, "", "sort: expected at most one FILE\n");
+        }
+        const source = await this.textInput("sort", file, input);
         if (source.exitCode !== 0) return source;
         const lines = bufferedLines(source.stdout).sort((left, right) => left.localeCompare(right));
+        if (reverse) lines.reverse();
         return result(0, lines.length ? `${lines.join("\n")}\n` : "");
       }
       case "uniq": {
         let count = false;
         const args = [...argv];
-        if (args[0] === "-c") {
-          count = true;
-          args.shift();
-        }
+        if (args[0] === "-c") { count = true; args.shift(); }
         if (args.length > 1 || args[0]?.startsWith("-")) return result(2, "", "uniq: expected [-c] [FILE]\n");
         const source = await this.textInput("uniq", args[0], input);
         if (source.exitCode !== 0) return source;
@@ -370,43 +435,48 @@ export class CommandSession {
         return result(0, output.length ? `${output.join("\n")}\n` : "");
       }
       case "tee": {
-        if (argv.some((value) => value.startsWith("-"))) return result(2, "", "tee: append/options are not implemented in v1\n");
-        try {
-          for (const path of argv) await this.os.fs.writeText(this.path(path), input);
-          return result(0, input);
-        } catch (error) {
-          return result(1, "", `tee: ${error instanceof Error ? error.message : String(error)}\n`);
+        let append = false;
+        const files: string[] = [];
+        for (const value of argv) {
+          if (value === "-a") append = true;
+          else if (value.startsWith("-")) return result(2, "", `tee: unsupported option ${value}; try man tee\n`);
+          else files.push(value);
         }
+        try {
+          for (const file of files) {
+            const targetPath = this.path(file);
+            const previous = append && await this.os.fs.exists(targetPath) ? await this.os.fs.readText(targetPath) : "";
+            await this.os.fs.writeText(targetPath, previous + input);
+          }
+          return result(0, input);
+        } catch (error) { return result(1, "", `tee: ${friendlyError(error)}\n`); }
       }
       case "ps": {
-        if (argv.length !== 0) return result(2, "", "ps: options are not implemented in v1\n");
+        if (argv.length !== 0) return result(2, "", "ps: expected no arguments\n");
         const processes = this.os.processes.list();
         const rows = ["PID\tSTATE\tAPP\tTITLE", ...processes.map((process) => `${process.id}\t${process.state}\t${process.appId}\t${process.title}`)];
         return result(0, `${rows.join("\n")}\n`);
       }
       case "clear":
-        if (argv.length !== 0) return result(2, "", "clear: this command accepts no arguments\n");
+        if (argv.length !== 0) return result(2, "", "clear: expected no arguments\n");
         this.io.clear?.();
         return result(0);
       case "history":
-        return argv.length === 0
-          ? result(0, this.historyEntries.map((entry, index) => `${index + 1}\t${entry}`).join("\n") + (this.historyEntries.length ? "\n" : ""))
-          : result(2, "", "history: this command accepts no arguments\n");
+        return argv.length === 0 ? result(0, this.historyEntries.map((entry, index) => `${index + 1}\t${entry}`).join("\n") + (this.historyEntries.length ? "\n" : "")) : result(2, "", "history: expected no arguments\n");
       case "open": {
         if (argv.length !== 1) return result(2, "", "open: expected one path\n");
-        try {
-          await this.os.open(this.path(argv[0]!));
-          return result(0);
-        } catch (error) {
-          return result(1, "", `open: ${error instanceof Error ? error.message : String(error)}\n`);
-        }
+        try { await this.os.open(this.path(argv[0]!)); return result(0); }
+        catch (error) { return result(1, "", `open: ${friendlyError(error)}\n`); }
+      }
+      case "edit": {
+        if (argv.length !== 1) return result(2, "", "edit: expected one path\n");
+        try { await this.os.openWith(this.path(argv[0]!), "native:text"); return result(0); }
+        catch (error) { return result(1, "", `edit: ${friendlyError(error)}\n`); }
       }
       case "help":
-        return argv.length === 0
-          ? result(0, `${SUPPORTED_COMMANDS.join(" ")}\n`)
-          : result(2, "", "help: this command accepts no arguments\n");
-      default:
-        return result(127, "", `${command.name}: command not found\n`);
+      case "man":
+        return argv.length <= 1 ? result(0, renderShellHelp(argv[0])) : result(2, "", `${command.name}: expected zero or one command name\n`);
+      default: return result(127, "", `${command.name}: command not found; try help\n`);
     }
   }
 
@@ -422,11 +492,8 @@ export class CommandSession {
       exitCode = executed.exitCode;
     }
     if (stderr) this.io.stderr?.write(stderr);
-    if (redirectPath !== undefined) {
-      await this.os.fs.writeText(this.path(redirectPath), stdin);
-    } else if (stdin) {
-      this.io.stdout?.write(stdin);
-    }
+    if (redirectPath !== undefined) await this.os.fs.writeText(this.path(redirectPath), stdin);
+    else if (stdin) this.io.stdout?.write(stdin);
     return result(exitCode, stdin, stderr);
   }
 }

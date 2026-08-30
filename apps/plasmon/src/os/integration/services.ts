@@ -79,6 +79,8 @@ import { ScriptingService } from "../../scripting/service.ts";
 import {
   createTerminalNativeLoader,
   terminalAppDefinition,
+  terminalAssociationRules,
+  terminalHandler,
 } from "../../native-apps/terminal/index.ts";
 
 export interface PlasmonServices {
@@ -302,7 +304,11 @@ export function createPlasmonServices(
     fileClipboard,
     hiddenVisibility,
   );
-  if (!isCoreProfile) nativeApps.register(terminalAppDefinition);
+  if (!isCoreProfile) {
+    associations.registerHandler(terminalHandler);
+    for (const rule of terminalAssociationRules) associations.registerRule(rule);
+    nativeApps.register(terminalAppDefinition);
+  }
 
   filesystem = createFilesystemCore({
     fs: rawFs,

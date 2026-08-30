@@ -233,12 +233,12 @@ export function FileManager({
   );
   const operationPresentation = presentFileOperation(operation);
   const canPaste = Boolean(clipboard.snapshot());
-  const canTranspileCmd = Boolean(
-    contextNode
-      && contextNode.kind === "file"
-      && contextNode.name.toLowerCase().endsWith(".cmd")
-      && onTranspileCmd,
-  );
+  const scriptExtension = contextNode?.kind === "file"
+    ? contextNode.name.toLowerCase().match(/\.(cmd|run)$/u)?.[1] ?? null
+    : null;
+  const canRunScript = Boolean(scriptExtension && openService);
+  const canEditScript = Boolean(scriptExtension && openService);
+  const canTranspileCmd = Boolean(scriptExtension === "cmd" && onTranspileCmd);
 
   const menuAction = (action: FileManagerContextMenuAction) => {
     if (action === "newFolder") {
@@ -251,6 +251,14 @@ export function FileManager({
     }
     if (action === "newMarkdown") {
       void commands.createNewDocument("markdown");
+      return;
+    }
+    if (action === "newCmd") {
+      void commands.createNewDocument("cmd");
+      return;
+    }
+    if (action === "newRun") {
+      void commands.createNewDocument("run");
       return;
     }
     if (action === "import") {
@@ -274,6 +282,20 @@ export function FileManager({
 
     if (action === "open") {
       void commands.openNode(contextNode);
+      return;
+    }
+    if (action === "runScript") {
+      closeContextMenu();
+      if (!openService || !canRunScript) return;
+      void openService.open("native:terminal", { nodeId: contextNode.id })
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+      return;
+    }
+    if (action === "editScript") {
+      closeContextMenu();
+      if (!openService || !canEditScript) return;
+      void openService.open("native:text", { nodeId: contextNode.id })
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
       return;
     }
     if (action === "openWith") {
@@ -458,6 +480,8 @@ export function FileManager({
           canOpenWith={canOpenWith}
           canDownload={contextNode?.kind === "file" && commands.isDownloadReady(contextNode)}
           canTranspileCmd={canTranspileCmd}
+          canRunScript={canRunScript}
+          canEditScript={canEditScript}
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}

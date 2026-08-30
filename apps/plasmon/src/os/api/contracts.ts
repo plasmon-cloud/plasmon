@@ -41,11 +41,15 @@ export interface OsWindow {
   readonly maximized: boolean;
 }
 
+export interface OsListOptions {
+  readonly includeHidden?: boolean;
+}
+
 export interface OsFileSystemApi {
   stat(path: string): Promise<OsResource | null>;
   exists(path: string): Promise<boolean>;
   /** List the direct children of one absolute directory path through normal filesystem semantics. */
-  list(path: string): Promise<readonly OsResource[]>;
+  list(path: string, options?: OsListOptions): Promise<readonly OsResource[]>;
   readText(path: string): Promise<string>;
   /** Create or replace one UTF-8 text file through normal filesystem policy. */
   writeText(path: string, content: string): Promise<OsResource>;
@@ -55,6 +59,8 @@ export interface OsFileSystemApi {
   copy(sourcePath: string, destinationPath: string): Promise<OsResource>;
   /** Move one resource into an existing destination directory through normal filesystem policy. */
   move(sourcePath: string, destinationPath: string): Promise<OsResource>;
+  /** Rename one resource in place through normal filesystem policy. */
+  rename(path: string, newName: string): Promise<OsResource>;
   /** Perform the normal user-facing removal operation for one resource. */
   remove(path: string): Promise<void>;
 }
@@ -80,4 +86,6 @@ export interface OsApi {
   readonly processes: OsProcessesApi;
   readonly windows: OsWindowsApi;
   open(path: string): Promise<OpenResult>;
+  /** Open a resource with one explicitly selected registered handler. */
+  openWith(path: string, handlerId: string): Promise<OpenResult>;
 }

@@ -44,7 +44,9 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
   const readOnly = target.readOnly === true;
   const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
-  const runContextTypes = snapshot.name.toLowerCase().endsWith(".run");
+  const lowerName = snapshot.name.toLowerCase();
+  const runContextTypes = lowerName.endsWith(".run");
+  const cmdLanguageSupport = lowerName.endsWith(".cmd");
 
   useEffect(() => {
     process.setTitle(processId, textEditorWindowTitle(snapshot.name));
@@ -151,6 +153,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
             minimap={minimap}
             wordWrap={wordWrap}
             runContextTypes={runContextTypes}
+            cmdLanguageSupport={cmdLanguageSupport}
             ariaLabel="Text content"
             onChange={(value) => sessionRef.current?.edit(value)}
             onCursorChange={setCursor}

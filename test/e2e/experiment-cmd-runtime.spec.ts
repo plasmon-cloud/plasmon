@@ -35,16 +35,13 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const terminalWindow = plasmon.getByRole("dialog", { name: "Terminal" }).last();
   await expect(terminalWindow).toBeVisible({ timeout: 15_000 });
   const terminalInput = terminalWindow.getByLabel("Terminal command");
-  await terminalInput.fill('echo "Hello from cmd"');
+  await expect(terminalWindow.locator('[data-terminal-engine="xterm"]')).toBeVisible();
+  await terminalInput.pressSequentially('echo "Hello from cmd"');
   await terminalInput.press("Enter");
-  await expect(
-    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: "Hello from cmd" }).first(),
-  ).toBeVisible({ timeout: 30_000 });
-  await terminalInput.fill("pwd");
+  await expect(terminalWindow.getByRole("log")).toContainText("Hello from cmd", { timeout: 30_000 });
+  await terminalInput.pressSequentially("pwd");
   await terminalInput.press("Enter");
-  await expect(
-    terminalWindow.locator('[data-terminal-tone="stdout"]', { hasText: /^\/\n?$/ }).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(terminalWindow.getByRole("log")).toContainText("/\n", { timeout: 15_000 });
 
   await plasmon.getByRole("button", { name: "Search" }).click();
   await plasmon.getByLabel("Search Plasmon").fill("Files");
@@ -64,8 +61,8 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
       y: Math.max(80, Math.floor(bounds.height * 0.85)),
     },
   });
-  await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
-  const rename = explorer.getByRole("textbox", { name: "Rename New Text Document.txt" });
+  await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Command Script (.cmd)" }).click();
+  const rename = explorer.getByRole("textbox", { name: "Rename New Command Script.cmd" });
   await expect(rename).toBeVisible();
   await rename.fill("Experiment Smoke.cmd");
   await rename.press("Enter");
@@ -73,7 +70,10 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
   const cmdEntry = fileList.locator('[data-fm-node-id]', { hasText: "Experiment Smoke.cmd" }).first();
   await expect(cmdEntry).toBeVisible();
   await cmdEntry.click({ button: "right" });
-  const transpile = plasmon.getByRole("menu").last().getByRole("menuitem", { name: "Transpile to .run" });
+  const cmdMenu = plasmon.getByRole("menu").last();
+  await expect(cmdMenu.getByRole("menuitem", { name: "Run" })).toBeVisible();
+  await expect(cmdMenu.getByRole("menuitem", { name: "Edit" })).toBeVisible();
+  const transpile = cmdMenu.getByRole("menuitem", { name: "Transpile to .run" });
   await expect(transpile).toBeVisible();
   await transpile.click();
 
@@ -87,7 +87,8 @@ test("packaged experiment executes .cmd through .run and exposes .run TypeScript
       `Explorer did not project the generated .run. alerts=${JSON.stringify(alerts)} visibleNames=${JSON.stringify(visibleNames)}; ${cause instanceof Error ? cause.message : String(cause)}`,
     );
   }
-  await runEntry.dblclick();
+  await runEntry.click({ button: "right" });
+  await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "Edit" }).click();
 
   const editorWindow = plasmon.getByRole("dialog", { name: "Experiment Smoke.run" }).last();
   await expect(editorWindow).toBeVisible({ timeout: 20_000 });
