@@ -1,5 +1,6 @@
 import type {
   AssociationRegistry,
+  DiagnosticOperationContext,
   FsNode,
   FsService,
   HandlerId,
@@ -26,6 +27,8 @@ export interface FilesystemOpenDispatcherOptions {
 
 export interface OpenFilesystemNodeOptions {
   handlerId?: HandlerId;
+  /** Explicit operation identity continued across filesystem/open boundaries. */
+  operation?: DiagnosticOperationContext;
   /**
    * Optional presentation-owned directory action. The dispatcher still owns
    * resource classification and shortcut dereference; callers such as an
@@ -107,14 +110,22 @@ export class FilesystemOpenDispatcher {
         await options.onOpenDirectory(node);
         return;
       }
-      const processId = await this.process.open("native:explorer", { nodeId: node.id });
+      const processId = await this.process.open(
+        "native:explorer",
+        { nodeId: node.id },
+        options.operation,
+      );
       if (processId === null) throw new Error("File Manager is unavailable");
       return;
     }
 
     const classification = classifyResource(node);
     if (classification.kind === "system-app" && classification.systemApp) {
-      await this.openService.open(classification.systemApp.handlerId, { nodeId: node.id });
+      await this.openService.open(
+        classification.systemApp.handlerId,
+        { nodeId: node.id },
+        options.operation,
+      );
       return;
     }
     if (classification.kind === "neutron-app" && classification.neutronApp) {
@@ -127,7 +138,7 @@ export class FilesystemOpenDispatcher {
     const resolved = await model.model(node, probe);
     const selected = options.handlerId ?? resolved.defaultHandlerId;
     if (!selected) throw new Error(`No compatible application is registered for ${node.name}`);
-    await model.open(node, selected, probe);
+    await model.open(node, selected, probe, options.operation);
   }
 
   private async openTarget(
@@ -141,7 +152,7 @@ export class FilesystemOpenDispatcher {
         await this.openNodeRecursive(target.nodeId, options, visited, depth);
         return;
       case "native":
-        await this.openService.open(target.handlerId, {});
+        await this.openService.open(target.handlerId, {}, options.operation);
         return;
       case "element":
         await this.neutron.openElement(target.elementId, {
@@ -156,7 +167,7 @@ export class FilesystemOpenDispatcher {
             ? "external:url"
             : null;
         if (!handlerId) throw new Error("No URL-capable browser handler is registered");
-        await this.openService.open(handlerId, { url: target.url });
+        await this.openService.open(handlerId, { url: target.url }, options.operation);
         return;
       }
     }
