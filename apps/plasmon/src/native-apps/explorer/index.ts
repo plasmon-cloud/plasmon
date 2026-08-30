@@ -13,14 +13,16 @@ import type {
   FileOperationClipboard,
 } from "../../os/file-manager/index.ts";
 import { SYSTEM_ICON_ASSETS } from "../../os/visual/assets.ts";
+import { FILE_MANAGER_NAME } from "./identity.ts";
 
 export type { ExplorerAppProps } from "./ExplorerApp.tsx";
 export * from "./history.ts";
+export * from "./identity.ts";
 
 export const explorerAppDefinition: NativeAppDefinition = {
   id: "native:explorer",
   handlerId: "native:explorer",
-  name: "File Manager",
+  name: FILE_MANAGER_NAME,
   icon: SYSTEM_ICON_ASSETS["file-manager"],
   singleton: false,
   defaultWindow: { width: 960, height: 650, minWidth: 640, minHeight: 420 },
