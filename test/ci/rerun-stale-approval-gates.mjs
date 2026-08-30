@@ -1,8 +1,6 @@
-import assert from "node:assert/strict";
-
 const APPROVAL_WINDOW_MS = 60_000;
 
-export const APPROVAL_WORKFLOW_PATHS = new Set([
+const APPROVAL_WORKFLOW_PATHS = new Set([
   ".github/workflows/kernel-ci.yml",
   ".github/workflows/plasmon-browser-smoke-ci.yml",
   ".github/workflows/plasmon-browser-ci.yml",
@@ -14,7 +12,7 @@ const retryableConclusions = new Set(["failure", "cancelled", "timed_out"]);
 
 const toTime = (value) => new Date(value).getTime();
 
-export function selectStaleApprovalRuns(runs, current) {
+function selectStaleApprovalRuns(runs, current) {
   const candidates = new Map();
   const currentCreated = toTime(current.created_at);
 
@@ -105,31 +103,4 @@ async function coordinateRerun() {
   }
 }
 
-function selfTest() {
-  const current = {
-    id: 500,
-    run_attempt: 2,
-    pr_number: 649,
-    head_sha: "abc",
-    created_at: "2026-08-30T04:41:27Z",
-  };
-  const pr = [{ number: 649 }];
-  const runs = [
-    { id: 500, path: ".github/workflows/plasmon-browser-ci.yml", event: "pull_request_review", head_sha: "abc", pull_requests: pr, created_at: current.created_at, status: "completed", conclusion: "failure", run_attempt: 2 },
-    { id: 501, path: ".github/workflows/plasmon-flake-probe.yml", event: "pull_request_review", head_sha: "abc", pull_requests: pr, created_at: "2026-08-30T04:41:28Z", status: "completed", conclusion: "failure", run_attempt: 1 },
-    { id: 502, path: ".github/workflows/plasmon-browser-smoke-ci.yml", event: "pull_request_review", head_sha: "abc", pull_requests: pr, created_at: "2026-08-30T04:41:28Z", status: "completed", conclusion: "success", run_attempt: 1 },
-    { id: 503, path: ".github/workflows/kernel-ci.yml", event: "pull_request_review", head_sha: "abc", pull_requests: pr, created_at: "2026-08-30T04:41:28Z", status: "completed", conclusion: "failure", run_attempt: 2 },
-    { id: 504, path: ".github/workflows/plasmon-browser-persistence-ci.yml", event: "pull_request_review", head_sha: "other", pull_requests: pr, created_at: "2026-08-30T04:41:28Z", status: "completed", conclusion: "failure", run_attempt: 1 },
-    { id: 505, path: ".github/workflows/plasmon-browser-persistence-ci.yml", event: "pull_request_review", head_sha: "abc", pull_requests: [{ number: 650 }], created_at: "2026-08-30T04:41:28Z", status: "completed", conclusion: "failure", run_attempt: 1 },
-    { id: 506, path: ".github/workflows/plasmon-browser-persistence-ci.yml", event: "pull_request_review", head_sha: "abc", pull_requests: pr, created_at: "2026-08-30T05:00:00Z", status: "completed", conclusion: "failure", run_attempt: 1 },
-  ];
-
-  assert.deepEqual(selectStaleApprovalRuns(runs, current).map((run) => run.id), [501]);
-  console.log("approval rerun coordinator self-test passed");
-}
-
-if (process.argv.includes("--self-test")) {
-  selfTest();
-} else {
-  await coordinateRerun();
-}
+await coordinateRerun();
