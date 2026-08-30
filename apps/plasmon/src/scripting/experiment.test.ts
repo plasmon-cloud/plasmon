@@ -86,7 +86,7 @@ test("transpileCmdFile creates a sibling .run without overwriting existing outpu
 });
 
 test("command catalog exposes the frozen v1 option/manual surface", () => {
-  expect(shellCommandHelp("ls")?.options?.map((option) => option.flag)).toEqual(["-a", "-l", "-h"]);
+  expect(shellCommandHelp("ls")?.options?.map((option) => option.flag)).toEqual(["-a", "-l", "-la", "-h"]);
   expect(shellCommandHelp("cat")?.options?.map((option) => option.flag)).toEqual(["-n"]);
   expect(shellCommandHelp("rm")?.options?.map((option) => option.flag)).toEqual(["-r", "-R", "-f"]);
   expect(shellCommandHelp("tee")?.options?.map((option) => option.flag)).toEqual(["-a"]);
