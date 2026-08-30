@@ -111,8 +111,6 @@ export class RollbarRemoteIncidentSink implements RemoteIncidentSink {
         event: breadcrumb.event,
         message: breadcrumb.message,
         ...(breadcrumb.correlationId ? { correlationId: breadcrumb.correlationId } : {}),
-        ...(breadcrumb.operationId ? { operationId: breadcrumb.operationId } : {}),
-        ...(breadcrumb.parentOperationId ? { parentOperationId: breadcrumb.parentOperationId } : {}),
         ...(breadcrumb.metadata ? { metadata: breadcrumb.metadata } : {}),
       },
     }, breadcrumbLevel(breadcrumb.level));
@@ -135,8 +133,6 @@ export class RollbarRemoteIncidentSink implements RemoteIncidentSink {
         faultFingerprint: incident.faultFingerprint,
         build: incident.build,
         ...(incident.correlationId ? { correlationId: incident.correlationId } : {}),
-        ...(incident.operationId ? { operationId: incident.operationId } : {}),
-        ...(incident.parentOperationId ? { parentOperationId: incident.parentOperationId } : {}),
         ...(incident.metadata ? { metadata: incident.metadata } : {}),
       },
     };
