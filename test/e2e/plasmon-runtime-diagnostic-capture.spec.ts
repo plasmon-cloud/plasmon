@@ -59,7 +59,7 @@ async function triggerUnhandledProductRejection(app: FrameLocator): Promise<void
 test("real browser uncaught exceptions and unhandled rejections enter canonical diagnostics without weakening BrowserHealth", async ({ page }, testInfo) => {
   const { app, health, diagnostics } = await launchPlasmon(page);
   try {
-    const uncaughtDiagnostic = waitForRuntimeDiagnostic(page, "runtime.uncaught_error");
+    const uncaughtDiagnostic = waitForRuntimeDiagnostic(page, "runtime.uncaught-error");
     const pageError = page.waitForEvent("pageerror");
     await triggerUncaughtProductError(app);
     const [uncaughtMessage, uncaughtPageError] = await Promise.all([uncaughtDiagnostic, pageError]);
@@ -72,7 +72,7 @@ test("real browser uncaught exceptions and unhandled rejections enter canonical 
     expect(uncaughtMessage.text()).not.toContain("private.example");
     expect(uncaughtMessage.text()).not.toContain("/Users/alice");
 
-    const rejectionDiagnostic = waitForRuntimeDiagnostic(page, "runtime.unhandled_rejection");
+    const rejectionDiagnostic = waitForRuntimeDiagnostic(page, "runtime.unhandled-rejection");
     await triggerUnhandledProductRejection(app);
     const rejectionMessage = await rejectionDiagnostic;
     expect(rejectionMessage.text()).toContain('"name":"RangeError"');

@@ -1,4 +1,14 @@
 import type {
+  DiagnosticCategory,
+  DiagnosticEvent,
+  DiagnosticEventFor,
+  DiagnosticOperation,
+  DiagnosticRuntime,
+  DiagnosticSource,
+  DiagnosticStage,
+  DiagnosticSubsystem,
+} from "./vocabulary.ts";
+import type {
   DiagnosticEventInput,
   DiagnosticLevel,
   DiagnosticRecord,
@@ -13,6 +23,12 @@ export interface DiagnosticLogFields {
   correlationId?: string;
   /** Optional explicitly grouped safe context. */
   context?: Record<string, unknown>;
+  /** Shared categorical fields have one compiler-enforced vocabulary. */
+  runtime?: DiagnosticRuntime;
+  operation?: DiagnosticOperation;
+  stage?: DiagnosticStage;
+  source?: DiagnosticSource;
+  category?: DiagnosticCategory;
   /** Additional fields become structured diagnostic context. */
   [key: string]: unknown;
 }
@@ -22,14 +38,17 @@ export interface DiagnosticLoggerDefaults {
   context?: Record<string, unknown>;
 }
 
-export interface DiagnosticLogger {
-  readonly subsystem: string;
-  debug(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
-  info(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
-  notice(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
-  warn(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
-  error(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
-  critical(event: string, fields?: DiagnosticLogFields): DiagnosticRecord;
+type EventFor<Subsystem extends string> =
+  Subsystem extends DiagnosticSubsystem ? DiagnosticEventFor<Subsystem> : DiagnosticEvent;
+
+export interface DiagnosticLogger<Subsystem extends string = string> {
+  readonly subsystem: Subsystem;
+  debug(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
+  info(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
+  notice(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
+  warn(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
+  error(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
+  critical(event: EventFor<Subsystem>, fields?: DiagnosticLogFields): DiagnosticRecord;
 }
 
 export interface DiagnosticEmitter {
@@ -39,7 +58,7 @@ export interface DiagnosticEmitter {
 function buildInput(
   subsystem: string,
   level: DiagnosticLevel,
-  event: string,
+  event: DiagnosticEvent,
   defaults: DiagnosticLoggerDefaults,
   fields: DiagnosticLogFields = {},
 ): DiagnosticEventInput {
@@ -69,24 +88,24 @@ function buildInput(
   };
 }
 
-export function createDiagnosticLogger(
+export function createDiagnosticLogger<Subsystem extends string>(
   emitter: DiagnosticEmitter,
-  subsystem: string,
+  subsystem: Subsystem,
   defaults: DiagnosticLoggerDefaults = {},
-): DiagnosticLogger {
+): DiagnosticLogger<Subsystem> {
   const write = (
     level: DiagnosticLevel,
-    event: string,
+    event: EventFor<Subsystem>,
     fields?: DiagnosticLogFields,
-  ): DiagnosticRecord => emitter.emit(buildInput(subsystem, level, event, defaults, fields));
+  ): DiagnosticRecord => emitter.emit(buildInput(subsystem, level, event as DiagnosticEvent, defaults, fields));
 
   return Object.freeze({
     subsystem,
-    debug: (event, fields) => write("debug", event, fields),
-    info: (event, fields) => write("info", event, fields),
-    notice: (event, fields) => write("notice", event, fields),
-    warn: (event, fields) => write("warn", event, fields),
-    error: (event, fields) => write("error", event, fields),
-    critical: (event, fields) => write("critical", event, fields),
+    debug: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("debug", event, fields),
+    info: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("info", event, fields),
+    notice: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("notice", event, fields),
+    warn: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("warn", event, fields),
+    error: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("error", event, fields),
+    critical: (event: EventFor<Subsystem>, fields?: DiagnosticLogFields) => write("critical", event, fields),
   });
 }

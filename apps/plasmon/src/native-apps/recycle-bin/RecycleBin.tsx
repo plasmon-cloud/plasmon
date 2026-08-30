@@ -17,6 +17,7 @@ import type {
 import type { FilesystemTrashService } from "../../os/fs/index.ts";
 import {
   RecycleBinModel,
+  recycleBinKindLabel,
   subscribeRecycleBinInvalidation,
   type RecycleBinItem,
 } from "./model.ts";
@@ -294,7 +295,7 @@ export function RecycleBin({
                       onChange={(event: ChangeEvent<HTMLInputElement>) => toggleItem(item.id, event.currentTarget.checked)}
                     />
                   </span>
-                  <span role="cell" className="recycle-bin__name-cell"><strong>{item.name}</strong><small>{item.kind}</small></span>
+                  <span role="cell" className="recycle-bin__name-cell"><strong>{item.name}</strong><small>{recycleBinKindLabel(item.kind)}</small></span>
                   <span role="cell" title={item.originalPath}>{item.originalPath}</span>
                   <span role="cell">{formatDeletedAt(item.deletedAt)}</span>
                   <span role="cell">{formatSize(item.size)}</span>

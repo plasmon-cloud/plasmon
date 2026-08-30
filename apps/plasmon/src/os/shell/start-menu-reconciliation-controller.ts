@@ -6,7 +6,11 @@ import type {
   NativeAppRegistry,
   NeutronBridge,
 } from "../contracts/index.ts";
-import type { DiagnosticLogger } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticSubsystem,
+  type DiagnosticLogger,
+} from "../diagnostics/index.ts";
 import { reconcileStartMenu, type StartSeedResult } from "./startMenu.ts";
 
 export interface StartMenuReconciliationSnapshot {
@@ -23,7 +27,7 @@ type ReconcileStartMenu = (
 
 export interface StartMenuReconciliationControllerOptions {
   reconcile?: ReconcileStartMenu;
-  diagnostics?: DiagnosticLogger;
+  diagnostics?: DiagnosticLogger<typeof DiagnosticSubsystem.Shell>;
 }
 
 function identityKey(
@@ -144,7 +148,7 @@ export class StartMenuReconciliationController {
         revision: this.snapshot.revision + 1,
       };
     } catch (cause: unknown) {
-      this.options.diagnostics?.error("shell.start.reconcile.failed", {
+      this.options.diagnostics?.error(DiagnosticEvent.Shell.StartReconcileFailed, {
         message: "Start Menu reconciliation failed",
         errorType: diagnosticErrorType(cause),
       });

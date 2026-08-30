@@ -42,8 +42,8 @@ function nativeWindowById(app: FrameLocator, windowId: string): Locator {
 async function openExplorer(app: FrameLocator): Promise<Locator> {
   await app.getByRole("button", { name: "Search" }).click();
   const search = app.getByRole("region", { name: "Search" });
-  await search.getByRole("textbox", { name: "Search Plasmon" }).fill("Files");
-  const result = search.locator("[data-search-result]", { hasText: "Files" }).first();
+  await search.getByRole("textbox", { name: "Search Plasmon" }).fill("File Explorer");
+  const result = search.locator("[data-search-result]", { hasText: "File Explorer" }).first();
   await expect(result).toBeVisible();
   await result.click();
 

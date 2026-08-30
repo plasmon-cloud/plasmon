@@ -105,7 +105,7 @@ test("move partial failure emits one bounded diagnostic and no lifecycle noise",
       operationState.complete();
     });
 
-    const events = records.filter((record) => record.event === "filemanager.move.partial");
+    const events = records.filter((record) => record.event === "file-manager.move.partial");
     expect(events).toHaveLength(1);
     expect(events[0]?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
     expect(JSON.stringify(events[0])).not.toContain("PRIVATE-");
@@ -148,7 +148,7 @@ test("import partial failure logs one bounded event without filename or error te
     });
     await act(async () => { await terminal; });
 
-    const events = records.filter((record) => record.event === "filemanager.import.partial");
+    const events = records.filter((record) => record.event === "file-manager.import.partial");
     expect(events).toHaveLength(1);
     expect(events[0]?.context).toEqual({ total: 2, succeeded: 1, failed: 1 });
     expect(JSON.stringify(events[0])).not.toContain("PRIVATE-import-name.txt");
@@ -193,7 +193,7 @@ test("paste failure logs one bounded event without private error message", async
     fireEvent.click(view.getByRole("button", { name: "Paste" }));
     await act(async () => { await terminal; });
 
-    const events = records.filter((record) => record.event === "filemanager.paste.failed");
+    const events = records.filter((record) => record.event === "file-manager.paste.failed");
     expect(events).toHaveLength(1);
     expect(events[0]?.context).toEqual({ mode: "copy", total: 1, errorType: "TypeError" });
     expect(JSON.stringify(events[0])).not.toContain("SECRET paste failure");

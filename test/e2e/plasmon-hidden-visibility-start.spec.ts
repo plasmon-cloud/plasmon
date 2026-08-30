@@ -80,7 +80,7 @@ test("packaged Start follows global visibility for an existing hidden target", a
     // Build the fixture entirely through packaged FileManager behavior. The
     // Start entry itself has a visible name; only its stable-NodeId target is
     // hidden, so this exercises Start's canonical target-visibility boundary.
-    await activateSearchResult(plasmon, "Files", "Files");
+    await activateSearchResult(plasmon, "File Explorer", "File Explorer");
     const explorer = plasmon.locator(".explorer-app").last();
     await expect(explorer).toBeVisible({ timeout: 20_000 });
     const files = explorer.getByRole("listbox", { name: "Files" });

@@ -62,7 +62,7 @@ describe("global runtime diagnostic capture", () => {
 
       const records = await observed.settle({
         subsystem: "runtime",
-        event: "runtime.uncaught_error",
+        event: "runtime.uncaught-error",
         level: "error",
       });
       expect(records).toHaveLength(1);
@@ -103,7 +103,7 @@ describe("global runtime diagnostic capture", () => {
 
       const records = await observed.settle({
         subsystem: "runtime",
-        event: "runtime.unhandled_rejection",
+        event: "runtime.unhandled-rejection",
         level: "error",
       });
       expect(records).toHaveLength(1);
@@ -137,7 +137,7 @@ describe("global runtime diagnostic capture", () => {
 
       const records = await observed.settle({ subsystem: "runtime", level: "error" });
       expect(records).toHaveLength(1);
-      expect(records[0]?.event).toBe("runtime.uncaught_error");
+      expect(records[0]?.event).toBe("runtime.uncaught-error");
     } finally {
       capture.dispose();
       observed.dispose();
@@ -166,7 +166,7 @@ describe("global runtime diagnostic capture", () => {
 
       expect(await observed.settle({
         subsystem: "runtime",
-        event: "runtime.uncaught_error",
+        event: "runtime.uncaught-error",
       })).toHaveLength(1);
     } finally {
       capture.dispose();
