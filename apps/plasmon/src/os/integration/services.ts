@@ -40,6 +40,10 @@ import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { setFrontendCallAdmissionDiagnosticLogger } from "../neutron/frontend-call-admission.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
+import {
+  ShellPreferenceStore,
+  ShellPreferencesController,
+} from "../shell/preferences.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
 import {
   FsServiceWindowPlacementStore,
@@ -76,12 +80,13 @@ import {
   createRecycleBinNativeLoader,
   recycleBinAppDefinition,
 } from "../../native-apps/recycle-bin/index.ts";
+import { installMonacoEnvironment } from "../../native-apps/shared/monaco/monacoEnvironment.ts";
 import {
   FakeResourceAuthorizationService,
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
+import { isCoreProfile, isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -100,6 +105,7 @@ export interface PlasmonServices {
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
+  shellPreferences: ShellPreferencesController;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -177,6 +183,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  shellPreferences: ShellPreferencesController,
   diagnostics: DiagnosticService,
   diagnosticSettings: DiagnosticSettingsStore,
   log: DiagnosticLogger,
@@ -187,14 +194,24 @@ function registerNativeApplications(
   if (isGameRuntimeProfile) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(emulatorJsRuntimeDefinition, createEmulatorJsRuntimeLoader());
+    nativeApps.registerWithLoader(
+      emulatorJsRuntimeDefinition,
+      createEmulatorJsRuntimeLoader(diagnostics.for("runtime.emulatorjs")),
+    );
 
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
-    nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
+    nativeApps.registerWithLoader(
+      jsDosRuntimeDefinition,
+      createJsDosRuntimeLoader(diagnostics.for("runtime.jsdos")),
+    );
   }
 
-  const contentLoaders = createContentAppLoaders({ hiddenVisibility, diagnosticSettings });
+  const contentLoaders = createContentAppLoaders({
+    hiddenVisibility,
+    shellPreferences,
+    diagnosticSettings,
+  });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) {
@@ -259,10 +276,17 @@ export function createPlasmonServices(
   const windowLog = diagnostics.for("windowing");
   const nativeAppLog = diagnostics.for("native-app");
   const shellLog = diagnostics.for("shell");
-  if (filesystemMode === "hosted") {
-    setFrontendCallAdmissionDiagnosticLogger(diagnostics.for("neutron"));
+  const neutronLog = diagnostics.for("neutron");
+
+  if (typeof window !== "undefined" && !isCoreProfile) {
+    installMonacoEnvironment(globalThis, diagnostics.for("runtime.monaco"));
   }
+  if (filesystemMode === "hosted") {
+    setFrontendCallAdmissionDiagnosticLogger(neutronLog);
+  }
+
   const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
+  const shellPreferences = new ShellPreferencesController(new ShellPreferenceStore(rawFs));
   const windows = options.windows ?? new NativeWindowManager();
   const placementStore = new FsServiceWindowPlacementStore(rawFs, undefined, {
     onRestoreRejected: (reason) => {
@@ -280,7 +304,9 @@ export function createPlasmonServices(
       });
     },
   });
-  const neutron = options.neutron ?? createNeutronBridge();
+  const neutron = options.neutron ?? createNeutronBridge({
+    vanilla: { diagnosticLogger: neutronLog },
+  });
   const nativeApps = new NativeApplicationRegistry({ diagnostics: nativeAppLog });
   const associations = new HandlerAssociationRegistry({
     defaults: createAssociationDefaultStore(rawFs, diagnostics),
@@ -351,6 +377,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    shellPreferences,
     diagnostics,
     diagnosticSettings,
     nativeAppLog,
@@ -426,5 +453,6 @@ export function createPlasmonServices(
     fileClipboard,
     startMenu,
     hiddenVisibility,
+    shellPreferences,
   };
 }
