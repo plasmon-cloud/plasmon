@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
-import type { FsService, OpenTarget, ProcessController, ProcessId } from "../../os/contracts/index.ts";
+import type { NativeAppComponentProps } from "../../os/process/runtime.ts";
 import {
   NativeAppButton,
   NativeAppContentSurface,
@@ -29,14 +29,16 @@ export const MARKDOWN_MODES = ["edit", "split", "preview"] as const;
 export function markdownPaneVisibility(mode: MarkdownMode): { editor: boolean; preview: boolean } {
   return { editor: mode !== "preview", preview: mode !== "edit" };
 }
-export interface MarkdownEditorProps {
-  processId: ProcessId;
-  target: OpenTarget;
-  fs: FsService;
-  process: ProcessController;
-}
+export interface MarkdownEditorProps extends NativeAppComponentProps {}
 
-export default function MarkdownEditor({ processId, target, fs, process }: MarkdownEditorProps) {
+export default function MarkdownEditor({
+  processId,
+  target,
+  fs,
+  process,
+  diagnostics,
+  operation,
+}: MarkdownEditorProps) {
   const [mode, setMode] = useState<MarkdownMode>("split");
   const [cursor, setCursor] = useState<MonacoCursorState>({ line: 1, column: 1, selected: 0 });
   const [monacoReady, setMonacoReady] = useState(false);
@@ -170,6 +172,8 @@ export default function MarkdownEditor({ processId, target, fs, process }: Markd
               minimap={minimap}
               wordWrap={wordWrap}
               ariaLabel="Markdown source"
+              diagnostics={diagnostics}
+              operation={operation}
               onChange={(value) => sessionRef.current?.edit(value)}
               onCursorChange={setCursor}
               onReadyChange={setMonacoReady}
