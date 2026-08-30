@@ -78,6 +78,7 @@ const MAX_TEXT_LENGTH = 1_024;
 const MAX_CONTEXT_DEPTH = 5;
 const MAX_CONTEXT_ARRAY = 32;
 const REDACTED = "[REDACTED]";
+const TRUNCATED_RECORD_MARKER = " …[TRUNCATED]\n";
 
 function thresholdAllows(level: DiagnosticLevel, minimum: DiagnosticLevel): boolean {
   return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[minimum];
@@ -187,6 +188,39 @@ function byteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
+function prefixWithinByteLimit(value: string, maxBytes: number): string {
+  if (maxBytes <= 0) return "";
+  if (byteLength(value) <= maxBytes) return value;
+
+  const codePoints = Array.from(value);
+  let low = 0;
+  let high = codePoints.length;
+  let best = "";
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    const candidate = codePoints.slice(0, middle).join("");
+    if (byteLength(candidate) <= maxBytes) {
+      best = candidate;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  return best;
+}
+
+function truncateDiagnosticLine(line: string, maxBytes: number): string {
+  if (byteLength(line) <= maxBytes) return line;
+
+  const marker = prefixWithinByteLimit(TRUNCATED_RECORD_MARKER, maxBytes);
+  const markerBytes = byteLength(marker);
+  if (markerBytes >= maxBytes) return marker;
+
+  const body = line.endsWith("\n") ? line.slice(0, -1) : line;
+  const prefix = prefixWithinByteLimit(body, maxBytes - markerBytes);
+  return `${prefix}${marker}`;
+}
+
 export function retainNewestDiagnosticLines(
   text: string,
   maxBytes: number,
@@ -204,9 +238,7 @@ export function retainNewestDiagnosticLines(
     const lineBytes = byteLength(line);
     if (kept.length > 0 && bytes + lineBytes > target) break;
     if (kept.length === 0 && lineBytes > maxBytes) {
-      const encoded = new TextEncoder().encode(line);
-      const suffix = encoded.slice(Math.max(0, encoded.length - maxBytes));
-      return new TextDecoder().decode(suffix);
+      return truncateDiagnosticLine(line, maxBytes);
     }
     kept.unshift(line);
     bytes += lineBytes;
