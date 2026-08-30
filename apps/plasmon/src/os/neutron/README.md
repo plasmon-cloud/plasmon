@@ -1,5 +1,6 @@
 # Plasmon Neutron bridge
 
+
 `neutron/**` is Plasmon's adapter to verified vanilla Neutron capabilities behind the public `NeutronBridge` contract.
 
 ## Boundary

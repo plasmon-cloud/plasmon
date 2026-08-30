@@ -559,7 +559,7 @@ module {
     ) : [Painless.HeaderField] {
         switch (policy) {
             case (#opaque_app) [
-                ("Content-Security-Policy", "sandbox allow-scripts")
+                ("Content-Security-Policy", "sandbox allow-scripts allow-downloads")
             ];
             case _ [];
         };

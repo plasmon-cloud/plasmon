@@ -19,7 +19,7 @@ const rectangles = new Map([
   [d, { left: 190, top: 40, right: 370, bottom: 76 }],
 ]);
 
-test("#196 exposes explicit Grid, List, and Details strategies", () => {
+test("exposes explicit Grid, List, and Details strategies", () => {
   expect(fileManagerViewStrategy("grid")).toEqual({
     kind: "grid",
     entryPresentation: "grid",
@@ -41,7 +41,7 @@ test("#196 exposes explicit Grid, List, and Details strategies", () => {
   expect(fileManagerViewStrategy("desktop")).toBeNull();
 });
 
-test("#196 Grid and List strategies follow rendered geometry", () => {
+test("Grid and List strategies follow rendered geometry", () => {
   for (const presentation of ["grid", "list"] as const) {
     expect(nextFileManagerViewId({
       presentation,
@@ -67,7 +67,7 @@ test("#196 Grid and List strategies follow rendered geometry", () => {
   }
 });
 
-test("#196 Details keeps stable ordered NodeId row navigation", () => {
+test("Details keeps stable ordered NodeId row navigation", () => {
   expect(nextFileManagerViewId({
     presentation: "details",
     orderedIds: ordered,

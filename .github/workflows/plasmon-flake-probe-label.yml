@@ -1,47 +1,163 @@
 name: Plasmon Flake Probe Label Trigger
 
 on:
-  # Labels are an explicit opt-in for suspected flakes caused by production
-  # changes. This bridge is separate from the path-filtered probe workflow so
-  # a label can trigger a probe even when no test file changed.
+  # The label is an explicit request for a fresh targeted diagnostic run. A
+  # synchronize event keeps that request attached to each new exact PR head
+  # until the label is removed.
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 permissions:
   actions: write
   contents: read
+  pull-requests: read
 
 jobs:
   dispatch:
-    name: Dispatch opted-in flake probe
+    if: >-
+      (github.event.action == 'labeled' && github.event.label.name == 'ci:flake-probe') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'ci:flake-probe'))
+    name: Dispatch targeted 50-iteration flake probe
     runs-on: ubuntu-latest
     steps:
-      - name: Dispatch exact-head probe when ci:flake-probe is present
+      - name: Check release integration scope
+        id: scope
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          if [ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]; then
+            echo "ci:flake-probe requires a same-repository PR; head_repository=$HEAD_REPOSITORY repository=$GITHUB_REPOSITORY" >&2
+            exit 1
+          fi
+          case "$BASE_REF" in
+            release/|release/*/*)
+              echo "ci:flake-probe requires a single-segment release-role base branch; base=$BASE_REF" >&2
+              exit 1
+              ;;
+            release/*) ;;
+            *)
+              echo "ci:flake-probe requires a release-role base branch; base=$BASE_REF" >&2
+              exit 1
+              ;;
+          esac
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact PR head for target selection
+        if: steps.scope.outputs.eligible == 'true'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Record exact PR diff for target selection
+        if: steps.scope.outputs.eligible == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p flake-probe-label
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+            | sed '/^$/d' \
+            | sort -u \
+            > flake-probe-label/changed-files.txt
+
+      - name: Select exact labeled probe target
+        if: steps.scope.outputs.eligible == 'true'
+        id: select
+        env:
+          FLAKE_PROBE_PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          node test/ci/select-labeled-flake-probe.mjs \
+            flake-probe-label/changed-files.txt \
+            --github-output "$GITHUB_OUTPUT" \
+            --json-file flake-probe-label/selection.json
+
+      - name: Require an unambiguous direct target
+        if: steps.scope.outputs.eligible == 'true' && steps.select.outputs.dispatch != 'true'
+        env:
+          REASON: ${{ steps.select.outputs.reason }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## ci:flake-probe target required"
+            echo
+            echo "The label requested a fresh 50-iteration probe, but a single safe non-quarantined target could not be inferred."
+            echo
+            echo "- Selection result: \`${REASON:-unknown}\`"
+            echo "- Add \`Flake-Probe-Target: test/e2e/<file>.spec.ts\` to the PR body."
+            echo "- Optional: add \`Flake-Probe-Grep: <title-or-tag>\` to narrow one acceptance within that file."
+            echo "- Supported named direct targets are \`right-snap\`, \`left-snap\`, \`window-lifetime\`, \`monaco\`, \`emulatorjs\`, and \`saved-preview\`."
+            echo "- Quarantined acceptances remain excluded even for labeled probes."
+            echo "- Remove and re-add \`ci:flake-probe\` after updating the PR body to force a new dispatch on the same exact head."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Dispatch fresh exact-head 50-iteration probe
+        if: steps.scope.outputs.eligible == 'true' && steps.select.outputs.dispatch == 'true'
         uses: actions/github-script@v8
+        env:
+          SELECTED_TARGET: ${{ steps.select.outputs.target }}
+          SELECTED_TEST_FILE: ${{ steps.select.outputs.test_file }}
+          SELECTED_TEST_GREP: ${{ steps.select.outputs.test_grep }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const pullRequest = context.payload.pull_request;
-            const labels = pullRequest.labels.map((label) => label.name);
-
-            if (!labels.includes('ci:flake-probe')) {
-              core.info('Label event was not ci:flake-probe; no probe dispatched.');
-              return;
-            }
-            if (pullRequest.base.ref !== 'release/0.1.0-r2') {
-              core.info(`Base branch ${pullRequest.base.ref} is outside r2; no probe dispatched.`);
-              return;
-            }
-
             const headSha = pullRequest.head.sha;
+            const dispatchRef = pullRequest.head.ref;
+            const selectedTarget = process.env.SELECTED_TARGET;
+            const selectedTestFile = process.env.SELECTED_TEST_FILE;
+            const selectedTestGrep = process.env.SELECTED_TEST_GREP;
+            const inputs = {
+              ref: headSha,
+              iterations: '50',
+              target: selectedTarget,
+            };
+            if (selectedTestFile) inputs.test_file = selectedTestFile;
+            if (selectedTestGrep) inputs.test_grep = selectedTestGrep;
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'plasmon-flake-probe.yml',
-              ref: headSha,
-              inputs: {
-                ref: headSha,
-                target: 'all',
-              },
+              ref: dispatchRef,
+              inputs,
             });
-            core.info(`Dispatched exact-head Plasmon Flake Probe for ${headSha}.`);
+
+            core.notice(
+              `Dispatched fresh 50-iteration probe through ${dispatchRef} while pinning exact SHA ${headSha}: target=${selectedTarget}, test_file=${selectedTestFile || '(named target)'}, grep=${selectedTestGrep || '(none)'}. Quarantine remains excluded.`,
+            );
+
+      - name: Summarize labeled dispatch
+        if: steps.scope.outputs.eligible == 'true' && steps.select.outputs.dispatch == 'true'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          TARGET: ${{ steps.select.outputs.target }}
+          TEST_FILE: ${{ steps.select.outputs.test_file }}
+          TEST_GREP: ${{ steps.select.outputs.test_grep }}
+          REASON: ${{ steps.select.outputs.reason }}
+          SOURCE: ${{ steps.select.outputs.selection_source }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## ci:flake-probe dispatch"
+            echo
+            echo "A new workflow_dispatch was created even if this exact SHA already had earlier PR or probe runs."
+            echo
+            echo "- Dispatch workflow ref: \`$HEAD_REF\`"
+            echo "- Exact SHA passed to probe checkout: \`$HEAD_SHA\`"
+            echo "- Probe iterations: 50"
+            echo "- Target: \`$TARGET\`"
+            if [ -n "$TEST_FILE" ]; then echo "- Test file: \`$TEST_FILE\`"; fi
+            if [ -n "$TEST_GREP" ]; then echo "- Playwright grep: \`$TEST_GREP\`"; fi
+            echo "- Selection: \`$REASON\` from \`$SOURCE\`"
+            echo "- Quarantine: always excluded"
+            echo
+            echo "The branch ref only transports workflow_dispatch. The dispatched workflow receives the immutable SHA as its \`ref\` input and checks out that exact commit."
+            echo "Direct labeled targets run with \`--workers=1 --retries=0 --grep-invert @quarantine\`."
+          } | tee -a "$GITHUB_STEP_SUMMARY"

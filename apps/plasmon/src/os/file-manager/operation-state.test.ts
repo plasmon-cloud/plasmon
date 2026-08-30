@@ -26,7 +26,7 @@ test("operation state preserves a mixed result", () => {
   expect(state.snapshot().failedItems).toBe(1);
 });
 
-test("#92 move state exposes truthful item progress and partial failure", () => {
+test("move state exposes truthful item progress and partial failure", () => {
   const state = new FileOperationState();
   expect(state.begin("move", 3)).toBe(true);
   state.startItem(1, "one.txt");

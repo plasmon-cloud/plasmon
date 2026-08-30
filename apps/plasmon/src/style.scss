@@ -1,5 +1,10 @@
 @use "neutron-design-system/styles.scss";
 @use "./os/desktop/spatial-origin.scss";
+@use "./os/file-manager/theme-surfaces.scss";
+@use "./os/visual/icon-tokens.scss";
+@use "./os/shell/wallpapers.scss";
+@use "./os/shell/wallpaper-visibility.scss";
+@use "./os/shell/desktop-overlays.scss";
 
 @layer nt.tokens, nt.base, nt.layout, nt.components, nt.utilities, app;
 

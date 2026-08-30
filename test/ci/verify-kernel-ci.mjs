@@ -52,9 +52,9 @@ if (pullRequest.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
 }
 
 const push = eventSection("push");
-for (const branch of ["main", "release/0.1.0-r2"]) {
-  if (!push.includes(`      - ${branch}`)) {
-    throw new Error(`Kernel CI direct-push coverage lost ${branch}`);
+for (const branchRole of ["main", "'release/**'"]) {
+  if (!push.includes(`      - ${branchRole}`)) {
+    throw new Error(`Kernel CI direct-push coverage lost ${branchRole}`);
   }
 }
 if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
@@ -116,4 +116,4 @@ forbidFragment("if: steps.kernel_scope.outputs.run_kernel == 'true'", "Kernel CI
 forbidFragment("satisfying required Kernel CI without full kernel build", "Kernel CI old green-noop messaging");
 forbidFragment("continue-on-error: true");
 
-console.log("Kernel CI always-instantiated, job-level skip, fail-closed detector, stable kernel context, and full-lane contracts verified");
+console.log("Kernel CI always-instantiated, job-level skip, fail-closed detector, stable kernel context, and release-role full-lane contracts verified");

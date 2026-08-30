@@ -1,5 +1,6 @@
 # FileManager
 
+
 `file-manager/**` is the reusable filesystem presentation and interaction layer used by Desktop and Explorer-style applications. It renders authoritative `FsService` state and coordinates selection, rename, clipboard operations, drag/drop, create/import/download, context commands, Properties/Open With presentation, visibility preferences, operation status, and error reporting.
 
 ## Architecture
@@ -26,14 +27,14 @@ Deterministic behavior lives in production helper modules such as:
 
 `FileManager.tsx` is the composition root and humble React adapter. It retains legitimate transient React state such as selection and currently-open menus/dialogs, subscribes to operation snapshots, and translates rendered events into focused adapters. It no longer contains independent refresh, rename, command, keyboard, drag, marquee, resource-surface, command-bar, context-menu, dialog, or non-Desktop view-rendering implementations.
 
-The main #195 adapter seams are:
+The main React adapter seams are:
 
 - `use-file-manager-directory-state.ts` — React lifecycle around canonical `RefreshGate`, filesystem-event relevance, authoritative listing, and NodeId selection reconciliation;
-- `use-file-manager-commands.ts` — UI invocation wiring that delegates to activation/open, clipboard/paste, create/import, shortcut, Trash/delete, download, `FsService`, and #65 operation authorities;
+- `use-file-manager-commands.ts` — UI invocation wiring that delegates to activation/open, clipboard/paste, create/import, shortcut, Trash/delete, download, `FsService`, and the canonical operation-state authority;
 - `use-file-manager-rename.ts` — inline editor lifecycle around canonical `renameNode`/`FsService` mutation;
 - `use-file-manager-keyboard-adapter.ts` — DOM keyboard translation into existing command/selection/spatial-navigation policy;
-- `use-file-manager-pointer-adapter.ts` — pointer capture, browser hit testing, RAF drag-preview adaptation, contextual drop feedback, drag visual cleanup, and marquee DOM adaptation around existing drag/drop/selection policy. Drag-originated directory moves consume the same injectable FileOperationState accepted by #65, while canonical drop validation, ordered mutation, partial-mutation truth, and stable identity remain in `model.ts`/`FsService`;
-- `FileManagerEntries.tsx`, `FileManagerCommandBar.tsx`, `FileManagerContextMenu.tsx`, and `FileManagerDialogs.tsx` — render-only typed adapters that receive state/callbacks and own no filesystem, open, Trash, classification, placement, or operation authority. For Grid/List/Details, `FileManagerEntries.tsx` consumes the selected `FileManagerViewStrategy`; Desktop instead consumes caller-owned #192 positions directly and remains outside the view-strategy migration.
+- `use-file-manager-pointer-adapter.ts` — pointer capture, browser hit testing, RAF drag-preview adaptation, contextual drop feedback, drag visual cleanup, and marquee DOM adaptation around existing drag/drop/selection policy. Drag-originated directory moves consume the same injectable FileOperationState used by the canonical operation lifecycle, while canonical drop validation, ordered mutation, partial-mutation truth, and stable identity remain in `model.ts`/`FsService`;
+- `FileManagerEntries.tsx`, `FileManagerCommandBar.tsx`, `FileManagerContextMenu.tsx`, and `FileManagerDialogs.tsx` — render-only typed adapters that receive state/callbacks and own no filesystem, open, Trash, classification, placement, or operation authority. For Grid/List/Details, `FileManagerEntries.tsx` consumes the selected `FileManagerViewStrategy`; Desktop instead consumes caller-owned positions directly and remains outside the view-strategy migration.
 
 Import can truthfully expose per-item progress because FileManager already sequences those items. Drag-originated directory moves likewise expose per-item progress because the canonical move loop already has stable source order and item boundaries; failures retain the completed/failed/unprocessed counts without inventing byte progress. Paste exposes running/completed/failed lifecycle and the known total count, but does not invent byte or per-item progress that the existing filesystem paste boundary does not report.
 
@@ -51,6 +52,12 @@ Contextual text such as `Move to Documents` is only a presentation of the canoni
 
 FileManager is not a filesystem repository and must not grow private application-opening or Trash policy. All normal resource activation delegates to the filesystem core's canonical open dispatcher. FileManager may provide presentation-owned directory navigation so an existing Explorer window can navigate in place, but resource classification, shortcut dereference, system/Neutron application opening, and ordinary association dispatch remain filesystem/opening authority concerns.
 
+### Browser download activation
+
+FileManager prepares a selected file's Blob when its context menu opens. The Download action stays disabled until that preparation completes, then performs the existing object-URL/anchor download synchronously in the user action. This preserves browser transient user activation across the asynchronous `FsService` read without changing filesystem authority, filename/MIME/cleanup behavior, or the Kernel app-frame sandbox contract. Dismissing the menu or unmounting FileManager invalidates pending preparation, so a late read cannot retain or publish a stale Blob. A packaged/browser test remains the authority for proving the resulting browser-owned download; deterministic tests cover the helper and preparation seam only.
+
+The core hosted package is the compatibility profile for a legacy hosted runtime whose app frame does not permit browser downloads. Both the asynchronous fallback and prepared synchronous action check that boundary before claiming success and surface the resulting error through FileManager's ErrorBanner. Standalone previews and profiles paired with Kernel download support retain the normal object-URL/anchor path.
+
 Ordinary Delete delegates to the filesystem core's canonical Trash service. FileManager retains confirmation, selection reconciliation, and visible error presentation, while protection decisions, Trash metadata, stable-identity moves, restore, permanent deletion, and emptying remain filesystem authority concerns.
 
 Create Shortcut eligibility follows canonical filesystem resource capabilities. The filesystem `createShortcut()` primitive owns shortcut metadata, unique-name allocation, and stable `NodeId` targets; FileManager owns command presentation and the created shortcut's selection, focus, inline rename, and visible error handling. Send to Desktop is the same shortcut operation with `/Desktop` resolved as the destination: the original resource is never moved or copied, including protected system or installed-application resources.
@@ -61,7 +68,7 @@ Hidden-resource classification also remains filesystem-owned. FileManager's `Sho
 
 Grid, List, and Details are explicit rendered strategies over one canonical FileManager model. `FileManager.tsx` selects the strategy from the existing presentation value and passes that strategy, rather than raw non-Desktop presentation state, into the entries adapter. The strategy supplies the shared `FileEntry` presentation, view-specific navigation policy, and view-owned arrangement metadata such as the Details column labels. The entries adapter keeps one NodeId-keyed `FileEntry` mapping and one callback surface for selection, open, rename, context menu, pointer/drag, and drop behavior.
 
-Desktop is intentionally not a fourth migrated strategy. Desktop keeps the shared FileEntry/resource semantics but consumes #192 caller-owned NodeId positions through the explicit Desktop entries mode. A view strategy must not acquire filesystem, activation/open, rename execution, Trash, clipboard, operation-state, resource-classification/presentation, FileEntry, or Desktop-placement authority.
+Desktop is intentionally not a fourth migrated strategy. Desktop keeps the shared FileEntry/resource semantics but consumes caller-owned NodeId positions through the explicit Desktop entries mode. A view strategy must not acquire filesystem, activation/open, rename execution, Trash, clipboard, operation-state, resource-classification/presentation, FileEntry, or Desktop-placement authority.
 
 ### List presentation
 
@@ -69,7 +76,7 @@ List is deliberately distinct from Grid and Details. At normal Explorer widths i
 
 List arrow navigation follows the geometry that the browser actually rendered. The FileManager pointer/browser adapter supplies current entry rectangles to the pure `spatialNeighborId()` helper, which returns another stable `NodeId`; the existing `selectNode()` path then remains selection authority. If there is no resource in the requested spatial direction, focus remains on the current resource. Grid uses the same browser-rectangle spatial contract for its responsive two-dimensional arrangement. Details remains ordered-row navigation. Open, rename, context menu, drag/drop, shortcut/resource presentation, operation progress, and filesystem operations remain the same shared FileEntry/FileManager paths used by all three strategies.
 
-Reference investigation for #173 found that daedalOS also models List as a dedicated compact FileManager view with compact rows while reusing shared focus/keyboard infrastructure. Plasmon's accepted #173 contract is more specific: normal-width List must visibly form multiple compact columns and horizontal arrow navigation must follow the resulting geometry. This note does not freeze an exact column count, breakpoint, or CSS mechanism.
+Reference investigation found that daedalOS also models List as a dedicated compact FileManager view with compact rows while reusing shared focus/keyboard infrastructure. Plasmon's current contract is more specific: normal-width List must visibly form multiple compact columns and horizontal arrow navigation must follow the resulting geometry. This note does not freeze an exact column count, breakpoint, or CSS mechanism.
 
 ### Resource presentation boundary
 
@@ -77,13 +84,13 @@ FileManager consumes the integrated resource classifier and the shared Visual pr
 
 This means FileManager still owns presentation lifecycle that genuinely depends on its surface, such as image-thumbnail leases and resolving a shortcut target's metadata through `FsService`; it does **not** own MIME/type classification, native handler identity, application artwork fallback, shortcut execution, or shared icon sizing. Shortcut target artwork is composed with the shared shortcut overlay rather than replaced.
 
-Desktop selected/focused label expansion and inline-rename geometry are FileEntry presentation concerns only. The #192 Desktop controller remains the sole allocator/reconciler of NodeId-keyed positions, and the shared #190 Visual seam remains the source of resource/application presentation identity.
+Desktop selected/focused label expansion and inline-rename geometry are FileEntry presentation concerns only. The Desktop controller remains the sole allocator/reconciler of NodeId-keyed positions, and the shared Visual seam remains the source of resource/application presentation identity.
 
 ## Refactor direction
 
-Keep the #195 decomposition boundary: deterministic policy and canonical commands remain below React; browser-owned mechanisms stay in narrow adapters; typed render components receive state/callbacks without acquiring domain authority. Do not collapse these seams back into `FileManager.tsx`, and do not create a second Desktop/Explorer command stack merely to support future view work.
+Keep the established decomposition boundary: deterministic policy and canonical commands remain below React; browser-owned mechanisms stay in narrow adapters; typed render components receive state/callbacks without acquiring domain authority. Do not collapse these seams back into `FileManager.tsx`, and do not create a second Desktop/Explorer command stack merely to support future view work.
 
-The #196 strategy boundary is intentionally narrow: later view work may extend deterministic spatial/layout or presentation-arrangement policy through `FileManagerViewStrategy`, but all views must continue to consume the shared FileEntry, selection, activation/open, rename, command, drag/drop, Trash, clipboard, operation-state, resource-classification/presentation, and NodeId contracts. Keep operation state bounded to demonstrated FileManager workflows rather than turning it into a generic job manager.
+The established view-strategy boundary is intentionally narrow: later view work may extend deterministic spatial/layout or presentation-arrangement policy through `FileManagerViewStrategy`, but all views must continue to consume the shared FileEntry, selection, activation/open, rename, command, drag/drop, Trash, clipboard, operation-state, resource-classification/presentation, and NodeId contracts. Keep operation state bounded to demonstrated FileManager workflows rather than turning it into a generic job manager.
 
 ## Testing
 

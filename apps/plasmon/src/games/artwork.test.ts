@@ -10,7 +10,7 @@ import {
 } from "./artwork.ts";
 import { DEMO_GAME_RESOURCE_NAME } from "./demoFixtureBundle.ts";
 
-test("#123 legal demo fixture receives canonical package artwork idempotently", async () => {
+test("legal demo fixture receives canonical package artwork idempotently", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
   const root = await fs.resolvePath("/");
   if (!root) throw new Error("Filesystem root is unavailable");

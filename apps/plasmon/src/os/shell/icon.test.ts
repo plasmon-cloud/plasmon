@@ -2,10 +2,10 @@
 import { expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SHORTCUT_OVERLAY_ASSET, SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
+import { SYSTEM_ICON_ASSETS } from "../visual/assets.ts";
 import { ShellIcon } from "./icon.tsx";
 
-test("Shell renders authoritative image artwork through shared Visual", () => {
+test("Shell preserves authoritative external image artwork through shared Visual", () => {
   const markup = renderToStaticMarkup(createElement(ShellIcon, {
     icon: "/apps/mail/static/icon.svg",
     label: "Mail",
@@ -16,20 +16,22 @@ test("Shell renders authoritative image artwork through shared Visual", () => {
   expect(markup).toContain("object-fit:contain");
 });
 
-test("Shell missing artwork uses the shared application fallback rather than initials", () => {
+test("Shell missing artwork uses the theme-aware shared application fallback rather than initials", () => {
   const markup = renderToStaticMarkup(createElement(ShellIcon, { label: "Neutron Mail" }));
-  expect(markup).toContain(SYSTEM_ICON_ASSETS.application);
+  expect(markup).toContain('data-plasmon-owned-icon="system:application"');
+  expect(markup).toContain('fill="var(--plasmon-icon-primary)"');
   expect(markup).not.toContain("NM");
 });
 
-test("Shell shortcut composition and taskbar sizing are delegated to shared Visual", () => {
+test("Shell owned shortcut composition and taskbar sizing are delegated to theme-aware shared Visual", () => {
   const markup = renderToStaticMarkup(createElement(ShellIcon, {
     icon: SYSTEM_ICON_ASSETS["file-manager"],
     label: "Files",
     shortcut: true,
     context: "taskbar",
   }));
-  expect(markup).toContain(SYSTEM_ICON_ASSETS["file-manager"]);
-  expect(markup).toContain(SHORTCUT_OVERLAY_ASSET);
+  expect(markup).toContain('data-plasmon-owned-icon="system:file-manager"');
+  expect(markup).toContain('data-plasmon-owned-icon="shortcut-overlay"');
+  expect(markup).toContain('fill="var(--plasmon-icon-primary)"');
   expect(markup).toContain('data-icon-context="taskbar"');
 });

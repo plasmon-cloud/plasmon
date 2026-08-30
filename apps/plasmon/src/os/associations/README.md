@@ -1,5 +1,6 @@
 # Associations and Open With
 
+
 `associations/**` implements Plasmon's shared handler catalog, deterministic resource matching, user defaults, Open With model, and logical resource/compatibility parsers used by the association system.
 
 ## Responsibilities

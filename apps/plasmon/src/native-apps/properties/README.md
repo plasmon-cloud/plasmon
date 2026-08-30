@@ -1,5 +1,6 @@
 # Properties
 
+
 Properties is the native application wrapper for shared filesystem/resource inspection.
 
 `PropertiesApp.tsx` is primarily presentation. Resource path/type/content/default-handler/logical metadata should be derived from filesystem and association services so Properties agrees with FileManager, Search, and opening behavior.

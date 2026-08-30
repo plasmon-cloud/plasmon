@@ -12,7 +12,7 @@ export interface PlasmonOSProps {
 }
 
 /**
- * Integration-owned Wave 2 composition root. Native applications render in
+ * Integration-owned OS composition root. Native applications render in
  * Plasmon-managed windows; real Neutron Elements are only opened through the
  * Shell/NeutronBridge and remain Kernel-owned sibling tiles.
  */
@@ -41,6 +41,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
       filesystemOpen={services.filesystem.open}
       openService={services.openService}
       startMenu={services.startMenu}
+      hiddenVisibility={services.hiddenVisibility}
     >
       <AltTabBoundary process={services.process} windows={services.windows}>
         <div className="plasmon-os-workspace">

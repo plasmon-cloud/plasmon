@@ -1,5 +1,6 @@
 # Photos
 
+
 Photos is the native image viewer for browser-supported image resources.
 
 `media.ts` owns deterministic image classification/object-URL and sibling-navigation helpers. `fullscreen.ts` wraps optional browser fullscreen behavior. `Photos.tsx` renders the viewer and navigation UI.

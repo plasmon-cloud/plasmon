@@ -11,6 +11,7 @@ import {
 } from "../reducer/apps.ts";
 import type { TileInstance, WorkspaceId } from "./types.ts";
 import { usesUnprefixedAppFrameOrigin } from "../capabilities/plan.ts";
+import { AppTileFrameIframe } from "./AppTileFrameIframe.tsx";
 import { nextStartedTileRuntime } from "./tile_frame_lifecycle.ts";
 import {
   assertRuntimeFrameUrl,
@@ -118,24 +119,17 @@ export const AppTileFrame = memo(function AppTileFrame({
   if (!appInstalled || !frameStarted || !runtimeIdentity) return null;
 
   return (
-    <iframe
-      key={`${tile.id}:${runtimeIdentity}`}
-      ref={iframeRef}
-      className="tile-iframe"
-      data-tid="app-frame"
-      data-app-id={tile.appId}
-      data-tile-id={tile.tileId}
-      data-instance-id={tile.id}
+    <AppTileFrameIframe
+      tile={tile}
+      runtimeIdentity={runtimeIdentity}
+      src={src}
+      iframeRef={iframeRef}
       onLoad={() => {
         loadedRuntimeRef.current = runtimeIdentity;
         if (active) {
           ensureFrameEndpointConnected(iframeRef.current?.contentWindow ?? null);
         }
       }}
-      sandbox="allow-scripts"
-      src={src}
-      title={tile.title}
-      {...({ credentialless: "true" } as Record<string, string>)}
     />
   );
 });

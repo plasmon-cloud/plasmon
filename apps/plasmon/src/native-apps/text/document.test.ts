@@ -191,7 +191,7 @@ test("Save As creates a new node and preserves the original", async () => {
   session.dispose();
 });
 
-test("#415 Save As stays filename-derived and same-NodeId rename updates language", async () => {
+test("Save As stays filename-derived and same-NodeId rename updates language", async () => {
   const fs = new TinyFs();
   const original = fs.seed("notes.txt", "const answer = 42;", "text/plain");
   const session = new DocumentSession(fs);
@@ -230,7 +230,7 @@ test("#415 Save As stays filename-derived and same-NodeId rename updates languag
   session.dispose();
 });
 
-test("#415 unsupported Save As names intentionally pin the safe plaintext fallback", async () => {
+test("unsupported Save As names intentionally pin the safe plaintext fallback", async () => {
   expect(textSaveAsMime("example.js")).toBeUndefined();
   expect(textSaveAsMime("example.txt")).toBeUndefined();
   expect(textSaveAsMime("notes.unknown")).toBe("text/plain");

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
+import {
+  plasmonBranchRole,
+  releaseBranchGlob,
+} from "./plasmon-ci-policy.mjs";
 
-const releaseBranch = "release/0.1.0-r2";
+const releaseBranchLine = `      - '${releaseBranchGlob}'`;
 
 const gates = [
   {
@@ -21,7 +25,7 @@ const gates = [
       "run_packaged_smoke",
       "Detect packaged-smoke-relevant changes",
     ],
-    pushBranches: [releaseBranch],
+    pushBranches: [releaseBranchLine],
   },
   {
     id: "browser",
@@ -41,8 +45,8 @@ const gates = [
       "Detect specialist-browser-relevant changes",
     ],
     pushBranches: [
-      "version-0.1.0-os",
-      releaseBranch,
+      "      - version-0.1.0-os",
+      releaseBranchLine,
     ],
   },
   {
@@ -55,14 +59,14 @@ const gates = [
       "npm run plasmon:local:prepare",
       "npm run plasmon:local:status",
       "npm run plasmon:local:reinstall",
-      "NEUTRON_NDEPLOY_CONFIG=plasmon-local.ndeploy.json npx --no-install playwright test test/e2e/plasmon-persistence.spec.ts",
+      "npm run test:e2e:plasmon:persistence",
     ],
     forbiddenPrSelectionFragments: [
       "persistence_scope",
       "run_persistence",
       "Detect persistence-relevant changes",
     ],
-    pushBranches: [releaseBranch],
+    pushBranches: [releaseBranchLine],
   },
 ];
 
@@ -84,7 +88,7 @@ function eventSection(lines, eventName) {
 
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^  [A-Za-z0-9_-]+:\s*$/.test(lines[index])) {
+    if (/^  [A-Za-z0-9_-]+:\s*$/u.test(lines[index])) {
       end = index;
       break;
     }
@@ -95,7 +99,7 @@ function eventSection(lines, eventName) {
 function stepSectionFromIndex(lines, start) {
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    if (/^      - name: /.test(lines[index])) {
+    if (/^      - name: /u.test(lines[index])) {
       end = index;
       break;
     }
@@ -115,41 +119,37 @@ function stepCount(source, stepName) {
 }
 
 function assertUnconditionalStep(step, label) {
-  if (/^        if:/m.test(step)) {
+  if (/^        if:/mu.test(step)) {
     throw new Error(`${label} must run unconditionally on every PR`);
   }
 }
 
-function assertPushBranch(path, branch) {
-  const source = readFileSync(path, "utf8");
-  const push = eventSection(source.split(/\r?\n/), "push");
-  if (!push.includes(`      - ${branch}`)) {
-    throw new Error(`${path} direct-push coverage lost required branch ${branch}`);
-  }
-  return push;
-}
-
 function assertUnfilteredReleasePush(path) {
-  const push = assertPushBranch(path, releaseBranch);
-  if (push.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
-    throw new Error(`${path} cannot path-filter ${releaseBranch} pushes; every release push must schedule this required gate`);
+  const source = readFileSync(path, "utf8");
+  const push = eventSection(source.split(/\r?\n/u), "push");
+  if (!push.includes(releaseBranchLine)) {
+    throw new Error(`${path} direct-push coverage lost release branch role ${releaseBranchGlob}`);
+  }
+  if (push.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
+    throw new Error(`${path} cannot path-filter release-role pushes; every release push must schedule this required gate`);
+  }
+  if (/release\/0\.1\.0-r\d/u.test(source)) {
+    throw new Error(`${path} hard-codes a concrete release branch instead of the release role`);
   }
   return push;
 }
 
 for (const gate of selectedGates) {
   const source = readFileSync(gate.path, "utf8");
-  const lines = source.split(/\r?\n/);
+  const lines = source.split(/\r?\n/u);
   const pullRequest = eventSection(lines, "pull_request");
 
-  if (pullRequest.some((line) => /^    paths(?:-ignore)?:/.test(line))) {
+  if (pullRequest.some((line) => /^    paths(?:-ignore)?:/u.test(line))) {
     throw new Error(`${gate.context} cannot use a pull_request path filter`);
   }
-
   if (!source.includes(`    name: ${gate.context}`)) {
     throw new Error(`${gate.path} no longer reports stable context ${gate.context}`);
   }
-
   if (source.includes("continue-on-error: true")) {
     throw new Error(`${gate.context} must not mask required-gate failures with continue-on-error`);
   }
@@ -159,7 +159,6 @@ for (const gate of selectedGates) {
   if (stepCount(source, verifierName) !== 1) {
     throw new Error(`${gate.context} must execute its required-gate verifier exactly once`);
   }
-
   const verifier = stepSectionByName(lines, verifierName);
   assertUnconditionalStep(verifier, `${gate.context} required-gate verifier`);
   if (!verifier.includes(verifierCommand)) {
@@ -167,8 +166,8 @@ for (const gate of selectedGates) {
   }
 
   const forbiddenGlobalFragments = [
-    '${{ github.event.pull_request.base.sha }}',
-    '${{ github.event.pull_request.head.sha }}',
+    "${{ github.event.pull_request.base.sha }}",
+    "${{ github.event.pull_request.head.sha }}",
     "git diff --name-only",
   ];
   for (const fragment of [...forbiddenGlobalFragments, ...gate.forbiddenPrSelectionFragments]) {
@@ -190,18 +189,34 @@ for (const gate of selectedGates) {
       throw new Error(`${gate.context} real gate lost required acceptance fragment: ${fragment}`);
     }
   }
-  if (expensiveStep.includes("npm run plasmon:demo:")) {
+  if (gate.id !== "browser" && expensiveStep.includes("npm run plasmon:demo:")) {
     throw new Error(`${gate.context} must use the bounded plasmon:local:* fixture, not the full demo manifest`);
   }
 
-  if (gate.pushBranches) {
-    const push = eventSection(lines, "push");
-    for (const branch of gate.pushBranches) {
-      if (!push.includes(`      - ${branch}`)) {
-        throw new Error(`${gate.context} direct-push coverage lost required branch ${branch}`);
-      }
+  const push = eventSection(lines, "push");
+  for (const branchLine of gate.pushBranches) {
+    if (!push.includes(branchLine)) {
+      throw new Error(`${gate.context} direct-push coverage lost required branch role/legacy branch ${branchLine.trim()}`);
     }
   }
+}
+
+const browserWorkflow = readFileSync(".github/workflows/plasmon-browser-ci.yml", "utf8");
+if (!browserWorkflow.includes("    name: Packaged Playwright demo acceptance")) {
+  throw new Error("Packaged browser workflow lost stable Demo acceptance context");
+}
+const demoLines = browserWorkflow.split(/\r?\n/u);
+const demoStep = stepSectionByName(demoLines, "Package and run Plasmon demo browser acceptance");
+for (const fragment of [
+  "npm run plasmon:demo:prepare",
+  "npm run plasmon:demo:status",
+  "npm run plasmon:demo:reinstall",
+  "npm run test:e2e:plasmon:demo",
+]) {
+  if (!demoStep.includes(fragment)) throw new Error(`Demo gate lost required capability fragment: ${fragment}`);
+}
+if (/test\/e2e\/plasmon-[^\s'"\\]+\.spec\.[cm]?[jt]sx?/u.test(demoStep)) {
+  throw new Error("Demo workflow must select its browser lane semantically instead of enumerating spec files");
 }
 
 const requiredReleasePushWorkflows = [
@@ -215,4 +230,11 @@ for (const path of requiredReleasePushWorkflows) {
   assertUnfilteredReleasePush(path);
 }
 
-console.log(`Required r2 browser gate PR-always-run and unfiltered five-gate release-push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);
+for (const ref of ["release/candidate", "release/demo", "release/future"]) {
+  if (plasmonBranchRole(ref) !== "release") throw new Error(`Release-role policy rejected ${ref}`);
+}
+for (const ref of ["main", "feature/example", "", "release/", "release/bad/name", "release/name with spaces"]) {
+  if (plasmonBranchRole(ref) !== "unknown") throw new Error(`Release-role policy must fail closed for ${ref || "(empty)"}`);
+}
+
+console.log(`Required browser gate PR-always-run, semantic Demo selection, and unfiltered ${releaseBranchGlob} release-role push contracts verified: ${selectedGates.map((gate) => gate.id).join(", ")}`);

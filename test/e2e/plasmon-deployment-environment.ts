@@ -3,6 +3,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 export const PLASMON_LOCAL_MANIFEST = "plasmon-local.ndeploy.json";
 export const PLASMON_DEMO_MANIFEST = "plasmon.ndeploy.json";
+export const PLASMON_WORKSPACE = "neutron-plasmon";
 
 export type PlasmonDeploymentScope = "local" | "demo";
 
@@ -43,6 +44,12 @@ export function manifestForPlasmonDeployment(scope: PlasmonDeploymentScope): str
     case "demo":
       return PLASMON_DEMO_MANIFEST;
   }
+}
+
+export function packageProfileForDeployment(manifestPath: string, workspace: string): string | undefined {
+  return manifestPath === PLASMON_DEMO_MANIFEST && workspace === PLASMON_WORKSPACE
+    ? "demo"
+    : undefined;
 }
 
 function repositoryRoot(): string {
@@ -111,16 +118,67 @@ export function workspacesToPackage(artifacts: readonly DeploymentArtifact[]): s
   return [...new Set(artifacts.map((artifact) => artifact.workspace))];
 }
 
-async function runCommand(command: string[], cwd: string): Promise<void> {
+function packageEnvironmentForDeployment(manifestPath: string, workspace: string): NodeJS.ProcessEnv | undefined {
+  if (workspace !== PLASMON_WORKSPACE) return undefined;
+
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.PLASMON_PACKAGE_PROFILE;
+  const requestedProfile = process.env.PLASMON_PACKAGE_PROFILE?.trim();
+  const profile = requestedProfile || packageProfileForDeployment(manifestPath, workspace);
+  if (profile) env.PLASMON_PACKAGE_PROFILE = profile;
+  return env;
+}
+
+async function runCommand(command: string[], cwd: string, env?: NodeJS.ProcessEnv): Promise<void> {
   const child = Bun.spawn(command, {
     cwd,
     stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
+    ...(env ? { env } : {}),
   });
   const exitCode = await child.exited;
   if (exitCode !== 0) {
     throw new Error(`Command failed (${exitCode}): ${command.join(" ")}`);
+  }
+}
+
+// Runtime diagnostics do not depend on a particular application fixture or
+// browser acceptance profile.
+async function printLinuxRuntimeDiagnostics(reason: string): Promise<void> {
+  if (process.platform !== "linux") return;
+  console.error(`[plasmon-runtime-diagnostics] ${reason}`);
+
+  for (const filename of [
+    "/sys/fs/cgroup/memory.events",
+    "/sys/fs/cgroup/memory.current",
+    "/sys/fs/cgroup/memory.max",
+    "/proc/meminfo",
+  ]) {
+    try {
+      const value = await readFile(filename, "utf8");
+      console.error(`[plasmon-runtime-diagnostics] ${filename}\n${value.trim()}`);
+    } catch (error) {
+      console.error(`[plasmon-runtime-diagnostics] unable to read ${filename}: ${String(error)}`);
+    }
+  }
+
+  try {
+    const child = Bun.spawn(
+      ["ps", "-eo", "pid,ppid,pgid,sid,stat,lstart,cmd"],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    console.error(`[plasmon-runtime-diagnostics] process table (exit ${exitCode})\n${stdout.trim()}`);
+    if (stderr.trim()) {
+      console.error(`[plasmon-runtime-diagnostics] ps stderr\n${stderr.trim()}`);
+    }
+  } catch (error) {
+    console.error(`[plasmon-runtime-diagnostics] unable to capture process table: ${String(error)}`);
   }
 }
 
@@ -143,9 +201,15 @@ export async function prepareDeploymentEnvironment(
   options: DeploymentEnvironmentOptions,
 ): Promise<DeploymentArtifact[]> {
   const repoRoot = resolve(options.repoRoot ?? repositoryRoot());
+  const manifestPath = options.manifestPath;
+  if (!manifestPath) throw new Error("Deployment manifest must be selected explicitly");
   const artifacts = await resolveDeploymentArtifacts({ ...options, repoRoot });
   for (const workspace of workspacesToPackage(artifacts)) {
-    await runCommand(["npm", "--workspace", workspace, "run", "package"], repoRoot);
+    await runCommand(
+      ["npm", "--workspace", workspace, "run", "package"],
+      repoRoot,
+      packageEnvironmentForDeployment(manifestPath, workspace),
+    );
   }
   await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   return artifacts;
@@ -167,7 +231,15 @@ export async function provisionDeploymentEnvironment(
     await verifyDeploymentArchives(artifacts, { ...options, repoRoot });
   }
 
-  await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
+  try {
+    await runCommand(["npm", "run", "provision", "--", manifestPath, action], repoRoot);
+  } catch (error) {
+    await printLinuxRuntimeDiagnostics(`provision ${action} failed`);
+    throw error;
+  }
+  if (action === "status") {
+    await printLinuxRuntimeDiagnostics("post-suite provision status");
+  }
 }
 
 async function main(): Promise<void> {

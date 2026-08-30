@@ -1,14 +1,17 @@
 # Plasmon OS architecture
 
+
 `apps/plasmon/src/os/` is the canonical shared desktop-OS layer for Plasmon. It composes filesystem, associations, process/window management, desktop/FileManager, Shell, Neutron integration, Sharing, and shared presentation while leaving Kernel authority with Neutron.
 
 ## Architectural boundaries
 
 - `contracts/**` defines the shared vocabulary between subsystems.
 - `fs/**` is the filesystem semantics/persistence boundary; UI surfaces consume it rather than becoming storage authorities.
+- `hiddenVisibility.ts` owns the filesystem-backed OS-wide hidden-resource visibility preference. Settings is the mutation surface; Search and Start consume only that global value plus canonical filesystem/target hiddenness, while Explorer composes it with the independent FileManager-local preference as `global || local` without overwriting local state. `integration/**` wires the shared authority but does not duplicate its policy.
 - `associations/**` owns generic handler matching and defaults.
 - `process/**` and `windowing/**` own Plasmon-local native app lifecycle/window state.
 - `context-menu-boundary.ts` owns only the reusable browser-event ownership decision for first-party context menus. Specialized Shell/FileManager/application menus retain command authority; editable controls and explicitly foreign/iframe content remain unclaimed.
+- `resource-command.ts` owns only bounded cross-surface user-action orchestration for commands with demonstrated multiple production consumers. The initial Open command preserves stable NodeId intent and delegates classification, shortcuts, handlers, directory behavior, and opening to the existing filesystem authority.
 - `neutron/**` adapts verified Kernel behavior; it must not invent missing Kernel capabilities.
 - `integration/**` composes public implementations and should not absorb subsystem policy.
 - `sharing/**` owns explicit provider publication/storage semantics and only the authorization orchestration faithfully expressible through current contracts; MTN remains authoritative for cross-AppScope authorization and live provider calls.
@@ -77,4 +80,4 @@ Specific regressions, compatibility exceptions, file-format minutiae, and active
 
 ## Further reading
 
-Read the nearest subsystem `README.md` and `AGENTS.md` before modifying it. Accepted design/history lives under `apps/plasmon/docs/`; repository Neutron behavior is documented under `/doc/`.
+Read the nearest subsystem `README.md` and `AGENTS.md` before modifying it. Current cross-subsystem Plasmon authority is indexed by `apps/plasmon/docs/README.md`; preserved release/refactor/design provenance is under `apps/plasmon/docs/history/`. Repository Neutron behavior is documented under `/doc/`.

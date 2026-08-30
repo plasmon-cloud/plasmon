@@ -16,7 +16,7 @@ function node(id: string, name: string): FsNode {
   };
 }
 
-test("#195 derives filtered render order without changing NodeId selection", () => {
+test("derives filtered render order without changing NodeId selection", () => {
   const nodes = [node("alpha", "Alpha.txt"), node("beta", "Beta.md")];
   const selection = selectNode(emptySelection(), nodes.map((entry) => entry.id), "beta");
 
@@ -33,7 +33,7 @@ test("#195 derives filtered render order without changing NodeId selection", () 
   expect(state.desktopPositions).toEqual({});
 });
 
-test("#195 passes caller-owned Desktop coordinates through only for Desktop presentation", () => {
+test("passes caller-owned Desktop coordinates through only for Desktop presentation", () => {
   const nodes = [node("alpha", "Alpha.txt")];
   const selection = emptySelection();
   const positions = { alpha: { x: 16, y: 24 } };

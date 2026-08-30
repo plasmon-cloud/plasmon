@@ -5,6 +5,9 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  // Browser focus may scroll an overflow:hidden container programmatically,
+  // offsetting manager-owned window geometry from the visible workspace.
+  overflow: clip;
   isolation: isolate;
 }
 
@@ -15,9 +18,9 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  color: var(--plasmon-text, #f4f4f4);
-  background: var(--plasmon-surface-elevated, #202020);
-  border: 1px solid color-mix(in srgb, var(--plasmon-text, #fff) 12%, transparent);
+  color: var(--plasmon-text-primary);
+  background: var(--plasmon-window-background);
+  border: 1px solid var(--plasmon-border-strong);
   border-radius: var(--plasmon-radius-window, 10px);
   box-shadow: var(--plasmon-shadow-window, 0 18px 48px rgb(0 0 0 / 35%));
   font-family: var(--plasmon-font-ui, system-ui, sans-serif);
@@ -38,11 +41,7 @@
 }
 
 .plasmon-window--active {
-  border-color: color-mix(
-    in srgb,
-    var(--plasmon-accent, #4cc2ff) 58%,
-    var(--plasmon-border-strong, rgba(255, 255, 255, 0.18))
-  );
+  border-color: var(--plasmon-selection-border);
   box-shadow: var(--plasmon-shadow-window, 0 20px 54px rgb(0 0 0 / 42%));
 }
 
@@ -55,10 +54,10 @@
   position: absolute;
   box-sizing: border-box;
   pointer-events: none;
-  background: color-mix(in srgb, var(--plasmon-accent, #4cc2ff) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--plasmon-accent, #4cc2ff) 64%, transparent);
+  background: var(--plasmon-selection);
+  border: 1px solid var(--plasmon-selection-border);
   border-radius: var(--plasmon-radius-window, 10px);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--plasmon-focus-ring) 22%, transparent);
   opacity: .9;
 }
 
@@ -83,7 +82,9 @@
   justify-content: space-between;
   min-width: 0;
   height: var(--plasmon-titlebar-height, 32px);
-  background: color-mix(in srgb, var(--plasmon-surface-elevated, #202020) 92%, var(--plasmon-text, #fff) 8%);
+  color: var(--plasmon-text-primary);
+  background: var(--plasmon-window-titlebar);
+  border-bottom: 1px solid var(--plasmon-border-subtle);
   user-select: none;
   touch-action: none;
   cursor: grab;
@@ -137,7 +138,7 @@
   height: var(--plasmon-titlebar-height, 32px);
   padding: 0;
   place-items: center;
-  color: inherit;
+  color: var(--plasmon-text-primary);
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -145,16 +146,20 @@
   transition: background var(--plasmon-motion-fast, 120ms) ease, color var(--plasmon-motion-fast, 120ms) ease;
 }
 
-.plasmon-window__control:hover,
+.plasmon-window__control:hover {
+  background: var(--plasmon-control-hover);
+}
+
 .plasmon-window__control:focus-visible {
-  background: color-mix(in srgb, var(--plasmon-text, #fff) 10%, transparent);
-  outline: none;
+  background: var(--plasmon-control-hover);
+  outline: 2px solid var(--plasmon-focus-ring);
+  outline-offset: -2px;
 }
 
 .plasmon-window__control--close:hover,
 .plasmon-window__control--close:focus-visible {
-  color: #fff;
-  background: #c42b1c;
+  color: var(--plasmon-accent-ink);
+  background: var(--plasmon-danger);
 }
 
 .plasmon-window__control svg {
@@ -170,8 +175,8 @@
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  color: var(--plasmon-text, #f4f4f4);
-  background: var(--plasmon-surface, #171717);
+  color: var(--plasmon-text-primary);
+  background: var(--plasmon-window-background);
 }
 
 .plasmon-window__resize {

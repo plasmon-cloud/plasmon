@@ -1,37 +1,39 @@
 .recycle-bin {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
   width: 100%;
   height: 100%;
-  color: var(--plasmon-text, #e8edf4);
-  background: var(--plasmon-surface, #111722);
-  font: 13px/1.4 system-ui, sans-serif;
+  color: var(--plasmon-text-primary);
+  background: var(--plasmon-window-background);
+  font: var(--plasmon-font-size-ui)/var(--plasmon-line-height-ui) var(--plasmon-font-ui);
 }
 
 .recycle-bin button {
-  border: 1px solid var(--plasmon-border, #435064);
-  border-radius: 6px;
+  border: 1px solid var(--plasmon-border-strong);
+  border-radius: var(--plasmon-radius-control);
   padding: 7px 11px;
   color: inherit;
-  background: var(--plasmon-panel, #1a2230);
+  background: var(--plasmon-control-background);
   font: inherit;
   cursor: pointer;
 }
 
 .recycle-bin button:hover:not(:disabled) {
-  background: var(--plasmon-panel-hover, #253147);
+  background: var(--plasmon-control-hover);
 }
 
 .recycle-bin button:disabled {
-  opacity: 0.48;
+  color: var(--plasmon-text-disabled);
+  opacity: 0.72;
   cursor: default;
 }
 
 .recycle-bin button:focus-visible,
 .recycle-bin input:focus-visible {
-  outline: 2px solid var(--plasmon-accent, #7ab7ff);
+  outline: 2px solid var(--plasmon-focus-ring);
   outline-offset: 2px;
 }
 
@@ -41,25 +43,25 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--plasmon-border, #333e50);
-  background: var(--plasmon-panel, #171f2c);
+  border-bottom: 1px solid var(--plasmon-border-subtle);
+  background: var(--plasmon-panel-elevated);
 }
 
 .recycle-bin__header h1 {
   margin: 2px 0 3px;
-  font-size: 21px;
+  font-size: var(--plasmon-font-size-heading);
   line-height: 1.2;
 }
 
 .recycle-bin__header p,
 .recycle-bin__name-cell small {
   margin: 0;
-  color: var(--plasmon-muted, #9ca9bb);
+  color: var(--plasmon-text-secondary);
 }
 
 .recycle-bin__eyebrow {
-  color: var(--plasmon-muted, #9ca9bb);
-  font-size: 11px;
+  color: var(--plasmon-text-subtle);
+  font-size: var(--plasmon-font-size-small);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -70,35 +72,35 @@
   align-items: center;
   gap: 8px;
   padding: 9px 12px;
-  border-bottom: 1px solid var(--plasmon-border, #333e50);
-  background: var(--plasmon-panel, #171f2c);
+  border-bottom: 1px solid var(--plasmon-border-subtle);
+  background: var(--plasmon-panel-elevated);
 }
 
 .recycle-bin__toolbar-spacer { flex: 1; }
 
 .recycle-bin .recycle-bin__danger-button {
-  border-color: #7b4048;
-  color: #ffd9dd;
-  background: #3b2026;
+  border-color: var(--plasmon-danger);
+  color: var(--plasmon-text-primary);
+  background: color-mix(in srgb, var(--plasmon-danger) 13%, var(--plasmon-control-background));
 }
 
 .recycle-bin .recycle-bin__danger-button:hover:not(:disabled) {
-  background: #542a32;
+  background: color-mix(in srgb, var(--plasmon-danger) 22%, var(--plasmon-control-hover));
 }
 
 .recycle-bin__banner {
   margin: 10px 12px 0;
-  border: 1px solid #486785;
-  border-radius: 6px;
+  border: 1px solid var(--plasmon-selection-border);
+  border-radius: var(--plasmon-radius-control);
   padding: 8px 10px;
-  background: #18283a;
-  color: #d9ebff;
+  background: color-mix(in srgb, var(--plasmon-accent) 9%, var(--plasmon-panel-elevated));
+  color: var(--plasmon-text-primary);
 }
 
 .recycle-bin__banner--error {
-  border-color: #854953;
-  background: #351d22;
-  color: #ffd9dd;
+  border-color: var(--plasmon-danger);
+  background: color-mix(in srgb, var(--plasmon-danger) 10%, var(--plasmon-panel-elevated));
+  color: var(--plasmon-danger);
 }
 
 .recycle-bin__content {
@@ -116,19 +118,19 @@
   gap: 6px;
   height: 100%;
   min-height: 180px;
-  color: var(--plasmon-muted, #9ca9bb);
+  color: var(--plasmon-text-secondary);
   text-align: center;
 }
 
 .recycle-bin__state strong {
-  color: var(--plasmon-text, #e8edf4);
+  color: var(--plasmon-text-primary);
   font-size: 16px;
 }
 
 .recycle-bin__table {
   min-width: 700px;
-  border: 1px solid var(--plasmon-border, #333e50);
-  border-radius: 8px;
+  border: 1px solid var(--plasmon-border-subtle);
+  border-radius: var(--plasmon-radius-control);
   overflow: hidden;
 }
 
@@ -137,13 +139,13 @@
   grid-template-columns: 38px minmax(150px, 1.1fr) minmax(220px, 1.5fr) minmax(150px, 0.9fr) 90px;
   align-items: center;
   min-height: 48px;
-  border-bottom: 1px solid var(--plasmon-border, #2d3747);
-  background: var(--plasmon-surface, #111722);
+  border-bottom: 1px solid var(--plasmon-border-subtle);
+  background: var(--plasmon-window-background);
 }
 
 .recycle-bin__row:last-child { border-bottom: 0; }
-.recycle-bin__row:not(.recycle-bin__row--header):hover { background: #172131; }
-.recycle-bin__row.is-selected { background: #1d3048; }
+.recycle-bin__row:not(.recycle-bin__row--header):hover { background: var(--plasmon-control-hover); }
+.recycle-bin__row.is-selected { background: var(--plasmon-selection); }
 
 .recycle-bin__row > span {
   min-width: 0;
@@ -155,9 +157,9 @@
 
 .recycle-bin__row--header {
   min-height: 36px;
-  color: var(--plasmon-muted, #9ca9bb);
-  background: var(--plasmon-panel, #171f2c);
-  font-size: 11px;
+  color: var(--plasmon-text-secondary);
+  background: var(--plasmon-panel-elevated);
+  font-size: var(--plasmon-font-size-small);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -174,4 +176,40 @@
 .recycle-bin__name-cell strong {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.recycle-bin__confirmation-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(4 8 14 / 68%);
+}
+
+.recycle-bin__confirmation {
+  width: min(440px, 100%);
+  border: 1px solid var(--plasmon-border-strong);
+  border-radius: var(--plasmon-radius-panel);
+  padding: 18px;
+  background: var(--plasmon-panel-elevated);
+  box-shadow: var(--plasmon-shadow-panel);
+}
+
+.recycle-bin__confirmation h2 {
+  margin: 0 0 8px;
+  font-size: var(--plasmon-font-size-heading);
+}
+
+.recycle-bin__confirmation p {
+  margin: 0;
+  color: var(--plasmon-text-secondary);
+}
+
+.recycle-bin__confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
 }

@@ -14,7 +14,14 @@ import { FileOperationClipboard } from "./model.ts";
 import { collisionFreeCopyName, normalizedCollisionName, pasteClipboardCollisionAware } from "./clipboard.ts";
 import { createDocument, createGeneratedFolder } from "./create-import.ts";
 import { deleteFilesystemNodes } from "./delete.ts";
-import { downloadFsNode, readDownloadBlob, type DownloadEnvironment } from "./download.ts";
+import {
+  downloadBlob,
+  downloadCompatibilityError,
+  downloadFsNode,
+  HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
+  readDownloadBlob,
+  type DownloadEnvironment,
+} from "./download.ts";
 import { directoryDropTargetId } from "./drop-target.ts";
 import { fileEntryClassName } from "./FileEntry.tsx";
 import { fileManagerKeyboardCommand, isEditingKeyboardTarget } from "./keyboard.ts";
@@ -45,6 +52,7 @@ function node(
 class Gate3Fs implements FsService {
   readonly nodes = new Map<NodeId, FsNode>();
   readonly bytes = new Map<NodeId, Uint8Array>();
+  readCalls = 0;
   readonly calls: Array<{ op: string; id?: NodeId; target?: NodeId; name?: string; recursive?: boolean }> = [];
   private sequence = 0;
 
@@ -97,6 +105,7 @@ class Gate3Fs implements FsService {
   }
 
   async read(id: NodeId, range?: FsReadRange): Promise<Uint8Array> {
+    this.readCalls += 1;
     const value = this.bytes.get(id) ?? new Uint8Array();
     if (!range) return value.slice();
     return value.slice(range.offset, range.offset + range.length);
@@ -275,6 +284,55 @@ test("Download reads FsService bytes, keeps filename/MIME, and revokes its objec
     href: "blob:test",
     download: "movie.bin",
   });
+});
+
+test("prepared downloads click the browser anchor without another async boundary", () => {
+  const preparedNode = { ...node("file", "root", "prepared.txt"), size: 5 };
+  let clicked = false;
+  const environment: DownloadEnvironment = {
+    createObjectURL: () => "blob:prepared",
+    revokeObjectURL: () => {},
+    createAnchor: () => ({
+      href: "",
+      download: "",
+      click: () => { clicked = true; },
+      remove: () => {},
+    }),
+    scheduleCleanup: (callback) => callback(),
+  };
+
+  downloadBlob(preparedNode, new Blob(["ready"]), environment);
+  expect(clicked).toBe(true);
+});
+
+test("hosted core-profile downloads fail before reads in both prepared and unprepared paths", async () => {
+  expect(downloadCompatibilityError(true, true)).toBe(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
+  expect(downloadCompatibilityError(false, true)).toBeNull();
+  expect(downloadCompatibilityError(true, false)).toBeNull();
+
+  const file = node("file", "root", "movie.bin");
+  const fs = new Gate3Fs([node("root", null, "", "directory"), file]);
+  const environment: DownloadEnvironment = {
+    assertAvailable: () => {
+      const message = downloadCompatibilityError(true, true);
+      if (message) throw new Error(message);
+    },
+    createObjectURL: () => "blob:unused",
+    revokeObjectURL: () => undefined,
+    createAnchor: () => ({
+      href: "",
+      download: "",
+      click: () => undefined,
+      remove: () => undefined,
+    }),
+    scheduleCleanup: () => undefined,
+  };
+
+  await expect(downloadFsNode(fs, file, environment)).rejects.toThrow(HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE);
+  expect(fs.readCalls).toBe(0);
+  expect(() => downloadBlob(file, new Blob(["ready"]), environment)).toThrow(
+    HOSTED_DOWNLOAD_UNAVAILABLE_MESSAGE,
+  );
 });
 
 test("shared shortcut nodes render as shortcuts and preserve their own NodeId on rename/move", async () => {

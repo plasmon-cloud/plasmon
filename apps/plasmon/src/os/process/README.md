@@ -1,5 +1,6 @@
 # Native process runtime
 
+
 `process/**` implements Plasmon-local native application registration, process lifecycle, lazy component hosting, and synchronization with the window manager.
 
 A native application definition, a running process record, a window, a filesystem resource, a logical Atom, and a Neutron Element/AppScope are separate identities.

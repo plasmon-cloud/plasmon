@@ -27,7 +27,7 @@ function dependencies(raw: PersistentFsService) {
   };
 }
 
-test("#89 filesystem core ready reconciles one stable MonacoEditor Program Files runtime", async () => {
+test("filesystem core ready reconciles one stable MonacoEditor Program Files runtime", async () => {
   const raw = new PersistentFsService(new MemoryFsRepository());
 
   const firstCore = createFilesystemCore(dependencies(raw));

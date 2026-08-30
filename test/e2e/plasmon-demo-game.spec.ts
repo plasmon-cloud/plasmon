@@ -152,11 +152,10 @@ async function savePackagedDemoGame(
   return { app, savedDemo, pageErrors, consoleErrors };
 }
 
-// #250/#123/#202/#64 remain required. #124's flaky blob-publication assertion
-// is isolated below instead of quarantining this normal packaged demo journey.
+// The normal packaged demo journey remains required. The flaky blob-publication
+// assertion is isolated below instead of quarantining this normal demo journey.
 test(
   "explicit packaged demo fixture opens through the normal js-dos desktop path",
-  { tag: ["@issue-250", "@issue-123", "@issue-202", "@issue-64"] },
   async ({ page, request }) => {
     const { app, savedDemo, pageErrors, consoleErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: true });
     await activateFileManagerEntry(savedDemo);
@@ -172,12 +171,13 @@ test(
   },
 );
 
-// #304 quarantines exactly the flaky #124 browser-readiness observation. The
-// blob: requirement remains executable debt; static package artwork is not an
-// acceptable substitute. Targeted flake-probe validation runs this with retries=0.
+// The machine-readable quarantine isolates exactly the flaky saved-preview
+// browser-readiness observation. The blob: requirement remains executable debt;
+// static package artwork is not an acceptable substitute. Targeted flake-probe
+// validation runs this with retries=0.
 test(
   "saved js-dos resource publishes a blob-backed preview after save",
-  { tag: ["@r2-quarantine", "@issue-124", "@issue-304"] },
+  { tag: ["@quarantine", "@saved-preview"] },
   async ({ page, request }) => {
     const { savedDemo, pageErrors } = await savePackagedDemoGame(page, request, { verifyStaticArtwork: false });
     const savePreview = savedDemo.locator("img.plasmon-media-thumbnail").first();

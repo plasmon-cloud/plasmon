@@ -32,14 +32,14 @@ export interface BrowserHealthLedgerOptions {
   readonly allow?: readonly BrowserHealthAllowRule[];
 }
 
-const R2_KNOWN_CHROMIUM_SANDBOX_WARNING =
+const KNOWN_CHROMIUM_SANDBOX_WARNING =
   "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.";
 
-const R2_KNOWN_BROWSER_HEALTH_ALLOW: readonly BrowserHealthAllowRule[] = Object.freeze([
+const KNOWN_BROWSER_HEALTH_ALLOW: readonly BrowserHealthAllowRule[] = Object.freeze([
   {
     kind: "console.warn",
-    message: R2_KNOWN_CHROMIUM_SANDBOX_WARNING,
-    reason: "#305 exact Chromium sandbox diagnostic quarantine; unknown warnings remain failures",
+    message: KNOWN_CHROMIUM_SANDBOX_WARNING,
+    reason: "exact Chromium sandbox diagnostic quarantine; unknown warnings remain failures",
   },
 ]);
 
@@ -164,9 +164,9 @@ function failedResponseIssue(response: Response): BrowserHealthIssue {
  * pathname-prefix matching exist only for browser diagnostics containing
  * dynamic origins, hashes, or stack text.
  *
- * r2 additionally carries one release-scoped exact diagnostic quarantine from
- * #305. It matches the full Chromium warning text only; every other console
- * warning/error continues through the strict failure path.
+ * One exact Chromium sandbox diagnostic remains quarantined by message. It
+ * matches the full warning text only; every other console warning/error
+ * continues through the strict failure path.
  */
 export function installPlasmonBrowserHealth(
   page: Page,
@@ -174,7 +174,7 @@ export function installPlasmonBrowserHealth(
 ): InstalledBrowserHealth {
   const origins = normalizedOrigins(options.firstPartyOrigins);
   const ledger = new BrowserHealthLedger({
-    allow: [...R2_KNOWN_BROWSER_HEALTH_ALLOW, ...(options.allow ?? [])],
+    allow: [...KNOWN_BROWSER_HEALTH_ALLOW, ...(options.allow ?? [])],
   });
 
   const onPageError = (error: Error): void => {

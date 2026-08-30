@@ -1,5 +1,6 @@
 # Markdown editor
 
+
 Markdown is a Plasmon native document application built on the shared Monaco browser-runtime host in `../shared/monaco/`, the shared document session from `../text/`, and a sanitized rendered preview.
 
 `MarkdownEditor.tsx` coordinates edit/split/preview presentation. `MarkdownPreview.tsx` and `render.ts` own rendered Markdown presentation/sanitization. Loading, dirty state, save/conflict behavior, persistence, and dirty-close decisions reuse the shared Text document infrastructure, including the same deterministic close model and Save / Discard / Cancel prompt. Monaco editor/model/worker lifecycle is not Text- or Markdown-owned; both apps consume `MonacoEditorHost`.
@@ -10,7 +11,7 @@ Ordinary close remains Process-owned; Markdown supplies only the same document d
 
 ## Preview rendering
 
-Preview and Split render standard Markdown through Marked and then sanitize the generated HTML through DOMPurify. Plasmon does not rewrite invalid Markdown syntax into a private dialect at the preview boundary.
+Preview and Split render Markdown through Marked and then sanitize the generated HTML through DOMPurify. Plasmon has one deliberately narrow compatibility rule for a standalone top-level compact heading at column zero: source such as `#hello` is presented to Marked as `# hello` without rewriting the editor or persisted document. That compatibility rule does not apply to fenced code, indented code, `##...`, or inline `#tag` text. Do not broaden it into a private Markdown dialect or bypass Marked/DOMPurify.
 
 ## Editor commands and formatting
 

@@ -1,11 +1,12 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { FsNode } from "../contracts/index.ts";
-import { PinIcon } from "../visual/primitives.tsx";
+import { PinIcon, SystemIcon, type ResourceIconPresentation } from "../visual/primitives.tsx";
 import { ShellIcon } from "./icon.tsx";
 import type { StartSurfaceViewState } from "./start-surface-state.ts";
+import "./startSurface.scss";
 
 export interface StartItemPresentation {
-  icon?: string;
+  icon?: string | ResourceIconPresentation;
   shortcut: boolean;
   subtitle: string;
   context?: { kind: "native" | "element"; id: string };
@@ -23,12 +24,6 @@ export interface StartSurfaceProps {
   onOpen: (node: FsNode) => void | Promise<void>;
   onPin: (kind: "native" | "element", id: string) => void;
   onSettings: () => void;
-}
-
-function StartSearchMark() {
-  return <svg className="plasmon-shell__system-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" />
-  </svg>;
 }
 
 function focusStartItem(event: ReactKeyboardEvent<HTMLElement>): void {
@@ -65,7 +60,7 @@ export function StartSurface({
   >
     <header><span>Filesystem-backed</span><h2>Start</h2></header>
     <div className="plasmon-shell__search-box">
-      <StartSearchMark />
+      <SystemIcon icon="search" className="plasmon-shell__system-icon" />
       <input
         autoFocus
         value={view.query}
@@ -82,8 +77,10 @@ export function StartSurface({
         <button type="button" disabled={!view.canGoBack} onClick={onBack}>← Back</button>
         <span><strong>{view.trailLabel}</strong><small>Folders and shortcuts are ordinary filesystem nodes.</small></span>
       </div>
-      {view.status.error ? <p role="alert">{view.status.error}</p> : null}
-      {view.status.loading ? <p role="status">Loading Start Menu…</p> : null}
+      <div className="plasmon-shell__start-status">
+        {view.status.error ? <p role="alert">{view.status.error}</p> : null}
+        {view.status.loading ? <p role="status">Loading Start Menu…</p> : null}
+      </div>
       <div className="plasmon-shell__list" onKeyDown={focusStartItem}>
         {view.visibleItems.map((node) => {
           const presentation = presentItem(node);

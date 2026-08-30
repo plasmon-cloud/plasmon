@@ -1,5 +1,6 @@
 # Browser
 
+
 The Browser native app presents HTTP(S) web targets inside a Plasmon native window and offers external navigation when embedded browsing is unsuitable.
 
 `url.ts` owns deterministic URL normalization/validation and resource-to-URL resolution. `Browser.tsx` owns address-bar UI, iframe presentation, loading/error state, and external-window interaction.

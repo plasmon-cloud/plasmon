@@ -5,13 +5,12 @@ import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-// Issue #244 restores this real-browser snapped -> restore -> opposite-edge
+// This acceptance restores the real-browser snapped -> restore -> opposite-edge
 // contract to required serialized Specialist execution. Synchronize on the
 // production drag-session state before moving the top-level Playwright pointer
 // to an iframe edge; do not use sleeps, retries, or WindowManager test hooks.
 test(
   "packaged Plasmon restores a left-snapped native window and previews right snap",
-  { tag: ["@issue-244"] },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);

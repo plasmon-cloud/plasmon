@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { FsNode } from "../../os/contracts/index.ts";
+import type { FsNode, FsService, NodeId } from "../../os/contracts/index.ts";
 import { createHeadlessPlasmonEnvironment } from "../../../test/headlessEnvironment.ts";
 import { ExplorerNavigationModel } from "./navigation.ts";
 
@@ -105,6 +105,55 @@ test("Explorer history resolves stable NodeIds and prunes deleted historical tar
     expect(navigation.snapshot().index).toBe(0);
     expect((await navigation.forward())?.nodeId).toBe(c.id);
   } finally {
+    environment.dispose();
+  }
+});
+
+test("stale Explorer refresh cannot overwrite a newer folder navigation", async () => {
+  const environment = createHeadlessPlasmonEnvironment();
+  let releaseRefresh: (() => void) | null = null;
+  try {
+    await environment.ready;
+    const fs = environment.services.fs;
+    const documents = await requireDirectory(environment, "/Documents");
+    const a = await fs.mkdir(documents.id, "Refresh Race A");
+    const b = await fs.mkdir(documents.id, "Refresh Race B");
+    const initial = await location(fs, a);
+
+    let markRefreshStarted: (() => void) | null = null;
+    const refreshStarted = new Promise<void>((resolve) => { markRefreshStarted = resolve; });
+    const refreshGate = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+    let delayCurrentStat = true;
+    const delayedFs = new Proxy(fs, {
+      get(target, property) {
+        if (property === "stat") {
+          return async (id: NodeId) => {
+            if (delayCurrentStat && id === a.id) {
+              delayCurrentStat = false;
+              markRefreshStarted?.();
+              await refreshGate;
+            }
+            return target.stat(id);
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }) as FsService;
+
+    const navigation = new ExplorerNavigationModel(delayedFs, initial);
+    const refresh = navigation.refreshCurrent();
+    await refreshStarted;
+
+    expect((await navigation.navigateNode(b.id)).nodeId).toBe(b.id);
+    releaseRefresh();
+    releaseRefresh = null;
+
+    expect(await refresh).toBeNull();
+    expect(navigation.current()?.nodeId).toBe(b.id);
+    expect(navigation.snapshot().entries.map((entry) => entry.nodeId)).toEqual([a.id, b.id]);
+  } finally {
+    releaseRefresh?.();
     environment.dispose();
   }
 });

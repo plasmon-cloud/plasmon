@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import {
+  releaseNativeWindowTitlebarDrag,
+  startNativeWindowTitlebarDrag,
+} from "./plasmon-window-pointer.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
-// Issue #277 temporarily quarantines the flaky shared #43 left-edge
-// preview/snap boundary from required r2 Specialist CI. Keep the contract in
-// the Specialist inventory so restoration evidence remains executable while
-// --grep-invert @r2-quarantine prevents this narrow flake from blocking r2.
 test(
-  "packaged Plasmon previews and commits left snap @issue-277",
-  { tag: ["@r2-quarantine", "@issue-277"] },
+  "packaged Plasmon previews and commits left snap",
+  { tag: "@left-snap" },
   async ({ page }) => {
     const runtime = resolveLocalNeutronRuntime();
     const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
@@ -50,17 +50,8 @@ test(
     if (!workspace) throw new Error("Plasmon WindowLayer has no browser bounds");
 
     const snapPreview = app.locator(".plasmon-window-layer [data-window-snap-preview]");
-    const titlebarBox = await titlebar.boundingBox();
-    if (!titlebarBox) throw new Error("Native window titlebar has no browser bounds");
-    const offsetX = Math.min(120, titlebarBox.width / 2);
-    const offsetY = Math.min(16, titlebarBox.height / 2);
-    const dragX = titlebarBox.x + offsetX;
-    const dragY = titlebarBox.y + offsetY;
-
-    await page.mouse.move(dragX, dragY);
-    await page.mouse.down();
-    await expect(dialog).toHaveAttribute("data-interacting", "drag");
-    await page.mouse.move(workspace.x + 1, dragY, { steps: 5 });
+    const dragStart = await startNativeWindowTitlebarDrag(page, dialog, titlebar);
+    await page.mouse.move(workspace.x + 1, dragStart.pageY, { steps: 5 });
     await expect(snapPreview).toHaveAttribute("data-window-snap-preview", "left");
 
     const geometry = await snapPreview.evaluate((element) => {
@@ -93,8 +84,7 @@ test(
     expect(dragBounds.x + dragBounds.width).toBeLessThanOrEqual(workspace.x + workspace.width + 1);
     expect(dragBounds.y + dragBounds.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
 
-    await page.mouse.up();
-    await expect(dialog).not.toHaveAttribute("data-interacting", "drag");
+    await releaseNativeWindowTitlebarDrag(page, dialog);
     await expect(snapPreview).toHaveCount(0);
     await expect(dialog).toHaveAttribute("data-window-snap", "left");
   },

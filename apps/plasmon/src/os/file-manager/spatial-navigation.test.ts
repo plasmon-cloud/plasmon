@@ -16,19 +16,19 @@ const rectangles = new Map<NodeId, SpatialRect>([
   [d, { left: 190, top: 40, right: 370, bottom: 76 }],
 ]);
 
-test("#173 spatial navigation follows rendered rows and columns", () => {
+test("spatial navigation follows rendered rows and columns", () => {
   expect(spatialNeighborId(ordered, a, "right", rectangles)).toBe(b);
   expect(spatialNeighborId(ordered, a, "down", rectangles)).toBe(c);
   expect(spatialNeighborId(ordered, d, "left", rectangles)).toBe(c);
   expect(spatialNeighborId(ordered, d, "up", rectangles)).toBe(b);
 });
 
-test("#173 spatial navigation stays put when no candidate exists", () => {
+test("spatial navigation stays put when no candidate exists", () => {
   expect(spatialNeighborId(ordered, a, "left", rectangles)).toBeNull();
   expect(spatialNeighborId(ordered, d, "right", rectangles)).toBeNull();
 });
 
-test("#173 spatial navigation uses stable order to break equal geometry ties", () => {
+test("spatial navigation uses stable order to break equal geometry ties", () => {
   const e = id("e");
   const f = id("f");
   const tied = new Map<NodeId, SpatialRect>([

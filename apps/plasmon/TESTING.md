@@ -211,7 +211,7 @@ Playwright is not the primary Plasmon development harness. Use it when the accep
 
 The packaged Plasmon specs live under repository-root `test/e2e/` so they reuse the existing Playwright configuration and canonical Neutron provisioning helpers.
 
-`test/e2e/plasmon-review-demo.spec.ts` remains the installed Review boundary proof. It verifies Review exists as an independently installed package, Plasmon exposes `/Apps/Review.neutron`, canonical activation reaches the installed Review iframe/application, representative Review interaction works, and browser errors are surfaced. Projection uniqueness/metadata and canonical open-dispatch policy are already proved below Playwright and should not be broadly duplicated there.
+`test/e2e/plasmon-demo-review.spec.ts` remains the installed Review boundary proof. It verifies Review exists as an independently installed package, Plasmon exposes `/Apps/Review.neutron`, canonical activation reaches the installed Review iframe/application, representative Review interaction works, and browser errors are surfaced. Projection uniqueness/metadata and canonical open-dispatch policy are already proved below Playwright and should not be broadly duplicated there.
 
 Do not grow Playwright into general Desktop/FileManager/Start/Search scripts or screenshot regression unless the acceptance claim itself requires a real browser.
 
@@ -240,13 +240,13 @@ If the existing shared harness lacks only a reusable browser adapter or RTL comp
 
 ## CI
 
-For r2 pull requests, `.github/workflows/plasmon-ci.yml` runs **Plasmon Fast CI on every PR**, independent of changed files, using:
+For pull requests selected by the canonical Plasmon CI branch-role policy, `.github/workflows/plasmon-ci.yml` runs **Plasmon Fast CI** using:
 
 ```sh
 npm --workspace neutron-plasmon test
 ```
 
-Direct-push applicability may retain its explicit branch/path filters; that does not change the complete-PR execution contract.
+Direct-push applicability may retain its explicit branch/path filters; that does not change the pull-request execution contract for branches covered by that policy.
 
 It installs the test dependencies but intentionally avoids Kernel packaging, Motoko/Nix, and Playwright. Fast CI also executes the focused deployment command/manifest regression so the `demo` and `local` namespaces cannot silently converge again.
 
@@ -255,6 +255,12 @@ It installs the test dependencies but intentionally avoids Kernel packaging, Mot
 If an agent environment cannot run Bun locally, push the Issue branch and use Plasmon Fast CI as the feedback loop. `Tests not run` is not a complete handoff when CI is available.
 
 Kernel and independently installed application workflows remain separate required evidence when the changed boundary requires them. Do not weaken or skip those gates to make Plasmon CI green.
+
+### Browser quarantine authority
+
+Required browser CI and Flake Probe use the fixed Playwright tag `@quarantine`. The machine-readable current debt authority is [`../../test/ci/plasmon-quarantine.json`](../../test/ci/plasmon-quarantine.json); [`../../test/ci/QUARANTINED_BROWSER_TESTS.md`](../../test/ci/QUARANTINED_BROWSER_TESTS.md) explains the same current state for contributors. The inventory records which exact semantic acceptances are authorized debt; it does not configure or rename the quarantine tag.
+
+Quarantine is exact-test scoped and must not become a suite skip, retry policy, timeout increase, or generic green-on-failure path. Restoration removes the exact `@quarantine` marker and inventory entry before collecting retry-free proof. Unknown and non-quarantined failures remain hard failures.
 
 ## Required agent workflow
 

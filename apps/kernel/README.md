@@ -6,6 +6,12 @@ apps have no iframe.
 
 It handles app installation.
 
+## Installed app tile-frame sandbox
+
+Installed app tile frames are credentialless opaque frames with the exact sandbox policy `allow-scripts allow-downloads`. `allow-downloads` is required for an installed app to use its existing browser download path (for example, a Blob/object URL followed by an anchor with `download`). The policy intentionally does not grant `allow-same-origin`, `allow-popups`, or `allow-forms`; download capability must not broaden the frame's origin, popup, or form authority.
+
+The iframe attribute and the HTTP response `Content-Security-Policy` are independent enforcement layers. The renderer policy lives in `src/workspace/app_tile_frame_policy.ts`; the response policy is emitted by `backend/main.mo`. Keep both exact values aligned when changing download capability, and update the owning-boundary tests in `test/app_tile_frame_policy.test.ts` and `test/motoko/http_app_asset_sandbox_test.mo` together.
+
 It assembles all Motoko files and compiles them.
 
 It opens dialogs in which users can allow or deny certain things like an app frontend requesting a call to be signed and allowed.

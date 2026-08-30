@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - version-0.1.0-os
-      - release/0.1.0-r2
+      - 'release/**'
   pull_request:
   workflow_dispatch:
 
@@ -38,9 +38,21 @@ jobs:
           set -euxo pipefail
           node test/ci/verify-plasmon-test-inventory.mjs
           node test/ci/verify-plasmon-test-inventory.mjs --self-test-orphan
+          node test/ci/verify-required-browser-gates.mjs
+
+      - name: Verify active provenance policy
+        run: |
+          set -euxo pipefail
+          node test/ci/verify-active-provenance.mjs --self-test
+          node test/ci/verify-active-provenance.mjs
 
       - name: Verify flake-probe workflow contract
-        run: node test/ci/verify-flake-probe.mjs
+        run: |
+          set -euxo pipefail
+          node test/ci/verify-flake-probe.mjs
+          node test/ci/verify-labeled-flake-probe.mjs
+          node test/ci/verify-flake-summary-human.mjs
+          node test/ci/verify-playwright-packet-lifecycle.mjs
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2

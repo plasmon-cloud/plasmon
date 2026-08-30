@@ -1,5 +1,6 @@
 # Desktop
 
+
 `desktop/**` is the Plasmon Desktop presentation over filesystem state. `Desktop.tsx` reuses the shared FileManager interaction surface and persists desktop-specific visual placement metadata.
 
 The Desktop is not a separate file database, application registry, Trash authority, resource-presentation authority, or launch authority. Filesystem contents come from `FsService`; Trash/restore semantics remain in `TrashService`; opening and file operations route through the shared OS services used by other filesystem surfaces.
@@ -33,7 +34,7 @@ It does **not** inspect filesystem resource semantics, choose handlers, classify
 
 Keep `Desktop.tsx` thin. When Desktop and FileManager diverge, prefer improving their shared presentation/model layer while keeping desktop-only concerns limited to workspace placement, background behavior, and desktop-specific interaction conventions.
 
-Do not add another per-surface resource presentation resolver or semantic resource authority while working on placement. The #191 pilot established that deterministic policy extraction is useful only when it preserves and consumes canonical domain seams.
+Do not add another per-surface resource presentation resolver or semantic resource authority while working on placement. Deterministic policy extraction is useful only when it preserves and consumes canonical domain seams.
 
 ## Testing
 

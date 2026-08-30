@@ -8,11 +8,11 @@ import type {
 import { deriveSearchSurfaceViewState, type SearchSurfaceViewState } from "./search-surface-state.ts";
 import {
   LatestSearchController,
-  searchShell,
   subscribeSearchInvalidation,
   type SearchBatch,
   type SearchTab,
 } from "./search.ts";
+import { searchShellVisibleByDefault } from "./searchVisibility.ts";
 
 const EMPTY_SEARCH: SearchBatch = { results: [], warnings: [], truncated: false, capped: false };
 
@@ -31,6 +31,7 @@ export interface SearchSurfaceControllerOptions {
 }
 
 export interface SearchSurfaceController {
+  fs: FsService;
   query: string;
   setQuery(value: string): void;
   tab: SearchTab;
@@ -72,7 +73,7 @@ export function useSearchSurfaceController(
       const controller = new AbortController();
       abort.current = controller;
       void latest.current.run(
-        () => searchShell(options.fs, options.nativeApps, options.elements, query, {
+        () => searchShellVisibleByDefault(options.fs, options.nativeApps, options.elements, query, {
           signal: controller.signal,
           pinnedNative: options.pinnedNative,
           pinnedElements: options.pinnedElements,
@@ -114,5 +115,5 @@ export function useSearchSurfaceController(
     [batch, error, searching, tab],
   );
 
-  return { query, setQuery, tab, setTab, view };
+  return { fs: options.fs, query, setQuery, tab, setTab, view };
 }

@@ -12,7 +12,7 @@
 - Generic opening coordinates resolved handlers/runtimes; do not add filename/application-specific dispatch in composition.
 - Fakes are test/preview seams, never proof of a real Kernel or security capability.
 - Authorization/security integration must fail safely when the required real service is unavailable.
-- Current work routing and ownership come from canonical GitHub Issues/Areas and current Coordinator instructions; historical agent/branch handoffs in Git history or dated records are not active assignments.
+- Current work routing and ownership come from canonical GitHub Issues/Areas and repository assignment/ownership mechanisms; historical agent/branch handoffs in Git history or dated records are not active assignments.
 
 ## Refactor direction
 

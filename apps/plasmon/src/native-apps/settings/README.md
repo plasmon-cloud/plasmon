@@ -1,5 +1,6 @@
 # Settings
 
+
 Settings is the Plasmon-native settings/status surface over shared OS capabilities.
 
 `model.ts` currently contains deterministic settings/status models such as filesystem-backed storage summarization. `Settings.tsx` receives capability callbacks/services rather than importing Shell or subsystem internals directly.

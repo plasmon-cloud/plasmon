@@ -87,9 +87,8 @@ nested `README.md` and `AGENTS.md` files at subsystem ownership boundaries; the
 nearest scoped `AGENTS.md` refines implementation rules for that directory.
 
 The active Plasmon frontend entrypoint is `apps/plasmon/src/index.tsx`, which
-renders `src/os/PlasmonOS.tsx`. Older launcher/GUI experiments under `src/`
-must not be assumed to be the active product merely because they remain in the
-repository.
+renders `src/os/PlasmonOS.tsx`. Current architecture and subsystem ownership are
+documented from `apps/plasmon/docs/README.md` and the nearest scoped README/AGENTS files.
 
 Neutron remains authoritative for Kernel capabilities, security boundaries,
 installation, AppScope isolation, and package/runtime behavior.

@@ -1,5 +1,6 @@
 # Video
 
+
 Video is the native browser-media player for association-selected video files and supported web media targets.
 
 `media.ts` owns deterministic URL validation, media-type hints, native codec capability interpretation, playback error classification, supported web-video normalization, and object-URL lifetime. `VideoPlayer.tsx` owns media/iframe presentation and browser event handling.

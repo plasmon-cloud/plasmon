@@ -70,7 +70,13 @@ export class ExplorerNavigationModel {
   async refreshCurrent(): Promise<ExplorerLocation | null> {
     const current = this.history.current();
     if (!current) return null;
+    const expectedIndex = this.history.snapshot().index;
     const next = await resolveExplorerNode(this.fs, current.nodeId);
+    const latest = this.history.current();
+    if (
+      this.history.snapshot().index !== expectedIndex
+      || latest?.nodeId !== current.nodeId
+    ) return null;
     this.history.replaceCurrent(next);
     return next;
   }

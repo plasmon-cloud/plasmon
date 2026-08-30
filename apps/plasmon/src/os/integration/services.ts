@@ -29,6 +29,7 @@ import {
   type RepositoryCommit,
   type RepositoryState,
 } from "../fs/index.ts";
+import { HiddenVisibilityPreferenceStore } from "../hiddenVisibility.ts";
 import { createNeutronBridge } from "../neutron/index.ts";
 import { NativeApplicationRegistry, NativeProcessController } from "../process/index.ts";
 import { StartMenuReconciliationController } from "../shell/start-menu-reconciliation-controller.ts";
@@ -88,6 +89,7 @@ export interface PlasmonServices {
   openService: OpenService;
   fileClipboard: FileOperationClipboard;
   startMenu: StartMenuReconciliationController;
+  hiddenVisibility: HiddenVisibilityPreferenceStore;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -162,7 +164,7 @@ export function createAssociationDefaultStore(fs: FsService): AssociationDefault
   return new FsServiceAssociationDefaultStore(fs);
 }
 
-function registerWave2Applications(
+function registerNativeApplications(
   nativeApps: NativeApplicationRegistry,
   associations: HandlerAssociationRegistry,
   fsEvents: FsEventSource,
@@ -170,6 +172,7 @@ function registerWave2Applications(
   openAuthority: FileManagerOpenAuthority,
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
+  hiddenVisibility: HiddenVisibilityPreferenceStore,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
@@ -187,7 +190,7 @@ function registerWave2Applications(
     nativeApps.registerWithLoader(jsDosRuntimeDefinition, createJsDosRuntimeLoader());
   }
 
-  const contentLoaders = createContentAppLoaders();
+  const contentLoaders = createContentAppLoaders({ hiddenVisibility });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) throw new Error(`Missing native application loader: ${definition.id}`);
@@ -203,6 +206,7 @@ function registerWave2Applications(
       openAuthority,
       trashAuthority,
       clipboard,
+      hiddenVisibility,
     }),
   );
   nativeApps.registerWithLoader(
@@ -217,7 +221,7 @@ function registerWave2Applications(
 }
 
 /**
- * Wave 2 composition root. In Neutron, filesystem calls are routed to the
+ * Plasmon OS composition root. In Neutron, filesystem calls are routed to the
  * persistent Plasmon background surface through FsRpcClient; standalone
  * preview selects a browser-local repository with safe fallback. Association
  * user defaults and native-window placement persist through that same raw
@@ -246,6 +250,7 @@ export function createPlasmonServices(
   const rawFs = options.filesystemRepository
     ? new PersistentFsService(options.filesystemRepository)
     : createFilesystemService();
+  const hiddenVisibility = new HiddenVisibilityPreferenceStore(rawFs);
   const windows = options.windows ?? new NativeWindowManager();
   const windowPlacement = new NativeWindowPlacementController(
     windows,
@@ -281,7 +286,7 @@ export function createPlasmonServices(
     },
   };
 
-  registerWave2Applications(
+  registerNativeApplications(
     nativeApps,
     associations,
     rawFs,
@@ -289,6 +294,7 @@ export function createPlasmonServices(
     fileManagerOpenAuthority,
     fileManagerTrashAuthority,
     fileClipboard,
+    hiddenVisibility,
   );
 
   filesystem = createFilesystemCore({
@@ -321,5 +327,6 @@ export function createPlasmonServices(
     openService,
     fileClipboard,
     startMenu,
+    hiddenVisibility,
   };
 }

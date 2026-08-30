@@ -5,7 +5,7 @@ import type {
   NativeAppDefinition,
 } from "../os/contracts/index.ts";
 import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "../os/visual/assets.ts";
-import { isHackathonCoreProfile } from "../os/integration/packageProfile.ts";
+import { isCoreProfile } from "../os/integration/packageProfile.ts";
 import type { PhotosProps } from "./photos/Photos.tsx";
 import type { VideoPlayerProps } from "./video/VideoPlayer.tsx";
 import type { BrowserProps } from "./browser/Browser.tsx";
@@ -19,7 +19,7 @@ export const videoHandler: HandlerDefinition = { id: "native:video", kind: "nati
 export const browserHandler: HandlerDefinition = { id: "native:browser", kind: "native", name: "Browser", icon: SYSTEM_ICON_ASSETS.browser, capabilities: ["read", "url"] };
 export const settingsHandler: HandlerDefinition = { id: "native:settings", kind: "native", name: "Settings", icon: SYSTEM_ICON_ASSETS.settings, capabilities: [] };
 
-/** Metadata-only external routing target; Coordinator A owns OpenService execution. */
+/** Metadata-only external routing target; OpenService owns external URL execution. */
 export const externalUrlHandler: HandlerDefinition = { id: "external:url", kind: "external", name: "Open in browser tab", icon: browserHandler.icon, capabilities: ["url"] };
 
 export const textAssociationRules: AssociationRule[] = [
@@ -51,13 +51,13 @@ const coreContentAppDefinitions = [photosAppDefinition, videoAppDefinition, brow
 const coreContentHandlerDefinitions = [photosHandler, videoHandler, browserHandler, settingsHandler, externalUrlHandler] as const;
 const coreContentAssociationRules = [...photosAssociationRules, ...videoAssociationRules, ...browserAssociationRules] as const;
 
-export const contentAppDefinitions = isHackathonCoreProfile
+export const contentAppDefinitions = isCoreProfile
   ? coreContentAppDefinitions
   : [textAppDefinition, markdownAppDefinition, ...coreContentAppDefinitions] as const;
-export const contentHandlerDefinitions = isHackathonCoreProfile
+export const contentHandlerDefinitions = isCoreProfile
   ? coreContentHandlerDefinitions
   : [textHandler, markdownHandler, ...coreContentHandlerDefinitions] as const;
-export const contentAssociationRules = isHackathonCoreProfile
+export const contentAssociationRules = isCoreProfile
   ? coreContentAssociationRules
   : [...textAssociationRules, ...markdownAssociationRules, ...coreContentAssociationRules] as const;
 
@@ -78,7 +78,7 @@ export function createContentAppLoaders(settingsDependencies: SettingsDependenci
     [browserAppDefinition.id, loadBrowserComponent as () => Promise<{ default: ComponentType<BrowserProps> }>],
     [settingsAppDefinition.id, createSettingsLoader(settingsDependencies)],
   ]);
-  if (!isHackathonCoreProfile) {
+  if (!isCoreProfile) {
     loaders.set(textAppDefinition.id, loadTextComponent);
     loaders.set(markdownAppDefinition.id, loadMarkdownComponent);
   }
