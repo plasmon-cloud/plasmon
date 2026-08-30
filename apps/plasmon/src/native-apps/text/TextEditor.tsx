@@ -167,7 +167,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <div style={editorErrorStyle} role="alert">{saveAsError ?? snapshot.error}</div>
       )}
       <NativeAppStatusStrip style={styles.status}>
-        <span>{editorLanguageDisplayName(language)}</span>
+        <span>{editorLanguageDisplayName(language, snapshot.name)}</span>
         <span>UTF-8</span>
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
