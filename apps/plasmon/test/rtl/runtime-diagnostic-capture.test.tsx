@@ -21,7 +21,7 @@ function app(): NativeAppDefinition {
   };
 }
 
-test("a contained native-host crash remains #661-owned and is not reported again globally", async () => {
+test("a contained native-host crash remains host-owned and is not reported again globally", async () => {
   const env = createHeadlessPlasmonEnvironment();
   const observed = observeDiagnostics(env.diagnostics);
   const capture = installRuntimeDiagnosticCapture(env.diagnostics, window);
