@@ -475,9 +475,9 @@
     "source_set_sha256": "fd5e40860abf1d62db56c404486f155e99b05d20ef60696710cfa61e1048bfdf"
   },
   "package_lock": {
-    "bytes": 353164,
+    "bytes": 353875,
     "path": "package-lock.json",
-    "sha256": "617ec067a5cf8c7402c7958c7b9dfe0fa78ac3d9ba67b1e20b1c80bc5015962e"
+    "sha256": "31e6c51444e8cc34e307b62973e0711e399573d20ce193656ada434f86c0bcb8"
   },
   "qualification": {
     "contract_sha256": "74de0cd7497ab0101d48ed58b84a94978bc69ca99d1edde6fa60b1d847c6e91c",
