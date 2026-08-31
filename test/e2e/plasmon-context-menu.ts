@@ -12,5 +12,7 @@ export async function clickNewContextMenuItem(
   await menu.getByRole("menuitem", { name: "New", exact: true }).click();
   const submenu = menu.getByRole("menu", { name: "New submenu" });
   await expect(submenu).toBeVisible();
-  await submenu.getByRole("menuitem", { name, exact: true }).click();
+  const item = submenu.getByRole("menuitem", { name, exact: true });
+  await item.focus();
+  await item.press("Enter");
 }
