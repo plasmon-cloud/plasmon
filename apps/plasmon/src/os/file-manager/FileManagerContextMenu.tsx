@@ -12,6 +12,9 @@ export type FileManagerContextMenuAction =
   | "open"
   | "openWith"
   | "download"
+  | "runScript"
+  | "editScript"
+  | "transpileRun"
   | "cut"
   | "copy"
   | "createShortcut"
@@ -22,6 +25,8 @@ export type FileManagerContextMenuAction =
   | "newFolder"
   | "newText"
   | "newMarkdown"
+  | "newCmd"
+  | "newRun"
   | "import"
   | "paste";
 
@@ -48,6 +53,9 @@ interface FileManagerContextMenuProps {
   node: FsNode | null;
   canOpenWith: boolean;
   canDownload: boolean;
+  canTranspileCmd: boolean;
+  canRunScript: boolean;
+  canEditScript: boolean;
   canCreateShortcut: boolean;
   operationRunning: boolean;
   canPaste: boolean;
@@ -248,7 +256,14 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
     >
       {props.node ? (
         <>
-          <button type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
+          {props.canRunScript ? (
+            <>
+              <button type="button" role="menuitem" onClick={() => props.onAction("runScript")}>Run</button>
+              <button type="button" role="menuitem" disabled={!props.canEditScript} onClick={() => props.onAction("editScript")}>Edit</button>
+            </>
+          ) : (
+            <button type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
+          )}
           {props.node.kind !== "directory" ? (
             <button
               type="button"
@@ -271,6 +286,11 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               Download
             </button>
           ) : null}
+          {props.canTranspileCmd ? (
+            <button type="button" role="menuitem" onClick={() => props.onAction("transpileRun")}>
+              Transpile to .run
+            </button>
+          ) : null}
           <div className="fm-menu-separator" role="separator" />
           <button type="button" role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
           <button type="button" role="menuitem" onClick={() => props.onAction("copy")}>Copy</button>
@@ -289,6 +309,8 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               { id: "folder", label: "New Folder", onSelect: () => props.onAction("newFolder") },
               { id: "text", label: "New Text Document", onSelect: () => props.onAction("newText") },
               { id: "markdown", label: "New Markdown Document", onSelect: () => props.onAction("newMarkdown") },
+              { id: "cmd", label: "New Command Script (.cmd)", onSelect: () => props.onAction("newCmd") },
+              { id: "run", label: "New Run Script (.run)", onSelect: () => props.onAction("newRun") },
             ]}
             open={activeSubmenu === "new"}
             onOpen={() => setActiveSubmenu("new")}

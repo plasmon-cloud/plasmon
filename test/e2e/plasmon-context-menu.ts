@@ -5,7 +5,7 @@ export type PlasmonContextMenuScope = Locator | FrameLocator;
 /** Open an item from the Desktop/FileManager background New submenu. */
 export async function clickNewContextMenuItem(
   scope: PlasmonContextMenuScope,
-  name: "New Folder" | "New Text Document" | "New Markdown Document",
+  name: "New Folder" | "New Text Document" | "New Markdown Document" | "New Command Script (.cmd)" | "New Run Script (.run)",
 ): Promise<void> {
   const menu = scope.getByRole("menu", { name: "Folder background context menu" });
   await expect(menu).toBeVisible();

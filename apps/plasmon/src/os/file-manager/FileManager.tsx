@@ -44,6 +44,7 @@ import { FileManagerEntries } from "./FileManagerEntries.tsx";
 import { FileOperationState, type FileOperationSnapshot } from "./operation-state.ts";
 import { presentFileOperation } from "./operation-presentation.ts";
 import { readSharedShortcut } from "./shortcut.ts";
+import { activateExecutableScript } from "./script-activation.ts";
 import {
   deriveFileManagerRenderState,
   type DesktopPosition,
@@ -88,6 +89,7 @@ export interface FileManagerProps {
   ) => void | Promise<void>;
   onIncomingDropPlacement?: (intent: IncomingDropPlacementIntent) => void | Promise<void>;
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
+  onTranspileCmd?: (node: FsNode) => void | Promise<void>;
   onSnapshot?: (snapshot: FileManagerSnapshot) => void;
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
   className?: string;
@@ -113,6 +115,7 @@ export function FileManager({
   onDesktopReposition,
   onIncomingDropPlacement,
   onOpenDirectory,
+  onTranspileCmd,
   onSnapshot,
   confirmDelete,
   className,
@@ -255,6 +258,12 @@ export function FileManager({
   );
   const operationPresentation = presentFileOperation(operation);
   const canPaste = Boolean(clipboard.snapshot());
+  const scriptExtension = contextNode?.kind === "file"
+    ? contextNode.name.toLowerCase().match(/\.(cmd|run)$/u)?.[1] ?? null
+    : null;
+  const canRunScript = Boolean(scriptExtension && openService && associations?.getHandler("native:terminal"));
+  const canEditScript = Boolean(scriptExtension && openService);
+  const canTranspileCmd = Boolean(scriptExtension === "cmd" && onTranspileCmd);
 
   const menuAction = (action: FileManagerContextMenuAction) => {
     if (action === "newFolder") {
@@ -267,6 +276,14 @@ export function FileManager({
     }
     if (action === "newMarkdown") {
       void commands.createNewDocument("markdown");
+      return;
+    }
+    if (action === "newCmd") {
+      void commands.createNewDocument("cmd");
+      return;
+    }
+    if (action === "newRun") {
+      void commands.createNewDocument("run");
       return;
     }
     if (action === "import") {
@@ -292,6 +309,20 @@ export function FileManager({
       void commands.openNode(contextNode);
       return;
     }
+    if (action === "runScript") {
+      closeContextMenu();
+      if (!openService || !canRunScript) return;
+      void activateExecutableScript(openService, contextNode)
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+      return;
+    }
+    if (action === "editScript") {
+      closeContextMenu();
+      if (!openService || !canEditScript) return;
+      void openService.open("native:text", { nodeId: contextNode.id })
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
+      return;
+    }
     if (action === "openWith") {
       closeContextMenu();
       if (canOpenWith) setOpenWithNode(contextNode);
@@ -299,6 +330,14 @@ export function FileManager({
     }
     if (action === "download") {
       void commands.downloadNode(contextNode);
+      return;
+    }
+    if (action === "transpileRun") {
+      closeContextMenu();
+      if (!onTranspileCmd || !canTranspileCmd) return;
+      void Promise.resolve(onTranspileCmd(contextNode))
+        .then(() => directory.refresh())
+        .catch((cause: unknown) => directory.setError(cause instanceof Error ? cause.message : String(cause)));
       return;
     }
     if (action === "cut") {
@@ -469,6 +508,9 @@ export function FileManager({
           node={contextNode}
           canOpenWith={canOpenWith}
           canDownload={contextNode?.kind === "file" && commands.isDownloadReady(contextNode)}
+          canTranspileCmd={canTranspileCmd}
+          canRunScript={canRunScript}
+          canEditScript={canEditScript}
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}
