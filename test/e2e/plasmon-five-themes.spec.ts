@@ -7,12 +7,12 @@ const APP_ID = "plasmon";
 const TILE_ID = "main";
 
 const THEMES = [
-  { id: "plasmon-graphite", label: "Graphite", scheme: "dark" },
-  { id: "plasmon-verdant", label: "Verdant", scheme: "dark" },
-  { id: "plasmon-midnight", label: "Midnight", scheme: "dark" },
-  { id: "plasmon-ember", label: "Ember", scheme: "dark" },
-  { id: "plasmon-glacier", label: "Glacier", scheme: "light" },
-  { id: "plasmon-rosewood", label: "Rosewood", scheme: "dark" },
+  { id: "plasmon-graphite", label: "Graphite" },
+  { id: "plasmon-verdant", label: "Verdant" },
+  { id: "plasmon-midnight", label: "Midnight" },
+  { id: "plasmon-ember", label: "Ember" },
+  { id: "plasmon-glacier", label: "Glacier" },
+  { id: "plasmon-rosewood", label: "Rosewood" },
 ] as const;
 
 // PocketIC and the installed app have an external startup boundary; all later
@@ -163,6 +163,11 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     const settings = nativeSettingsSurface;
     await expect(settings).toBeVisible();
 
+    const darkAppearance = settings.getByRole("button", { name: "Dark", exact: true });
+    await darkAppearance.click();
+    await expect(darkAppearance).toHaveAttribute("aria-pressed", "true");
+    await expect(shell).toHaveAttribute("data-plasmon-appearance", "dark");
+
     const observed = {
       desktop: new Set<string>(),
       titlebar: new Set<string>(),
@@ -180,6 +185,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
       await choice.click();
       await expect(choice).toHaveAttribute("aria-pressed", "true");
       await expect(shell).toHaveAttribute("data-plasmon-theme", theme.id);
+      await expect(shell).toHaveAttribute("data-plasmon-appearance", "dark");
 
       const desktop = await resolvedToken(shell, "--plasmon-desktop-background");
       const titlebar = await resolvedToken(shell, "--plasmon-window-titlebar");
@@ -215,7 +221,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
       observed.nativeSettings.add(await computed(nativeSettingsSurface, "backgroundColor"));
 
       const scheme = await computed(shell, "colorScheme");
-      expect(scheme).toContain(theme.scheme);
+      expect(scheme).toContain("dark");
       await testInfo.attach(`theme-${theme.id}.png`, {
         body: await page.locator(appSelector).screenshot({ animations: "disabled" }),
         contentType: "image/png",

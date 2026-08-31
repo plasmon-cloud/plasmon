@@ -13,4 +13,11 @@ describe("Text editor presentation", () => {
     expect(editorLanguageDisplayName("typescript")).toBe("TypeScript");
     expect(editorLanguageDisplayName("custom-language")).toBe("custom-language");
   });
+
+  test("identifies Plasmon script formats without claiming generic Bash or TypeScript", () => {
+    expect(editorLanguageDisplayName("shell", "setup.cmd")).toBe("Plasmon Command (.cmd)");
+    expect(editorLanguageDisplayName("typescript", "setup.run")).toBe("Plasmon Run (.run)");
+    expect(editorLanguageDisplayName("shell", "setup.sh")).toBe("Shell");
+    expect(editorLanguageDisplayName("typescript", "setup.ts")).toBe("TypeScript");
+  });
 });

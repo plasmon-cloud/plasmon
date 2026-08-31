@@ -24,7 +24,7 @@ production Plasmon authorities
 - Test-only powers such as global deterministic settlement, fake-effect failure/defer controls, clock manipulation, impossible-state construction, transport fault injection, and assertions do not belong here.
 - Focused subsystem tests should continue testing their subsystem directly. The OS API is primarily for high-level deterministic workflows that span production authorities.
 
-## Current scripting-v1 surface
+## Current scripting surface
 
 The bounded production surface exposes:
 
