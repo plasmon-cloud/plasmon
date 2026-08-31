@@ -88,6 +88,14 @@ import {
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
 import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
+import { createPlasmonOsApi } from "../api/adapter.ts";
+import { ScriptingService } from "../../scripting/service.ts";
+import {
+  createTerminalNativeLoader,
+  terminalAppDefinition,
+  terminalAssociationRules,
+  terminalHandler,
+} from "../../native-apps/terminal/index.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -369,6 +377,11 @@ export function createPlasmonServices(
     diagnostics,
     nativeAppLog,
   );
+  if (!isCoreProfile) {
+    associations.registerHandler(terminalHandler);
+    for (const rule of terminalAssociationRules) associations.registerRule(rule);
+    nativeApps.register(terminalAppDefinition);
+  }
 
   filesystem = createFilesystemCore({
     fs: rawFs,
@@ -406,8 +419,7 @@ export function createPlasmonServices(
   const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {
     diagnostics: shellLog,
   });
-
-  return {
+  const services: PlasmonServices = {
     fs,
     fsEvents: fs,
     filesystem,
@@ -425,4 +437,22 @@ export function createPlasmonServices(
     hiddenVisibility,
     shellPreferences,
   };
+
+  const scripting = new ScriptingService({ os: createPlasmonOsApi({ services }) });
+  nativeApps.setLoader(
+    explorerAppDefinition.id,
+    createExplorerNativeLoader({
+      fsEvents: fs,
+      associations,
+      openService,
+      openAuthority: fileManagerOpenAuthority,
+      trashAuthority: fileManagerTrashAuthority,
+      clipboard: fileClipboard,
+      hiddenVisibility,
+      transpileCmdFile: async (nodeId) => scripting.transpileCmdFile(await fs.pathOf(nodeId)),
+    }),
+  );
+  if (!isCoreProfile) nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
+
+  return services;
 }

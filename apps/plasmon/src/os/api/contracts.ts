@@ -13,11 +13,11 @@ export interface OsResource {
 /** Semantic result of opening one filesystem resource through the canonical dispatcher. */
 export interface OpenResult {
   readonly resource: OsResource;
-  /** Present when the requested resource is directly owned by a Plasmon-native process. */
+  /** Present when the open operation resolves to a Plasmon-native process. */
   readonly handlerId?: string;
-  /** Present when the requested resource is directly targeted by a Plasmon-native process. */
+  /** Present when the operation launches or reuses a Plasmon-native process. */
   readonly processId?: string;
-  /** Present when that directly-targeted Plasmon-native process owns a window. */
+  /** Present when the resulting Plasmon-native process owns a window. */
   readonly windowId?: string;
 }
 
@@ -41,12 +41,15 @@ export interface OsWindow {
   readonly maximized: boolean;
 }
 
-/** Filesystem operations use absolute Plasmon paths and preserve production filesystem policy. */
+export interface OsListOptions {
+  readonly includeHidden?: boolean;
+}
+
 export interface OsFileSystemApi {
   stat(path: string): Promise<OsResource | null>;
   exists(path: string): Promise<boolean>;
   /** List the direct children of one absolute directory path through normal filesystem semantics. */
-  list(path: string): Promise<readonly OsResource[]>;
+  list(path: string, options?: OsListOptions): Promise<readonly OsResource[]>;
   readText(path: string): Promise<string>;
   /** Create or replace one UTF-8 text file through normal filesystem policy. */
   writeText(path: string, content: string): Promise<OsResource>;
@@ -56,7 +59,9 @@ export interface OsFileSystemApi {
   copy(sourcePath: string, destinationPath: string): Promise<OsResource>;
   /** Move one resource into an existing destination directory through normal filesystem policy. */
   move(sourcePath: string, destinationPath: string): Promise<OsResource>;
-  /** Perform normal user-facing removal (Recycle Bin where applicable), not permanent deletion. */
+  /** Rename one resource in place through normal filesystem policy. */
+  rename(path: string, newName: string): Promise<OsResource>;
+  /** Perform the normal user-facing removal operation for one resource. */
   remove(path: string): Promise<void>;
 }
 
@@ -81,4 +86,6 @@ export interface OsApi {
   readonly processes: OsProcessesApi;
   readonly windows: OsWindowsApi;
   open(path: string): Promise<OpenResult>;
+  /** Open a resource with one explicitly selected registered handler. */
+  openWith(path: string, handlerId: string): Promise<OpenResult>;
 }

@@ -18,7 +18,10 @@ export function textEditorWindowTitle(name: string): string {
   return `${documentName} - Monaco Editor`;
 }
 
-export function editorLanguageDisplayName(language: string): string {
+export function editorLanguageDisplayName(language: string, resourceName?: string): string {
+  const lowerName = resourceName?.trim().toLowerCase() ?? "";
+  if (lowerName.endsWith(".cmd")) return "Plasmon Command (.cmd)";
+  if (lowerName.endsWith(".run")) return "Plasmon Run (.run)";
   const normalized = language.trim().toLowerCase();
   if (!normalized) return "Plain Text";
   return LANGUAGE_LABELS[normalized] ?? language;

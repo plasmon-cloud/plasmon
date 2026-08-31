@@ -12,7 +12,7 @@ const ALL_MONACO_WORKERS = [
 ] as const;
 const packagePolicy = resolvePackageProfile();
 const MONACO_WORKERS = packagePolicy.monacoProfile === "slim"
-  ? ALL_MONACO_WORKERS.slice(0, 1)
+  ? ALL_MONACO_WORKERS.filter(([filename]) => filename === "editor.worker.js" || filename === "ts.worker.js")
   : ALL_MONACO_WORKERS;
 
 const GENERATED_RUNTIME_ROOT = "./public/runtime/monaco";

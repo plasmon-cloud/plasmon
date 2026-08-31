@@ -72,7 +72,7 @@ const monacoEntryPoints = [
 ] as const;
 
 const slimMonacoEntryPoints = monacoEntryPoints.filter(({ out }) =>
-  out === "System/Program Files/MonacoEditor/editor.worker"
+  out.endsWith("/editor.worker") || out.endsWith("/ts.worker")
 );
 
 const config: BuildOptions = {

@@ -10,6 +10,15 @@
         }
       },
       "migrations": {}
+    },
+    "sharing": {
+      "schemas": {
+        "1": {
+          "hash": "946b9ad04093762ef0cd6a266042eab4b9b6eafc7935b267013df54e56f571ea",
+          "entry": "946b9ad04093762ef0cd6a266042eab4b9b6eafc7935b267013df54e56f571ea"
+        }
+      },
+      "migrations": {}
     }
   }
 }

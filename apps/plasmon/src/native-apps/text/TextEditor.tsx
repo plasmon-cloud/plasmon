@@ -44,6 +44,9 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const [saveAsError, setSaveAsError] = useState<string | null>(null);
   const readOnly = target.readOnly === true;
   const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
+  const lowerName = snapshot.name.toLowerCase();
+  const runContextTypes = lowerName.endsWith(".run");
+  const cmdLanguageSupport = lowerName.endsWith(".cmd");
 
   useEffect(() => {
     process.setTitle(processId, textEditorWindowTitle(snapshot.name));
@@ -149,6 +152,8 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
             readOnly={readOnly}
             minimap={minimap}
             wordWrap={wordWrap}
+            runContextTypes={runContextTypes}
+            cmdLanguageSupport={cmdLanguageSupport}
             ariaLabel="Text content"
             onChange={(value) => sessionRef.current?.edit(value)}
             onCursorChange={setCursor}
@@ -162,7 +167,7 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
         <div style={editorErrorStyle} role="alert">{saveAsError ?? snapshot.error}</div>
       )}
       <NativeAppStatusStrip style={styles.status}>
-        <span>{editorLanguageDisplayName(language)}</span>
+        <span>{editorLanguageDisplayName(language, snapshot.name)}</span>
         <span>UTF-8</span>
         <span>Ln {cursor.line}, Col {cursor.column}{cursor.selected ? ` · ${cursor.selected} selected` : ""}</span>
         <span>{snapshot.status === "conflict" ? "Conflict" : snapshot.status === "saving" ? "Saving…" : snapshot.dirty ? "Modified" : "Saved"}</span>
