@@ -4,7 +4,7 @@ Taskbar behavior settings are Shell-owned values on the existing filesystem-back
 
 ## Canonical fields
 
-The bounded R3 contract is:
+The bounded taskbar contract is:
 
 - `taskbarAlignment`: `center` | `left`;
 - `taskbarPlacement`: `bottom` | `top`;
@@ -29,6 +29,6 @@ Task icon size changes artwork scale only. Existing task-button interaction targ
 
 ## Consumer boundary
 
-Canonical Settings may read, subscribe to, and save these fields through the injected `ShellPreferencesAuthority`. Settings does not own their defaults, validation, migration, persistence, layout behavior, or a mirrored taskbar model. The dedicated Settings consumer work remains #738.
+Canonical Settings may read, subscribe to, and save these fields through the injected `ShellPreferencesAuthority`. Settings does not own their defaults, validation, migration, persistence, layout behavior, or a mirrored taskbar model. The dedicated Settings consumer remains separately owned and consumes this authority.
 
-This R3 contract does not include left/right vertical taskbars, auto-hide, multi-monitor taskbars, a generic tray registry, or Shell-owned window geometry.
+This contract does not include left/right vertical taskbars, auto-hide, multi-monitor taskbars, a generic tray registry, or Shell-owned window geometry.
