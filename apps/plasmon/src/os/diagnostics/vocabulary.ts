@@ -103,6 +103,7 @@ export const DiagnosticEvent = {
   Filesystem: {
     BootstrapReady: event("filesystem.bootstrap.ready"),
     BootstrapFailed: event("filesystem.bootstrap.failed"),
+    SettingsRestoreFailed: event("diagnostics.settings.restore.failed"),
     NeutronProjectionFailed: event("filesystem.neutron-projection.failed"),
     TrashFailed: event("filesystem.trash.failed"),
     TrashRestoreFailed: event("filesystem.trash.restore.failed"),

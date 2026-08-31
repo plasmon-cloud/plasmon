@@ -12,6 +12,17 @@ import {
 export const EMULATORJS_PROGRAM_FILES_ROOT = "System/Program Files/EmulatorJS";
 export const EMULATORJS_BROWSER_ROOT = "runtime/emulatorjs";
 
+const EMULATORJS_SOURCE_BUNDLE_ASSETS = Object.freeze([
+  "src/emulator.js",
+  "src/nipplejs.js",
+  "src/shaders.js",
+  "src/storage.js",
+  "src/gamepad.js",
+  "src/GameManager.js",
+  "src/socket.io.min.js",
+  "src/compression.js",
+]);
+
 export interface EmulatorJsRuntimeMaterializationReport {
   readonly runtimeId: "emulatorjs";
   readonly version: string;
@@ -86,19 +97,63 @@ function assetCandidates(asset: string): readonly string[] {
   return [...candidates];
 }
 
+function findArchiveAsset(
+  archives: readonly (readonly TarEntry[])[],
+  asset: string,
+): Uint8Array | null {
+  const candidates = assetCandidates(asset);
+  const matches = archives.flatMap((entries) => entries.filter((entry) =>
+    candidates.some((candidate) => entry.path === candidate || entry.path.endsWith(`/${candidate}`))
+  ));
+  if (matches.length === 0) return null;
+  if (matches.length > 1) throw new Error(`Prepared EmulatorJS runtime contains ambiguous required asset ${asset}`);
+  const bytes = matches[0]!.bytes;
+  if (bytes.byteLength === 0) throw new Error(`Prepared EmulatorJS runtime asset ${asset} is empty`);
+  return bytes;
+}
+
+function requireArchiveAsset(
+  archives: readonly (readonly TarEntry[])[],
+  asset: string,
+  generatedAsset: string,
+): Uint8Array {
+  const bytes = findArchiveAsset(archives, asset);
+  if (!bytes) {
+    throw new Error(`Prepared EmulatorJS runtime cannot derive ${generatedAsset}; missing source asset ${asset}`);
+  }
+  return bytes;
+}
+
+function deriveGeneratedAsset(
+  archives: readonly (readonly TarEntry[])[],
+  asset: string,
+): Uint8Array | null {
+  // EmulatorJS 4.2.3 intentionally omits generated minified files from its npm
+  // package. Its published source package remains the pinned authority, so emit
+  // deterministic package-local equivalents from those verified source bytes.
+  if (asset === "emulator.min.js") {
+    const separator = Buffer.from("\n;\n", "utf8");
+    const parts = EMULATORJS_SOURCE_BUNDLE_ASSETS.map((sourceAsset) =>
+      Buffer.from(requireArchiveAsset(archives, sourceAsset, asset))
+    );
+    return new Uint8Array(Buffer.concat(parts.flatMap((part, index) =>
+      index === parts.length - 1 ? [part] : [part, separator]
+    )));
+  }
+  if (asset === "emulator.min.css") {
+    return requireArchiveAsset(archives, "emulator.css", asset).slice();
+  }
+  return null;
+}
+
 export function selectRequiredEmulatorJsAssets(
   archives: readonly (readonly TarEntry[])[],
   requiredAssets: readonly string[],
 ): ReadonlyMap<string, Uint8Array> {
   const selected = new Map<string, Uint8Array>();
   for (const asset of requiredAssets) {
-    const candidates = assetCandidates(asset);
-    const matches = archives.flatMap((entries) => entries.filter((entry) =>
-      candidates.some((candidate) => entry.path === candidate || entry.path.endsWith(`/${candidate}`))
-    ));
-    if (matches.length === 0) throw new Error(`Prepared EmulatorJS runtime is missing required asset ${asset}`);
-    if (matches.length > 1) throw new Error(`Prepared EmulatorJS runtime contains ambiguous required asset ${asset}`);
-    const bytes = matches[0]!.bytes;
+    const bytes = findArchiveAsset(archives, asset) ?? deriveGeneratedAsset(archives, asset);
+    if (!bytes) throw new Error(`Prepared EmulatorJS runtime is missing required asset ${asset}`);
     if (bytes.byteLength === 0) throw new Error(`Prepared EmulatorJS runtime asset ${asset} is empty`);
     selected.set(asset, bytes);
   }
