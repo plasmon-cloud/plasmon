@@ -68,3 +68,93 @@ test("Settings changes Light/Dark independently from theme and wallpaper", async
     app.dispose();
   }
 });
+
+test("Settings derives Custom from system colors while icons remain an independent accessible axis", async () => {
+  const app = await renderPlasmon();
+  try {
+    await act(async () => {
+      await app.environment.os.open("/System/Settings.sys");
+    });
+
+    await app.user.click(await app.findByRole("button", { name: "Personalization" }));
+    const heading = await app.findByRole("heading", { name: "Personalization" });
+    const panel = heading.closest("section");
+    if (!panel) throw new Error("Personalization panel is unavailable");
+    const controls = within(panel);
+
+    expect(controls.getByRole("status").textContent).toContain("System colors: Graphite");
+    expect(controls.getByRole("button", { name: "Graphite" }).getAttribute("aria-pressed")).toBe("true");
+    const iconSet = controls.getByRole("combobox", { name: "Icon set" }) as HTMLSelectElement;
+    expect(iconSet.disabled).toBe(true);
+    expect(iconSet.value).toBe("plasmon");
+
+    const followIconColors = controls.getByRole("button", { name: "Follow theme icon colors" });
+    const customIcons = controls.getByRole("button", { name: "Custom icons" });
+    expect(followIconColors.getAttribute("aria-pressed")).toBe("true");
+    expect(customIcons.getAttribute("aria-pressed")).toBe("false");
+
+    const accentHex = controls.getByRole("textbox", { name: "Accent / selection / focus hex value" });
+    await app.user.clear(accentHex);
+    await app.user.type(accentHex, "#123456{Enter}");
+
+    await waitFor(() => {
+      const snapshot = app.environment.services.shellPreferences.getSnapshot();
+      expect(snapshot.systemColorOverrides).toEqual({ accent: "#123456" });
+      expect(controls.getByRole("status").textContent).toContain("System colors: Custom");
+      expect(document.documentElement.style.getPropertyValue("--plasmon-accent")).toBe("#123456");
+    });
+
+    let snapshot = app.environment.services.shellPreferences.getSnapshot();
+    expect(snapshot.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+    expect(snapshot.iconPalette).toEqual({ mode: "follow-theme" });
+
+    await app.user.click(customIcons);
+    await waitFor(() => {
+      expect(app.environment.services.shellPreferences.getSnapshot().iconPalette.mode).toBe("custom");
+      expect(customIcons.getAttribute("aria-pressed")).toBe("true");
+    });
+
+    await app.user.click(controls.getByRole("button", { name: "Reset colors to Graphite" }));
+    await waitFor(() => {
+      snapshot = app.environment.services.shellPreferences.getSnapshot();
+      expect(snapshot.systemColorOverrides).toEqual({});
+      expect(snapshot.iconPalette.mode).toBe("custom");
+      expect(controls.getByRole("status").textContent).toContain("System colors: Graphite");
+      expect(document.documentElement.style.getPropertyValue("--plasmon-accent")).toBe("");
+    });
+
+    const primaryIconHex = controls.getByRole("textbox", { name: "Primary icon color hex value" });
+    await app.user.clear(primaryIconHex);
+    await app.user.type(primaryIconHex, "#abcdef{Enter}");
+    await waitFor(() => {
+      snapshot = app.environment.services.shellPreferences.getSnapshot();
+      if (snapshot.iconPalette.mode !== "custom") throw new Error("Custom icon palette was not retained");
+      expect(snapshot.iconPalette.colors.primary).toBe("#abcdef");
+      expect(snapshot.systemColorOverrides).toEqual({});
+      expect(controls.getByRole("status").textContent).toContain("System colors: Graphite");
+      expect(document.documentElement.style.getPropertyValue("--plasmon-icon-primary")).toBe("#abcdef");
+    });
+
+    await app.user.click(controls.getByRole("button", { name: "Midnight" }));
+    await waitFor(() => {
+      snapshot = app.environment.services.shellPreferences.getSnapshot();
+      expect(snapshot.themeId).toBe("plasmon-midnight");
+      if (snapshot.iconPalette.mode !== "custom") throw new Error("Custom icon palette was not retained");
+      expect(snapshot.iconPalette.colors.primary).toBe("#abcdef");
+      expect(snapshot.systemColorOverrides).toEqual({});
+      expect(snapshot.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+      expect(controls.getByRole("status").textContent).toContain("System colors: Midnight");
+    });
+
+    await app.user.click(controls.getByRole("button", { name: "Use theme colors" }));
+    await waitFor(() => {
+      snapshot = app.environment.services.shellPreferences.getSnapshot();
+      expect(snapshot.iconPalette).toEqual({ mode: "follow-theme" });
+      expect(snapshot.systemColorOverrides).toEqual({});
+      expect(followIconColors.getAttribute("aria-pressed")).toBe("true");
+      expect(document.documentElement.style.getPropertyValue("--plasmon-icon-primary")).toBe("#30264f");
+    });
+  } finally {
+    app.dispose();
+  }
+});
