@@ -1,5 +1,6 @@
 import type { FsService, OpenTarget } from "../../os/contracts/index.ts";
 import { tryParseInternetShortcut } from "../../os/associations/shortcut.ts";
+import { reportBrowserTargetResolveFailure } from "../semanticDiagnostics.ts";
 
 export interface BrowserLocation {
   url: string;
@@ -42,9 +43,15 @@ export async function resolveBrowserTarget(target: OpenTarget, fs: FsService): P
 
   const node = await fs.stat(target.nodeId);
   const parsed = tryParseInternetShortcut(await fs.read(node.id));
-  if (!parsed.ok) throw new Error(parsed.error.message);
+  if (!parsed.ok) {
+    reportBrowserTargetResolveFailure();
+    throw new Error(parsed.error.message);
+  }
   const location = browserLocationFromUrl(parsed.shortcut.url);
-  if (!location) throw new Error("Shortcut URL must use http:// or https://");
+  if (!location) {
+    reportBrowserTargetResolveFailure();
+    throw new Error("Shortcut URL must use http:// or https://");
+  }
   return { url: location.url, title: node.name || location.title };
 }
 
