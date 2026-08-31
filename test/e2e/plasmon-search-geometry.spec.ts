@@ -96,7 +96,7 @@ test("Search keeps stable frame and controls while switching categories", async 
   }
 });
 
-test("Start and Search overlays do not move Desktop resources or an existing native window", async ({ page }) => {
+test("Start and Search overlays do not move Desktop resources or normal/maximized native windows", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
   const kernelUrl = localCanisterOrigin(runtime.canisterId, runtime.gatewayUrl);
   const health = installPlasmonBrowserHealth(page, {
@@ -147,28 +147,45 @@ test("Start and Search overlays do not move Desktop resources or an existing nat
     await expect(nativeWindow).toBeVisible();
 
     const desktopBaseline = await rootShortcut.boundingBox();
-    const windowBaseline = await nativeWindow.boundingBox();
-    if (!desktopBaseline || !windowBaseline) {
+    const normalWindowBaseline = await nativeWindow.boundingBox();
+    if (!desktopBaseline || !normalWindowBaseline) {
       throw new Error("Desktop/native-window baseline geometry is unavailable");
     }
 
-    const startButton = plasmon.getByRole("button", { name: "Start", exact: true });
-    await startButton.click();
-    const startPanel = plasmon.getByRole("region", { name: "Start menu" });
-    await expect(startPanel).toBeVisible();
-    await expectSameBounds(rootShortcut, desktopBaseline, "Desktop resource while Start opens");
-    await expectSameBounds(nativeWindow, windowBaseline, "native window while Start opens");
-    await startPanel.getByRole("textbox", { name: "Search Start" }).press("Escape");
-    await expect(startPanel).toHaveCount(0);
+    const exerciseFlyouts = async (
+      windowState: "normal" | "maximized",
+      windowBaseline: NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>,
+    ): Promise<void> => {
+      const startButton = plasmon.getByRole("button", { name: "Start", exact: true });
+      await startButton.click();
+      const startPanel = plasmon.getByRole("region", { name: "Start menu" });
+      await expect(startPanel).toBeVisible();
+      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource while Start opens with ${windowState} window`);
+      await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window while Start opens`);
+      await startPanel.getByRole("textbox", { name: "Search Start" }).press("Escape");
+      await expect(startPanel).toHaveCount(0);
+      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource after Start closes with ${windowState} window`);
+      await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window after Start closes`);
 
-    const searchButton = plasmon.getByRole("button", { name: "Search" });
-    await searchButton.click();
-    const searchPanel = plasmon.getByRole("region", { name: "Search" });
-    await expect(searchPanel).toBeVisible();
-    await expectSameBounds(rootShortcut, desktopBaseline, "Desktop resource while Search opens");
-    await expectSameBounds(nativeWindow, windowBaseline, "native window while Search opens");
-    await searchPanel.getByRole("textbox", { name: "Search Plasmon" }).press("Escape");
-    await expect(searchPanel).toHaveCount(0);
+      const searchButton = plasmon.getByRole("button", { name: "Search" });
+      await searchButton.click();
+      const searchPanel = plasmon.getByRole("region", { name: "Search" });
+      await expect(searchPanel).toBeVisible();
+      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource while Search opens with ${windowState} window`);
+      await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window while Search opens`);
+      await searchPanel.getByRole("textbox", { name: "Search Plasmon" }).press("Escape");
+      await expect(searchPanel).toHaveCount(0);
+      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource after Search closes with ${windowState} window`);
+      await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window after Search closes`);
+    };
+
+    await exerciseFlyouts("normal", normalWindowBaseline);
+
+    await nativeWindow.getByRole("button", { name: "Maximize" }).click();
+    await expect(nativeWindow.getByRole("button", { name: "Restore" })).toBeVisible();
+    const maximizedWindowBaseline = await nativeWindow.boundingBox();
+    if (!maximizedWindowBaseline) throw new Error("Maximized native-window geometry is unavailable");
+    await exerciseFlyouts("maximized", maximizedWindowBaseline);
 
     health.assertClean();
   } finally {
