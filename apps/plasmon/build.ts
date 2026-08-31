@@ -91,6 +91,9 @@ const config: BuildOptions = {
   external: [
     "/static/*",
     "static/*",
+    // Slim has no Terminal registration; keep its browser-only dependency out
+    // of the small package even though the full-profile loader remains shared.
+    ...(packagePolicy.isSlim ? ["./src/scripting/integration.ts"] : []),
   ],
   format: "esm",
   jsx: "automatic",
