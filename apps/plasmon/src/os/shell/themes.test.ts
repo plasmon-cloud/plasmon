@@ -194,7 +194,7 @@ test("shared disabled, danger, selection, and scrollbar semantics are explicit a
   expect(windowingStyles).toContain("background: var(--plasmon-danger);");
 });
 
-test("#620 normal Desktop label treatment remains while selected Light labels use selection semantics", () => {
+test("normal Desktop label treatment remains while selected Light labels use selection semantics", () => {
   expect(adaptiveStyles).toContain(".fm-entry--desktop:not(.is-renaming) .fm-entry__name");
   expect(adaptiveStyles).toContain("var(--plasmon-wallpaper-label-ink)");
   expect(adaptiveStyles).toContain("var(--plasmon-wallpaper-label-shadow)");
