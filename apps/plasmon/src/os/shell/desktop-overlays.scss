@@ -1,22 +1,16 @@
 @layer plasmon-shell {
-  // Desktop overlays are Shell-owned presentation above the assembled workspace.
-  // Keep branding independent from wallpaper artwork so generated and raster
-  // backgrounds share the same behavior, and so #419 build identity can later
-  // stack in this lower-right region without becoming wallpaper state.
-  .plasmon-shell {
-    --plasmon-shell-z-desktop-overlay: 8900;
-  }
-
-  .plasmon-shell[data-plasmon-brand-watermark="visible"]::after {
+  // Branding is part of the wallpaper composition rather than a foreground
+  // workspace overlay. Keep the SVG independent from wallpaper bytes and its
+  // persisted preference so every built-in/raster wallpaper shares it.
+  .plasmon-shell[data-plasmon-brand-watermark="visible"] > .plasmon-shell__wallpaper::after {
     background: url("static/plasmon/plasmon-watermark.svg") center / contain no-repeat;
-    bottom: calc(var(--plasmon-taskbar-height) + 20px);
+    bottom: calc(var(--plasmon-taskbar-height) + 24px);
     content: "";
-    height: 42px;
-    opacity: .32;
+    height: 63px;
+    opacity: .3;
     pointer-events: none;
     position: absolute;
     right: 24px;
-    width: 176px;
-    z-index: var(--plasmon-shell-z-desktop-overlay);
+    width: 264px;
   }
 }
