@@ -136,6 +136,31 @@
     min-width: 0;
   }
 
+  .plasmon-shell,
+  .plasmon-shell * {
+    scrollbar-color: var(--plasmon-scrollbar-thumb) var(--plasmon-scrollbar-track);
+    scrollbar-width: thin;
+  }
+
+  .plasmon-shell *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .plasmon-shell *::-webkit-scrollbar-track {
+    background: var(--plasmon-scrollbar-track);
+  }
+
+  .plasmon-shell *::-webkit-scrollbar-thumb {
+    background: var(--plasmon-scrollbar-thumb);
+    border: 2px solid var(--plasmon-scrollbar-track);
+    border-radius: 999px;
+  }
+
+  .plasmon-shell *::-webkit-scrollbar-thumb:hover {
+    background: var(--plasmon-scrollbar-thumb-hover);
+  }
+
   .plasmon-native-app-toolbar {
     align-items: center;
     background: var(--plasmon-panel-background);
@@ -175,10 +200,15 @@
   }
 
   .plasmon-native-app-button:disabled {
-    background: color-mix(in srgb, var(--plasmon-panel-elevated) 72%, transparent);
-    border-color: var(--plasmon-border-subtle);
+    background: var(--plasmon-control-disabled-background);
+    border-color: var(--plasmon-control-disabled-border);
     color: var(--plasmon-text-disabled);
-    cursor: default;
+  }
+
+  .plasmon-shell :is(button, input, select, textarea):disabled {
+    color: var(--plasmon-text-disabled);
+    cursor: not-allowed;
+    opacity: .58;
   }
 
   .plasmon-native-app-status {
