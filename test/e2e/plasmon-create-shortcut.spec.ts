@@ -63,6 +63,40 @@ async function openExplorer(app: ReturnType<Page["frameLocator"]>) {
   return { explorer, files };
 }
 
+async function createFolderFromBackground(
+  app: ReturnType<Page["frameLocator"]>,
+  files: Locator,
+) {
+  // Permanent creation buttons are intentionally absent. Use the canonical
+  // background creation route, accepting both flat and grouped New menu shapes
+  // so this dependent acceptance remains valid across merge order.
+  const bounds = await files.boundingBox();
+  if (!bounds) throw new Error("FileManager has no browser bounds");
+  await files.click({
+    button: "right",
+    position: {
+      x: Math.max(1, Math.floor(bounds.width * 0.9)),
+      y: Math.max(1, Math.floor(bounds.height * 0.9)),
+    },
+  });
+
+  const directNewFolder = app.getByRole("menuitem", { name: "New Folder", exact: true });
+  if (await directNewFolder.count()) {
+    await expect(directNewFolder).toBeVisible();
+    await directNewFolder.click();
+    return;
+  }
+
+  const newSubmenuTrigger = app.getByRole("menuitem", { name: "New", exact: true });
+  await expect(newSubmenuTrigger).toBeVisible();
+  await newSubmenuTrigger.click();
+  const newFolder = app
+    .getByRole("menu", { name: "New submenu" })
+    .getByRole("menuitem", { name: "New Folder", exact: true });
+  await expect(newFolder).toBeVisible();
+  await newFolder.click();
+}
+
 function nameFromRenameLabel(label: string | null): string {
   if (!label?.startsWith("Rename ")) throw new Error(`Unexpected rename label: ${String(label)}`);
   return label.slice("Rename ".length);
@@ -92,7 +126,7 @@ test("packaged FileManager exposes and activates Create Shortcut", async ({ page
 
     // Create one ordinary folder so the acceptance owns a stable target without
     // relying on demo content or an editor/runtime-specific target.
-    await toolbar.getByRole("button", { name: "New Folder", exact: true }).click();
+    await createFolderFromBackground(app, files);
     const targetRename = files.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(targetRename).toBeVisible();
     await expect(targetRename).toBeFocused();

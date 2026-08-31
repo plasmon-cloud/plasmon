@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
-import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -408,7 +408,10 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
   // Monaco editor, and use the real native Close control. Save/discard/failure
   // semantics stay in deterministic Native Apps tests; Playwright protects only
   // the rendered close-request interaction.
-  await dialog.getByRole("button", { name: "New Text Document" }).click();
+  await chooseFileManagerBackgroundAction(
+    dialog.getByRole("listbox", { name: "Files" }),
+    "New Text Document",
+  );
   const renameDocument = dialog.getByRole("textbox", { name: "Rename New Text Document.txt" });
   await expect(renameDocument).toBeVisible();
   await renameDocument.press("Escape");
