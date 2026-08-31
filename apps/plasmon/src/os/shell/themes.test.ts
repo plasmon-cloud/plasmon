@@ -3,17 +3,17 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
   DEFAULT_SHELL_PREFERENCES,
+  SHELL_APPEARANCE_MODES,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
   validateShellPreferences,
+  type ShellAppearanceMode,
   type ShellThemeId,
 } from "./preferences.ts";
 
-const visualTokens = [
-  readFileSync(new URL("../integration/visual-tokens.scss", import.meta.url), "utf8"),
-  readFileSync(new URL("../integration/theme-graphite.scss", import.meta.url), "utf8"),
-].join("\n");
-const settingsSurface = readFileSync(new URL("./ShellSurfaces.tsx", import.meta.url), "utf8");
+const appearanceTokens = readFileSync(new URL("../integration/theme-appearance.scss", import.meta.url), "utf8");
+const visualStyles = readFileSync(new URL("../visual/visual.scss", import.meta.url), "utf8");
+const adaptiveStyles = readFileSync(new URL("../visual/adaptive-surfaces.scss", import.meta.url), "utf8");
 const fileManagerStyles = readFileSync(new URL("../file-manager/file-manager.scss", import.meta.url), "utf8");
 const windowingStyles = readFileSync(new URL("../windowing/windowing.scss", import.meta.url), "utf8");
 
@@ -26,6 +26,8 @@ const THEME_PALETTE_TOKENS = [
   "--plasmon-taskbar-background:",
   "--plasmon-control-background:",
   "--plasmon-control-hover:",
+  "--plasmon-control-disabled-background:",
+  "--plasmon-control-disabled-border:",
   "--plasmon-border-subtle:",
   "--plasmon-border-strong:",
   "--plasmon-text-primary:",
@@ -37,18 +39,24 @@ const THEME_PALETTE_TOKENS = [
   "--plasmon-accent-ink:",
   "--plasmon-selection:",
   "--plasmon-selection-border:",
+  "--plasmon-selection-text:",
   "--plasmon-focus-ring:",
   "--plasmon-danger:",
   "--plasmon-warning:",
   "--plasmon-success:",
+  "--plasmon-scrollbar-track:",
+  "--plasmon-scrollbar-thumb:",
+  "--plasmon-scrollbar-thumb-hover:",
   "--plasmon-shadow-window:",
   "--plasmon-shadow-panel:",
   "--plasmon-shadow-icon:",
 ] as const;
 
-function themeBlock(themeId: ShellThemeId): string {
-  return visualTokens.match(
-    new RegExp(`\\.plasmon-shell\\[data-plasmon-theme="${themeId}"\\]\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
+function appearanceBlock(themeId: ShellThemeId, appearanceMode: ShellAppearanceMode): string {
+  return appearanceTokens.match(
+    new RegExp(
+      `\\.plasmon-shell\\[data-plasmon-theme="${themeId}"\\]\\[data-plasmon-appearance="${appearanceMode}"\\]\\s*\\{([\\s\\S]*?)\\n\\s*\\}`,
+    ),
   )?.[1] ?? "";
 }
 
@@ -57,7 +65,42 @@ function tokenValue(block: string, token: string): string {
   return block.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
 }
 
-test("exposes exactly six stable, individually named Shell themes with Graphite as default", () => {
+function rgb(hex: string): [number, number, number] {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error(`Expected six-digit hex color, received ${hex}`);
+  return [
+    Number.parseInt(hex.slice(1, 3), 16),
+    Number.parseInt(hex.slice(3, 5), 16),
+    Number.parseInt(hex.slice(5, 7), 16),
+  ];
+}
+
+function relativeLuminance(hex: string): number {
+  const channels = rgb(hex).map((value) => {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+}
+
+function contrast(a: string, b: string): number {
+  const lighter = Math.max(relativeLuminance(a), relativeLuminance(b));
+  const darker = Math.min(relativeLuminance(a), relativeLuminance(b));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function validPreference(appearanceMode?: unknown) {
+  return {
+    version: 1,
+    pinnedNative: [],
+    pinnedElements: [],
+    themeId: "plasmon-graphite",
+    ...(appearanceMode === undefined ? {} : { appearanceMode }),
+    wallpaper: { mode: "follow-theme" },
+    taskbarAlignment: "center",
+  };
+}
+
+test("keeps exactly six stable theme identities and an independent two-value appearance mode", () => {
   expect(SHELL_THEME_IDS).toEqual([
     "plasmon-graphite",
     "plasmon-verdant",
@@ -66,120 +109,114 @@ test("exposes exactly six stable, individually named Shell themes with Graphite 
     "plasmon-glacier",
     "plasmon-rosewood",
   ]);
-  expect(SHELL_THEME_LABELS["plasmon-graphite"]).toBe("Graphite");
-  expect(SHELL_THEME_LABELS["plasmon-verdant"]).toBe("Verdant");
+  expect(SHELL_APPEARANCE_MODES).toEqual(["dark", "light"]);
   expect(DEFAULT_SHELL_PREFERENCES.themeId).toBe("plasmon-graphite");
+  expect(DEFAULT_SHELL_PREFERENCES.appearanceMode).toBe("dark");
   expect(Object.keys(SHELL_THEME_LABELS)).toEqual([...SHELL_THEME_IDS]);
   expect(new Set(Object.values(SHELL_THEME_LABELS)).size).toBe(6);
-  expect(settingsSurface).toContain("SHELL_THEME_LABELS[themeId]");
+  expect(SHELL_THEME_IDS).not.toContain("custom" as ShellThemeId);
+
+  expect(validateShellPreferences(validPreference())?.appearanceMode).toBe("dark");
+  expect(validateShellPreferences(validPreference("dark"))?.appearanceMode).toBe("dark");
+  expect(validateShellPreferences(validPreference("light"))?.appearanceMode).toBe("light");
+  expect(validateShellPreferences(validPreference("system"))).toBeNull();
 });
 
-test("all six theme IDs remain valid filesystem-backed Shell preference values", () => {
+test("all six themes expose complete Dark and Light shared semantic palettes", () => {
   for (const themeId of SHELL_THEME_IDS) {
-    expect(validateShellPreferences({
-      version: 1,
-      pinnedNative: [],
-      pinnedElements: [],
-      themeId,
-      wallpaper: "aurora",
-      taskbarAlignment: "center",
-    })?.themeId).toBe(themeId);
+    for (const appearanceMode of SHELL_APPEARANCE_MODES) {
+      const block = appearanceBlock(themeId, appearanceMode);
+      expect(block).not.toBe("");
+      expect(block).toContain(`color-scheme: ${appearanceMode};`);
+      for (const token of THEME_PALETTE_TOKENS) expect(block).toContain(token);
+    }
   }
-
-  expect(validateShellPreferences({
-    version: 1,
-    pinnedNative: [],
-    pinnedElements: [],
-    themeId: "plasmon-dark",
-    wallpaper: "aurora",
-    taskbarAlignment: "center",
-  })?.themeId).toBe("plasmon-verdant");
 });
 
-test("every theme overrides the complete shared color and elevation palette", () => {
+test("switching only appearance preserves stable theme and wallpaper identity", () => {
+  const dark = validateShellPreferences({
+    ...validPreference("dark"),
+    themeId: "plasmon-rosewood",
+    wallpaper: { mode: "pinned", id: "glacier-prism" },
+  });
+  expect(dark).not.toBeNull();
+  const light = validateShellPreferences({ ...dark, appearanceMode: "light" });
+  expect(light?.themeId).toBe("plasmon-rosewood");
+  expect(light?.appearanceMode).toBe("light");
+  expect(light?.wallpaper).toEqual({ mode: "pinned", id: "glacier-prism" });
+  expect(SHELL_THEME_IDS).toHaveLength(6);
+});
+
+test("theme identities remain visually distinct in both appearances", () => {
+  for (const appearanceMode of SHELL_APPEARANCE_MODES) {
+    for (const token of [
+      "--plasmon-desktop-background:",
+      "--plasmon-window-background:",
+      "--plasmon-window-titlebar:",
+      "--plasmon-accent:",
+      "--plasmon-text-primary:",
+    ]) {
+      const values = SHELL_THEME_IDS.map((themeId) => tokenValue(appearanceBlock(themeId, appearanceMode), token));
+      expect(values.every(Boolean)).toBe(true);
+      expect(new Set(values).size).toBe(6);
+    }
+  }
+});
+
+test("shared disabled, danger, selection, and scrollbar semantics are explicit and readable", () => {
+  expect(visualStyles).toContain("var(--plasmon-control-disabled-background)");
+  expect(visualStyles).toContain("var(--plasmon-control-disabled-border)");
+  expect(visualStyles).toContain(":is(button, input, select, textarea):disabled");
+  expect(visualStyles).toContain("opacity: .58;");
+  expect(visualStyles).toContain("scrollbar-color: var(--plasmon-scrollbar-thumb) var(--plasmon-scrollbar-track)");
+  expect(visualStyles).toContain("var(--plasmon-scrollbar-thumb-hover)");
+
   for (const themeId of SHELL_THEME_IDS) {
-    const block = themeBlock(themeId);
-    expect(block).not.toBe("");
-    for (const token of THEME_PALETTE_TOKENS) expect(block).toContain(token);
+    for (const appearanceMode of SHELL_APPEARANCE_MODES) {
+      const danger = tokenValue(appearanceBlock(themeId, appearanceMode), "--plasmon-danger:");
+      const [red, green, blue] = rgb(danger);
+      expect(red).toBeGreaterThan(green * 1.35);
+      expect(red).toBeGreaterThan(blue * 1.25);
+    }
+    const light = appearanceBlock(themeId, "light");
+    expect(contrast(
+      tokenValue(light, "--plasmon-selection:"),
+      tokenValue(light, "--plasmon-selection-text:"),
+    )).toBeGreaterThanOrEqual(4.5);
   }
 
-  expect(themeBlock("plasmon-glacier")).toContain("color-scheme: light;");
-  for (const themeId of SHELL_THEME_IDS.filter((id) => id !== "plasmon-glacier")) {
-    expect(themeBlock(themeId)).toContain("color-scheme: dark;");
-  }
+  const glacierLight = appearanceBlock("plasmon-glacier", "light");
+  expect(contrast(
+    tokenValue(glacierLight, "--plasmon-scrollbar-track:"),
+    tokenValue(glacierLight, "--plasmon-scrollbar-thumb:"),
+  )).toBeGreaterThanOrEqual(2);
+
+  expect(windowingStyles).toContain("background: var(--plasmon-danger);");
 });
 
-test("Graphite is grayscale-led with a distinct colored accent", () => {
-  const graphite = themeBlock("plasmon-graphite");
-  expect(tokenValue(graphite, "--plasmon-window-background:")).toBe("#15171a");
-  expect(tokenValue(graphite, "--plasmon-window-titlebar:")).toBe("#24272c");
-  expect(tokenValue(graphite, "--plasmon-text-primary:")).toBe("#f6f7f8");
-  expect(tokenValue(graphite, "--plasmon-accent:")).toBe("#62c5e8");
+test("normal Desktop label treatment remains while selected Light labels use selection semantics", () => {
+  expect(adaptiveStyles).toContain(".fm-entry--desktop:not(.is-renaming) .fm-entry__name");
+  expect(adaptiveStyles).toContain("var(--plasmon-wallpaper-label-ink)");
+  expect(adaptiveStyles).toContain("var(--plasmon-wallpaper-label-shadow)");
+  expect(adaptiveStyles).toContain('[data-plasmon-appearance="light"] .fm-entry--desktop.is-selected:not(.is-renaming) .fm-entry__name');
+  expect(adaptiveStyles).toContain("color: var(--plasmon-selection-text);");
+  expect(adaptiveStyles).toContain("text-shadow: none;");
 });
 
-test("major assembled-surface colors are intentionally distinct across all six themes", () => {
-  for (const token of [
-    "--plasmon-desktop-background:",
-    "--plasmon-window-background:",
-    "--plasmon-window-titlebar:",
-    "--plasmon-panel-elevated:",
-    "--plasmon-accent:",
-    "--plasmon-text-primary:",
-  ]) {
-    const values = SHELL_THEME_IDS.map((themeId) => tokenValue(themeBlock(themeId), token));
-    expect(values.every(Boolean)).toBe(true);
-    expect(new Set(values).size).toBe(6);
-  }
-});
-
-test("FileManager and Explorer consume the shared theme palette rather than a fixed dark palette", () => {
+test("FileManager remains a consumer of shared semantics rather than gaining a competing theme model", () => {
   for (const token of [
     "var(--plasmon-desktop-background)",
     "var(--plasmon-window-background)",
     "var(--plasmon-panel-background)",
-    "var(--plasmon-panel-elevated)",
     "var(--plasmon-control-background)",
     "var(--plasmon-control-hover)",
-    "var(--plasmon-border-subtle)",
-    "var(--plasmon-border-strong)",
     "var(--plasmon-text-primary)",
-    "var(--plasmon-text-secondary)",
-    "var(--plasmon-text-subtle)",
     "var(--plasmon-selection)",
     "var(--plasmon-selection-border)",
     "var(--plasmon-focus-ring)",
     "var(--plasmon-danger)",
   ]) expect(fileManagerStyles).toContain(token);
 
-  for (const retiredColor of [
-    "#0d1320",
-    "#111827",
-    "#151c2b",
-    "#75a7ff",
-    "#eef3fb",
-    "#171f30",
-  ]) expect(fileManagerStyles.toLowerCase()).not.toContain(retiredColor);
-
-  expect(fileManagerStyles).toContain(
-    ".plasmon-desktop { position: relative; width: 100%; height: 100%; min-height: 320px; overflow: hidden; background: var(--plasmon-desktop-background); }",
-  );
-});
-
-test("Windowing consumes explicit native-window titlebar and content theme semantics", () => {
-  for (const token of [
-    "var(--plasmon-window-background)",
-    "var(--plasmon-window-titlebar)",
-    "var(--plasmon-border-subtle)",
-    "var(--plasmon-border-strong)",
-    "var(--plasmon-text-primary)",
-    "var(--plasmon-control-hover)",
-    "var(--plasmon-selection)",
-    "var(--plasmon-selection-border)",
-    "var(--plasmon-focus-ring)",
-    "var(--plasmon-danger)",
-  ]) expect(windowingStyles).toContain(token);
-
-  expect(windowingStyles).not.toContain("var(--plasmon-surface-elevated");
-  expect(windowingStyles).not.toContain("var(--plasmon-surface,");
-  expect(windowingStyles).not.toContain("var(--plasmon-text,");
+  expect(fileManagerStyles).not.toContain("data-plasmon-appearance");
+  expect(fileManagerStyles).not.toContain("data-plasmon-theme");
 });

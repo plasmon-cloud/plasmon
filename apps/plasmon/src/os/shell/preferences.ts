@@ -21,6 +21,9 @@ export const SHELL_THEME_LABELS = Object.freeze({
   "plasmon-rosewood": "Rosewood",
 } satisfies Readonly<Record<ShellThemeId, string>>);
 
+export const SHELL_APPEARANCE_MODES = ["dark", "light"] as const;
+export type ShellAppearanceMode = (typeof SHELL_APPEARANCE_MODES)[number];
+
 export const SHELL_GENERATED_WALLPAPER_IDS = [
   "plasmon-lattice",
   "midnight-orbit",
@@ -70,6 +73,8 @@ export interface ShellPreferences {
   pinnedNative: string[];
   pinnedElements: string[];
   themeId: ShellThemeId;
+  /** Defaults to dark for legacy v1 preference objects that predate appearance mode. */
+  appearanceMode: ShellAppearanceMode;
   wallpaper: ShellWallpaperPreference;
   /** Defaults to true for legacy v1 preference objects that predate the watermark preference. */
   showBrandWatermark?: boolean;
@@ -81,7 +86,8 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   pinnedNative: [],
   pinnedElements: [],
   themeId: "plasmon-graphite",
-  wallpaper: Object.freeze({ mode: "follow-theme" as const }),
+  appearanceMode: "dark",
+  wallpaper: Object.freeze({ mode: "pinned" as const, id: "rosewood-bloom" as const }),
   showBrandWatermark: true,
   taskbarAlignment: "center",
 });
@@ -92,6 +98,7 @@ export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SH
     pinnedNative: [...preferences.pinnedNative],
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
+    appearanceMode: preferences.appearanceMode,
     wallpaper: preferences.wallpaper.mode === "pinned"
       ? { mode: "pinned", id: preferences.wallpaper.id }
       : { mode: "follow-theme" },
@@ -134,6 +141,10 @@ function normalizeTheme(value: unknown): ShellThemeId | null {
   return isTheme(value) ? value : null;
 }
 
+function isAppearanceMode(value: unknown): value is ShellAppearanceMode {
+  return typeof value === "string" && (SHELL_APPEARANCE_MODES as readonly string[]).includes(value);
+}
+
 function isWallpaperId(value: unknown): value is ShellWallpaperId {
   return typeof value === "string" && (SHELL_WALLPAPER_IDS as readonly string[]).includes(value);
 }
@@ -164,12 +175,14 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
   const pinnedNative = stringList(value.pinnedNative);
   const pinnedElements = stringList(value.pinnedElements);
   const themeId = normalizeTheme(value.themeId);
+  const appearanceMode = value.appearanceMode === undefined ? "dark" : value.appearanceMode;
   const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
   const showBrandWatermark = value.showBrandWatermark === undefined ? true : value.showBrandWatermark;
   if (
     !pinnedNative
     || !pinnedElements
     || !themeId
+    || !isAppearanceMode(appearanceMode)
     || typeof showBrandWatermark !== "boolean"
     || !isTaskbarAlignment(taskbarAlignment)
   ) {
@@ -180,6 +193,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     pinnedNative,
     pinnedElements,
     themeId,
+    appearanceMode,
     wallpaper: normalizeWallpaperPreference(value.wallpaper),
     showBrandWatermark,
     taskbarAlignment,
@@ -200,6 +214,7 @@ function preferenceMetadataValue(preferences: ShellPreferences): JsonValue {
     pinnedNative: [...preferences.pinnedNative],
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
+    appearanceMode: preferences.appearanceMode,
     wallpaper: preferences.wallpaper.mode === "pinned"
       ? { mode: "pinned", id: preferences.wallpaper.id }
       : { mode: "follow-theme" },
