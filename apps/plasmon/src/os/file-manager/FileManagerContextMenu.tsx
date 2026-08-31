@@ -115,15 +115,8 @@ function ContextSubmenu({
       style={{ position: "relative" }}
       onMouseEnter={() => { if (!disabled) onOpen(); }}
       onBlur={(event) => {
-        const container = event.currentTarget;
         const next = event.relatedTarget;
-        if (next instanceof Node) {
-          if (!container.contains(next)) onClose();
-          return;
-        }
-        queueMicrotask(() => {
-          if (!container.contains(document.activeElement)) onClose();
-        });
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) onClose();
       }}
     >
       <button
@@ -173,6 +166,7 @@ function ContextSubmenu({
               type="button"
               role={item.checked === undefined ? "menuitem" : "menuitemradio"}
               {...(item.checked === undefined ? {} : { "aria-checked": item.checked })}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
                 item.onSelect();
                 onClose();
