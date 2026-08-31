@@ -137,16 +137,22 @@ test("Start and Search overlays do not move Desktop resources or normal/maximize
     const plasmon = page.frameLocator(plasmonSelector).first();
     await expect(plasmon.getByRole("navigation", { name: "Taskbar" })).toBeVisible({ timeout: 30_000 });
 
-    const rootShortcut = plasmon.getByRole("region", { name: "Desktop" }).locator("[data-fm-node-id]", { hasText: "Root" });
-    await expect(rootShortcut).toBeVisible({ timeout: 30_000 });
+    const files = plasmon.getByRole("listbox", { name: "Files" }).first();
+    await expect(files).toBeVisible({ timeout: 30_000 });
+    const desktopResource = files.locator(".fm-entries [data-fm-node-id]").first();
+    await expect(desktopResource).toBeVisible();
+
     const nativeWindows = plasmon.locator(".plasmon-window-layer [data-window-id]");
     const initialWindowCount = await nativeWindows.count();
-    await rootShortcut.dblclick();
+    await plasmon.getByRole("button", { name: "Start", exact: true }).click();
+    const setupStart = plasmon.getByRole("region", { name: "Start menu" });
+    await expect(setupStart).toBeVisible();
+    await setupStart.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
     const nativeWindow = nativeWindows.last();
     await expect(nativeWindow).toBeVisible();
 
-    const desktopBaseline = await rootShortcut.boundingBox();
+    const desktopBaseline = await desktopResource.boundingBox();
     const normalWindowBaseline = await nativeWindow.boundingBox();
     if (!desktopBaseline || !normalWindowBaseline) {
       throw new Error("Desktop/native-window baseline geometry is unavailable");
@@ -160,22 +166,22 @@ test("Start and Search overlays do not move Desktop resources or normal/maximize
       await startButton.click();
       const startPanel = plasmon.getByRole("region", { name: "Start menu" });
       await expect(startPanel).toBeVisible();
-      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource while Start opens with ${windowState} window`);
+      await expectSameBounds(desktopResource, desktopBaseline, `Desktop resource while Start opens with ${windowState} window`);
       await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window while Start opens`);
       await startPanel.getByRole("textbox", { name: "Search Start" }).press("Escape");
       await expect(startPanel).toHaveCount(0);
-      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource after Start closes with ${windowState} window`);
+      await expectSameBounds(desktopResource, desktopBaseline, `Desktop resource after Start closes with ${windowState} window`);
       await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window after Start closes`);
 
       const searchButton = plasmon.getByRole("button", { name: "Search" });
       await searchButton.click();
       const searchPanel = plasmon.getByRole("region", { name: "Search" });
       await expect(searchPanel).toBeVisible();
-      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource while Search opens with ${windowState} window`);
+      await expectSameBounds(desktopResource, desktopBaseline, `Desktop resource while Search opens with ${windowState} window`);
       await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window while Search opens`);
       await searchPanel.getByRole("textbox", { name: "Search Plasmon" }).press("Escape");
       await expect(searchPanel).toHaveCount(0);
-      await expectSameBounds(rootShortcut, desktopBaseline, `Desktop resource after Search closes with ${windowState} window`);
+      await expectSameBounds(desktopResource, desktopBaseline, `Desktop resource after Search closes with ${windowState} window`);
       await expectSameBounds(nativeWindow, windowBaseline, `${windowState} native window after Search closes`);
     };
 
