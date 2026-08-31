@@ -70,24 +70,31 @@ async function createFolderFromBackground(
   // Permanent creation buttons are intentionally absent. Use the canonical
   // background creation route, accepting both flat and grouped New menu shapes
   // so this dependent acceptance remains valid across merge order.
-  await files.dispatchEvent("contextmenu", {
-    button: 2,
-    clientX: 16,
-    clientY: 16,
+  const bounds = await files.boundingBox();
+  if (!bounds) throw new Error("FileManager has no browser bounds");
+  await files.click({
+    button: "right",
+    position: {
+      x: Math.max(1, Math.floor(bounds.width * 0.9)),
+      y: Math.max(1, Math.floor(bounds.height * 0.9)),
+    },
   });
-  const backgroundMenu = app.getByRole("menu").last();
-  await expect(backgroundMenu).toBeVisible();
 
-  const newSubmenuTrigger = backgroundMenu.getByRole("menuitem", { name: "New", exact: true });
-  if (await newSubmenuTrigger.count()) {
-    await newSubmenuTrigger.click();
-    const newSubmenu = app.getByRole("menu", { name: "New submenu" });
-    await expect(newSubmenu).toBeVisible();
-    await newSubmenu.getByRole("menuitem", { name: "New Folder", exact: true }).click();
+  const directNewFolder = app.getByRole("menuitem", { name: "New Folder", exact: true });
+  if (await directNewFolder.count()) {
+    await expect(directNewFolder).toBeVisible();
+    await directNewFolder.click();
     return;
   }
 
-  await backgroundMenu.getByRole("menuitem", { name: "New Folder", exact: true }).click();
+  const newSubmenuTrigger = app.getByRole("menuitem", { name: "New", exact: true });
+  await expect(newSubmenuTrigger).toBeVisible();
+  await newSubmenuTrigger.click();
+  const newFolder = app
+    .getByRole("menu", { name: "New submenu" })
+    .getByRole("menuitem", { name: "New Folder", exact: true });
+  await expect(newFolder).toBeVisible();
+  await newFolder.click();
 }
 
 function nameFromRenameLabel(label: string | null): string {
