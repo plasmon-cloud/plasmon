@@ -46,6 +46,13 @@ export function createSettingsOpenTarget(
   return { appDestination: destination };
 }
 
+export function withSettingsDestination(
+  target: OpenTarget,
+  destination: SettingsDestinationId,
+): OpenTarget {
+  return { ...target, appDestination: destination };
+}
+
 export interface StorageSummary {
   files: number;
   directories: number;
