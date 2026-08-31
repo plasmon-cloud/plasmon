@@ -91,7 +91,9 @@ test("ordinary non-script resources retain Open instead of Run/Edit", () => {
 
 test("background menu creates both command and run scripts explicitly", () => {
   const actions = renderMenu(null);
+  fireEvent.click(screen.getByRole("menuitem", { name: "New", exact: true }));
   fireEvent.click(screen.getByRole("menuitem", { name: "New Command Script (.cmd)", exact: true }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "New", exact: true }));
   fireEvent.click(screen.getByRole("menuitem", { name: "New Run Script (.run)", exact: true }));
   expect(actions).toEqual(["newCmd", "newRun"]);
 });

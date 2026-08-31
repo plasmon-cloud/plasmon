@@ -1,4 +1,5 @@
-import { expect, type Locator } from "@playwright/test";
+import { type Locator } from "@playwright/test";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 interface Box {
   x: number;
@@ -40,7 +41,5 @@ export async function chooseFileManagerBackgroundAction(
   if (!point) throw new Error("No exposed FileManager background point is available");
 
   await files.click({ button: "right", position: point });
-  const menu = files.getByRole("menu").last();
-  await expect(menu).toBeVisible();
-  await menu.getByRole("menuitem", { name: action, exact: true }).click();
+  await clickNewContextMenuItem(files, action);
 }

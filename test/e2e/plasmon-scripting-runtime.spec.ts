@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
@@ -41,7 +42,7 @@ async function openBackgroundMenu(
       y: Math.max(80, Math.floor(bounds.height * 0.85)),
     },
   });
-  return plasmon.getByRole("menu").last();
+  return plasmon;
 }
 
 test("packaged scripting executes .cmd through .run and exposes script editor discovery", async ({ page, request }) => {
@@ -93,7 +94,7 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
   const fileList = explorer.getByRole("listbox", { name: "Files" });
 
   const newCmdMenu = await openBackgroundMenu(plasmon, fileList);
-  await newCmdMenu.getByRole("menuitem", { name: "New Command Script (.cmd)" }).click();
+  await clickNewContextMenuItem(newCmdMenu, "New Command Script (.cmd)");
   const rename = explorer.getByRole("textbox", { name: "Rename New Command Script.cmd" });
   await expect(rename).toBeVisible();
   await rename.fill("Scripting Smoke.cmd");
@@ -164,7 +165,7 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
 
   // Direct New Run Script is independently usable; .run files do not require a .cmd creator.
   const newRunMenu = await openBackgroundMenu(plasmon, fileList);
-  await newRunMenu.getByRole("menuitem", { name: "New Run Script (.run)" }).click();
+  await clickNewContextMenuItem(newRunMenu, "New Run Script (.run)");
   const renameRun = explorer.getByRole("textbox", { name: "Rename New Run Script.run" });
   await expect(renameRun).toBeVisible();
   await renameRun.fill("Direct Smoke.run");

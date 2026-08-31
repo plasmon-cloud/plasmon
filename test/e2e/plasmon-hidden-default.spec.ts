@@ -3,6 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { activateLocalPlaywrightIdentity } from "./local-playwright-identity.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const PLASMON_FRAME = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 
@@ -69,8 +70,7 @@ test("hidden Properties stays out of Search and Start while contextual Propertie
         y: Math.max(140, Math.floor(bounds.height * 0.62)),
       },
     });
-    const desktopMenu = plasmon.getByRole("menu").last();
-    await desktopMenu.getByRole("menuitem", { name: "New Text Document" }).click();
+    await clickNewContextMenuItem(plasmon, "New Text Document");
     const rename = plasmon.getByRole("textbox", { name: "Rename New Text Document.txt" });
     await expect(rename).toBeVisible();
     await rename.fill("Visibility 466.txt");
