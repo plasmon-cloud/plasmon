@@ -38,6 +38,7 @@ test("system color overrides accept only the curated semantic role registry", ()
     "titlebar",
     "panel",
     "raised-surface",
+    "taskbar",
     "control",
     "primary-text",
     "secondary-text",
@@ -46,11 +47,13 @@ test("system color overrides accept only the curated semantic role registry", ()
   ]);
   expect(normalizeSystemColorOverrides({
     desktop: "#ABC",
+    taskbar: "#010203",
     accent: "#123456",
     border: "not-a-color",
     arbitraryCss: "url(evil)",
   })).toEqual({
     desktop: "#aabbcc",
+    taskbar: "#010203",
     accent: "#123456",
   });
   expect(systemColorOverrideCssVariables({ arbitraryCss: "#ffffff" } as never)).toEqual({});
