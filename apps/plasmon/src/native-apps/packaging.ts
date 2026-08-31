@@ -54,7 +54,6 @@ const REQUIRED_MONACO_OUTPUT_SUFFIXES = [
 ] as const;
 const REQUIRED_SLIM_MONACO_OUTPUT_SUFFIXES = [
   `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}editor.worker.js`,
-  `${MONACO_PROGRAM_FILES_OUTPUT_ROOT}ts.worker.js`,
 ] as const;
 
 type MonacoProfile = "slim" | "base";

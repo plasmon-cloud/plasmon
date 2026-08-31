@@ -258,7 +258,7 @@ export function FileManager({
   const scriptExtension = contextNode?.kind === "file"
     ? contextNode.name.toLowerCase().match(/\.(cmd|run)$/u)?.[1] ?? null
     : null;
-  const canRunScript = Boolean(scriptExtension && openService);
+  const canRunScript = Boolean(scriptExtension && openService && associations?.getHandler("native:terminal"));
   const canEditScript = Boolean(scriptExtension && openService);
   const canTranspileCmd = Boolean(scriptExtension === "cmd" && onTranspileCmd);
 

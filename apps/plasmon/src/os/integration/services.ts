@@ -87,15 +87,12 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
-import { createPlasmonOsApi } from "../api/adapter.ts";
-import { ScriptingService } from "../../scripting/service.ts";
+import { isCoreProfile, isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
 import {
-  createTerminalNativeLoader,
   terminalAppDefinition,
   terminalAssociationRules,
   terminalHandler,
-} from "../../native-apps/terminal/index.ts";
+} from "../../native-apps/terminal/definition.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -377,7 +374,7 @@ export function createPlasmonServices(
     diagnostics,
     nativeAppLog,
   );
-  if (!isCoreProfile) {
+  if (!isCoreProfile && !isSlimProfile) {
     associations.registerHandler(terminalHandler);
     for (const rule of terminalAssociationRules) associations.registerRule(rule);
     nativeApps.register(terminalAppDefinition);
@@ -438,7 +435,12 @@ export function createPlasmonServices(
     shellPreferences,
   };
 
-  const scripting = new ScriptingService({ os: createPlasmonOsApi({ services }) });
+  if (isSlimProfile) return services;
+
+  let scriptingIntegration: Promise<import("../../scripting/integration.ts").ScriptingIntegration> | null = null;
+  const getScriptingIntegration = () => scriptingIntegration ??= import("../../scripting/integration.ts")
+    .then(({ createScriptingIntegration }) => createScriptingIntegration(services));
+
   nativeApps.setLoader(
     explorerAppDefinition.id,
     createExplorerNativeLoader({
@@ -449,10 +451,18 @@ export function createPlasmonServices(
       trashAuthority: fileManagerTrashAuthority,
       clipboard: fileClipboard,
       hiddenVisibility,
-      transpileCmdFile: async (nodeId) => scripting.transpileCmdFile(await fs.pathOf(nodeId)),
+      transpileCmdFile: async (nodeId) => {
+        const { scripting } = await getScriptingIntegration();
+        return scripting.transpileCmdFile(await fs.pathOf(nodeId));
+      },
     }),
   );
-  if (!isCoreProfile) nativeApps.setLoader(terminalAppDefinition.id, createTerminalNativeLoader({ scripting }));
+  if (!isCoreProfile) {
+    nativeApps.setLoader(
+      terminalAppDefinition.id,
+      async () => (await getScriptingIntegration()).terminalLoader(),
+    );
+  }
 
   return services;
 }
