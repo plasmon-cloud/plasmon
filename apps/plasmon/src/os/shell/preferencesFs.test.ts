@@ -95,6 +95,9 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     wallpaper: { mode: "follow-theme" },
     showBrandWatermark: true,
     taskbarAlignment: "center",
+    taskbarPlacement: "bottom",
+    taskbarIconSize: "medium",
+    showNeutronTray: true,
     ...patch,
   };
 }
