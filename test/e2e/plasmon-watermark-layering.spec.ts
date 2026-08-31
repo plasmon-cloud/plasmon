@@ -56,8 +56,6 @@ test("watermark stays in wallpaper composition below Desktop and native-window c
 
     const composition = await wallpaper.evaluate((element) => {
       const pseudo = getComputedStyle(element, "::after");
-      const hitRect = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(hitRect.left + 16, hitRect.top + 16);
       return {
         backgroundImage: pseudo.backgroundImage,
         height: Number.parseFloat(pseudo.height),
@@ -66,7 +64,6 @@ test("watermark stays in wallpaper composition below Desktop and native-window c
         zIndex: pseudo.zIndex,
         parentZIndex: getComputedStyle(element).zIndex,
         workspaceFollows: element.nextElementSibling?.classList.contains("plasmon-shell__workspace") === true,
-        wallpaperReceivesBackgroundHit: hit === element || element.contains(hit),
       };
     });
     expect(composition.backgroundImage).toContain("plasmon-watermark.svg");
