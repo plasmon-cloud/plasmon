@@ -50,8 +50,14 @@ test("Desktop background Personalize opens and retargets the singleton canonical
     await app.user.pointer({ target: desktopItem, keys: "[MouseRight]" });
     menu = await app.findByRole("menu");
     expect(within(menu).queryByRole("menuitem", { name: "Personalize" })).toBeNull();
-    await app.user.keyboard("{Escape}");
+  } finally {
+    app.dispose();
+  }
+});
 
+test("Explorer background context does not expose Desktop Personalize", async () => {
+  const app = await renderPlasmon();
+  try {
     await act(async () => {
       const processId = await app.environment.services.process.open("native:explorer", {});
       if (processId === null) throw new Error("Explorer native process did not open");
@@ -59,7 +65,7 @@ test("Desktop background Personalize opens and retargets the singleton canonical
     const explorer = await app.findByRole("region", { name: "File Explorer" });
     const explorerFiles = within(explorer).getByRole("listbox", { name: "Files" });
     await app.user.pointer({ target: explorerFiles, keys: "[MouseRight]" });
-    menu = await app.findByRole("menu");
+    const menu = await app.findByRole("menu");
     expect(within(menu).queryByRole("menuitem", { name: "Personalize" })).toBeNull();
   } finally {
     app.dispose();
