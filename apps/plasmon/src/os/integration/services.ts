@@ -492,6 +492,7 @@ export function createPlasmonServices(
       trashAuthority: fileManagerTrashAuthority,
       clipboard: fileClipboard,
       hiddenVisibility,
+      diagnostics,
       transpileCmdFile: async (nodeId) => {
         const { scripting } = await getScriptingIntegration();
         return scripting.transpileCmdFile(await fs.pathOf(nodeId));
