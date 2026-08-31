@@ -1,4 +1,8 @@
-import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import type { FsNode } from "../contracts/index.ts";
 import { PinIcon, SystemIcon, type ResourceIconPresentation } from "../visual/primitives.tsx";
 import { ShellIcon } from "./icon.tsx";
@@ -52,6 +56,12 @@ export function StartSurface({
   onPin,
   onSettings,
 }: StartSurfaceProps) {
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useLayoutEffect(() => {
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, []);
+
   return <section
     className="plasmon-shell__panel plasmon-shell__start-panel"
     data-shell-owned-surface
@@ -62,7 +72,7 @@ export function StartSurface({
     <div className="plasmon-shell__search-box">
       <SystemIcon icon="search" className="plasmon-shell__system-icon" />
       <input
-        autoFocus
+        ref={searchInputRef}
         value={view.query}
         onChange={(event) => onQueryChange(event.target.value)}
         onKeyDown={(event) => {
