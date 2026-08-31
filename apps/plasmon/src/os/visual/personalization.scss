@@ -19,6 +19,10 @@
     --plasmon-panel-elevated: inherit;
   }
 
+  :root[data-plasmon-system-overrides~="taskbar"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-taskbar-background: inherit;
+  }
+
   :root[data-plasmon-system-overrides~="control"] .plasmon-shell:not([data-plasmon-palette-probe]) {
     --plasmon-control-background: inherit;
   }
