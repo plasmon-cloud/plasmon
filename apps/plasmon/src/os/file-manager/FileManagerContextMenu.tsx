@@ -42,8 +42,13 @@ interface FileManagerContextMenuProps {
   onAction: (action: FileManagerContextMenuAction) => void;
 }
 
+export function shouldShowPersonalizeMenuItem(node: FsNode | null, enabled: boolean): boolean {
+  return node === null && enabled;
+}
+
 export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const showPersonalize = shouldShowPersonalizeMenuItem(props.node, props.showPersonalize);
 
   useLayoutEffect(() => {
     const menu = menuRef.current;
@@ -117,7 +122,7 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           <button type="button" role="menuitem" disabled={props.operationRunning} onClick={() => props.onAction("import")}>Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
           <button type="button" role="menuitem" disabled={props.operationRunning || !props.canPaste} onClick={() => props.onAction("paste")}>Paste</button>
-          {props.showPersonalize ? (
+          {showPersonalize ? (
             <>
               <div className="fm-menu-separator" role="separator" />
               <button type="button" role="menuitem" onClick={() => props.onAction("personalize")}>Personalize</button>
