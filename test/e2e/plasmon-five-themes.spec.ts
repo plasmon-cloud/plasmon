@@ -150,7 +150,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await expect(browserAddress).toBeVisible();
 
     const nativeSettingsWindow = await openNativeAppFromSearch("Settings");
-    const nativeSettingsSurface = nativeSettingsWindow.getByRole("region", { name: "Settings" });
+    const nativeSettingsSurface = nativeSettingsWindow.getByRole("region", { name: "Settings", exact: true });
     const nativeSettingsPanel = nativeSettingsSurface.locator(".plasmon-native-app-panel").first();
     await expect(nativeSettingsSurface).toBeVisible();
     await expect(nativeSettingsPanel).toBeVisible();
@@ -162,6 +162,8 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await expect(nativeSettingsWindow).toHaveClass(/plasmon-window--active/);
     const settings = nativeSettingsSurface;
     await expect(settings).toBeVisible();
+    await settings.getByRole("button", { name: "Personalization", exact: true }).click();
+    await expect(settings.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
 
     const observed = {
       desktop: new Set<string>(),
