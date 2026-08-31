@@ -120,6 +120,21 @@ export const VISUAL_PRESENTATION_CONFIGURATION_DEFINITION: ConfigurationDocument
   ),
 };
 
+export function applyVisualPresentationConfiguration(
+  shell: HTMLElement,
+  snapshot: VisualPresentationConfigurationSnapshot,
+): void {
+  shell.dataset.plasmonVisualLabelReadability = snapshot.desktopLabels.readability;
+  shell.dataset.plasmonVisualCheckerIntensity = snapshot.transparencyChecker.intensity;
+  shell.dataset.plasmonVisualCheckerPattern = snapshot.transparencyChecker.pattern;
+}
+
+export function clearVisualPresentationConfiguration(shell: HTMLElement): void {
+  delete shell.dataset.plasmonVisualLabelReadability;
+  delete shell.dataset.plasmonVisualCheckerIntensity;
+  delete shell.dataset.plasmonVisualCheckerPattern;
+}
+
 export interface VisualPresentationConfigurationOptions {
   readonly onDiagnostic?: (diagnostic: ConfigurationDiagnostic) => void;
 }
