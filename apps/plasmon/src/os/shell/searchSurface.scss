@@ -1,5 +1,6 @@
 @layer plasmon-shell {
   .plasmon-shell__panel.plasmon-shell__search-panel {
+    animation: none;
     display: flex;
     flex-direction: column;
     height: min(76vh, 620px);
