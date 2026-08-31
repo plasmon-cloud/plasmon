@@ -63,6 +63,33 @@ async function openExplorer(app: ReturnType<Page["frameLocator"]>) {
   return { explorer, files };
 }
 
+async function createFolderFromBackground(
+  app: ReturnType<Page["frameLocator"]>,
+  files: Locator,
+) {
+  // #751 removes the permanent creation buttons. Use the canonical background
+  // creation route instead. Accept both the pre-#750 flat menu and #750's New >
+  // grouping so this dependent acceptance remains valid across merge order.
+  await files.dispatchEvent("contextmenu", {
+    button: 2,
+    clientX: 16,
+    clientY: 16,
+  });
+  const backgroundMenu = app.getByRole("menu").last();
+  await expect(backgroundMenu).toBeVisible();
+
+  const newSubmenuTrigger = backgroundMenu.getByRole("menuitem", { name: "New", exact: true });
+  if (await newSubmenuTrigger.count()) {
+    await newSubmenuTrigger.click();
+    const newSubmenu = app.getByRole("menu", { name: "New submenu" });
+    await expect(newSubmenu).toBeVisible();
+    await newSubmenu.getByRole("menuitem", { name: "New Folder", exact: true }).click();
+    return;
+  }
+
+  await backgroundMenu.getByRole("menuitem", { name: "New Folder", exact: true }).click();
+}
+
 function nameFromRenameLabel(label: string | null): string {
   if (!label?.startsWith("Rename ")) throw new Error(`Unexpected rename label: ${String(label)}`);
   return label.slice("Rename ".length);
@@ -92,7 +119,7 @@ test("packaged FileManager exposes and activates Create Shortcut", async ({ page
 
     // Create one ordinary folder so the acceptance owns a stable target without
     // relying on demo content or an editor/runtime-specific target.
-    await toolbar.getByRole("button", { name: "New Folder", exact: true }).click();
+    await createFolderFromBackground(app, files);
     const targetRename = files.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(targetRename).toBeVisible();
     await expect(targetRename).toBeFocused();
