@@ -189,6 +189,7 @@ test("Start and Search overlays do not move Desktop resources or normal/maximize
 
     await nativeWindow.getByRole("button", { name: "Maximize" }).click();
     await expect(nativeWindow.getByRole("button", { name: "Restore" })).toBeVisible();
+    await finishElementAnimations(nativeWindow);
     const maximizedWindowBaseline = await nativeWindow.boundingBox();
     if (!maximizedWindowBaseline) throw new Error("Maximized native-window geometry is unavailable");
     await exerciseFlyouts("maximized", maximizedWindowBaseline);
