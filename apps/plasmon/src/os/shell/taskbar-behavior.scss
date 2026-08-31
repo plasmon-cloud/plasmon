@@ -22,10 +22,6 @@
     justify-content: flex-start;
   }
 
-  .plasmon-shell__taskbar[data-taskbar-alignment="center"] {
-    justify-content: center;
-  }
-
   .plasmon-shell[data-task-icon-size="small"] {
     --plasmon-shell-task-icon-size: 26px;
   }
