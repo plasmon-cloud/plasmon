@@ -62,6 +62,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
               trashAuthority={services.filesystem.trash}
               fsEvents={services.fsEvents}
               process={services.process}
+              shellPreferences={services.shellPreferences}
               associations={services.associations}
               openService={services.openService}
               clipboard={services.fileClipboard}

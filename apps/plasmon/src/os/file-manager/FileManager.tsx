@@ -37,6 +37,7 @@ import {
   FileManagerContextMenu,
   type FileManagerContextMenuAction,
   type FileManagerContextMenuState,
+  type FileManagerDesktopWallpaperMenu,
 } from "./FileManagerContextMenu.tsx";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { FileManagerEntries } from "./FileManagerEntries.tsx";
@@ -80,6 +81,7 @@ export interface FileManagerProps {
   sort?: FsListOptions["sort"];
   filterQuery?: string;
   positions?: Readonly<Record<NodeId, DesktopPosition>>;
+  desktopWallpaperMenu?: FileManagerDesktopWallpaperMenu;
   onDesktopReposition?: (
     ids: readonly NodeId[],
     delta: { dx: number; dy: number },
@@ -109,6 +111,7 @@ export function FileManager({
   sort = "name",
   filterQuery = "",
   positions,
+  desktopWallpaperMenu,
   onDesktopReposition,
   onIncomingDropPlacement,
   onOpenDirectory,
@@ -393,7 +396,11 @@ export function FileManager({
       role="listbox"
       aria-label="Files"
       aria-multiselectable="true"
-      onKeyDownCapture={keyboard.handleKeyDown}
+      onKeyDownCapture={(event) => {
+        const target = event.target;
+        if (target instanceof Element && target.closest('[data-fm-context-menu="true"]')) return;
+        keyboard.handleKeyDown(event);
+      }}
       onPointerDown={pointer.handleBackgroundPointerDown}
       onPointerMove={pointer.handleBackgroundPointerMove}
       onPointerUp={pointer.finishMarquee}
@@ -507,7 +514,9 @@ export function FileManager({
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}
+          {...(presentation === "desktop" && desktopWallpaperMenu ? { desktopWallpaperMenu } : {})}
           onAction={menuAction}
+          onDismiss={closeContextMenu}
         />
       ) : null}
 

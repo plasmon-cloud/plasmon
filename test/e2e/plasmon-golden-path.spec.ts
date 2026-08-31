@@ -1,6 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -80,8 +81,7 @@ test("packaged Plasmon boots its real tile and protects native desktop workflows
       y: Math.max(120, Math.floor(desktopBounds.height * 0.55)),
     },
   });
-  const desktopMenu = app.getByRole("menu").last();
-  await desktopMenu.getByRole("menuitem", { name: "New Text Document" }).click();
+  await clickNewContextMenuItem(app, "New Text Document");
   const initialDesktopRename = app.getByRole("textbox", { name: "Rename New Text Document.txt" });
   await expect(initialDesktopRename).toBeVisible();
   const longDesktopName = "Quarterly planning notes with a deliberately long desktop filename for bounded selection.txt";
