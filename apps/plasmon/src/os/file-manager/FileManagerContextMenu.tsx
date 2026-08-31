@@ -56,60 +56,52 @@ interface FileManagerContextMenuProps {
   onDismiss: () => void;
 }
 
-interface FileManagerContextSubmenuItem {
+interface SubmenuItem {
   id: string;
   label: string;
   checked?: boolean;
-  disabled?: boolean;
   onSelect: () => void;
 }
 
-function submenuItems(menu: HTMLDivElement | null): HTMLElement[] {
+function enabledSubmenuItems(menu: HTMLDivElement | null): HTMLElement[] {
   if (!menu) return [];
   return Array.from(menu.querySelectorAll<HTMLElement>(
     '[role="menuitem"]:not(:disabled), [role="menuitemradio"]:not(:disabled)',
   ));
 }
 
-function FileManagerContextSubmenu({
+function ContextSubmenu({
   label,
   disabled = false,
   items,
 }: {
   label: string;
   disabled?: boolean;
-  items: readonly FileManagerContextSubmenuItem[];
+  items: readonly SubmenuItem[];
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const pendingFocusRef = useRef<"first" | "last" | null>(null);
+  const focusOnOpenRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (!open || !pendingFocusRef.current) return;
-    const candidates = submenuItems(menuRef.current);
-    const target = pendingFocusRef.current === "last"
-      ? candidates.at(-1)
-      : candidates[0];
-    pendingFocusRef.current = null;
-    target?.focus();
+    if (!open || !focusOnOpenRef.current) return;
+    focusOnOpenRef.current = false;
+    enabledSubmenuItems(menuRef.current)[0]?.focus();
   }, [open]);
 
-  const openAndFocus = (target: "first" | "last" = "first") => {
-    pendingFocusRef.current = target;
+  const openWithFocus = () => {
+    focusOnOpenRef.current = true;
     setOpen(true);
   };
 
-  const focusRelativeItem = (
-    event: ReactKeyboardEvent<HTMLDivElement>,
-    direction: 1 | -1,
-  ) => {
-    const candidates = submenuItems(menuRef.current);
+  const moveFocus = (event: ReactKeyboardEvent<HTMLDivElement>, delta: 1 | -1) => {
+    const candidates = enabledSubmenuItems(menuRef.current);
     if (candidates.length === 0) return;
     const current = candidates.indexOf(event.target as HTMLElement);
     const next = current < 0
-      ? direction > 0 ? 0 : candidates.length - 1
-      : (current + direction + candidates.length) % candidates.length;
+      ? delta > 0 ? 0 : candidates.length - 1
+      : (current + delta + candidates.length) % candidates.length;
     candidates[next]?.focus();
   };
 
@@ -127,17 +119,16 @@ function FileManagerContextSubmenu({
         ref={triggerRef}
         type="button"
         role="menuitem"
-        data-fm-menu-top-level="true"
+        data-fm-background-menuitem="true"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}
         onClick={() => setOpen(true)}
         onKeyDown={(event) => {
-          if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            event.stopPropagation();
-            openAndFocus("first");
-          }
+          if (event.key !== "ArrowRight" && event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          event.stopPropagation();
+          openWithFocus();
         }}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18 }}
       >
@@ -151,23 +142,13 @@ function FileManagerContextSubmenu({
           aria-label={`${label} submenu`}
           style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}
           onKeyDown={(event) => {
-            if (event.key === "ArrowDown") {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
               event.preventDefault();
               event.stopPropagation();
-              focusRelativeItem(event, 1);
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              event.stopPropagation();
-              focusRelativeItem(event, -1);
-            } else if (event.key === "Home") {
-              event.preventDefault();
-              event.stopPropagation();
-              submenuItems(menuRef.current)[0]?.focus();
-            } else if (event.key === "End") {
-              event.preventDefault();
-              event.stopPropagation();
-              submenuItems(menuRef.current).at(-1)?.focus();
-            } else if (event.key === "ArrowLeft" || event.key === "Escape") {
+              moveFocus(event, event.key === "ArrowDown" ? 1 : -1);
+              return;
+            }
+            if (event.key === "ArrowLeft" || event.key === "Escape") {
               event.preventDefault();
               event.stopPropagation();
               setOpen(false);
@@ -181,7 +162,6 @@ function FileManagerContextSubmenu({
               type="button"
               role={item.checked === undefined ? "menuitem" : "menuitemradio"}
               {...(item.checked === undefined ? {} : { "aria-checked": item.checked })}
-              disabled={item.disabled}
               onClick={() => {
                 setOpen(false);
                 item.onSelect();
@@ -218,25 +198,20 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
     );
     menu.style.left = `${position.x}px`;
     menu.style.top = `${position.y}px`;
-    menu.querySelector<HTMLElement>('[data-fm-menu-top-level="true"]:not(:disabled)')?.focus();
+    menu.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
   }, [props.state.nodeId, props.state.x, props.state.y]);
 
-  const focusTopLevelItem = (
-    event: ReactKeyboardEvent<HTMLDivElement>,
-    direction: 1 | -1,
-  ) => {
+  const moveBackgroundFocus = (event: ReactKeyboardEvent<HTMLDivElement>, delta: 1 | -1) => {
     const candidates = Array.from(menuRef.current?.querySelectorAll<HTMLElement>(
-      '[data-fm-menu-top-level="true"]:not(:disabled)',
+      '[data-fm-background-menuitem="true"]:not(:disabled)',
     ) ?? []);
     if (candidates.length === 0) return;
     const current = candidates.indexOf(event.target as HTMLElement);
     const next = current < 0
-      ? direction > 0 ? 0 : candidates.length - 1
-      : (current + direction + candidates.length) % candidates.length;
+      ? delta > 0 ? 0 : candidates.length - 1
+      : (current + delta + candidates.length) % candidates.length;
     candidates[next]?.focus();
   };
-
-  const topLevel = { "data-fm-menu-top-level": "true" } as const;
 
   return (
     <div
@@ -257,33 +232,19 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           props.onDismiss();
           return;
         }
-        const target = event.target as HTMLElement;
-        if (target.dataset.fmMenuTopLevel !== "true") return;
-        if (event.key === "ArrowDown") {
+        if (!props.node && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+          const target = event.target as HTMLElement;
+          if (target.dataset.fmBackgroundMenuitem !== "true") return;
           event.preventDefault();
-          focusTopLevelItem(event, 1);
-        } else if (event.key === "ArrowUp") {
-          event.preventDefault();
-          focusTopLevelItem(event, -1);
-        } else if (event.key === "Home") {
-          event.preventDefault();
-          Array.from(menuRef.current?.querySelectorAll<HTMLElement>(
-            '[data-fm-menu-top-level="true"]:not(:disabled)',
-          ) ?? [])[0]?.focus();
-        } else if (event.key === "End") {
-          event.preventDefault();
-          Array.from(menuRef.current?.querySelectorAll<HTMLElement>(
-            '[data-fm-menu-top-level="true"]:not(:disabled)',
-          ) ?? []).at(-1)?.focus();
+          moveBackgroundFocus(event, event.key === "ArrowDown" ? 1 : -1);
         }
       }}
     >
       {props.node ? (
         <>
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("open")}>Open</button>
           {props.node.kind !== "directory" ? (
             <button
-              {...topLevel}
               type="button"
               role="menuitem"
               disabled={!props.canOpenWith}
@@ -295,7 +256,6 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           ) : null}
           {props.node.kind === "file" ? (
             <button
-              {...topLevel}
               type="button"
               role="menuitem"
               disabled={!props.canDownload}
@@ -306,18 +266,18 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
             </button>
           ) : null}
           <div className="fm-menu-separator" role="separator" />
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("copy")}>Copy</button>
-          <button {...topLevel} type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("createShortcut")}>Create Shortcut</button>
-          <button {...topLevel} type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("sendToDesktop")}>Send to Desktop (create shortcut)</button>
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("rename")}>Rename</button>
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("delete")}>Delete</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("copy")}>Copy</button>
+          <button type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("createShortcut")}>Create Shortcut</button>
+          <button type="button" role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("sendToDesktop")}>Send to Desktop (create shortcut)</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("rename")}>Rename</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("delete")}>Delete</button>
           <div className="fm-menu-separator" role="separator" />
-          <button {...topLevel} type="button" role="menuitem" onClick={() => props.onAction("properties")}>Properties</button>
+          <button type="button" role="menuitem" onClick={() => props.onAction("properties")}>Properties</button>
         </>
       ) : (
         <>
-          <FileManagerContextSubmenu
+          <ContextSubmenu
             label="New"
             items={[
               { id: "folder", label: "New Folder", onSelect: () => props.onAction("newFolder") },
@@ -326,20 +286,35 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
             ]}
           />
           {props.desktopWallpaperMenu ? (
-            <FileManagerContextSubmenu
+            <ContextSubmenu
               label="Change Wallpaper"
               disabled={props.desktopWallpaperMenu.disabled}
               items={props.desktopWallpaperMenu.choices.map((choice) => ({
                 id: choice.id,
                 label: choice.label,
                 checked: Boolean(choice.selected),
-                onSelect: () => props.desktopWallpaperMenu?.onSelect(choice.id),
+                onSelect: () => {
+                  props.onDismiss();
+                  props.desktopWallpaperMenu?.onSelect(choice.id);
+                },
               }))}
             />
           ) : null}
-          <button {...topLevel} type="button" role="menuitem" disabled={props.operationRunning} onClick={() => props.onAction("import")}>Import Files…</button>
+          <button
+            type="button"
+            role="menuitem"
+            data-fm-background-menuitem="true"
+            disabled={props.operationRunning}
+            onClick={() => props.onAction("import")}
+          >Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
-          <button {...topLevel} type="button" role="menuitem" disabled={props.operationRunning || !props.canPaste} onClick={() => props.onAction("paste")}>Paste</button>
+          <button
+            type="button"
+            role="menuitem"
+            data-fm-background-menuitem="true"
+            disabled={props.operationRunning || !props.canPaste}
+            onClick={() => props.onAction("paste")}
+          >Paste</button>
         </>
       )}
     </div>
