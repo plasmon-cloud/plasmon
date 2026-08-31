@@ -63,7 +63,18 @@ export const SHELL_THEME_WALLPAPERS = Object.freeze({
 
 export type ShellWallpaperPreference =
   | { mode: "follow-theme" }
-  | { mode: "pinned"; id: ShellWallpaperId };
+  | { mode: "pinned"; id: ShellWallpaperId }
+  | { mode: "filesystem"; nodeId: NodeId };
+
+export const SHELL_WALLPAPER_LAYOUTS = ["fill", "fit", "stretch", "tile", "center"] as const;
+export type ShellWallpaperLayout = (typeof SHELL_WALLPAPER_LAYOUTS)[number];
+export const SHELL_WALLPAPER_LAYOUT_LABELS = Object.freeze({
+  fill: "Fill",
+  fit: "Fit",
+  stretch: "Stretch",
+  tile: "Tile",
+  center: "Center",
+} satisfies Readonly<Record<ShellWallpaperLayout, string>>);
 
 export const SHELL_TASKBAR_ALIGNMENTS = ["center", "left"] as const;
 export type ShellTaskbarAlignment = (typeof SHELL_TASKBAR_ALIGNMENTS)[number];
@@ -76,6 +87,8 @@ export interface ShellPreferences {
   /** Defaults to dark for legacy v1 preference objects that predate appearance mode. */
   appearanceMode: ShellAppearanceMode;
   wallpaper: ShellWallpaperPreference;
+  /** Defaults to Fill for legacy v1 preference objects that predate wallpaper layout. */
+  wallpaperLayout: ShellWallpaperLayout;
   /** Defaults to true for legacy v1 preference objects that predate the watermark preference. */
   showBrandWatermark?: boolean;
   taskbarAlignment: ShellTaskbarAlignment;
@@ -88,25 +101,35 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   themeId: "plasmon-graphite",
   appearanceMode: "dark",
   wallpaper: Object.freeze({ mode: "pinned" as const, id: "rosewood-bloom" as const }),
+  wallpaperLayout: "fill",
   showBrandWatermark: true,
   taskbarAlignment: "center",
 });
 
 export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SHELL_PREFERENCES): ShellPreferences {
+  const wallpaper = preferences.wallpaper.mode === "pinned"
+    ? { mode: "pinned" as const, id: preferences.wallpaper.id }
+    : preferences.wallpaper.mode === "filesystem"
+      ? { mode: "filesystem" as const, nodeId: preferences.wallpaper.nodeId }
+      : { mode: "follow-theme" as const };
   return {
     version: 1,
     pinnedNative: [...preferences.pinnedNative],
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
     appearanceMode: preferences.appearanceMode,
-    wallpaper: preferences.wallpaper.mode === "pinned"
-      ? { mode: "pinned", id: preferences.wallpaper.id }
-      : { mode: "follow-theme" },
+    wallpaper,
+    wallpaperLayout: preferences.wallpaperLayout,
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
   };
 }
 
+/**
+ * Effective packaged wallpaper identity. Filesystem targets use the current
+ * theme companion as their safe rendering fallback without rewriting the
+ * persisted filesystem target.
+ */
 export function effectiveShellWallpaper(
   themeId: ShellThemeId,
   wallpaper: ShellWallpaperPreference,
@@ -152,6 +175,9 @@ function isWallpaperId(value: unknown): value is ShellWallpaperId {
 function normalizeWallpaperPreference(value: unknown): ShellWallpaperPreference {
   if (isRecord(value)) {
     if (value.mode === "follow-theme") return { mode: "follow-theme" };
+    if (value.mode === "filesystem" && typeof value.nodeId === "string" && value.nodeId.trim() === value.nodeId && value.nodeId) {
+      return { mode: "filesystem", nodeId: value.nodeId };
+    }
     if (value.mode === "pinned" && value.id === "plasmon-aurora") {
       return { mode: "pinned", id: "plasmon-lattice" };
     }
@@ -166,6 +192,10 @@ function normalizeWallpaperPreference(value: unknown): ShellWallpaperPreference 
   return { mode: "follow-theme" };
 }
 
+function isWallpaperLayout(value: unknown): value is ShellWallpaperLayout {
+  return typeof value === "string" && (SHELL_WALLPAPER_LAYOUTS as readonly string[]).includes(value);
+}
+
 function isTaskbarAlignment(value: unknown): value is ShellTaskbarAlignment {
   return typeof value === "string" && (SHELL_TASKBAR_ALIGNMENTS as readonly string[]).includes(value);
 }
@@ -176,6 +206,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
   const pinnedElements = stringList(value.pinnedElements);
   const themeId = normalizeTheme(value.themeId);
   const appearanceMode = value.appearanceMode === undefined ? "dark" : value.appearanceMode;
+  const wallpaperLayout = value.wallpaperLayout === undefined ? "fill" : value.wallpaperLayout;
   const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
   const showBrandWatermark = value.showBrandWatermark === undefined ? true : value.showBrandWatermark;
   if (
@@ -183,6 +214,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     || !pinnedElements
     || !themeId
     || !isAppearanceMode(appearanceMode)
+    || !isWallpaperLayout(wallpaperLayout)
     || typeof showBrandWatermark !== "boolean"
     || !isTaskbarAlignment(taskbarAlignment)
   ) {
@@ -195,6 +227,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     themeId,
     appearanceMode,
     wallpaper: normalizeWallpaperPreference(value.wallpaper),
+    wallpaperLayout,
     showBrandWatermark,
     taskbarAlignment,
   };
@@ -209,15 +242,19 @@ export function parseShellPreferences(serialized: string): ShellPreferences | nu
 }
 
 function preferenceMetadataValue(preferences: ShellPreferences): JsonValue {
+  const wallpaper: JsonValue = preferences.wallpaper.mode === "pinned"
+    ? { mode: "pinned", id: preferences.wallpaper.id }
+    : preferences.wallpaper.mode === "filesystem"
+      ? { mode: "filesystem", nodeId: preferences.wallpaper.nodeId }
+      : { mode: "follow-theme" };
   return {
     version: 1,
     pinnedNative: [...preferences.pinnedNative],
     pinnedElements: [...preferences.pinnedElements],
     themeId: preferences.themeId,
     appearanceMode: preferences.appearanceMode,
-    wallpaper: preferences.wallpaper.mode === "pinned"
-      ? { mode: "pinned", id: preferences.wallpaper.id }
-      : { mode: "follow-theme" },
+    wallpaper,
+    wallpaperLayout: preferences.wallpaperLayout,
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
   };
