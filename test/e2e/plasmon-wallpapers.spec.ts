@@ -156,6 +156,10 @@ test("six wallpapers are visible, follow themes, pin independently, and share a 
     await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
 
     const follow = settings.getByRole("button", { name: "Follow theme", exact: true });
+    await expect(follow).toHaveAttribute("aria-pressed", "false");
+    await expect(follow).toBeEnabled();
+    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "rosewood-bloom");
+    await follow.click();
     await expect(follow).toHaveAttribute("aria-pressed", "true");
     await expect(follow).toBeDisabled();
     await expect(settings.getByRole("button", { name: "Graphite Sand", exact: true })).toBeDisabled();
