@@ -8,6 +8,10 @@ import {
   NativeAppStatusStrip,
 } from "../../os/visual/index.ts";
 import {
+  reportVideoPlaybackError,
+  reportVideoPlaybackStartFailure,
+} from "../semanticDiagnostics.ts";
+import {
   createObjectUrlLease,
   inferVideoMime,
   nativeVideoSupportForMime,
@@ -26,6 +30,11 @@ export interface VideoPlayerProps {
 type Source =
   | { kind: "video"; url: string; title: string; local: boolean; mime: string }
   | { kind: "youtube"; url: string; externalUrl: string; title: string };
+
+export function isExpectedVideoPlayRejection(reason: unknown): boolean {
+  if (!reason || typeof reason !== "object" || !("name" in reason)) return false;
+  return reason.name === "NotAllowedError" || reason.name === "AbortError";
+}
 
 async function resolveVideoSource(
   target: OpenTarget,
@@ -145,7 +154,13 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
 
     if (event.key === " " || event.key.toLowerCase() === "k") {
       event.preventDefault();
-      video.paused ? void video.play() : video.pause();
+      if (video.paused) {
+        void video.play().catch((reason: unknown) => {
+          if (!isExpectedVideoPlayRejection(reason)) reportVideoPlaybackStartFailure();
+        });
+      } else {
+        video.pause();
+      }
     } else if (event.key === "ArrowLeft") {
       video.currentTime = Math.max(0, video.currentTime - 5);
     } else if (event.key === "ArrowRight") {
@@ -190,6 +205,7 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
           style={styles.video}
           onCanPlay={() => setUnsupported(null)}
           onError={() => {
+            reportVideoPlaybackError();
             setUnsupported(videoPlaybackErrorMessage(
               source.title,
               source.mime,
