@@ -51,7 +51,7 @@ export function reportBrowserTargetResolveFailure(): void {
 }
 
 export function reportPhotosDecodeFailure(): void {
-  logger?.error(DiagnosticEvent.NativeApp.PhotosDecodeFailed, {
+  logger?.notice(DiagnosticEvent.NativeApp.PhotosDecodeFailed, {
     message: "Photos image decode failed",
     operation: DiagnosticOperation.Load,
   });
@@ -65,7 +65,7 @@ export function reportVideoSourceResolveFailure(): void {
 }
 
 export function reportVideoPlaybackError(): void {
-  logger?.error(DiagnosticEvent.NativeApp.VideoPlaybackError, {
+  logger?.notice(DiagnosticEvent.NativeApp.VideoPlaybackError, {
     message: "Video playback failed",
     operation: DiagnosticOperation.Load,
   });
