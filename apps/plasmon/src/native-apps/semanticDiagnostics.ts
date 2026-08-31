@@ -15,6 +15,13 @@ export function setNativeAppSemanticDiagnosticLogger(
   logger = next;
 }
 
+export function reportDocumentLoadFailure(): void {
+  logger?.error(DiagnosticEvent.NativeApp.DocumentLoadFailed, {
+    message: "Document content decoding failed",
+    operation: DiagnosticOperation.Load,
+  });
+}
+
 export function reportDocumentSaveAsRollbackFailure(): void {
   logger?.error(DiagnosticEvent.NativeApp.DocumentSaveAsRollbackFailed, {
     message: "Document Save As rollback failed",
@@ -33,7 +40,13 @@ export function reportDocumentCloseSaveUnexpectedFailure(): void {
 export function reportMarkdownFormatFailure(): void {
   logger?.error(DiagnosticEvent.NativeApp.MarkdownFormatFailed, {
     message: "Markdown formatting failed",
-    operation: DiagnosticOperation.Validate,
+  });
+}
+
+export function reportBrowserTargetResolveFailure(): void {
+  logger?.error(DiagnosticEvent.NativeApp.BrowserTargetResolveFailed, {
+    message: "Browser target interpretation failed",
+    operation: DiagnosticOperation.Open,
   });
 }
 
@@ -41,6 +54,13 @@ export function reportPhotosDecodeFailure(): void {
   logger?.error(DiagnosticEvent.NativeApp.PhotosDecodeFailed, {
     message: "Photos image decode failed",
     operation: DiagnosticOperation.Load,
+  });
+}
+
+export function reportVideoSourceResolveFailure(): void {
+  logger?.error(DiagnosticEvent.NativeApp.VideoSourceResolveFailed, {
+    message: "Video target interpretation failed",
+    operation: DiagnosticOperation.Open,
   });
 }
 
@@ -55,6 +75,13 @@ export function reportVideoPlaybackStartFailure(): void {
   logger?.error(DiagnosticEvent.NativeApp.VideoPlaybackStartFailed, {
     message: "Video playback start failed",
     operation: DiagnosticOperation.Start,
+  });
+}
+
+export function reportExplorerFavoritesRefreshFailure(): void {
+  logger?.error(DiagnosticEvent.NativeApp.ExplorerFavoritesRefreshFailed, {
+    message: "File Explorer Favorites refresh failed",
+    operation: DiagnosticOperation.Read,
   });
 }
 
