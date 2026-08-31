@@ -1,4 +1,4 @@
-name: Issue triage metadata bridge
+name: Issue and PR triage metadata bridge
 
 on:
   issue_comment:
@@ -7,125 +7,24 @@ on:
 permissions:
   contents: read
   issues: write
+  pull-requests: write
 
 jobs:
   triage:
     if: >-
-      github.event.issue.pull_request == null &&
       startsWith(github.event.comment.body, '/triage ') &&
       (github.event.comment.author_association == 'OWNER' ||
        github.event.comment.author_association == 'MEMBER' ||
        github.event.comment.author_association == 'COLLABORATOR')
     runs-on: ubuntu-latest
     steps:
-      - name: Apply native issue type and fields
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Apply canonical Issue or PR metadata
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const command = context.payload.comment.body.trim().split('\n', 1)[0];
-            const prefix = '/triage ';
-            if (!command.startsWith(prefix)) {
-              core.setFailed('Triage comment must begin with /triage.');
-              return;
-            }
-
-            const parsed = {};
-            for (const segment of command.slice(prefix.length).split(';')) {
-              const trimmed = segment.trim();
-              if (!trimmed) continue;
-              const separator = trimmed.indexOf('=');
-              if (separator <= 0) {
-                core.setFailed(`Invalid triage segment: ${trimmed}`);
-                return;
-              }
-              const key = trimmed.slice(0, separator).trim().toLowerCase();
-              const value = trimmed.slice(separator + 1).trim();
-              if (Object.prototype.hasOwnProperty.call(parsed, key)) {
-                core.setFailed(`Duplicate triage key: ${key}`);
-                return;
-              }
-              parsed[key] = value;
-            }
-
-            const requiredKeys = ['type', 'desire', 'effort', 'area'];
-            const unknownKeys = Object.keys(parsed).filter((key) => !requiredKeys.includes(key));
-            if (unknownKeys.length) {
-              core.setFailed(`Unknown triage key(s): ${unknownKeys.join(', ')}`);
-              return;
-            }
-            const missingKeys = requiredKeys.filter((key) => !parsed[key]);
-            if (missingKeys.length) {
-              core.setFailed(`Missing triage key(s): ${missingKeys.join(', ')}`);
-              return;
-            }
-
-            const allowedTypes = new Set(['Bug', 'Feature', 'Task']);
-            const allowedLevels = new Set(['High', 'Medium', 'Low']);
-            const allowedAreas = new Set([
-              'Repo',
-              'Contracts',
-              'Filesystem',
-              'Associations',
-              'Process',
-              'Windowing',
-              'Desktop',
-              'File Manager',
-              'Shell',
-              'Native Apps',
-              'Games',
-              'Visual',
-              'Neutron',
-              'Atoms',
-              'Integration',
-              'Backend',
-              'Docs',
-              'Testing',
-            ]);
-
-            if (!allowedTypes.has(parsed.type)) {
-              core.setFailed(`Invalid issue type: ${parsed.type}`);
-              return;
-            }
-            if (!allowedLevels.has(parsed.desire)) {
-              core.setFailed(`Invalid Desire value: ${parsed.desire}`);
-              return;
-            }
-            if (!allowedLevels.has(parsed.effort)) {
-              core.setFailed(`Invalid Effort value: ${parsed.effort}`);
-              return;
-            }
-            if (!allowedAreas.has(parsed.area)) {
-              core.setFailed(`Invalid Area value: ${parsed.area}`);
-              return;
-            }
-
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const issueNumber = context.payload.issue.number;
-            const apiVersion = '2026-03-10';
-
-            const fieldIds = {
-              Effort: 45341550,
-              Desire: 45464444,
-              Area: 45464445,
-            };
-
-            await github.request('PATCH /repos/{owner}/{repo}/issues/{issue_number}', {
-              owner,
-              repo,
-              issue_number: issueNumber,
-              type: parsed.type,
-              issue_field_values: [
-                { field_id: fieldIds.Desire, value: parsed.desire },
-                { field_id: fieldIds.Effort, value: parsed.effort },
-                { field_id: fieldIds.Area, value: parsed.area },
-              ],
-              headers: {
-                'X-GitHub-Api-Version': apiVersion,
-              },
-            });
-
-            core.info(
-              `Applied type=${parsed.type}, desire=${parsed.desire}, effort=${parsed.effort}, area=${parsed.area} to #${issueNumber}`,
-            );
+            const triage = require('./.github/scripts/triage.cjs');
+            await triage({ github, context, core });

@@ -1,0 +1,23 @@
+name: Triage CI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue-triage-metadata.yml'
+      - '.github/workflows/triage-ci.yml'
+      - '.github/scripts/triage.cjs'
+      - '.github/scripts/triage.test.cjs'
+      - '.github/TRIAGE.md'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate triage helper
+        run: |
+          node --check .github/scripts/triage.cjs
+          node --test .github/scripts/triage.test.cjs
