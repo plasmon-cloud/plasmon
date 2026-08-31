@@ -42,6 +42,7 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
     pinnedNative: ["native:text"],
     pinnedElements: ["mail"],
     themeId,
+    appearanceMode: "dark",
     wallpaper,
     taskbarAlignment: "left",
     taskbarPlacement: "bottom",
@@ -50,7 +51,7 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
   };
 }
 
-test("exposes six theme companions: five generated designs plus Graphite Sand JPG", () => {
+test("exposes six theme companions while fresh profiles pin Rosewood Bloom independently", () => {
   expect(SHELL_THEME_IDS).toEqual(THEMES);
   expect(SHELL_GENERATED_WALLPAPER_IDS).toEqual(GENERATED_WALLPAPERS);
   expect(SHELL_JPG_WALLPAPER_ID).toBe("graphite-sand");
@@ -60,7 +61,12 @@ test("exposes six theme companions: five generated designs plus Graphite Sand JP
   expect(Object.keys(SHELL_WALLPAPER_LABELS)).toEqual(WALLPAPERS);
   expect(new Set(Object.values(SHELL_WALLPAPER_LABELS)).size).toBe(WALLPAPERS.length);
   expect(DEFAULT_SHELL_PREFERENCES.themeId).toBe("plasmon-graphite");
+  expect(DEFAULT_SHELL_PREFERENCES.appearanceMode).toBe("dark");
+  expect(DEFAULT_SHELL_PREFERENCES.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(effectiveShellWallpaper(DEFAULT_SHELL_PREFERENCES.themeId, DEFAULT_SHELL_PREFERENCES.wallpaper))
+    .toBe("rosewood-bloom");
   expect(SHELL_THEME_WALLPAPERS["plasmon-graphite"]).toBe("graphite-sand");
+  expect(effectiveShellWallpaper("plasmon-graphite", { mode: "follow-theme" })).toBe("graphite-sand");
   expect(SHELL_THEME_WALLPAPERS["plasmon-verdant"]).toBe("plasmon-lattice");
 });
 
@@ -71,7 +77,7 @@ test("Follow theme resolves from the active theme while any pinned wallpaper rem
   }
 });
 
-test("legacy, preview, and corrupt appearance state migrates without erasing unrelated v1 preferences", () => {
+test("legacy, preview, and corrupt wallpaper state migrates without erasing unrelated v1 preferences", () => {
   for (const legacy of ["aurora", "plain"]) {
     expect(validateShellPreferences(stored(legacy))).toEqual({
       ...stored({ mode: "follow-theme" }),

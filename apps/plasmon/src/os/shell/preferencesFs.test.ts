@@ -14,7 +14,9 @@ import type {
 } from "../contracts/index.ts";
 import {
   DEFAULT_SHELL_PREFERENCES,
+  effectiveShellWallpaper,
   SHELL_PREFERENCES_KEY,
+  ShellPreferencesController,
   ShellPreferenceStore,
   saveShellPreferencesNonDestructive,
   type ShellPreferences,
@@ -92,6 +94,7 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     pinnedNative: [],
     pinnedElements: [],
     themeId: "plasmon-graphite",
+    appearanceMode: "dark",
     wallpaper: { mode: "follow-theme" },
     showBrandWatermark: true,
     taskbarAlignment: "center",
@@ -102,7 +105,18 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
   };
 }
 
-test("legacy v1 Shell preferences preserve existing values and migrate wallpaper to Follow theme", async () => {
+test("fresh Shell preferences are Graphite Dark with Rosewood Bloom pinned", async () => {
+  const fs = new PreferenceFs();
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded).toEqual(DEFAULT_SHELL_PREFERENCES);
+  expect(loaded.themeId).toBe("plasmon-graphite");
+  expect(loaded.appearanceMode).toBe("dark");
+  expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(effectiveShellWallpaper(loaded.themeId, loaded.wallpaper)).toBe("rosewood-bloom");
+  expect(fs.metadataWrites).toBe(0);
+});
+
+test("legacy v1 Shell preferences preserve existing values and migrate appearance to Dark", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -117,6 +131,20 @@ test("legacy v1 Shell preferences preserve existing values and migrate wallpaper
     pinnedElements: ["mail"],
     themeId: "plasmon-midnight",
   }));
+  expect(fs.metadataWrites).toBe(0);
+});
+
+test("existing valid Follow-theme users are not rewritten to the new fresh wallpaper", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = preferences({
+    themeId: "plasmon-graphite",
+    wallpaper: { mode: "follow-theme" },
+  }) as unknown as JsonValue;
+
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.wallpaper).toEqual({ mode: "follow-theme" });
+  expect(effectiveShellWallpaper(loaded.themeId, loaded.wallpaper)).toBe("graphite-sand");
+  expect(fs.metadataWrites).toBe(0);
 });
 
 test("preview Plasmon Dark and Aurora values migrate to Verdant and Plasmon Lattice", async () => {
@@ -132,6 +160,7 @@ test("preview Plasmon Dark and Aurora values migrate to Verdant and Plasmon Latt
 
   const loaded = await new ShellPreferenceStore(fs).load();
   expect(loaded.themeId).toBe("plasmon-verdant");
+  expect(loaded.appearanceMode).toBe("dark");
   expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "plasmon-lattice" });
   expect(loaded.showBrandWatermark).toBe(true);
 });
@@ -167,6 +196,32 @@ test("theme persists through FsService root metadata", async () => {
   expect((await new ShellPreferenceStore(fs).load()).themeId).toBe("plasmon-midnight");
 });
 
+test("appearance mode persists through FsService root metadata", async () => {
+  const fs = new PreferenceFs();
+  await new ShellPreferenceStore(fs).save(preferences({ appearanceMode: "light" }));
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.appearanceMode).toBe("light");
+  expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ appearanceMode: "light" }));
+});
+
+test("appearance-only controller saves preserve theme and effective wallpaper", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = preferences({
+    themeId: "plasmon-midnight",
+    wallpaper: { mode: "pinned", id: "rosewood-bloom" },
+  }) as unknown as JsonValue;
+  const controller = new ShellPreferencesController(new ShellPreferenceStore(fs));
+  const before = await controller.load();
+  const wallpaperBefore = effectiveShellWallpaper(before.themeId, before.wallpaper);
+
+  const outcome = await controller.save({ ...before, appearanceMode: "light" });
+  expect(outcome.saved).toBe(true);
+  expect(outcome.preferences.themeId).toBe("plasmon-midnight");
+  expect(outcome.preferences.appearanceMode).toBe("light");
+  expect(outcome.preferences.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(effectiveShellWallpaper(outcome.preferences.themeId, outcome.preferences.wallpaper)).toBe(wallpaperBefore);
+});
+
 test("pinned generated wallpaper persists through FsService root metadata", async () => {
   const fs = new PreferenceFs();
   await new ShellPreferenceStore(fs).save(preferences({ wallpaper: { mode: "pinned", id: "ember-horizon" } }));
@@ -194,7 +249,7 @@ test("taskbar alignment persists through FsService root metadata", async () => {
   expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ taskbarAlignment: "left" }));
 });
 
-test("corrupt preference root metadata falls back to deterministic Graphite defaults", async () => {
+test("corrupt preference root metadata falls back to deterministic fresh defaults", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -206,6 +261,15 @@ test("corrupt preference root metadata falls back to deterministic Graphite defa
   expect(await new ShellPreferenceStore(fs).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
 });
 
+test("invalid explicit appearance mode does not partially accept corrupt preferences", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    ...preferences({ wallpaper: { mode: "follow-theme" } }),
+    appearanceMode: "system",
+  } as unknown as JsonValue;
+  expect(await new ShellPreferenceStore(fs).load()).toEqual(DEFAULT_SHELL_PREFERENCES);
+});
+
 test("invalid wallpaper falls back only that dimension without discarding valid Shell preferences", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
@@ -213,6 +277,7 @@ test("invalid wallpaper falls back only that dimension without discarding valid 
     pinnedNative: ["native:text"],
     pinnedElements: ["mail"],
     themeId: "plasmon-rosewood",
+    appearanceMode: "light",
     wallpaper: { mode: "pinned", id: "not-a-wallpaper" },
     taskbarAlignment: "left",
   };
@@ -220,6 +285,7 @@ test("invalid wallpaper falls back only that dimension without discarding valid 
     pinnedNative: ["native:text"],
     pinnedElements: ["mail"],
     themeId: "plasmon-rosewood",
+    appearanceMode: "light",
     taskbarAlignment: "left",
   }));
 });
@@ -242,6 +308,7 @@ test("write failure keeps the selected in-memory preference outcome", async () =
   fs.failWrites = true;
   const selected = preferences({
     pinnedElements: ["mail"],
+    appearanceMode: "light",
     wallpaper: { mode: "pinned", id: "glacier-prism" },
     taskbarAlignment: "left",
   });

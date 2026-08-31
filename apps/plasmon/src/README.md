@@ -23,7 +23,7 @@ Always verify reachability from this path before treating old source as active p
 - `games/` — game/demo content integration; content is not a replacement application architecture.
 - top-level styles/helpers — shared or compatibility presentation used only where imported by the active path.
 
-The prior GUI experiment and parallel platform compatibility layer have been retired from the active source tree. Git history remains the recovery source for those experiments; new work must not recreate either as an alternate OS/runtime authority.
+Legacy GUI and platform-compatibility code is retired from the active source tree. Git history remains the recovery source; new work must not recreate either as an alternate OS/runtime authority.
 
 ## Convergence direction
 

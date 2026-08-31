@@ -15,16 +15,20 @@ import {
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
   effectiveShellWallpaper,
+  SHELL_APPEARANCE_MODES,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
   SHELL_WALLPAPER_IDS,
   SHELL_WALLPAPER_LABELS,
   type ShellPreferencesAuthority,
 } from "../../os/shell/preferences.ts";
-import { NativeAppContentSurface, NativeAppPanel } from "../../os/visual/index.ts";
+import {
+  NativeAppButton,
+  NativeAppContentSurface,
+  NativeAppPanel,
+} from "../../os/visual/index.ts";
 import {
   formatBytes,
-  settingsFeatureAvailability,
   summarizeStorage,
   type StorageSummary,
 } from "./model.ts";
@@ -303,7 +307,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
               <h3 style={styles.sectionHeading}>Theme</h3>
               <div style={styles.optionGrid}>
                 {SHELL_THEME_IDS.map((themeId) => (
-                  <button
+                  <NativeAppButton
                     key={themeId}
                     type="button"
                     disabled={!shellPreferencesReady}
@@ -311,21 +315,35 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                     onClick={() => updateShellPreferences({ themeId })}
                   >
                     {SHELL_THEME_LABELS[themeId]}
+                  </NativeAppButton>
+                ))}
+              </div>
+              <h3 style={styles.sectionHeading}>Appearance mode</h3>
+              <div style={styles.optionGrid}>
+                {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
+                  <button
+                    key={appearanceMode}
+                    type="button"
+                    disabled={!shellPreferencesReady}
+                    aria-pressed={shellSnapshot.appearanceMode === appearanceMode}
+                    onClick={() => updateShellPreferences({ appearanceMode })}
+                  >
+                    {appearanceMode === "dark" ? "Dark" : "Light"}
                   </button>
                 ))}
               </div>
               <h3 style={styles.sectionHeading}>Wallpaper</h3>
               <div style={styles.optionGrid}>
-                <button
+                <NativeAppButton
                   type="button"
                   disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
                   aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
                   onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
                 >
                   Follow theme
-                </button>
+                </NativeAppButton>
                 {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
-                  <button
+                  <NativeAppButton
                     key={wallpaperId}
                     type="button"
                     disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
@@ -333,11 +351,11 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                     onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
                   >
                     {SHELL_WALLPAPER_LABELS[wallpaperId]}
-                  </button>
+                  </NativeAppButton>
                 ))}
               </div>
               <h3 style={styles.sectionHeading}>Desktop overlay</h3>
-              <button
+              <NativeAppButton
                 type="button"
                 disabled={!shellPreferencesReady}
                 aria-label="Show Plasmon watermark"
@@ -345,12 +363,12 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                 onClick={() => updateShellPreferences({ showBrandWatermark: shellSnapshot.showBrandWatermark === false })}
               >
                 Plasmon watermark: {shellSnapshot.showBrandWatermark !== false ? "On" : "Off"}
-              </button>
+              </NativeAppButton>
               <p style={styles.helpText}>The Plasmon SVG watermark is layered over every wallpaper and can be hidden independently.</p>
               <h3 style={styles.sectionHeading}>Taskbar alignment</h3>
               <div style={styles.optionGrid}>
-                <button type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "center"} onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}>Center</button>
-                <button type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "left"} onClick={() => updateShellPreferences({ taskbarAlignment: "left" })}>Left</button>
+                <NativeAppButton type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "left"} onClick={() => updateShellPreferences({ taskbarAlignment: "left" })}>Left</NativeAppButton>
+                <NativeAppButton type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "center"} onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}>Center</NativeAppButton>
               </div>
               {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
             </>
@@ -394,13 +412,6 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
               ? "Per-resource defaults are available through Open With. A global default-enumeration API is not exposed by the current contract."
               : "File association changes are available per resource through Properties / Open With."}
           </p>
-        </NativeAppPanel>
-
-        <NativeAppPanel style={styles.card} aria-labelledby="future-heading">
-          <h2 id="future-heading" style={styles.subheading}>Backup & sharing</h2>
-          {settingsFeatureAvailability.map((feature) => (
-            <p key={feature.id}><strong>{feature.label}:</strong> {feature.message}</p>
-          ))}
         </NativeAppPanel>
       </NativeAppContentSurface>
     );

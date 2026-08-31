@@ -511,6 +511,7 @@ export function Shell({
   return <div
     className={`plasmon-shell plasmon-shell--wallpaper-${effectiveWallpaperId}`}
     data-plasmon-theme={effectivePreferences.themeId}
+    data-plasmon-appearance={effectivePreferences.appearanceMode}
     data-plasmon-wallpaper={effectiveWallpaperId}
     data-plasmon-brand-watermark={effectivePreferences.showBrandWatermark === false ? "hidden" : "visible"}
     data-taskbar-placement={taskbarLayout.placement}
