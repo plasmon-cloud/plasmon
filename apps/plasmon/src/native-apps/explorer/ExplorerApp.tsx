@@ -34,6 +34,7 @@ import {
   type FileManagerSnapshot,
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
+import { reportExplorerFavoritesRefreshFailure } from "../semanticDiagnostics.ts";
 import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
 import { FILE_MANAGER_NAME, fileManagerWindowTitle } from "./identity.ts";
@@ -193,7 +194,10 @@ export function ExplorerApp({
         setFavorites(snapshot.nodes);
         return snapshot.rootId;
       } catch {
-        if (active) setFavorites([]);
+        if (active) {
+          reportExplorerFavoritesRefreshFailure();
+          setFavorites([]);
+        }
         return null;
       }
     };
