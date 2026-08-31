@@ -1,6 +1,9 @@
 import type { FsNode, FsService, NodeId, Revision } from "../../os/contracts/index.ts";
 import { classifyResource } from "../../os/fs/index.ts";
-import { reportDocumentSaveAsRollbackFailure } from "../semanticDiagnostics.ts";
+import {
+  reportDocumentLoadFailure,
+  reportDocumentSaveAsRollbackFailure,
+} from "../semanticDiagnostics.ts";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -25,7 +28,7 @@ export function utf8ByteLength(text: string): number { return encoder.encode(tex
 export function cursorLineColumn(text: string, offset: number): { line: number; column: number } { const safe = Math.max(0, Math.min(offset, text.length)); const lines = text.slice(0, safe).split("\n"); return { line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 }; }
 /** Keep supported Text-authored types filename-derived so later rename can reclassify them. */
 export function textSaveAsMime(name: string, fallbackMime = "text/plain"): string | undefined { const type = classifyResource({ name, kind: "file", metadata: {} }).type; return type.source === "filename" && (type.contentKind === "text" || type.contentKind === "source" || type.contentKind === "markdown") ? undefined : fallbackMime; }
-async function stableRead(fs: FsService, nodeId: NodeId): Promise<{ node: FsNode; text: string }> { for (let attempt = 0; attempt < 2; attempt += 1) { const before = await fs.stat(nodeId); const bytes = await fs.read(nodeId); const after = await fs.stat(nodeId); if (sameFileContent(stamp(before), stamp(after))) { try { return { node: after, text: decoder.decode(bytes) }; } catch { throw new Error(`${after.name || "File"} is not valid UTF-8`); } } } throw new Error("The file changed while it was being read. Try again."); }
+async function stableRead(fs: FsService, nodeId: NodeId): Promise<{ node: FsNode; text: string }> { for (let attempt = 0; attempt < 2; attempt += 1) { const before = await fs.stat(nodeId); const bytes = await fs.read(nodeId); const after = await fs.stat(nodeId); if (sameFileContent(stamp(before), stamp(after))) { try { return { node: after, text: decoder.decode(bytes) }; } catch { reportDocumentLoadFailure(); throw new Error(`${after.name || "File"} is not valid UTF-8`); } } } throw new Error("The file changed while it was being read. Try again."); }
 
 export class DocumentSession {
   private readonly fs: FsService; private readonly autosave: boolean; private readonly autosaveMs: number; private readonly listeners = new Set<() => void>();
