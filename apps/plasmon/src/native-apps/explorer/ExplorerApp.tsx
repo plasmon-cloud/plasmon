@@ -21,9 +21,6 @@ import type {
   OpenTarget,
 } from "../../os/contracts/index.ts";
 import type { DiagnosticService } from "../../os/diagnostics/index.ts";
-import {
-  classifyResource,
-} from "../../os/fs/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
   DEFAULT_FILE_MANAGER_PREFERENCES,
@@ -31,6 +28,7 @@ import {
   FileManagerPreferenceStore,
   FileManagerVisibilityFsService,
   FileOperationClipboard,
+  resourceIconPresentationForFile,
   type FileManagerOpenAuthority,
   type FileManagerPreferences,
   type FileManagerPresentation,
@@ -40,7 +38,6 @@ import {
 import {
   applicationResourcePresentation,
   ResourceIcon,
-  resourcePresentationForClassification,
 } from "../../os/visual/index.ts";
 import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
@@ -350,7 +347,7 @@ export function ExplorerApp({
             const isCurrent = location?.nodeId === favorite.id;
             const iconPresentation = favorite.id === favoriteAppsId
               ? applicationResourcePresentation()
-              : resourcePresentationForClassification(classifyResource(favorite));
+              : resourceIconPresentationForFile(favorite);
             return (
               <button
                 type="button"

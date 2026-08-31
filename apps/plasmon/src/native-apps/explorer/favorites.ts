@@ -1,5 +1,5 @@
 import type { FsEvent, FsNode, FsService, NodeId } from "../../os/contracts/index.ts";
-import { APPS_PATH } from "../../os/fs/managed.ts";
+import { APPS_PATH } from "../../os/fs/index.ts";
 
 const DEFAULT_FAVORITE_EXCLUDED_PATHS = ["/Downloads", "/System"] as const;
 

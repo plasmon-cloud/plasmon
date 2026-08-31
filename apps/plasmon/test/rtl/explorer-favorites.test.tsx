@@ -5,7 +5,6 @@ import { renderPlasmon } from "../renderPlasmon.tsx";
 test("File Explorer Favorites use shared themed icons and canonical Apps navigation", async () => {
   const app = await renderPlasmon();
   try {
-    const apps = await app.environment.os.fs.stat("/Apps");
     await act(async () => {
       await app.environment.os.open("/Documents");
     });
@@ -21,7 +20,6 @@ test("File Explorer Favorites use shared themed icons and canonical Apps navigat
     expect(favoriteView.queryByText("▰")).toBeNull();
     expect(documentsButton.getAttribute("aria-current")).toBe("page");
     expect(appsButton.getAttribute("aria-current")).toBeNull();
-    expect(apps.id).toBeDefined();
 
     await app.user.click(appsButton);
 
