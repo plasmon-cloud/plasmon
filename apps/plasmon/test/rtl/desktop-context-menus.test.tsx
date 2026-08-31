@@ -99,7 +99,7 @@ test("Desktop Change Wallpaper submenu uses canonical built-ins and preserves un
       ...seeded,
       wallpaper: { mode: "pinned" as const, id: "glacier-prism" as const },
     };
-    expect(shellPreferences.getSnapshot()).toEqual(expected);
+    await waitFor(() => expect(shellPreferences.getSnapshot()).toEqual(expected));
     await waitFor(async () => {
       const root = await app.environment.services.fs.resolvePath("/");
       expect(root?.metadata[SHELL_PREFERENCES_KEY]).toEqual({
