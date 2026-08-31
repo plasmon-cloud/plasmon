@@ -15,8 +15,8 @@ test("File Explorer Favorites use shared themed icons and canonical Apps navigat
     const documentsButton = await favoriteView.findByRole("button", { name: "Documents" });
     const appsButton = await favoriteView.findByRole("button", { name: "Apps" });
 
-    expect(documentsButton.querySelector('[data-plasmon-owned-icon="folder"]')).not.toBeNull();
-    expect(appsButton.querySelector('[data-plasmon-owned-icon="application"]')).not.toBeNull();
+    expect(documentsButton.querySelector('[data-plasmon-owned-icon="file-type:folder"]')).not.toBeNull();
+    expect(appsButton.querySelector('[data-plasmon-owned-icon="system:application"]')).not.toBeNull();
     expect(favoriteView.queryByText("▰")).toBeNull();
     await waitFor(() => expect(documentsButton.getAttribute("aria-current")).toBe("page"));
     expect(appsButton.getAttribute("aria-current")).toBeNull();
