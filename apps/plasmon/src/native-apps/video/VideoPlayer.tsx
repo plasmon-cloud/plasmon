@@ -10,6 +10,7 @@ import {
 import {
   reportVideoPlaybackError,
   reportVideoPlaybackStartFailure,
+  reportVideoSourceResolveFailure,
 } from "../semanticDiagnostics.ts";
 import {
   createObjectUrlLease,
@@ -48,7 +49,10 @@ async function resolveVideoSource(
     title = node.name || title;
     if (!url && (node.kind === "shortcut" || node.name.toLowerCase().endsWith(".url"))) {
       const shortcut = tryParseInternetShortcut(await fs.read(node.id));
-      if (!shortcut.ok) throw new Error(shortcut.error.message);
+      if (!shortcut.ok) {
+        reportVideoSourceResolveFailure();
+        throw new Error(shortcut.error.message);
+      }
       url = shortcut.shortcut.url;
     } else if (!url) {
       const bytes = await fs.read(node.id);
@@ -64,7 +68,10 @@ async function resolveVideoSource(
 
   if (!url) throw new Error("No video target was supplied");
   const safe = safeHttpUrl(url);
-  if (!safe) throw new Error("Video URL must use http:// or https://");
+  if (!safe) {
+    reportVideoSourceResolveFailure();
+    throw new Error("Video URL must use http:// or https://");
+  }
   if (title === "Video Player") title = new URL(safe).hostname || title;
   const embed = youtubeEmbedUrl(safe);
   if (embed) {
