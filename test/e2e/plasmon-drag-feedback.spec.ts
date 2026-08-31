@@ -9,6 +9,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 let resourceSequence = 0;
 
@@ -71,10 +72,10 @@ async function createDesktopTextDocument(frame: FrameLocator, files: Locator) {
 }
 
 async function createExplorerResource(files: Locator, kind: "file" | "directory") {
-  const toolbar = files.getByRole("toolbar", { name: "File commands" });
-  await toolbar.getByRole("button", {
-    name: kind === "directory" ? "New Folder" : "New Text Document",
-  }).click();
+  await chooseFileManagerBackgroundAction(
+    files,
+    kind === "directory" ? "New Folder" : "New Text Document",
+  );
   const rename = files.getByRole("textbox", { name: /^Rename / });
   await expect(rename).toBeVisible();
   const name = uniqueResourceName(kind);
