@@ -44,6 +44,9 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
     themeId,
     appearanceMode: "dark",
     wallpaper,
+    systemColorOverrides: {},
+    iconSetId: "plasmon",
+    iconPalette: { mode: "follow-theme" },
     taskbarAlignment: "left",
   };
 }
