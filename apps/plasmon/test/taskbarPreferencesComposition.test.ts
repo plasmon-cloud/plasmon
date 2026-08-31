@@ -4,6 +4,7 @@ import { createHeadlessPlasmonEnvironment } from "./headlessEnvironment.ts";
 
 test("taskbar preferences persist across production recomposition without rewriting Process or Window identity", async () => {
   const first = createHeadlessPlasmonEnvironment();
+  let firstDisposed = false;
   await first.ready;
 
   try {
@@ -56,6 +57,7 @@ test("taskbar preferences persist across production recomposition without rewrit
 
     const repository = first.repository;
     first.dispose();
+    firstDisposed = true;
 
     const second = createHeadlessPlasmonEnvironment({ repository });
     await second.ready;
@@ -69,7 +71,6 @@ test("taskbar preferences persist across production recomposition without rewrit
       second.dispose();
     }
   } finally {
-    // dispose() is idempotent for the first environment after persistence proof.
-    first.dispose();
+    if (!firstDisposed) first.dispose();
   }
 });
