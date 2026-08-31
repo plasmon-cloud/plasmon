@@ -189,9 +189,18 @@
       border-color var(--plasmon-motion-fast) ease;
   }
 
+  .plasmon-native-app-button[aria-pressed="true"]:not(:disabled) {
+    background: color-mix(in srgb, var(--plasmon-panel-elevated) 68%, var(--plasmon-accent) 32%);
+    border-color: var(--plasmon-selection-border);
+  }
+
   .plasmon-native-app-button:hover:not(:disabled) {
     background: color-mix(in srgb, var(--plasmon-panel-elevated) 84%, var(--plasmon-accent) 16%);
     border-color: var(--plasmon-selection-border);
+  }
+
+  .plasmon-native-app-button[aria-pressed="true"]:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--plasmon-panel-elevated) 60%, var(--plasmon-accent) 40%);
   }
 
   .plasmon-native-app-button:focus-visible {
