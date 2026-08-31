@@ -4,7 +4,13 @@ import { NativeProcessHost } from "./process/index.ts";
 import { AltTabBoundary } from "./shell/AltTabBoundary.tsx";
 import { Shell } from "./shell/index.ts";
 import { NativeWindow, WindowLayer } from "./windowing/index.ts";
-import { ResourceIcon, nativeHandlerResourcePresentation } from "./visual/index.ts";
+import {
+  ResourceIcon,
+  VisualPresentationConfigurationController,
+  applyVisualPresentationConfiguration,
+  clearVisualPresentationConfiguration,
+  nativeHandlerResourcePresentation,
+} from "./visual/index.ts";
 import { createPlasmonServices, type PlasmonServices } from "./integration/services.ts";
 import { DiagnosticEvent, DiagnosticSubsystem } from "./diagnostics/index.ts";
 
@@ -23,6 +29,10 @@ function diagnosticErrorType(error: unknown): string {
  */
 export function PlasmonOS({ services: provided }: PlasmonOSProps) {
   const services = useMemo(() => provided ?? createPlasmonServices(), [provided]);
+  const visualPresentation = useMemo(
+    () => new VisualPresentationConfigurationController(services.fs, services.filesystem.configuration),
+    [services],
+  );
   const nativeAppLog = useMemo(
     () => services.diagnostics.for(DiagnosticSubsystem.NativeApp),
     [services.diagnostics],
@@ -33,6 +43,27 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
     () => services.process.subscribe(() => setProcessRevision((value) => value + 1)),
     [services.process],
   );
+
+  useEffect(() => {
+    let active = true;
+    let appliedShell: HTMLElement | null = null;
+    const apply = () => {
+      if (!active || typeof document === "undefined") return;
+      const shell = document.querySelector<HTMLElement>(".plasmon-shell");
+      if (!shell) return;
+      appliedShell = shell;
+      applyVisualPresentationConfiguration(shell, visualPresentation.getSnapshot());
+    };
+    apply();
+    const unsubscribe = visualPresentation.subscribe(apply);
+    void visualPresentation.ready.then(apply);
+    return () => {
+      active = false;
+      unsubscribe();
+      if (appliedShell) clearVisualPresentationConfiguration(appliedShell);
+      visualPresentation.dispose();
+    };
+  }, [visualPresentation]);
 
   const processById = useMemo(
     () => new Map(services.process.list().map((record) => [record.id, record] as const)),
