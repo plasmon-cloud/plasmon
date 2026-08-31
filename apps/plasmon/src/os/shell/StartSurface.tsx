@@ -7,6 +7,7 @@ import type { FsNode } from "../contracts/index.ts";
 import { PinIcon, SystemIcon, type ResourceIconPresentation } from "../visual/primitives.tsx";
 import { ShellIcon } from "./icon.tsx";
 import type { StartSurfaceViewState } from "./start-surface-state.ts";
+import "./searchBoxFocus.scss";
 import "./startSurface.scss";
 
 export interface StartItemPresentation {
