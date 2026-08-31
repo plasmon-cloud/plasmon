@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { waitFor, within } from "@testing-library/react";
+import { act, waitFor, within } from "@testing-library/react";
 import type { ExternalElement } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -112,7 +112,9 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
       (window) => window.processId === settingsProcess?.id,
     )).toBe(true);
 
-    await app.environment.os.open("/System/Settings.sys");
+    await act(async () => {
+      await app.environment.os.open("/System/Settings.sys");
+    });
     const settingsProcesses = app.environment.os.processes.list().filter(
       (process) => process.handlerId === "native:settings",
     );
@@ -120,8 +122,11 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     expect(settingsProcesses[0]?.id).toBe(settingsProcess?.id);
     const settingsAfterLauncher = app.getByRole("region", { name: "Settings" });
     const navigationAfterLauncher = within(settingsAfterLauncher).getByRole("navigation", { name: "Settings sections" });
-    expect(within(navigationAfterLauncher).getByRole("button", { name: "Home" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(settingsAfterLauncher).getByRole("heading", { name: "Settings home" })).toBeDefined();
+    const homeAfterLauncher = within(navigationAfterLauncher).getByRole("button", { name: "Home" });
+    await waitFor(() => {
+      expect(homeAfterLauncher.getAttribute("aria-pressed")).toBe("true");
+      expect(within(settingsAfterLauncher).getByRole("heading", { name: "Settings home" })).toBeDefined();
+    });
     expect(within(settingsAfterLauncher).queryByRole("heading", { name: "Backup & sharing" })).toBeNull();
     expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
   } finally {
