@@ -127,8 +127,6 @@ export function Desktop({
   const [incumbentIds, setIncumbentIds] = useState<readonly NodeId[]>([]);
   const [workspace, setWorkspace] = useState<DesktopWorkspace | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [shellPreferencesReady, setShellPreferencesReady] = useState(() => shellPreferences.isReady());
-  const [shellSnapshot, setShellSnapshot] = useState(() => shellPreferences.getSnapshot());
 
   const initialize = useCallback(async () => {
     try {
@@ -143,11 +141,6 @@ export function Desktop({
   }, [fs]);
 
   useEffect(() => { void initialize(); }, [initialize]);
-
-  useEffect(() => shellPreferences.subscribe((preferences, ready) => {
-    setShellSnapshot(preferences);
-    setShellPreferencesReady(ready);
-  }), [shellPreferences]);
 
   useEffect(() => {
     const element = workspaceRef.current;
@@ -199,30 +192,6 @@ export function Desktop({
     setOrderedIds(nextIds);
   }, []);
 
-  const wallpaperChoices = useMemo(() => {
-    const activeWallpaper = effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper);
-    return SHELL_WALLPAPER_IDS.map((id) => ({
-      id,
-      label: SHELL_WALLPAPER_LABELS[id],
-      selected: activeWallpaper === id,
-    }));
-  }, [shellSnapshot]);
-
-  const selectWallpaper = useCallback((id: string) => {
-    if (!(SHELL_WALLPAPER_IDS as readonly string[]).includes(id)) return;
-    const wallpaperId = id as ShellWallpaperId;
-    const current = shellPreferences.getSnapshot();
-    void shellPreferences.save({
-      ...current,
-      wallpaper: { mode: "pinned", id: wallpaperId },
-    }).then((outcome) => {
-      if (outcome.saved) setError(null);
-      else setError(`Wallpaper preference could not be saved: ${errorMessage(outcome.error)}`);
-    }).catch((cause: unknown) => {
-      setError(`Wallpaper preference could not be saved: ${errorMessage(cause)}`);
-    });
-  }, [shellPreferences]);
-
   const sectionClassName = `plasmon-desktop${className ? ` ${className}` : ""}`;
 
   if (!desktop) {
@@ -256,9 +225,28 @@ export function Desktop({
         presentation="desktop"
         positions={resolvedPositions}
         desktopWallpaperMenu={{
-          choices: wallpaperChoices,
-          disabled: !shellPreferencesReady,
-          onSelect: selectWallpaper,
+          get choices() {
+            const snapshot = shellPreferences.getSnapshot();
+            const active = effectiveShellWallpaper(snapshot.themeId, snapshot.wallpaper);
+            return SHELL_WALLPAPER_IDS.map((id) => ({
+              id,
+              label: SHELL_WALLPAPER_LABELS[id],
+              selected: active === id,
+            }));
+          },
+          get disabled() { return !shellPreferences.isReady(); },
+          async onSelect(id) {
+            try {
+              const outcome = await shellPreferences.save({
+                ...shellPreferences.getSnapshot(),
+                wallpaper: { mode: "pinned", id: id as ShellWallpaperId },
+              });
+              if (!outcome.saved) throw outcome.error;
+              setError(null);
+            } catch (cause: unknown) {
+              setError(`Wallpaper preference could not be saved: ${errorMessage(cause)}`);
+            }
+          },
         }}
         onSnapshot={handleSnapshot}
         onIncomingDropPlacement={async (intent) => {
