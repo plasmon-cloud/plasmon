@@ -28,12 +28,17 @@ import {
   FileManagerPreferenceStore,
   FileManagerVisibilityFsService,
   FileOperationClipboard,
+  resourceIconPresentationForFile,
   type FileManagerOpenAuthority,
   type FileManagerPreferences,
   type FileManagerPresentation,
   type FileManagerSnapshot,
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
+import {
+  applicationResourcePresentation,
+  ResourceIcon,
+} from "../../os/visual/index.ts";
 import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
 import { FILE_MANAGER_NAME, fileManagerWindowTitle } from "./identity.ts";
@@ -107,6 +112,7 @@ export function ExplorerApp({
     () => hiddenVisibility.getSnapshot().alwaysShowHiddenFiles,
   );
   const [favorites, setFavorites] = useState<FsNode[]>([]);
+  const [favoriteAppsId, setFavoriteAppsId] = useState<NodeId | null>(null);
   const [itemCount, setItemCount] = useState(0);
   const [selectedCount, setSelectedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -191,9 +197,13 @@ export function ExplorerApp({
         const snapshot = await readDefaultExplorerFavorites(fs);
         if (!active) return null;
         setFavorites(snapshot.nodes);
+        setFavoriteAppsId(snapshot.appsId);
         return snapshot.rootId;
       } catch {
-        if (active) setFavorites([]);
+        if (active) {
+          setFavorites([]);
+          setFavoriteAppsId(null);
+        }
         return null;
       }
     };
@@ -333,11 +343,24 @@ export function ExplorerApp({
       <div className="explorer-app__body">
         <aside className="explorer-app__sidebar" aria-label="Favorites">
           <h2>Favorites</h2>
-          {favorites.map((favorite) => (
-            <button type="button" key={favorite.id} className={location?.nodeId === favorite.id ? "is-current" : ""} onClick={() => void navigate(favorite.id)}>
-              <span aria-hidden="true">▰</span>{favorite.name}
-            </button>
-          ))}
+          {favorites.map((favorite) => {
+            const isCurrent = location?.nodeId === favorite.id;
+            const iconPresentation = favorite.id === favoriteAppsId
+              ? applicationResourcePresentation()
+              : resourceIconPresentationForFile(favorite);
+            return (
+              <button
+                type="button"
+                key={favorite.id}
+                className={isCurrent ? "is-current" : ""}
+                aria-current={isCurrent ? "page" : undefined}
+                onClick={() => void navigate(favorite.id)}
+              >
+                <ResourceIcon context="file-list" presentation={iconPresentation} />
+                {favorite.name}
+              </button>
+            );
+          })}
         </aside>
 
         <main className="explorer-app__main">
