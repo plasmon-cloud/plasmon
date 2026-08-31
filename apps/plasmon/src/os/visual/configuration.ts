@@ -149,7 +149,7 @@ export class VisualPresentationConfigurationController {
   readonly ready: Promise<void>;
 
   constructor(
-    private readonly fs: FsService,
+    fs: FsService,
     private readonly configuration: ConfigurationService,
     options: VisualPresentationConfigurationOptions = {},
   ) {
