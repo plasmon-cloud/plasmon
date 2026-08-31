@@ -65,22 +65,29 @@ interface FileManagerContextMenuProps {
 }
 
 interface SubmenuItem {
-  id: string;
   label: string;
   checked?: boolean;
   onSelect: () => void;
 }
 
+const NEW_SUBMENU_ITEMS = [
+  ["New Folder", "newFolder"],
+  ["New Text Document", "newText"],
+  ["New Markdown Document", "newMarkdown"],
+  ["New Command Script (.cmd)", "newCmd"],
+  ["New Run Script (.run)", "newRun"],
+] as const satisfies readonly (readonly [string, FileManagerContextMenuAction])[];
+
 function enabledSubmenuItems(menu: HTMLDivElement | null): HTMLElement[] {
   if (!menu) return [];
   return Array.from(menu.querySelectorAll<HTMLElement>(
-    '[role="menuitem"]:not(:disabled), [role="menuitemradio"]:not(:disabled)',
+    '[role^="menuitem"]:not(:disabled)',
   ));
 }
 
 function ContextSubmenu({
   label,
-  disabled = false,
+  disabled,
   items,
   open,
   onOpen,
@@ -103,11 +110,6 @@ function ContextSubmenu({
     enabledSubmenuItems(menuRef.current)[0]?.focus();
   }, [open]);
 
-  const openWithFocus = () => {
-    focusOnOpenRef.current = true;
-    onOpen();
-  };
-
   const moveFocus = (event: ReactKeyboardEvent<HTMLDivElement>, delta: 1 | -1) => {
     const candidates = enabledSubmenuItems(menuRef.current);
     if (candidates.length === 0) return;
@@ -121,7 +123,7 @@ function ContextSubmenu({
   return (
     <div
       style={{ position: "relative" }}
-      onMouseEnter={() => { if (!disabled) onOpen(); }}
+      onMouseEnter={disabled ? undefined : onOpen}
       onBlur={(event) => {
         const next = event.relatedTarget;
         if (!(next instanceof Node) || !event.currentTarget.contains(next)) onClose();
@@ -140,7 +142,8 @@ function ContextSubmenu({
           if (event.key !== "ArrowRight" && event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           event.stopPropagation();
-          openWithFocus();
+          focusOnOpenRef.current = true;
+          onOpen();
         }}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18 }}
       >
@@ -170,10 +173,10 @@ function ContextSubmenu({
         >
           {items.map((item) => (
             <button
-              key={item.id}
+              key={item.label}
               type="button"
               role={item.checked === undefined ? "menuitem" : "menuitemradio"}
-              {...(item.checked === undefined ? {} : { "aria-checked": item.checked })}
+              aria-checked={item.checked}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
                 item.onSelect();
@@ -305,13 +308,10 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
         <>
           <ContextSubmenu
             label="New"
-            items={[
-              { id: "folder", label: "New Folder", onSelect: () => props.onAction("newFolder") },
-              { id: "text", label: "New Text Document", onSelect: () => props.onAction("newText") },
-              { id: "markdown", label: "New Markdown Document", onSelect: () => props.onAction("newMarkdown") },
-              { id: "cmd", label: "New Command Script (.cmd)", onSelect: () => props.onAction("newCmd") },
-              { id: "run", label: "New Run Script (.run)", onSelect: () => props.onAction("newRun") },
-            ]}
+            items={NEW_SUBMENU_ITEMS.map(([label, action]) => ({
+              label,
+              onSelect: () => props.onAction(action),
+            }))}
             open={activeSubmenu === "new"}
             onOpen={() => setActiveSubmenu("new")}
             onClose={() => setActiveSubmenu(null)}
@@ -321,9 +321,8 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               label="Change Wallpaper"
               disabled={props.desktopWallpaperMenu.disabled}
               items={props.desktopWallpaperMenu.choices.map((choice) => ({
-                id: choice.id,
                 label: choice.label,
-                checked: Boolean(choice.selected),
+                checked: !!choice.selected,
                 onSelect: () => {
                   props.desktopWallpaperMenu?.onSelect(choice.id);
                   props.onDismiss();
