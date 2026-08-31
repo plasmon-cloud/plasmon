@@ -12,13 +12,13 @@ test("File Explorer Favorites use shared themed icons and canonical Apps navigat
     const explorer = await app.findByRole("region", { name: "File Explorer" });
     const favorites = within(explorer).getByRole("complementary", { name: "Favorites" });
     const favoriteView = within(favorites);
-    const documentsButton = favoriteView.getByRole("button", { name: "Documents" });
-    const appsButton = favoriteView.getByRole("button", { name: "Apps" });
+    const documentsButton = await favoriteView.findByRole("button", { name: "Documents" });
+    const appsButton = await favoriteView.findByRole("button", { name: "Apps" });
 
     expect(documentsButton.querySelector('[data-plasmon-owned-icon="folder"]')).not.toBeNull();
     expect(appsButton.querySelector('[data-plasmon-owned-icon="application"]')).not.toBeNull();
     expect(favoriteView.queryByText("▰")).toBeNull();
-    expect(documentsButton.getAttribute("aria-current")).toBe("page");
+    await waitFor(() => expect(documentsButton.getAttribute("aria-current")).toBe("page"));
     expect(appsButton.getAttribute("aria-current")).toBeNull();
 
     await app.user.click(appsButton);
