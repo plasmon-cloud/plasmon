@@ -15,6 +15,11 @@ const trayElement: ExternalElement = {
 
 test("Shell composes calendar and tray coordination with canonical Settings activation", async () => {
   const app = await renderPlasmon({ elements: [trayElement] });
+  const shellPreferences = app.environment.services.shellPreferences;
+  await shellPreferences.save({
+    ...shellPreferences.getSnapshot(),
+    wallpaper: { mode: "follow-theme" },
+  });
 
   try {
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
