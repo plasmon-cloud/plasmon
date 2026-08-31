@@ -18,6 +18,7 @@ export interface SettingsSectionDefinition {
 }
 
 export const DEFAULT_SETTINGS_DESTINATION: SettingsDestinationId = "home";
+export const SETTINGS_DESTINATION_URL_PREFIX = "plasmon-settings:";
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
   { id: "home", label: "Home", heading: "Settings" },
@@ -37,20 +38,23 @@ export function normalizeSettingsDestination(value: unknown): SettingsDestinatio
 }
 
 export function settingsDestinationFromTarget(target: OpenTarget): SettingsDestinationId {
-  return normalizeSettingsDestination(target.appDestination);
+  const destination = target.url?.startsWith(SETTINGS_DESTINATION_URL_PREFIX)
+    ? target.url.slice(SETTINGS_DESTINATION_URL_PREFIX.length)
+    : undefined;
+  return normalizeSettingsDestination(destination);
 }
 
 export function createSettingsOpenTarget(
   destination: SettingsDestinationId = DEFAULT_SETTINGS_DESTINATION,
 ): OpenTarget {
-  return { appDestination: destination };
+  return { url: `${SETTINGS_DESTINATION_URL_PREFIX}${destination}` };
 }
 
 export function withSettingsDestination(
   target: OpenTarget,
   destination: SettingsDestinationId,
 ): OpenTarget {
-  return { ...target, appDestination: destination };
+  return { ...target, url: `${SETTINGS_DESTINATION_URL_PREFIX}${destination}` };
 }
 
 export interface StorageSummary {
