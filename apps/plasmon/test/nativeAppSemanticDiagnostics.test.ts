@@ -264,12 +264,12 @@ describe("native app semantic diagnostics", () => {
       expect(await observation.settle({
         subsystem: DiagnosticSubsystem.NativeApp,
         event: DiagnosticEvent.NativeApp.PhotosDecodeFailed,
-        level: "error",
+        level: "notice",
       })).toHaveLength(1);
       expect(await observation.settle({
         subsystem: DiagnosticSubsystem.NativeApp,
         event: DiagnosticEvent.NativeApp.VideoPlaybackError,
-        level: "error",
+        level: "notice",
       })).toHaveLength(1);
 
       expect(isExpectedVideoPlayRejection({ name: "NotAllowedError" })).toBe(true);
