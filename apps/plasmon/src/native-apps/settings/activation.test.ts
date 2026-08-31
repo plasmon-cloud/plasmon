@@ -26,12 +26,12 @@ test("Settings destination activation reuses one process, updates its target, an
   const personalizationProcessId = await activateSettings(process, "personalization");
   expect(personalizationProcessId).toBe(genericProcessId);
   expect(process.list()).toHaveLength(1);
-  expect(process.list()[0]?.target.appDestination).toBe("personalization");
+  expect(settingsDestinationFromTarget(process.list()[0]!.target)).toBe("personalization");
 
   const taskbarProcessId = await activateSettings(process, "taskbar");
   expect(taskbarProcessId).toBe(genericProcessId);
   expect(process.list()).toHaveLength(1);
-  expect(process.list()[0]?.target.appDestination).toBe("taskbar");
+  expect(settingsDestinationFromTarget(process.list()[0]!.target)).toBe("taskbar");
   expect(windows.focusSnapshot().focusedId).toBe(process.list()[0]?.windowId);
 
   process.dispose();
