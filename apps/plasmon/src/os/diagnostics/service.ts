@@ -42,7 +42,7 @@ export interface DiagnosticRecord {
 
 export interface DiagnosticService {
   /** Canonical producer API. Scope once per subsystem, then emit stable named events. */
-  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger;
+  for<Subsystem extends string>(subsystem: Subsystem, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger<Subsystem>;
   /** Low-level structured ingestion seam used by scoped loggers and focused tests. */
   emit(input: DiagnosticEventInput): DiagnosticRecord;
   subscribe(listener: (record: DiagnosticRecord) => void): () => void;
@@ -272,8 +272,8 @@ export class PlasmonDiagnosticService implements DiagnosticService {
   private readonly listeners = new Set<(record: DiagnosticRecord) => void>();
   private readonly path: string;
   private readonly now: () => number;
-  private readonly fileMinLevel: DiagnosticLevel;
-  private readonly consoleMinLevel: DiagnosticLevel;
+  private fileMinLevel: DiagnosticLevel;
+  private consoleMinLevel: DiagnosticLevel;
   private readonly console: DiagnosticConsole | null;
   private readonly maxBytes: number;
   private readonly retainBytes: number;
@@ -289,8 +289,17 @@ export class PlasmonDiagnosticService implements DiagnosticService {
     this.retainBytes = options.retainBytes ?? DEFAULT_SYSTEM_LOG_RETAIN_BYTES;
   }
 
-  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger {
+  for<Subsystem extends string>(subsystem: Subsystem, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger<Subsystem> {
     return createDiagnosticLogger(this, subsystem, defaults);
+  }
+
+  /** Runtime sink policy seam; producer emission remains unchanged. */
+  setSinkMinimumLevels(levels: {
+    fileMinLevel: DiagnosticLevel;
+    consoleMinLevel: DiagnosticLevel;
+  }): void {
+    this.fileMinLevel = levels.fileMinLevel;
+    this.consoleMinLevel = levels.consoleMinLevel;
   }
 
   emit(input: DiagnosticEventInput): DiagnosticRecord {

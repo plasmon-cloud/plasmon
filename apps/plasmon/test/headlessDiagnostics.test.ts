@@ -61,7 +61,7 @@ describe("headless production diagnostics", () => {
 
         const failures = await diagnostics.settle({
           subsystem: "process",
-          event: "process.close.handler_failed",
+          event: "process.close.handler-failed",
           level: "error",
         });
         expect(failures).toHaveLength(1);

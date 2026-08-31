@@ -3,6 +3,7 @@ import {
   createDiagnosticLogger,
   type DiagnosticEmitter,
 } from "./logger.ts";
+import { DiagnosticEvent } from "./vocabulary.ts";
 import type { DiagnosticEventInput, DiagnosticRecord } from "./service.ts";
 
 function captureEmitter(inputs: DiagnosticEventInput[]): DiagnosticEmitter {
@@ -27,8 +28,8 @@ describe("createDiagnosticLogger", () => {
     const inputs: DiagnosticEventInput[] = [];
     const log = createDiagnosticLogger(captureEmitter(inputs), "filesystem");
 
-    log.info("file.move.completed", { count: 3, source: "/A", destination: "/B" });
-    log.error("file.write.failed", {
+    log.info(DiagnosticEvent.Filesystem.BootstrapReady, { count: 3, originPath: "/A", destination: "/B" });
+    log.error(DiagnosticEvent.Filesystem.BootstrapFailed, {
       message: "Could not persist file",
       error: new Error("write failed"),
       path: "/Notes/todo.txt",
@@ -37,13 +38,13 @@ describe("createDiagnosticLogger", () => {
     expect(inputs[0]).toEqual({
       level: "info",
       subsystem: "filesystem",
-      event: "file.move.completed",
-      message: "file.move.completed",
-      context: { count: 3, source: "/A", destination: "/B" },
+      event: DiagnosticEvent.Filesystem.BootstrapReady,
+      message: DiagnosticEvent.Filesystem.BootstrapReady,
+      context: { count: 3, originPath: "/A", destination: "/B" },
     });
     expect(inputs[1]?.level).toBe("error");
     expect(inputs[1]?.subsystem).toBe("filesystem");
-    expect(inputs[1]?.event).toBe("file.write.failed");
+    expect(inputs[1]?.event).toBe(DiagnosticEvent.Filesystem.BootstrapFailed);
     expect(inputs[1]?.message).toBe("Could not persist file");
     expect(inputs[1]?.context).toEqual({ path: "/Notes/todo.txt" });
     expect(inputs[1]?.error).toBeInstanceOf(Error);
@@ -53,12 +54,12 @@ describe("createDiagnosticLogger", () => {
     const inputs: DiagnosticEventInput[] = [];
     const log = createDiagnosticLogger(captureEmitter(inputs), "test");
 
-    log.debug("debug");
-    log.info("info");
-    log.notice("notice");
-    log.warn("warn");
-    log.error("error");
-    log.critical("critical");
+    log.debug(DiagnosticEvent.Runtime.UncaughtError);
+    log.info(DiagnosticEvent.Runtime.UnhandledRejection);
+    log.notice(DiagnosticEvent.Filesystem.BootstrapReady);
+    log.warn(DiagnosticEvent.Process.WindowLost);
+    log.error(DiagnosticEvent.NativeApp.Crashed);
+    log.critical(DiagnosticEvent.Neutron.DiscoveryFailed);
 
     expect(inputs.map((input) => input.level)).toEqual([
       "debug",
@@ -77,11 +78,11 @@ describe("createDiagnosticLogger", () => {
       context: { origin: "desktop", attempt: 1 },
     });
 
-    log.warn("open.handler.fallback", {
+    log.warn(DiagnosticEvent.Neutron.OpenInvalid, {
       attempt: 2,
       handlerId: "native:text",
     });
-    log.error("open.handler.failed", {
+    log.error(DiagnosticEvent.Neutron.OpenFailed, {
       correlationId: "open-child-1",
       context: { phase: "launch" },
       handlerId: "native:text",

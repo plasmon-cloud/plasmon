@@ -7,6 +7,7 @@ import { Shell } from "./shell/index.ts";
 import { NativeWindow, WindowLayer } from "./windowing/index.ts";
 import { ResourceIcon, nativeHandlerResourcePresentation } from "./visual/index.ts";
 import { createPlasmonServices, type PlasmonServices } from "./integration/services.ts";
+import { DiagnosticEvent, DiagnosticSubsystem } from "./diagnostics/index.ts";
 
 export interface PlasmonOSProps {
   services?: PlasmonServices;
@@ -24,7 +25,7 @@ function diagnosticErrorType(error: unknown): string {
 export function PlasmonOS({ services: provided }: PlasmonOSProps) {
   const services = useMemo(() => provided ?? createPlasmonServices(), [provided]);
   const nativeAppLog = useMemo(
-    () => services.diagnostics.for("native-app"),
+    () => services.diagnostics.for(DiagnosticSubsystem.NativeApp),
     [services.diagnostics],
   );
   const [processRevision, setProcessRevision] = useState(0);
@@ -52,6 +53,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
         openService={services.openService}
         startMenu={services.startMenu}
         hiddenVisibility={services.hiddenVisibility}
+        shellPreferences={services.shellPreferences}
       >
         <AltTabBoundary process={services.process} windows={services.windows}>
           <div className="plasmon-os-workspace">
@@ -110,7 +112,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                             </div>
                           )}
                           onMissingLoader={() => {
-                            nativeAppLog.error("native-app.load.failed", {
+                            nativeAppLog.error(DiagnosticEvent.NativeApp.LoadFailed, {
                               message: "Native application host loader is unavailable",
                               appId: record.appId,
                               handlerId: record.handlerId,
@@ -120,7 +122,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
                           }}
                           onError={(error) => {
                             if (services.nativeApps.isLoadFailure(record.appId, error)) return;
-                            nativeAppLog.error("native-app.crashed", {
+                            nativeAppLog.error(DiagnosticEvent.NativeApp.Crashed, {
                               message: "Native application failed inside its Process host",
                               appId: record.appId,
                               handlerId: record.handlerId,

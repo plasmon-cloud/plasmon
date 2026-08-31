@@ -9,7 +9,12 @@ import type {
   OpenService,
   ProcessController,
 } from "../contracts/index.ts";
-import type { DiagnosticService } from "../diagnostics/index.ts";
+import {
+  DiagnosticEvent,
+  DiagnosticStage,
+  DiagnosticSubsystem,
+  type DiagnosticService,
+} from "../diagnostics/index.ts";
 import { reconcileCoreDesktopSeeds } from "./defaultSeeds.ts";
 import {
   TrashService,
@@ -85,7 +90,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
   const managed = new ProtectedManagedFsService(options.fs);
   const projections = new StableNeutronProjectionService(options.fs);
   const privilegedTrash = new TrashService(options.fs);
-  const filesystemLog = options.diagnostics?.for("filesystem") ?? null;
+  const filesystemLog = options.diagnostics?.for(DiagnosticSubsystem.Filesystem) ?? null;
   let disposed = false;
   let stopNeutron: () => void = () => undefined;
   let reconcileTail: Promise<void> = Promise.resolve();
@@ -132,8 +137,8 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
         await reconcileNeutron();
       })
       .catch((error) => {
-        filesystemLog?.warn("filesystem.neutron-projection.failed", {
-          stage: "invalidation",
+        filesystemLog?.warn(DiagnosticEvent.Filesystem.NeutronProjectionFailed, {
+          stage: DiagnosticStage.Invalidation,
           errorType: diagnosticErrorType(error),
         });
       });
@@ -146,7 +151,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
         return await privilegedTrash.trash(nodeId);
       } catch (error) {
         if (!isExpectedTrashFailure(error)) {
-          filesystemLog?.error("filesystem.trash.failed", {
+          filesystemLog?.error(DiagnosticEvent.Filesystem.TrashFailed, {
             errorType: diagnosticErrorType(error),
           });
         }
@@ -162,7 +167,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
           : await privilegedTrash.restore(nodeId, fallbackPath);
       } catch (error) {
         if (!isExpectedTrashFailure(error)) {
-          filesystemLog?.error("filesystem.trash.restore.failed", {
+          filesystemLog?.error(DiagnosticEvent.Filesystem.TrashRestoreFailed, {
             errorType: diagnosticErrorType(error),
           });
         }
@@ -175,7 +180,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
         await privilegedTrash.permanentlyDelete(nodeId);
       } catch (error) {
         if (!isExpectedTrashFailure(error)) {
-          filesystemLog?.error("filesystem.trash.permanent-delete.failed", {
+          filesystemLog?.error(DiagnosticEvent.Filesystem.TrashPermanentDeleteFailed, {
             errorType: diagnosticErrorType(error),
           });
         }
@@ -187,7 +192,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
       try {
         return await privilegedTrash.empty();
       } catch (error) {
-        filesystemLog?.error("filesystem.trash.empty.failed", {
+        filesystemLog?.error(DiagnosticEvent.Filesystem.TrashEmptyFailed, {
           errorType: diagnosticErrorType(error),
         });
         throw error;

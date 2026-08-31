@@ -127,7 +127,7 @@ test("[demo profile] Text classifies FileManager rename and Save As language tra
       "a FileManager text document renamed to .js should render real JavaScript tokenization",
     );
 
-    const filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    const filesTask = taskbar.getByRole("button", { name: /^File Explorer;/ }).first();
     await filesTask.click();
     await expect(documentsWindow).toHaveClass(/plasmon-window--active/);
 

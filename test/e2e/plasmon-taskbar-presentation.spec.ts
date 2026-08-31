@@ -34,13 +34,13 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
     await expect(taskbar).toBeVisible({ timeout: 30_000 });
     await expect(plasmon.locator(".plasmon-shell")).toHaveAttribute("aria-busy", "false");
 
-    // Preserve any pre-existing persisted pin choice. With no native Files
-    // process at startup, a rendered Files task means the user already pinned it.
-    const initialFilesTask = taskbar.getByRole("button", { name: /^Files;/ });
+    // Preserve any pre-existing persisted pin choice. With no native File Explorer
+    // process at startup, a rendered File Explorer task means the user already pinned it.
+    const initialFilesTask = taskbar.getByRole("button", { name: /^File Explorer;/ });
     filesWasPinned = await initialFilesTask.count() > 0;
     if (filesWasPinned) {
       await expect(initialFilesTask.first()).toHaveAttribute("data-task-state", "pinned-only");
-      await expect(initialFilesTask.first()).toHaveAccessibleName("Files; Pinned to taskbar");
+      await expect(initialFilesTask.first()).toHaveAccessibleName("File Explorer; Pinned to taskbar");
     }
 
     const nativeWindows = plasmon.locator(".plasmon-window-layer [data-window-id]");
@@ -50,7 +50,7 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
     await rootShortcut.dblclick();
     await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
 
-    let filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    let filesTask = taskbar.getByRole("button", { name: /^File Explorer;/ }).first();
     await expect(filesTask).toHaveAttribute("data-task-state", "active");
     await expect(filesTask).toHaveAttribute("aria-pressed", "true");
     expect((await filesTask.getAttribute("aria-label")) ?? "").not.toMatch(RAW_RUNTIME_TOKEN);
@@ -62,8 +62,8 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
       const itemMenu = plasmon.getByRole("menu", { name: "Taskbar context menu" });
       await expect(itemMenu).toBeVisible();
       await itemMenu.getByRole("menuitem", { name: "Pin to taskbar" }).click();
-      filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
-      await expect(filesTask).toHaveAccessibleName(/Files; Active and focused; pinned to taskbar/);
+      filesTask = taskbar.getByRole("button", { name: /^File Explorer;/ }).first();
+      await expect(filesTask).toHaveAccessibleName(/File Explorer; Active and focused; pinned to taskbar/);
     }
 
     const activeExplorer = plasmon.locator(".plasmon-window-layer [data-window-id].plasmon-window--active");
@@ -71,9 +71,9 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
     await activeExplorer.locator(".plasmon-window__controls").getByRole("button", { name: "Close" }).click();
     await expect(nativeWindows).toHaveCount(initialWindowCount, { timeout: 10_000 });
 
-    filesTask = taskbar.getByRole("button", { name: /^Files;/ }).first();
+    filesTask = taskbar.getByRole("button", { name: /^File Explorer;/ }).first();
     await expect(filesTask).toHaveAttribute("data-task-state", "pinned-only");
-    await expect(filesTask).toHaveAccessibleName("Files; Pinned to taskbar");
+    await expect(filesTask).toHaveAccessibleName("File Explorer; Pinned to taskbar");
     await expect(filesTask).toHaveAttribute("aria-pressed", "false");
 
     // Relaunch, minimize, and focus through the same task button. These are
@@ -82,17 +82,17 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
     await filesTask.click();
     await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
     await expect(filesTask).toHaveAttribute("data-task-state", "active");
-    await expect(filesTask).toHaveAccessibleName(/Files; Active and focused; pinned to taskbar/);
+    await expect(filesTask).toHaveAccessibleName(/File Explorer; Active and focused; pinned to taskbar/);
     await expect(filesTask).toHaveAttribute("aria-pressed", "true");
 
     await filesTask.click();
     await expect(filesTask).toHaveAttribute("data-task-state", "running");
-    await expect(filesTask).toHaveAccessibleName(/Files; Running; pinned to taskbar/);
+    await expect(filesTask).toHaveAccessibleName(/File Explorer; Running; pinned to taskbar/);
     await expect(filesTask).toHaveAttribute("aria-pressed", "false");
 
     await filesTask.click();
     await expect(filesTask).toHaveAttribute("data-task-state", "active");
-    await expect(filesTask).toHaveAccessibleName(/Files; Active and focused; pinned to taskbar/);
+    await expect(filesTask).toHaveAccessibleName(/File Explorer; Active and focused; pinned to taskbar/);
 
     // Exercise an actual installed Neutron Element. The Shell must translate
     // Neutron's canonical runtime observation into user-facing "Running"
@@ -140,7 +140,7 @@ test("packaged taskbar exposes user-facing native and Element state", async ({ p
           `iframe[data-app-id="${PLASMON_APP_ID}"][data-tile-id="${PLASMON_TILE_ID}"]`,
         ).first();
         const cleanupTaskbar = cleanupPlasmon.getByRole("navigation", { name: "Taskbar" });
-        const cleanupFilesTask = cleanupTaskbar.getByRole("button", { name: /^Files;/ }).first();
+        const cleanupFilesTask = cleanupTaskbar.getByRole("button", { name: /^File Explorer;/ }).first();
         if (await cleanupFilesTask.count() > 0) {
           const cleanupLabel = (await cleanupFilesTask.getAttribute("aria-label")) ?? "";
           if (/pinned to taskbar/i.test(cleanupLabel)) {

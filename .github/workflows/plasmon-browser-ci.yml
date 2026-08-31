@@ -64,23 +64,23 @@ jobs:
           fi
 
       - name: Report staged specialist checkpoint
-        if: ${{ github.event_name != 'workflow_dispatch' && !(github.event_name == 'pull_request_review' && github.event.review.state == 'approved') && !(github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
+        if: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request' && github.event_name != 'pull_request_review' && !(github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           case "${{ github.event_name }}" in
-            pull_request) echo "Specialist acceptance waits for the PR's first GitHub review approval." ;;
+            pull_request) echo "Specialist acceptance runs on every PR head before and after approval." ;;
             merge_group) echo "Specialist acceptance already passed before Merge; merge queue is fast-only." ;;
             push) echo "Specialist acceptance already passed before merge; post-merge Flake Probe owns stability analysis." ;;
-            pull_request_review) echo "This review was not an approval; no expensive Specialist work is started." ;;
+            pull_request_review) echo "Specialist acceptance reruns for submitted reviews so a review event cannot replace a real Specialist result with a cheap checkpoint." ;;
           esac
 
       - name: Install Nix
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package and run Plasmon specialist browser acceptance
-        if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true') }}
         run: |
           nix develop --command bash -lc '
             set -euxo pipefail
@@ -116,7 +116,7 @@ jobs:
           '
 
       - name: Upload Specialist Playwright report
-        if: ${{ always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true')) }}
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'pull_request_review' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved') || (github.event_name == 'pull_request' && steps.retained_approval.outputs.approved == 'true')) }}
         uses: actions/upload-artifact@v4
         with:
           name: plasmon-specialist-report-${{ github.run_attempt }}
