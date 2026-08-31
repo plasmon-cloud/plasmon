@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { bootstrapFilesystem } from "../../os/fs/managed.ts";
 import { MemoryFsRepository } from "../../os/fs/repository.ts";
 import { PersistentFsService } from "../../os/fs/service.ts";
-import { readDefaultExplorerFavorites } from "./favorites.ts";
+import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 
 test("default Favorites project the accepted root directories by NodeId", async () => {
   const fs = new PersistentFsService(new MemoryFsRepository());
@@ -12,10 +12,13 @@ test("default Favorites project the accepted root directories by NodeId", async 
   const snapshot = await readDefaultExplorerFavorites(fs);
   assert.deepEqual(
     snapshot.nodes.map((node) => node.name),
-    ["Desktop", "Documents", "Games", "Music", "Pictures", "Shared", "Videos"],
+    ["Apps", "Desktop", "Documents", "Games", "Music", "Pictures", "Shared", "Videos"],
   );
   assert.ok(snapshot.nodes.every((node) => node.parentId === snapshot.rootId));
-  assert.equal(snapshot.nodes.some((node) => node.name === "Apps"), false);
+  const apps = await fs.resolvePath("/Apps");
+  assert.ok(apps);
+  assert.equal(snapshot.appsId, apps.id);
+  assert.equal(snapshot.nodes.find((node) => node.name === "Apps")?.id, apps.id);
   assert.equal(snapshot.nodes.some((node) => node.name === "System"), false);
   assert.equal(snapshot.nodes.some((node) => node.name === "Downloads"), false);
 
@@ -30,6 +33,34 @@ test("default Favorites project the accepted root directories by NodeId", async 
   const projects = await fs.mkdir(root.id, "Projects");
   const customized = await readDefaultExplorerFavorites(fs);
   assert.equal(customized.nodes.find((node) => node.name === "Projects")?.id, projects.id);
+});
+
+test("Favorites invalidation remains bounded to root inventory changes", async () => {
+  const fs = new PersistentFsService(new MemoryFsRepository());
+  await bootstrapFilesystem(fs);
+  const snapshot = await readDefaultExplorerFavorites(fs);
+  const documents = await fs.resolvePath("/Documents");
+  assert.ok(documents);
+
+  const nested = await fs.mkdir(documents.id, "Nested");
+  assert.equal(
+    explorerFavoritesAffectedByEvent({ type: "created", node: nested }, snapshot.rootId),
+    false,
+  );
+
+  const projects = await fs.mkdir(snapshot.rootId, "Projects");
+  assert.equal(
+    explorerFavoritesAffectedByEvent({ type: "created", node: projects }, snapshot.rootId),
+    true,
+  );
+  assert.equal(
+    explorerFavoritesAffectedByEvent({ type: "removed", id: projects.id, parentId: snapshot.rootId }, snapshot.rootId),
+    true,
+  );
+  assert.equal(
+    explorerFavoritesAffectedByEvent({ type: "reset", revision: await fs.revision() }, snapshot.rootId),
+    true,
+  );
 });
 
 test("a preserved legacy Downloads directory is not a default Favorite", async () => {
