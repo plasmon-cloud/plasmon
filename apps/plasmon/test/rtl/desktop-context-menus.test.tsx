@@ -107,6 +107,7 @@ test("Desktop Change Wallpaper submenu uses canonical built-ins and preserves un
         pinnedNative: expected.pinnedNative,
         pinnedElements: expected.pinnedElements,
         themeId: expected.themeId,
+        appearanceMode: expected.appearanceMode,
         wallpaper: expected.wallpaper,
         showBrandWatermark: expected.showBrandWatermark,
         taskbarAlignment: expected.taskbarAlignment,
