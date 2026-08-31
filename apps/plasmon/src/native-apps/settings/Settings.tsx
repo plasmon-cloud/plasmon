@@ -14,12 +14,9 @@ import {
 } from "../../os/diagnostics/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
-  effectiveShellWallpaper,
   SHELL_APPEARANCE_MODES,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
-  SHELL_WALLPAPER_IDS,
-  SHELL_WALLPAPER_LABELS,
   type ShellPreferencesAuthority,
 } from "../../os/shell/preferences.ts";
 import {
@@ -36,6 +33,7 @@ import {
   type SettingsDestinationId,
   type StorageSummary,
 } from "./model.ts";
+import { WallpaperPersonalization } from "./WallpaperPersonalization.tsx";
 
 export interface SettingsDependencies {
   associations?: AssociationRegistry;
@@ -393,28 +391,12 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                           </NativeAppButton>
                         ))}
                       </div>
-                      <h3 style={styles.sectionHeading}>Wallpaper</h3>
-                      <div style={styles.optionGrid}>
-                        <NativeAppButton
-                          type="button"
-                          disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
-                          aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
-                          onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
-                        >
-                          Follow theme
-                        </NativeAppButton>
-                        {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
-                          <NativeAppButton
-                            key={wallpaperId}
-                            type="button"
-                            disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
-                            aria-pressed={shellSnapshot.wallpaper.mode === "pinned" && shellSnapshot.wallpaper.id === wallpaperId}
-                            onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
-                          >
-                            {SHELL_WALLPAPER_LABELS[wallpaperId]}
-                          </NativeAppButton>
-                        ))}
-                      </div>
+                      <WallpaperPersonalization
+                        fs={fs}
+                        preferences={shellSnapshot}
+                        ready={shellPreferencesReady}
+                        onChange={updateShellPreferences}
+                      />
                       <h3 style={styles.sectionHeading}>Desktop overlay</h3>
                       <NativeAppButton
                         type="button"
