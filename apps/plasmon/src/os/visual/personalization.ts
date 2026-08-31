@@ -102,6 +102,32 @@ const ICON_THEME_PALETTES = Object.freeze({
 
 export type VisualCssVariableStyle = Readonly<Record<string, string>>;
 
+const SYSTEM_PROJECTION_VARIABLES = [
+  "--plasmon-desktop-background",
+  "--plasmon-window-background",
+  "--plasmon-window-titlebar",
+  "--plasmon-panel-background",
+  "--plasmon-panel-elevated",
+  "--plasmon-control-background",
+  "--plasmon-text-primary",
+  "--plasmon-text-secondary",
+  "--plasmon-accent",
+  "--plasmon-accent-hover",
+  "--plasmon-focus-ring",
+  "--plasmon-selection-border",
+  "--plasmon-selection",
+  "--plasmon-border-strong",
+  "--plasmon-border-subtle",
+] as const;
+
+const ICON_PROJECTION_VARIABLES = [
+  "--plasmon-icon-primary",
+  "--plasmon-icon-secondary",
+  "--plasmon-icon-accent",
+  "--plasmon-icon-outline",
+  "--plasmon-icon-highlight",
+] as const;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -235,4 +261,25 @@ export function applyVisualCssVariables(
       else element.style.removeProperty(name);
     }
   };
+}
+
+export function projectVisualPersonalizationToDocument(
+  systemOverrides: VisualSystemColorOverrides,
+  iconPalette: VisualIconPalette,
+): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  for (const variable of SYSTEM_PROJECTION_VARIABLES) root.style.removeProperty(variable);
+  for (const variable of ICON_PROJECTION_VARIABLES) root.style.removeProperty(variable);
+
+  const normalizedOverrides = normalizeSystemColorOverrides(systemOverrides);
+  const systemVariables = systemColorOverrideCssVariables(normalizedOverrides);
+  for (const [name, value] of Object.entries(systemVariables)) root.style.setProperty(name, value);
+  const activeRoles = VISUAL_SYSTEM_COLOR_ROLE_IDS.filter((roleId) => normalizedOverrides[roleId]);
+  if (activeRoles.length > 0) root.setAttribute("data-plasmon-system-overrides", activeRoles.join(" "));
+  else root.removeAttribute("data-plasmon-system-overrides");
+
+  const iconVariables = iconPaletteCssVariables(iconPalette);
+  for (const [name, value] of Object.entries(iconVariables)) root.style.setProperty(name, value);
+  root.setAttribute("data-plasmon-icon-palette-projected", "true");
 }
