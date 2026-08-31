@@ -67,9 +67,9 @@ async function createFolderFromBackground(
   app: ReturnType<Page["frameLocator"]>,
   files: Locator,
 ) {
-  // #751 removes the permanent creation buttons. Use the canonical background
-  // creation route instead. Accept both the pre-#750 flat menu and #750's New >
-  // grouping so this dependent acceptance remains valid across merge order.
+  // Permanent creation buttons are intentionally absent. Use the canonical
+  // background creation route, accepting both flat and grouped New menu shapes
+  // so this dependent acceptance remains valid across merge order.
   await files.dispatchEvent("contextmenu", {
     button: 2,
     clientX: 16,
