@@ -42,7 +42,7 @@ export interface DiagnosticRecord {
 
 export interface DiagnosticService {
   /** Canonical producer API. Scope once per subsystem, then emit stable named events. */
-  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger;
+  for<Subsystem extends string>(subsystem: Subsystem, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger<Subsystem>;
   /** Low-level structured ingestion seam used by scoped loggers and focused tests. */
   emit(input: DiagnosticEventInput): DiagnosticRecord;
   subscribe(listener: (record: DiagnosticRecord) => void): () => void;
@@ -289,7 +289,7 @@ export class PlasmonDiagnosticService implements DiagnosticService {
     this.retainBytes = options.retainBytes ?? DEFAULT_SYSTEM_LOG_RETAIN_BYTES;
   }
 
-  for(subsystem: string, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger {
+  for<Subsystem extends string>(subsystem: Subsystem, defaults?: DiagnosticLoggerDefaults): DiagnosticLogger<Subsystem> {
     return createDiagnosticLogger(this, subsystem, defaults);
   }
 

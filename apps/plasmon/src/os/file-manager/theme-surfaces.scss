@@ -58,6 +58,38 @@
   color: inherit;
 }
 
+/* Native select popups need an explicit opaque semantic surface in Chromium/WebKit;
+ * otherwise translucent controls can be composited over the OS popup's white surface. */
+[data-plasmon-theme] .explorer-app__viewbar select {
+  background: var(--plasmon-control-background);
+  color: var(--plasmon-text-primary);
+}
+
+[data-plasmon-theme] .explorer-app__viewbar select option,
+[data-plasmon-theme] .explorer-app__viewbar select optgroup {
+  background: var(--plasmon-panel-elevated);
+  color: var(--plasmon-text-primary);
+}
+
+[data-plasmon-theme] .explorer-app__viewbar select:hover:not(:disabled) {
+  background: var(--plasmon-control-hover);
+}
+
+[data-plasmon-theme] .explorer-app__viewbar select:focus-visible {
+  border-color: var(--plasmon-selection-border);
+  outline: 2px solid var(--plasmon-focus-ring);
+  outline-offset: 1px;
+}
+
+[data-plasmon-theme] .explorer-app__viewbar select:disabled {
+  color: var(--plasmon-text-disabled);
+}
+
+[data-plasmon-theme] .explorer-app__viewbar select option:checked {
+  background: var(--plasmon-accent);
+  color: var(--plasmon-accent-ink);
+}
+
 [data-plasmon-theme] .explorer-app__address input[aria-invalid="true"] {
   border-color: var(--plasmon-danger);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--plasmon-danger) 22%, transparent);

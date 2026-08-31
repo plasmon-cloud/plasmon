@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { PlasmonDiagnosticService, type DiagnosticRecord } from "../../os/diagnostics/index.ts";
+import {
+  DiagnosticSubsystem,
+  PlasmonDiagnosticService,
+  type DiagnosticRecord,
+} from "../../os/diagnostics/index.ts";
 import { MemoryFsRepository, PersistentFsService } from "../../os/fs/index.ts";
 import { logJsDosHandledFailure } from "./diagnostics.ts";
 
@@ -11,7 +15,7 @@ function diagnosticsHarness() {
   });
   const records: DiagnosticRecord[] = [];
   diagnostics.subscribe((record) => records.push(record));
-  return { log: diagnostics.for("runtime.jsdos"), records };
+  return { log: diagnostics.for(DiagnosticSubsystem.RuntimeJsDos), records };
 }
 
 describe("js-dos handled-failure diagnostics", () => {
@@ -29,14 +33,14 @@ describe("js-dos handled-failure diagnostics", () => {
     logJsDosHandledFailure(log, { kind: "stop", error: new Error(privateRuntimeDetail) });
 
     expect(records.map((record) => record.event)).toEqual([
-      "runtime.jsdos.start.failed",
-      "runtime.jsdos.restore.failed",
-      "runtime.jsdos.save.failed",
-      "runtime.jsdos.stop.failed",
+      "runtime.js-dos.start.failed",
+      "runtime.js-dos.restore.failed",
+      "runtime.js-dos.save.failed",
+      "runtime.js-dos.stop.failed",
     ]);
     expect(records[0]).toMatchObject({
       level: "error",
-      subsystem: "runtime.jsdos",
+      subsystem: "runtime.js-dos",
       context: {
         runtime: "js-dos",
         version: "8.4.1",

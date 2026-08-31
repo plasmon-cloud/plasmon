@@ -13,7 +13,7 @@ test("diagnostic text selects without stealing FileEntry drag", async ({ page })
     firstPartyOrigins: [kernelUrl],
     allow: [{
       kind: "console.warn",
-      messageIncludes: "WARN | [filemanager] | filemanager.move.failed | filemanager.move.failed | context={\"failed\":1,\"succeeded\":0,\"total\":1}",
+      messageIncludes: "WARN | [file-manager] | file-manager.move.failed | file-manager.move.failed | context={\"failed\":1,\"succeeded\":0,\"total\":1}",
       reason: "this scenario deliberately creates one same-name move collision to expose the selectable FileManager diagnostic",
     }],
   });
@@ -162,7 +162,7 @@ test("diagnostic text selects without stealing FileEntry drag", async ({ page })
 
     const expectedMoveWarnings = health.ledger.allowedIssues().filter((issue) =>
       issue.kind === "console.warn"
-      && issue.message.includes("[filemanager] | filemanager.move.failed |"));
+      && issue.message.includes("[file-manager] | file-manager.move.failed |"));
     expect(expectedMoveWarnings).toHaveLength(1);
     health.assertClean();
   } finally {

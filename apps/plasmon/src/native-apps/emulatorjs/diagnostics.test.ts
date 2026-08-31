@@ -48,7 +48,7 @@ describe("EmulatorJS handled-failure diagnostics", () => {
       level: "error",
       subsystem: "runtime.emulatorjs",
       context: {
-        runtime: "EmulatorJS",
+        runtime: "emulatorjs",
         core: "nes",
         stage: "rom-validation",
         errorType: "Error",
