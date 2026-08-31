@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { within } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import type { ExternalElement } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -40,14 +40,40 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     const capabilityHeadings = [
       "Storage",
       "Files & Explorer",
+      "Diagnostics",
       "Appearance",
       "File associations",
-      "Backup & sharing",
     ];
     for (const heading of capabilityHeadings) {
       expect(within(settings).getByRole("heading", { name: heading })).toBeDefined();
     }
+    expect(within(settings).queryByRole("heading", { name: "Backup & sharing" })).toBeNull();
+    expect(within(settings).queryByText(/Wave 2|not integrated/i)).toBeNull();
     expect(within(settings).getByRole("checkbox", { name: "Always show hidden files" })).toBeDefined();
+    expect(within(settings).getByRole("combobox", { name: "System log minimum level" })).toBeDefined();
+    expect(within(settings).getByRole("combobox", { name: "Browser console minimum level" })).toBeDefined();
+
+    const graphite = within(settings).getByRole("button", { name: "Graphite" });
+    const verdant = within(settings).getByRole("button", { name: "Verdant" });
+    expect(graphite.getAttribute("aria-pressed")).toBe("true");
+    expect(verdant.getAttribute("aria-pressed")).toBe("false");
+    expect(graphite.classList.contains("plasmon-native-app-button")).toBe(true);
+    expect(verdant.classList.contains("plasmon-native-app-button")).toBe(true);
+
+    await app.user.click(verdant);
+    await waitFor(() => {
+      expect(verdant.getAttribute("aria-pressed")).toBe("true");
+      expect(graphite.getAttribute("aria-pressed")).toBe("false");
+    });
+
+    const followTheme = within(settings).getByRole("button", { name: "Follow theme" });
+    expect(followTheme.hasAttribute("disabled")).toBe(true);
+    expect(followTheme.getAttribute("aria-pressed")).toBe("true");
+    expect(followTheme.classList.contains("plasmon-native-app-button")).toBe(true);
+
+    const taskbarAlignmentChoices = within(settings).getAllByRole("button", { name: /^(Left|Center)$/ });
+    expect(taskbarAlignmentChoices.map((button) => button.textContent)).toEqual(["Left", "Center"]);
+    expect(taskbarAlignmentChoices.every((button) => button.classList.contains("plasmon-native-app-button"))).toBe(true);
 
     const settingsProcess = app.environment.os.processes.list().find(
       (process) => process.handlerId === "native:settings",
@@ -70,6 +96,7 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     for (const heading of capabilityHeadings) {
       expect(within(settingsAfterLauncher).getByRole("heading", { name: heading })).toBeDefined();
     }
+    expect(within(settingsAfterLauncher).queryByRole("heading", { name: "Backup & sharing" })).toBeNull();
     expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
   } finally {
     app.dispose();
