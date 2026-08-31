@@ -13,15 +13,7 @@ import {
   type DiagnosticSettingsStore,
 } from "../../os/diagnostics/index.ts";
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
-import {
-  effectiveShellWallpaper,
-  SHELL_APPEARANCE_MODES,
-  SHELL_THEME_IDS,
-  SHELL_THEME_LABELS,
-  SHELL_WALLPAPER_IDS,
-  SHELL_WALLPAPER_LABELS,
-  type ShellPreferencesAuthority,
-} from "../../os/shell/preferences.ts";
+import type { ShellPreferences, ShellPreferencesAuthority } from "../../os/shell/preferences.ts";
 import {
   NativeAppButton,
   NativeAppContentSurface,
@@ -36,6 +28,7 @@ import {
   type SettingsDestinationId,
   type StorageSummary,
 } from "./model.ts";
+import { PersonalizationPanel } from "./PersonalizationPanel.tsx";
 
 export interface SettingsDependencies {
   associations?: AssociationRegistry;
@@ -148,7 +141,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
       process.focus(processId);
     };
 
-    const updateShellPreferences = (patch: Partial<Exclude<typeof shellSnapshot, null>>) => {
+    const updateShellPreferences = (patch: Partial<ShellPreferences>): void => {
       const authority = dependencies.shellPreferences;
       if (!authority || !shellSnapshot || !shellPreferencesReady) return;
       setShellPreferencesError(null);
@@ -364,70 +357,12 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                 <NativeAppPanel style={styles.card}>
                   <h2 id="personalization-heading" style={styles.subheading}>Personalization</h2>
                   {shellSnapshot ? (
-                    <>
-                      <h3 style={styles.sectionHeading}>Theme</h3>
-                      <div style={styles.optionGrid}>
-                        {SHELL_THEME_IDS.map((themeId) => (
-                          <NativeAppButton
-                            key={themeId}
-                            type="button"
-                            disabled={!shellPreferencesReady}
-                            aria-pressed={shellSnapshot.themeId === themeId}
-                            onClick={() => updateShellPreferences({ themeId })}
-                          >
-                            {SHELL_THEME_LABELS[themeId]}
-                          </NativeAppButton>
-                        ))}
-                      </div>
-                      <h3 style={styles.sectionHeading}>Appearance mode</h3>
-                      <div style={styles.optionGrid}>
-                        {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
-                          <NativeAppButton
-                            key={appearanceMode}
-                            type="button"
-                            disabled={!shellPreferencesReady}
-                            aria-pressed={shellSnapshot.appearanceMode === appearanceMode}
-                            onClick={() => updateShellPreferences({ appearanceMode })}
-                          >
-                            {appearanceMode === "dark" ? "Dark" : "Light"}
-                          </NativeAppButton>
-                        ))}
-                      </div>
-                      <h3 style={styles.sectionHeading}>Wallpaper</h3>
-                      <div style={styles.optionGrid}>
-                        <NativeAppButton
-                          type="button"
-                          disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
-                          aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
-                          onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
-                        >
-                          Follow theme
-                        </NativeAppButton>
-                        {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
-                          <NativeAppButton
-                            key={wallpaperId}
-                            type="button"
-                            disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
-                            aria-pressed={shellSnapshot.wallpaper.mode === "pinned" && shellSnapshot.wallpaper.id === wallpaperId}
-                            onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
-                          >
-                            {SHELL_WALLPAPER_LABELS[wallpaperId]}
-                          </NativeAppButton>
-                        ))}
-                      </div>
-                      <h3 style={styles.sectionHeading}>Desktop overlay</h3>
-                      <NativeAppButton
-                        type="button"
-                        disabled={!shellPreferencesReady}
-                        aria-label="Show Plasmon watermark"
-                        aria-pressed={shellSnapshot.showBrandWatermark !== false}
-                        onClick={() => updateShellPreferences({ showBrandWatermark: shellSnapshot.showBrandWatermark === false })}
-                      >
-                        Plasmon watermark: {shellSnapshot.showBrandWatermark !== false ? "On" : "Off"}
-                      </NativeAppButton>
-                      <p style={styles.helpText}>The Plasmon SVG watermark is layered over every wallpaper and can be hidden independently.</p>
-                      {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
-                    </>
+                    <PersonalizationPanel
+                      preferences={shellSnapshot}
+                      ready={shellPreferencesReady}
+                      error={shellPreferencesError}
+                      onUpdate={updateShellPreferences}
+                    />
                   ) : dependencies.setThemeName ? (
                     <label style={styles.controlRow}>
                       Theme
