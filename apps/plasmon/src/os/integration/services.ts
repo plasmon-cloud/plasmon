@@ -31,9 +31,11 @@ import {
 } from "../fs/index.ts";
 import {
   DiagnosticEvent,
+  DiagnosticSettingsStore,
   DiagnosticStage,
   DiagnosticSubsystem,
   PlasmonDiagnosticService,
+  resolveDiagnosticSettingsCapabilities,
   type DiagnosticLogger,
   type DiagnosticService,
 } from "../diagnostics/index.ts";
@@ -87,13 +89,14 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isCoreProfile, isGameRuntimeProfile } from "./packageProfile.ts";
+import { isCoreProfile, isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
 
 export interface PlasmonServices {
   fs: FsService;
   fsEvents: FsEventSource;
   filesystem: FilesystemCoreServices;
   diagnostics: DiagnosticService;
+  diagnosticSettings: DiagnosticSettingsStore;
   process: ProcessController;
   windows: WindowManager;
   windowPlacement: NativeWindowPlacementController;
@@ -117,6 +120,11 @@ export interface CreatePlasmonServicesOptions {
   windows?: WindowManager;
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
+  /**
+   * Capability seam for the separately owned remote incident sink. This layer
+   * never installs a provider; callers may enable policy only when that sink exists.
+   */
+  remoteIncidentSinkAvailable?: boolean;
 }
 
 export type FilesystemFrontendMode = "hosted" | "standalone";
@@ -180,6 +188,7 @@ function registerNativeApplications(
   hiddenVisibility: HiddenVisibilityPreferenceStore,
   shellPreferences: ShellPreferencesController,
   diagnostics: DiagnosticService,
+  diagnosticSettings: DiagnosticSettingsStore,
   log: DiagnosticLogger<typeof DiagnosticSubsystem.NativeApp>,
 ): void {
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
@@ -201,7 +210,11 @@ function registerNativeApplications(
     );
   }
 
-  const contentLoaders = createContentAppLoaders({ hiddenVisibility, shellPreferences });
+  const contentLoaders = createContentAppLoaders({
+    hiddenVisibility,
+    shellPreferences,
+    diagnosticSettings,
+  });
   for (const definition of contentAppDefinitions) {
     const loader = contentLoaders.get(definition.id);
     if (!loader) {
@@ -250,6 +263,16 @@ export function createPlasmonServices(
       if (filesystem) await filesystem.ready;
     },
     onSinkError: (error) => console.error("Plasmon diagnostic persistence failed:", error),
+  });
+  const diagnosticSettings = new DiagnosticSettingsStore(
+    rawFs,
+    resolveDiagnosticSettingsCapabilities({
+      slimProfile: isSlimProfile,
+      remoteIncidentSinkAvailable: options.remoteIncidentSinkAvailable ?? false,
+    }),
+  );
+  diagnosticSettings.subscribe(({ fileMinLevel, consoleMinLevel }) => {
+    diagnostics.setSinkMinimumLevels({ fileMinLevel, consoleMinLevel });
   });
   const filesystemLog = diagnostics.for(DiagnosticSubsystem.Filesystem);
   const processLog = diagnostics.for(DiagnosticSubsystem.Process);
@@ -367,10 +390,11 @@ export function createPlasmonServices(
     hiddenVisibility,
     shellPreferences,
     diagnostics,
+    diagnosticSettings,
     nativeAppLog,
   );
 
-  filesystem = createFilesystemCore({
+  const filesystemCore = createFilesystemCore({
     fs: rawFs,
     nativeApps,
     neutron,
@@ -380,9 +404,25 @@ export function createPlasmonServices(
     diagnostics,
     ...(options.demoSeeds ? { demoSeeds: options.demoSeeds } : {}),
   });
+  let diagnosticSettingsRestoreError: unknown = null;
+  const ready = filesystemCore.ready.then(async (initialization) => {
+    try {
+      await diagnosticSettings.load();
+    } catch (error) {
+      diagnosticSettingsRestoreError = error;
+    }
+    return initialization;
+  });
+  filesystem = { ...filesystemCore, ready };
   const fs = filesystem.fs;
   void filesystem.ready
     .then((initialization) => {
+      if (diagnosticSettingsRestoreError) {
+        filesystemLog.warn(DiagnosticEvent.Filesystem.SettingsRestoreFailed, {
+          message: "Persisted diagnostic sink settings could not be restored; safe defaults remain active",
+          errorType: diagnosticErrorType(diagnosticSettingsRestoreError),
+        });
+      }
       filesystemLog.notice(DiagnosticEvent.Filesystem.BootstrapReady, {
         message: "Filesystem bootstrap completed",
       });
@@ -412,6 +452,7 @@ export function createPlasmonServices(
     fsEvents: fs,
     filesystem,
     diagnostics,
+    diagnosticSettings,
     process,
     windows,
     windowPlacement,
