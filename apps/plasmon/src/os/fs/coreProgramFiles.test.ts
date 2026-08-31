@@ -8,6 +8,7 @@ import type {
   ProcessController,
 } from "../contracts/index.ts";
 import { createFilesystemCore } from "./core.ts";
+import { CONFIGURATION_PATH } from "./configuration.ts";
 import { PROGRAM_FILES_PATH } from "./programFiles.ts";
 import { MemoryFsRepository } from "./repository.ts";
 import { OWNERSHIP_METADATA_KEY } from "./resourcePolicy.ts";
@@ -35,6 +36,8 @@ test("filesystem core ready reconciles one stable MonacoEditor Program Files run
   await firstCore.ready;
   const first = await raw.resolvePath(`${PROGRAM_FILES_PATH}/MonacoEditor`);
   assert.ok(first);
+  const configuration = await firstCore.configuration.root();
+  assert.equal(await raw.pathOf(configuration.id), CONFIGURATION_PATH);
   const earlyRuntime = await earlyRuntimePromise;
   assert.equal(earlyRuntime.id, first.id, "an early runtime consumer must share the core bootstrap identity");
   assert.equal(first.kind, "directory");

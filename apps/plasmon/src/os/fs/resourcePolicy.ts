@@ -5,6 +5,15 @@ export const SYSTEM_APP_METADATA_KEY = "plasmon.systemApp";
 export const NEUTRON_APP_METADATA_KEY = "plasmon.neutronApp";
 export const SYSTEM_APP_MIME = "application/x-plasmon-system-app";
 export const NEUTRON_APP_MIME = "application/x-plasmon-neutron-app";
+export const CONFIGURATION_FILE_METADATA_KEY = "plasmon.configurationFile";
+
+export interface ConfigurationFileResourceMetadata {
+  format: "plasmon.configuration-file";
+  version: 1;
+  owner: string;
+  schema: string;
+  schemaVersion: number;
+}
 
 export type ResourceOwnership =
   | "system-required"
@@ -284,6 +293,27 @@ export function readSystemAppMetadata(node: ClassifiableResource): SystemAppMeta
     version: 1,
     systemId,
     handlerId,
+  };
+}
+
+export function readConfigurationFileMetadata(node: ClassifiableResource): ConfigurationFileResourceMetadata | null {
+  if (node.kind !== "file") return null;
+  const value = record(node.metadata[CONFIGURATION_FILE_METADATA_KEY]);
+  if (
+    !value
+    || value.format !== "plasmon.configuration-file"
+    || value.version !== 1
+    || typeof value.owner !== "string"
+    || typeof value.schema !== "string"
+    || typeof value.schemaVersion !== "number"
+    || !Number.isSafeInteger(value.schemaVersion)
+  ) return null;
+  return {
+    format: "plasmon.configuration-file",
+    version: 1,
+    owner: value.owner,
+    schema: value.schema,
+    schemaVersion: value.schemaVersion,
   };
 }
 

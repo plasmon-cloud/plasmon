@@ -2,11 +2,17 @@ import type {
   CreateFileOptions,
   FsNode,
   FsService,
+  JsonValue,
   NodeId,
   WriteOptions,
 } from "../contracts/index.ts";
 import { ManagedFsService } from "./managed.ts";
-import { classifyResource, resourceCapabilities } from "./resourcePolicy.ts";
+import {
+  OWNERSHIP_METADATA_KEY,
+  classifyResource,
+  readConfigurationFileMetadata,
+  resourceCapabilities,
+} from "./resourcePolicy.ts";
 
 function protectedOperationError(node: FsNode, operation: string): Error {
   const classification = classifyResource(node);
@@ -21,6 +27,7 @@ function protectedOperationError(node: FsNode, operation: string): Error {
 function isUserWritableContainerPath(path: string): boolean {
   if (path === "/Apps" || path === "/System") return false;
   if (path === "/System/Program Files" || path.startsWith("/System/Program Files/")) return false;
+  if (path === "/System/Configuration" || path.startsWith("/System/Configuration/")) return false;
   if (path === "/System/.Trash" || path.startsWith("/System/.Trash/")) return false;
   return true;
 }
@@ -86,10 +93,21 @@ export class ProtectedManagedFsService extends ManagedFsService {
     if (
       classification.kind === "system-app"
       || classification.kind === "neutron-app"
-      || classification.ownership === "system-required"
+      || (classification.ownership === "system-required" && !readConfigurationFileMetadata(node))
     ) {
       throw protectedOperationError(node, "modified");
     }
     return super.write(id, bytes, options);
+  }
+
+  override async setMetadata(id: NodeId, patch: Record<string, JsonValue | null>): Promise<FsNode> {
+    const node = await this.stat(id);
+    if (
+      resourceCapabilities(node).rename === false
+      && Object.keys(patch).some((key) => key === OWNERSHIP_METADATA_KEY || key.startsWith("plasmon.configuration"))
+    ) {
+      throw protectedOperationError(node, "modified");
+    }
+    return super.setMetadata(id, patch);
   }
 }
