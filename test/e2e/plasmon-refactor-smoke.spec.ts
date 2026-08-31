@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const PLASMON_APP_ID = "plasmon";
 const PLASMON_TILE_ID = "main";
@@ -149,7 +150,7 @@ test("packaged refactor smoke preserves assembled Plasmon boundaries", async ({ 
         y: Math.max(120, Math.floor(desktopBounds.height * 0.55)),
       },
     });
-    await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+    await clickNewContextMenuItem(plasmon, "New Text Document");
     const rename = plasmon.getByRole("textbox", { name: "Rename New Text Document.txt" });
     await expect(rename).toBeVisible();
     const renameBox = await rename.boundingBox();

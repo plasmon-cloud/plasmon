@@ -8,6 +8,7 @@ import {
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 let resourceSequence = 0;
 
@@ -56,7 +57,7 @@ async function createDesktopTextDocument(frame: FrameLocator, files: Locator) {
       y: Math.max(120, Math.floor(desktopBounds.height * 0.55)),
     },
   });
-  await frame.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+  await clickNewContextMenuItem(frame, "New Text Document");
   const rename = frame.getByRole("textbox", { name: /^Rename / });
   await expect(rename).toBeVisible();
   const name = uniqueResourceName("file");

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 /**
  * Packaged regression coverage for Desktop FileEntry rename geometry.
@@ -66,7 +67,7 @@ test("Desktop rename editor stays inside its FileEntry tile", async ({ page }) =
         y: Math.max(120, Math.floor(filesBounds.height * 0.55)),
       },
     });
-    await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+    await clickNewContextMenuItem(plasmon, "New Text Document");
 
     const rename = plasmon.getByRole("textbox", { name: "Rename New Text Document.txt" });
     await expect(rename).toBeVisible();
