@@ -109,7 +109,11 @@ function ContextSubmenu({
     <div
       style={{ position: "relative" }}
       onMouseEnter={() => { if (!disabled) setOpen(true); }}
-      onMouseLeave={() => setOpen(false)}
+      onMouseLeave={(event) => {
+        const next = event.relatedTarget;
+        if (next instanceof Node && event.currentTarget.contains(next)) return;
+        setOpen(false);
+      }}
       onBlur={(event) => {
         const next = event.relatedTarget;
         if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
@@ -163,8 +167,8 @@ function ContextSubmenu({
               role={item.checked === undefined ? "menuitem" : "menuitemradio"}
               {...(item.checked === undefined ? {} : { "aria-checked": item.checked })}
               onClick={() => {
-                setOpen(false);
                 item.onSelect();
+                setOpen(false);
               }}
             >
               {item.label}
@@ -294,8 +298,8 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
                 label: choice.label,
                 checked: Boolean(choice.selected),
                 onSelect: () => {
-                  props.onDismiss();
                   props.desktopWallpaperMenu?.onSelect(choice.id);
+                  props.onDismiss();
                 },
               }))}
             />
