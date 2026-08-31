@@ -80,9 +80,9 @@ test("legacy preferences migrate to Fill while stable filesystem NodeId targets 
     themeId: "plasmon-midnight",
     appearanceMode: "dark",
   });
-  expect(validateShellPreferences(stored({ mode: "filesystem", nodeId: "node-image" }, "plasmon-midnight", "tile")))
-    ?.wallpaperLayout.toBe("tile");
-  expect(validateShellPreferences(stored({ mode: "filesystem", nodeId: "" })))?.wallpaper)
+  expect(validateShellPreferences(stored({ mode: "filesystem", nodeId: "node-image" }, "plasmon-midnight", "tile"))?.wallpaperLayout)
+    .toBe("tile");
+  expect(validateShellPreferences(stored({ mode: "filesystem", nodeId: "" }))?.wallpaper)
     .toEqual({ mode: "follow-theme" });
   expect(validateShellPreferences(stored({ mode: "pinned", id: "plasmon-aurora" }))?.wallpaper)
     .toEqual({ mode: "pinned", id: "plasmon-lattice" });
