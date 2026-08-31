@@ -2,6 +2,8 @@
  * These surfaces sit against content the active theme does not control: a
  * user-selected wallpaper or transparent pixels in media. Keep the treatment
  * semantic and theme-aware here instead of branching on individual themes.
+ * The data-attribute variants below are fixed Visual-owned mappings from the
+ * validated expert configuration enums; the file never supplies CSS values.
  */
 .plasmon-shell {
   --plasmon-wallpaper-label-ink: #fff;
@@ -12,6 +14,43 @@
     color-mix(in srgb, var(--plasmon-window-background) 92%, var(--plasmon-text-primary) 8%);
   --plasmon-transparency-check:
     color-mix(in srgb, var(--plasmon-window-background) 82%, var(--plasmon-text-primary) 18%);
+  --plasmon-transparency-check-size: 8px;
+  --plasmon-transparency-check-half-size: 4px;
+  --plasmon-transparency-check-negative-half-size: -4px;
+}
+
+.plasmon-shell[data-plasmon-visual-label-readability="strong"] {
+  --plasmon-wallpaper-label-shadow:
+    0 1px 2px rgb(0 0 0 / 96%),
+    0 0 5px rgb(0 0 0 / 78%);
+}
+
+.plasmon-shell[data-plasmon-visual-label-readability="maximum"] {
+  --plasmon-wallpaper-label-shadow:
+    0 1px 2px rgb(0 0 0 / 100%),
+    0 0 6px rgb(0 0 0 / 88%);
+}
+
+.plasmon-shell[data-plasmon-visual-checker-intensity="subtle"] {
+  --plasmon-transparency-check:
+    color-mix(in srgb, var(--plasmon-window-background) 88%, var(--plasmon-text-primary) 12%);
+}
+
+.plasmon-shell[data-plasmon-visual-checker-intensity="strong"] {
+  --plasmon-transparency-check:
+    color-mix(in srgb, var(--plasmon-window-background) 74%, var(--plasmon-text-primary) 26%);
+}
+
+.plasmon-shell[data-plasmon-visual-checker-pattern="fine"] {
+  --plasmon-transparency-check-size: 6px;
+  --plasmon-transparency-check-half-size: 3px;
+  --plasmon-transparency-check-negative-half-size: -3px;
+}
+
+.plasmon-shell[data-plasmon-visual-checker-pattern="coarse"] {
+  --plasmon-transparency-check-size: 12px;
+  --plasmon-transparency-check-half-size: 6px;
+  --plasmon-transparency-check-negative-half-size: -6px;
 }
 
 .plasmon-shell .fm-entry--desktop:not(.is-renaming) .fm-entry__name,
@@ -28,6 +67,12 @@
     linear-gradient(-45deg, var(--plasmon-transparency-check) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, var(--plasmon-transparency-check) 75%),
     linear-gradient(-45deg, transparent 75%, var(--plasmon-transparency-check) 75%);
-  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
-  background-size: 8px 8px;
+  background-position:
+    0 0,
+    0 var(--plasmon-transparency-check-half-size),
+    var(--plasmon-transparency-check-half-size) var(--plasmon-transparency-check-negative-half-size),
+    var(--plasmon-transparency-check-negative-half-size) 0;
+  background-size:
+    var(--plasmon-transparency-check-size)
+    var(--plasmon-transparency-check-size);
 }
