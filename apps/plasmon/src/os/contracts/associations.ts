@@ -18,6 +18,8 @@ export interface OpenTarget {
   url?: string;
   atom?: AtomDescriptor;
   readOnly?: boolean;
+  /** Opaque application-local navigation state carried through native activation. */
+  appDestination?: string;
 }
 
 export type HandlerKind = "native" | "neutron" | "external";
