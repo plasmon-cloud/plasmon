@@ -6,6 +6,7 @@ import {
   isVisualIconSetId,
   normalizeSystemColorOverrides,
   normalizeVisualIconPalette,
+  projectVisualPersonalizationToDocument,
   type VisualIconPalette,
   type VisualIconSetId,
   type VisualSystemBasePalette,
@@ -350,14 +351,17 @@ export interface ShellPreferencesAuthority {
 /**
  * Shared Shell preference authority for Shell and native Settings. The
  * controller owns the in-memory snapshot while ShellPreferenceStore remains
- * the filesystem persistence boundary.
+ * the filesystem persistence boundary. Visual projection is a live consumer
+ * of the same normalized snapshot; it is not a second preference store.
  */
 export class ShellPreferencesController implements ShellPreferencesAuthority {
   private preferences = cloneShellPreferences();
   private ready = false;
   private readonly listeners = new Set<(preferences: ShellPreferences, ready: boolean) => void>();
 
-  constructor(private readonly store: ShellPreferenceStore) {}
+  constructor(private readonly store: ShellPreferenceStore) {
+    this.projectPresentation();
+  }
 
   getSnapshot(): ShellPreferences {
     return cloneShellPreferences(this.preferences);
@@ -378,10 +382,12 @@ export class ShellPreferencesController implements ShellPreferencesAuthority {
     } catch (error: unknown) {
       this.preferences = cloneShellPreferences();
       this.ready = true;
+      this.projectPresentation();
       this.notify();
       throw error;
     }
     this.ready = true;
+    this.projectPresentation();
     this.notify();
     return this.getSnapshot();
   }
@@ -391,8 +397,16 @@ export class ShellPreferencesController implements ShellPreferencesAuthority {
     if (!checked) throw new Error("Shell preferences are invalid");
     if (checked.themeId !== this.preferences.themeId) checked.systemColorOverrides = {};
     this.preferences = cloneShellPreferences(checked);
+    this.projectPresentation();
     this.notify();
     return saveShellPreferencesNonDestructive(this.store, this.preferences);
+  }
+
+  private projectPresentation(): void {
+    projectVisualPersonalizationToDocument(
+      this.preferences.systemColorOverrides,
+      effectiveShellIconPalette(this.preferences),
+    );
   }
 
   private notify(): void {
