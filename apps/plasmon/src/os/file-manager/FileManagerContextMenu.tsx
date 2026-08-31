@@ -71,13 +71,10 @@ const NEW_ITEMS = [
   ["New Run Script (.run)", "newRun"],
 ] as const;
 
-function moveFocus(menu: HTMLElement, target: EventTarget | null, delta: number, selector = "button:not(:disabled)") {
+function moveFocus(menu: HTMLElement, target: HTMLElement, delta: number, selector: string) {
   const items = Array.from(menu.querySelectorAll<HTMLElement>(selector));
-  if (!items.length) return;
-  const index = items.indexOf(target as HTMLElement);
-  items[(index < 0 ? (delta > 0 ? -1 : 0) : index) + delta < 0
-    ? items.length - 1
-    : ((index < 0 ? (delta > 0 ? -1 : 0) : index) + delta) % items.length]?.focus();
+  const index = items.indexOf(target);
+  items[(index + delta + items.length) % items.length]?.focus();
 }
 
 export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
@@ -100,31 +97,6 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
     menu.querySelector<HTMLElement>("button:not(:disabled)")?.focus();
   }, [props.state.nodeId, props.state.x, props.state.y]);
 
-  useLayoutEffect(() => {
-    if (!submenu) return;
-    menuRef.current?.querySelector<HTMLElement>(`[aria-label="${submenu === "new" ? "New" : "Change Wallpaper"} submenu"] button`)?.focus();
-  }, [submenu]);
-
-  const triggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, next: "new" | "wallpaper") => {
-    if (event.key !== "ArrowRight" && event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    event.stopPropagation();
-    setSubmenu(next);
-  };
-
-  const submenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, trigger: string) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      event.stopPropagation();
-      moveFocus(event.currentTarget, event.target, event.key === "ArrowDown" ? 1 : -1);
-    } else if (event.key === "ArrowLeft" || event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      setSubmenu(null);
-      menuRef.current?.querySelector<HTMLElement>(`[data-fm-submenu="${trigger}"]`)?.focus();
-    }
-  };
-
   return (
     <div
       ref={menuRef}
@@ -138,14 +110,35 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
         event.stopPropagation();
       }}
       onKeyDown={(event) => {
+        const target = event.target as HTMLElement;
+        const currentMenu = target.closest<HTMLElement>('[role="menu"]');
+        const nested = currentMenu && currentMenu !== menuRef.current;
+        if (nested && (event.key === "ArrowLeft" || event.key === "Escape")) {
+          event.preventDefault();
+          setSubmenu(null);
+          (currentMenu.previousElementSibling as HTMLElement | null)?.focus();
+          return;
+        }
         if (event.key === "Escape") {
           event.preventDefault();
           props.onDismiss();
-        } else if (!props.node && (event.key === "ArrowDown" || event.key === "ArrowUp")
-          && (event.target as HTMLElement).dataset.fmBackgroundMenuitem === "true") {
+          return;
+        }
+        const next = target.dataset.fmSubmenu as "new" | "wallpaper" | undefined;
+        if (next && (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ")) {
           event.preventDefault();
-          setSubmenu(null);
-          moveFocus(event.currentTarget, event.target, event.key === "ArrowDown" ? 1 : -1, '[data-fm-background-menuitem="true"]:not(:disabled)');
+          setSubmenu(next);
+          return;
+        }
+        if (currentMenu && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+          event.preventDefault();
+          if (!nested) setSubmenu(null);
+          moveFocus(
+            currentMenu,
+            target,
+            event.key === "ArrowDown" ? 1 : -1,
+            nested ? ":scope > button:not(:disabled)" : '[data-fm-background-menuitem="true"]:not(:disabled)',
+          );
         }
       }}
     >
@@ -192,18 +185,11 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               aria-expanded={submenu === "new"}
               onMouseEnter={() => setSubmenu("new")}
               onClick={() => setSubmenu("new")}
-              onKeyDown={(event) => triggerKeyDown(event, "new")}
             >New <span aria-hidden="true">›</span></button>
             {submenu === "new" ? (
-              <div
-                className="fm-context-menu"
-                role="menu"
-                aria-label="New submenu"
-                style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}
-                onKeyDown={(event) => submenuKeyDown(event, "new")}
-              >
-                {NEW_ITEMS.map(([label, action]) => (
-                  <button key={action} type="button" role="menuitem" onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onAction(action); setSubmenu(null); }}>
+              <div className="fm-context-menu" role="menu" aria-label="New submenu" style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}>
+                {NEW_ITEMS.map(([label, action], index) => (
+                  <button key={action} autoFocus={index === 0} type="button" role="menuitem" onClick={() => { props.onAction(action); setSubmenu(null); }}>
                     {label}
                   </button>
                 ))}
@@ -222,23 +208,16 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
                 disabled={props.desktopWallpaperMenu.disabled}
                 onMouseEnter={() => setSubmenu("wallpaper")}
                 onClick={() => setSubmenu("wallpaper")}
-                onKeyDown={(event) => triggerKeyDown(event, "wallpaper")}
               >Change Wallpaper <span aria-hidden="true">›</span></button>
               {submenu === "wallpaper" ? (
-                <div
-                  className="fm-context-menu"
-                  role="menu"
-                  aria-label="Change Wallpaper submenu"
-                  style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}
-                  onKeyDown={(event) => submenuKeyDown(event, "wallpaper")}
-                >
-                  {props.desktopWallpaperMenu.choices.map((choice) => (
+                <div className="fm-context-menu" role="menu" aria-label="Change Wallpaper submenu" style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}>
+                  {props.desktopWallpaperMenu.choices.map((choice, index) => (
                     <button
                       key={choice.id}
+                      autoFocus={index === 0}
                       type="button"
                       role="menuitemradio"
                       aria-checked={!!choice.selected}
-                      onMouseDown={(event) => event.preventDefault()}
                       onClick={() => { props.desktopWallpaperMenu?.onSelect(choice.id); props.onDismiss(); }}
                     >{choice.label}</button>
                   ))}
