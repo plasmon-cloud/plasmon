@@ -1,5 +1,6 @@
 // @ts-ignore -- bun:test is available to the repository test runner but excluded from browser tsconfig globals.
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import type {
   CreateFileOptions,
   FsEvent,
@@ -23,6 +24,7 @@ import {
   type ShellPreferences,
 } from "./preferences.ts";
 import { deriveShellTaskbarLayout, TASKBAR_ICON_PIXELS } from "./taskbar-layout.ts";
+import { placeTaskbarContextMenu } from "./taskbar.ts";
 
 class PreferenceFs implements FsService {
   readonly root: FsNode = {
@@ -168,4 +170,43 @@ test("taskbar layout derivation maps placement size and tray visibility without 
   });
   expect(TASKBAR_ICON_PIXELS.large).toBeGreaterThan(TASKBAR_ICON_PIXELS.medium);
   expect(TASKBAR_ICON_PIXELS.medium).toBeGreaterThan(TASKBAR_ICON_PIXELS.small);
+});
+
+test("Top placement insets workspace and anchors Shell-owned flyouts below the taskbar", () => {
+  const css = readFileSync(new URL("./taskbar-behavior.scss", import.meta.url), "utf8");
+  expect(css).toContain('.plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__workspace');
+  expect(css).toContain("bottom: 0;");
+  expect(css).toContain("top: var(--plasmon-taskbar-height);");
+  expect(css).toContain('.plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__taskbar');
+  expect(css).toContain('.plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__panel:not(.plasmon-shell__context-menu)');
+  expect(css).toContain("top: calc(var(--plasmon-taskbar-height) + 10px);");
+  expect(css).not.toContain('data-taskbar-placement="left"');
+  expect(css).not.toContain('data-taskbar-placement="right"');
+});
+
+test("taskbar context menus stay source-adjacent at either horizontal taskbar edge", () => {
+  const viewport = { width: 1200, height: 800 };
+  const menu = { width: 230, height: 160 };
+  const fromTop = placeTaskbarContextMenu(
+    { left: 420, top: 0, width: 48, height: 54 },
+    viewport,
+    menu,
+  );
+  const fromBottom = placeTaskbarContextMenu(
+    { left: 420, top: 746, width: 48, height: 54 },
+    viewport,
+    menu,
+  );
+  expect(fromTop.y).toBeGreaterThan(54);
+  expect(fromBottom.y + menu.height).toBeLessThan(746);
+});
+
+test("task icon sizing keeps medium at current scale and tray hiding is presentation-only CSS", () => {
+  const css = readFileSync(new URL("./taskbar-behavior.scss", import.meta.url), "utf8");
+  expect(css).toContain('--plasmon-shell-task-icon-size: 26px;');
+  expect(css).toContain('--plasmon-shell-task-icon-size: 34px;');
+  expect(css).toContain('--plasmon-shell-task-icon-size: 40px;');
+  expect(css).toContain('.plasmon-shell .plasmon-shell__taskbar .plasmon-shell__app-icon');
+  expect(css).toContain('.plasmon-shell[data-neutron-tray-visible="false"] .plasmon-shell__tray-button');
+  expect(css).toContain("display: none;");
 });
