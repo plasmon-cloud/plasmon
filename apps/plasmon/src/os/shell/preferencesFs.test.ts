@@ -14,6 +14,8 @@ import type {
 } from "../contracts/index.ts";
 import {
   DEFAULT_SHELL_PREFERENCES,
+  deriveShellThemePresentationState,
+  effectiveShellIconPalette,
   effectiveShellWallpaper,
   SHELL_PREFERENCES_KEY,
   ShellPreferencesController,
@@ -96,11 +98,22 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     themeId: "plasmon-graphite",
     appearanceMode: "dark",
     wallpaper: { mode: "follow-theme" },
+    systemColorOverrides: {},
+    iconSetId: "plasmon",
+    iconPalette: { mode: "follow-theme" },
     showBrandWatermark: true,
     taskbarAlignment: "center",
     ...patch,
   };
 }
+
+const customIconColors = {
+  primary: "#111111",
+  secondary: "#222222",
+  accent: "#333333",
+  outline: "#444444",
+  highlight: "#555555",
+} as const;
 
 test("fresh Shell preferences are Graphite Dark with Rosewood Bloom pinned", async () => {
   const fs = new PreferenceFs();
@@ -109,11 +122,14 @@ test("fresh Shell preferences are Graphite Dark with Rosewood Bloom pinned", asy
   expect(loaded.themeId).toBe("plasmon-graphite");
   expect(loaded.appearanceMode).toBe("dark");
   expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(loaded.systemColorOverrides).toEqual({});
+  expect(loaded.iconSetId).toBe("plasmon");
+  expect(loaded.iconPalette).toEqual({ mode: "follow-theme" });
   expect(effectiveShellWallpaper(loaded.themeId, loaded.wallpaper)).toBe("rosewood-bloom");
   expect(fs.metadataWrites).toBe(0);
 });
 
-test("legacy v1 Shell preferences preserve existing values and migrate appearance to Dark", async () => {
+test("legacy v1 Shell preferences preserve existing values and migrate new personalization axes safely", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -201,11 +217,57 @@ test("appearance mode persists through FsService root metadata", async () => {
   expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ appearanceMode: "light" }));
 });
 
-test("appearance-only controller saves preserve theme and effective wallpaper", async () => {
+test("system color overrides persist normalized and ignore unknown or unsafe roles", async () => {
+  const fs = new PreferenceFs();
+  const raw = {
+    ...preferences(),
+    systemColorOverrides: {
+      desktop: "#ABC",
+      accent: "#123456",
+      border: "var(--bad)",
+      arbitraryCss: "url(evil)",
+    },
+  } as unknown as JsonValue;
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = raw;
+  expect((await new ShellPreferenceStore(fs).load()).systemColorOverrides).toEqual({
+    desktop: "#aabbcc",
+    accent: "#123456",
+  });
+});
+
+test("custom icon palette persists independently through the existing metadata authority", async () => {
+  const fs = new PreferenceFs();
+  await new ShellPreferenceStore(fs).save(preferences({
+    iconPalette: { mode: "custom", colors: customIconColors },
+  }));
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.iconSetId).toBe("plasmon");
+  expect(loaded.iconPalette).toEqual({ mode: "custom", colors: customIconColors });
+  expect(effectiveShellIconPalette(loaded)).toEqual(customIconColors);
+});
+
+test("unknown icon sets and malformed custom icon colors fail safely to Plasmon + Follow theme", async () => {
+  const fs = new PreferenceFs();
+  fs.root.metadata[SHELL_PREFERENCES_KEY] = {
+    ...preferences(),
+    iconSetId: "fabricated-set",
+    iconPalette: {
+      mode: "custom",
+      colors: { ...customIconColors, highlight: "not-css" },
+    },
+  } as unknown as JsonValue;
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded.iconSetId).toBe("plasmon");
+  expect(loaded.iconPalette).toEqual({ mode: "follow-theme" });
+});
+
+test("appearance-only controller saves preserve theme, wallpaper, system overrides, and icon choices", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = preferences({
     themeId: "plasmon-midnight",
     wallpaper: { mode: "pinned", id: "rosewood-bloom" },
+    systemColorOverrides: { accent: "#123456" },
+    iconPalette: { mode: "custom", colors: customIconColors },
   }) as unknown as JsonValue;
   const controller = new ShellPreferencesController(new ShellPreferenceStore(fs));
   const before = await controller.load();
@@ -216,7 +278,79 @@ test("appearance-only controller saves preserve theme and effective wallpaper", 
   expect(outcome.preferences.themeId).toBe("plasmon-midnight");
   expect(outcome.preferences.appearanceMode).toBe("light");
   expect(outcome.preferences.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(outcome.preferences.systemColorOverrides).toEqual({ accent: "#123456" });
+  expect(outcome.preferences.iconPalette).toEqual({ mode: "custom", colors: customIconColors });
   expect(effectiveShellWallpaper(outcome.preferences.themeId, outcome.preferences.wallpaper)).toBe(wallpaperBefore);
+});
+
+test("derived Custom state ignores wallpaper and icon-only changes", () => {
+  const basePalette = { accent: "#62c5e8", window: "#15171a" };
+  const wallpaperOnly = preferences({ wallpaper: { mode: "pinned", id: "glacier-prism" } });
+  const iconsOnly = preferences({ iconPalette: { mode: "custom", colors: customIconColors } });
+  expect(deriveShellThemePresentationState(wallpaperOnly, basePalette)).toEqual({
+    kind: "preset",
+    themeId: "plasmon-graphite",
+  });
+  expect(deriveShellThemePresentationState(iconsOnly, basePalette)).toEqual({
+    kind: "preset",
+    themeId: "plasmon-graphite",
+  });
+  expect(deriveShellThemePresentationState(preferences({ systemColorOverrides: { accent: "#62c5e8" } }), basePalette)).toEqual({
+    kind: "preset",
+    themeId: "plasmon-graphite",
+  });
+  expect(deriveShellThemePresentationState(preferences({ systemColorOverrides: { accent: "#123456" } }), basePalette)).toEqual({
+    kind: "custom",
+    baseThemeId: "plasmon-graphite",
+  });
+});
+
+test("appearance changes re-evaluate Custom against the active appearance palette", () => {
+  const selected = preferences({ systemColorOverrides: { accent: "#62c5e8" } });
+  expect(deriveShellThemePresentationState(selected, { accent: "#62c5e8" }).kind).toBe("preset");
+  expect(deriveShellThemePresentationState({ ...selected, appearanceMode: "light" }, { accent: "#177e9f" }).kind).toBe("custom");
+});
+
+test("selecting another base preset clears system colors but preserves wallpaper and custom icons", async () => {
+  const fs = new PreferenceFs();
+  const controller = new ShellPreferencesController(new ShellPreferenceStore(fs));
+  await controller.load();
+  await controller.save(preferences({
+    systemColorOverrides: { accent: "#123456", window: "#234567" },
+    wallpaper: { mode: "pinned", id: "rosewood-bloom" },
+    iconPalette: { mode: "custom", colors: customIconColors },
+  }));
+  const beforeThemeChange = controller.getSnapshot();
+  const outcome = await controller.save({ ...beforeThemeChange, themeId: "plasmon-midnight" });
+  expect(outcome.preferences.systemColorOverrides).toEqual({});
+  expect(outcome.preferences.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(outcome.preferences.iconPalette).toEqual({ mode: "custom", colors: customIconColors });
+});
+
+test("resetting colors or using theme icon colors preserves independent personalization axes", async () => {
+  const fs = new PreferenceFs();
+  const controller = new ShellPreferencesController(new ShellPreferenceStore(fs));
+  await controller.load();
+  await controller.save(preferences({
+    systemColorOverrides: { accent: "#123456" },
+    wallpaper: { mode: "pinned", id: "ember-horizon" },
+    iconPalette: { mode: "custom", colors: customIconColors },
+    taskbarAlignment: "left",
+  }));
+  const custom = controller.getSnapshot();
+  await controller.save({ ...custom, systemColorOverrides: {} });
+  let reset = controller.getSnapshot();
+  expect(reset.systemColorOverrides).toEqual({});
+  expect(reset.iconPalette).toEqual({ mode: "custom", colors: customIconColors });
+  expect(reset.wallpaper).toEqual({ mode: "pinned", id: "ember-horizon" });
+  expect(reset.taskbarAlignment).toBe("left");
+
+  await controller.save({ ...reset, iconPalette: { mode: "follow-theme" } });
+  reset = controller.getSnapshot();
+  expect(reset.iconPalette).toEqual({ mode: "follow-theme" });
+  expect(reset.systemColorOverrides).toEqual({});
+  expect(reset.wallpaper).toEqual({ mode: "pinned", id: "ember-horizon" });
+  expect(reset.taskbarAlignment).toBe("left");
 });
 
 test("pinned generated wallpaper persists through FsService root metadata", async () => {
@@ -307,6 +441,8 @@ test("write failure keeps the selected in-memory preference outcome", async () =
     pinnedElements: ["mail"],
     appearanceMode: "light",
     wallpaper: { mode: "pinned", id: "glacier-prism" },
+    systemColorOverrides: { accent: "#123456" },
+    iconPalette: { mode: "custom", colors: customIconColors },
     taskbarAlignment: "left",
   });
   const outcome = await saveShellPreferencesNonDestructive(new ShellPreferenceStore(fs), selected);
