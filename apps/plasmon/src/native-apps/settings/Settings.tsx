@@ -25,6 +25,7 @@ import {
   NativeAppButton,
   NativeAppContentSurface,
   NativeAppPanel,
+  VISUAL_PRESENTATION_CONFIGURATION_PATH,
 } from "../../os/visual/index.ts";
 import {
   formatBytes,
@@ -69,6 +70,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
       () => dependencies.shellPreferences?.isReady() ?? false,
     );
     const [shellPreferencesError, setShellPreferencesError] = useState<string | null>(null);
+    const [visualConfigurationError, setVisualConfigurationError] = useState<string | null>(null);
     const [diagnosticSettings, setDiagnosticSettings] = useState<DiagnosticSettings | null>(
       () => dependencies.diagnosticSettings?.getSnapshot() ?? null,
     );
@@ -157,6 +159,18 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
         }
       }).catch((cause: unknown) => {
         setShellPreferencesError(cause instanceof Error ? cause.message : String(cause));
+      });
+    };
+
+    const openVisualConfiguration = (): void => {
+      setVisualConfigurationError(null);
+      void (async () => {
+        const resource = await fs.resolvePath(VISUAL_PRESENTATION_CONFIGURATION_PATH);
+        if (!resource || !resource.parentId) throw new Error("Visual configuration resource is not available yet");
+        const explorer = await process.open("native:explorer", { nodeId: resource.parentId });
+        if (explorer === null) throw new Error("File Explorer is unavailable");
+      })().catch((cause: unknown) => {
+        setVisualConfigurationError(cause instanceof Error ? cause.message : String(cause));
       });
     };
 
@@ -429,6 +443,18 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                   ) : (
                     <p>Theme controls will become available when Shell provides its settings callback.</p>
                   )}
+                </NativeAppPanel>
+                <NativeAppPanel style={styles.card} aria-labelledby="advanced-visual-configuration-heading">
+                  <h2 id="advanced-visual-configuration-heading" style={styles.subheading}>Advanced configuration</h2>
+                  <p>
+                    Expert Visual presentation tuning lives in the managed filesystem document below. Settings does not mirror or edit its values.
+                  </p>
+                  <p><code>{VISUAL_PRESENTATION_CONFIGURATION_PATH}</code></p>
+                  <NativeAppButton type="button" onClick={openVisualConfiguration}>
+                    Open Visual configuration
+                  </NativeAppButton>
+                  <p style={styles.helpText}>Opens the Visual configuration folder in File Explorer; open presentation.json with Text to edit the authoritative resource.</p>
+                  {visualConfigurationError ? <p role="alert">Visual configuration could not be opened: {visualConfigurationError}</p> : null}
                 </NativeAppPanel>
               </section>
             ) : null}
