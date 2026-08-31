@@ -58,7 +58,7 @@ export function reportVideoPlaybackStartFailure(): void {
   });
 }
 
-export function reportRecycleBinBatchPartialFailure(
+function reportRecycleBinBatchPartialFailure(
   operation: typeof DiagnosticOperation.Restore | typeof DiagnosticOperation.Delete,
   requestedCount: number,
   completedCount: number,
@@ -71,11 +71,33 @@ export function reportRecycleBinBatchPartialFailure(
   });
 }
 
-export function reportRecycleBinRefreshAfterActionFailure(
+export function reportRecycleBinRestorePartialFailure(
+  requestedCount: number,
+  completedCount: number,
+): void {
+  reportRecycleBinBatchPartialFailure(DiagnosticOperation.Restore, requestedCount, completedCount);
+}
+
+export function reportRecycleBinDeletePartialFailure(
+  requestedCount: number,
+  completedCount: number,
+): void {
+  reportRecycleBinBatchPartialFailure(DiagnosticOperation.Delete, requestedCount, completedCount);
+}
+
+function reportRecycleBinRefreshAfterActionFailure(
   operation: typeof DiagnosticOperation.Restore | typeof DiagnosticOperation.Delete,
 ): void {
   logger?.error(DiagnosticEvent.NativeApp.RecycleBinRefreshAfterActionFailed, {
     message: "Recycle Bin refresh failed after a completed action",
     operation,
   });
+}
+
+export function reportRecycleBinRefreshAfterRestoreFailure(): void {
+  reportRecycleBinRefreshAfterActionFailure(DiagnosticOperation.Restore);
+}
+
+export function reportRecycleBinRefreshAfterDeleteFailure(): void {
+  reportRecycleBinRefreshAfterActionFailure(DiagnosticOperation.Delete);
 }
