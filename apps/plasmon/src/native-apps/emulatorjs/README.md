@@ -17,7 +17,7 @@ The supported resource is an iNES `.nes` ROM. Association matching selects `runt
 - core integrity: `sha512-XX9Vv2N/hzp0TstNMCTSppEs+sg+1lpJpPdSDuRqIO/cwdt7dUcF+WjNX1yQJLRbP5+XwcNHZ6K4BKy8CJpndQ==`
 - selected NES core: `fceumm`
 
-Required package-local runtime assets are `loader.js`, `emulator.min.js`, `emulator.min.css`, `compression/extract7z.js`, `cores/fceumm-wasm.data`, and `cores/fceumm-legacy-wasm.data`. Preparation uses the generic content-addressed runtime cache, verifies the pinned artifact integrities, and fails closed when required assets or compatible runtime metadata are missing. The runtime consumer materializes the verified files under managed Program Files and the URL-safe `/runtime/emulatorjs/` browser transport; it never accepts a mutable browser origin as runtime authority.
+Required package-local runtime assets are `loader.js`, `emulator.min.js`, `emulator.min.css`, `compression/extract7z.js`, `cores/fceumm-wasm.data`, and `cores/fceumm-legacy-wasm.data`. Preparation uses the generic content-addressed runtime cache, verifies the pinned artifact integrities, and fails closed when required source/core inputs or compatible runtime metadata are missing. EmulatorJS 4.2.3's npm source artifact intentionally omits the generated minified outputs: the runtime materializer therefore derives the package-local `emulator.min.js` deterministically from the verified `data/src` files in the upstream loader's fallback order and emits the verified `data/emulator.css` bytes as `emulator.min.css`. No mutable release/CDN fetch is used to fill those generated filenames. The resulting delivery files are mirrored under managed Program Files and the URL-safe `/runtime/emulatorjs/` browser transport.
 
 Useful package commands are:
 
