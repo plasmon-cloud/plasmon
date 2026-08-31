@@ -1,4 +1,16 @@
 import type { FsNode, FsService, JsonValue, NodeId } from "../contracts/index.ts";
+import {
+  DEFAULT_VISUAL_ICON_SET_ID,
+  iconPaletteForTheme,
+  isSystemPaletteCustom,
+  isVisualIconSetId,
+  normalizeSystemColorOverrides,
+  normalizeVisualIconPalette,
+  type VisualIconPalette,
+  type VisualIconSetId,
+  type VisualSystemBasePalette,
+  type VisualSystemColorOverrides,
+} from "../visual/personalization.ts";
 
 export const SHELL_PREFERENCES_KEY = "plasmon.shell.preferences.v1";
 
@@ -65,6 +77,10 @@ export type ShellWallpaperPreference =
   | { mode: "follow-theme" }
   | { mode: "pinned"; id: ShellWallpaperId };
 
+export type ShellIconPalettePreference =
+  | { mode: "follow-theme" }
+  | { mode: "custom"; colors: VisualIconPalette };
+
 export const SHELL_TASKBAR_ALIGNMENTS = ["center", "left"] as const;
 export type ShellTaskbarAlignment = (typeof SHELL_TASKBAR_ALIGNMENTS)[number];
 
@@ -76,6 +92,12 @@ export interface ShellPreferences {
   /** Defaults to dark for legacy v1 preference objects that predate appearance mode. */
   appearanceMode: ShellAppearanceMode;
   wallpaper: ShellWallpaperPreference;
+  /** Bounded semantic overrides only. An empty record means the selected preset is effective. */
+  systemColorOverrides: VisualSystemColorOverrides;
+  /** One truthful R3 set identity; invalid/missing legacy values normalize to Plasmon. */
+  iconSetId: VisualIconSetId;
+  /** Defaults to Follow theme for legacy v1 objects. */
+  iconPalette: ShellIconPalettePreference;
   /** Defaults to true for legacy v1 preference objects that predate the watermark preference. */
   showBrandWatermark?: boolean;
   taskbarAlignment: ShellTaskbarAlignment;
@@ -88,6 +110,9 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   themeId: "plasmon-graphite",
   appearanceMode: "dark",
   wallpaper: Object.freeze({ mode: "pinned" as const, id: "rosewood-bloom" as const }),
+  systemColorOverrides: Object.freeze({}),
+  iconSetId: DEFAULT_VISUAL_ICON_SET_ID,
+  iconPalette: Object.freeze({ mode: "follow-theme" as const }),
   showBrandWatermark: true,
   taskbarAlignment: "center",
 });
@@ -102,6 +127,11 @@ export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SH
     wallpaper: preferences.wallpaper.mode === "pinned"
       ? { mode: "pinned", id: preferences.wallpaper.id }
       : { mode: "follow-theme" },
+    systemColorOverrides: { ...preferences.systemColorOverrides },
+    iconSetId: preferences.iconSetId,
+    iconPalette: preferences.iconPalette.mode === "custom"
+      ? { mode: "custom", colors: { ...preferences.iconPalette.colors } }
+      : { mode: "follow-theme" },
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
   };
@@ -112,6 +142,25 @@ export function effectiveShellWallpaper(
   wallpaper: ShellWallpaperPreference,
 ): ShellWallpaperId {
   return wallpaper.mode === "pinned" ? wallpaper.id : SHELL_THEME_WALLPAPERS[themeId];
+}
+
+export function effectiveShellIconPalette(preferences: ShellPreferences): VisualIconPalette {
+  return preferences.iconPalette.mode === "custom"
+    ? preferences.iconPalette.colors
+    : iconPaletteForTheme(preferences.themeId);
+}
+
+export type ShellThemePresentationState =
+  | { kind: "preset"; themeId: ShellThemeId }
+  | { kind: "custom"; baseThemeId: ShellThemeId };
+
+export function deriveShellThemePresentationState(
+  preferences: ShellPreferences,
+  basePalette: VisualSystemBasePalette,
+): ShellThemePresentationState {
+  return isSystemPaletteCustom(basePalette, preferences.systemColorOverrides)
+    ? { kind: "custom", baseThemeId: preferences.themeId }
+    : { kind: "preset", themeId: preferences.themeId };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -166,6 +215,15 @@ function normalizeWallpaperPreference(value: unknown): ShellWallpaperPreference 
   return { mode: "follow-theme" };
 }
 
+function normalizeIconPalettePreference(value: unknown): ShellIconPalettePreference {
+  if (!isRecord(value) || value.mode === "follow-theme") return { mode: "follow-theme" };
+  if (value.mode === "custom") {
+    const colors = normalizeVisualIconPalette(value.colors);
+    if (colors) return { mode: "custom", colors };
+  }
+  return { mode: "follow-theme" };
+}
+
 function isTaskbarAlignment(value: unknown): value is ShellTaskbarAlignment {
   return typeof value === "string" && (SHELL_TASKBAR_ALIGNMENTS as readonly string[]).includes(value);
 }
@@ -178,6 +236,7 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
   const appearanceMode = value.appearanceMode === undefined ? "dark" : value.appearanceMode;
   const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
   const showBrandWatermark = value.showBrandWatermark === undefined ? true : value.showBrandWatermark;
+  const iconSetId = isVisualIconSetId(value.iconSetId) ? value.iconSetId : DEFAULT_VISUAL_ICON_SET_ID;
   if (
     !pinnedNative
     || !pinnedElements
@@ -195,6 +254,9 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     themeId,
     appearanceMode,
     wallpaper: normalizeWallpaperPreference(value.wallpaper),
+    systemColorOverrides: normalizeSystemColorOverrides(value.systemColorOverrides),
+    iconSetId,
+    iconPalette: normalizeIconPalettePreference(value.iconPalette),
     showBrandWatermark,
     taskbarAlignment,
   };
@@ -217,6 +279,11 @@ function preferenceMetadataValue(preferences: ShellPreferences): JsonValue {
     appearanceMode: preferences.appearanceMode,
     wallpaper: preferences.wallpaper.mode === "pinned"
       ? { mode: "pinned", id: preferences.wallpaper.id }
+      : { mode: "follow-theme" },
+    systemColorOverrides: { ...preferences.systemColorOverrides },
+    iconSetId: preferences.iconSetId,
+    iconPalette: preferences.iconPalette.mode === "custom"
+      ? { mode: "custom", colors: { ...preferences.iconPalette.colors } }
       : { mode: "follow-theme" },
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
@@ -322,6 +389,7 @@ export class ShellPreferencesController implements ShellPreferencesAuthority {
   async save(preferences: ShellPreferences): Promise<ShellPreferenceSaveOutcome> {
     const checked = validateShellPreferences(preferences);
     if (!checked) throw new Error("Shell preferences are invalid");
+    if (checked.themeId !== this.preferences.themeId) checked.systemColorOverrides = {};
     this.preferences = cloneShellPreferences(checked);
     this.notify();
     return saveShellPreferencesNonDestructive(this.store, this.preferences);
