@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import type { ProcessCloseRequest } from "../src/os/contracts/index.ts";
+import type { FsService, ProcessCloseRequest } from "../src/os/contracts/index.ts";
 import {
   DiagnosticEvent,
   DiagnosticSubsystem,
 } from "../src/os/diagnostics/index.ts";
 import type { FilesystemTrashService } from "../src/os/fs/index.ts";
+import { resolveBrowserTarget } from "../src/native-apps/browser/url.ts";
 import { applyMarkdownFormatter } from "../src/native-apps/markdown/markdownFormatter.ts";
 import { RecycleBinModel } from "../src/native-apps/recycle-bin/model.ts";
 import {
   reportPhotosDecodeFailure,
+  reportRecycleBinRefreshAfterRestoreFailure,
   reportVideoPlaybackError,
 } from "../src/native-apps/semanticDiagnostics.ts";
+import { DocumentSession } from "../src/native-apps/text/document.ts";
 import {
   DocumentCloseModel,
   type DocumentCloseSession,
@@ -68,6 +71,45 @@ describe("native app semantic diagnostics", () => {
     }
   });
 
+  test("reports only app-owned invalid UTF-8 document interpretation", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+    const observation = observeDiagnostics(env.diagnostics);
+    try {
+      await env.ready;
+      const fs = {
+        stat: async () => ({
+          id: "secret-node",
+          parentId: "root",
+          name: "private-token.txt",
+          kind: "file",
+          mime: "text/plain",
+          size: 1,
+          createdAt: 0,
+          modifiedAt: 1,
+          metadata: {},
+        }),
+        read: async () => new Uint8Array([0xff]),
+        revision: async () => 1,
+      } as unknown as FsService;
+      const session = new DocumentSession(fs);
+      await session.setTarget("secret-node");
+      expect(session.snapshot().status).toBe("error");
+      expect(session.snapshot().error).toContain("not valid UTF-8");
+
+      const records = await observation.settle({
+        subsystem: DiagnosticSubsystem.NativeApp,
+        event: DiagnosticEvent.NativeApp.DocumentLoadFailed,
+        level: "error",
+      });
+      expect(records).toHaveLength(1);
+      expect(JSON.stringify(records[0])).not.toContain("private-token");
+      expect(JSON.stringify(records[0])).not.toContain("secret-node");
+    } finally {
+      observation.dispose();
+      env.dispose();
+    }
+  });
+
   test("reports formatter recovery without leaking source/error details and keeps formatter absence quiet", async () => {
     const env = createHeadlessPlasmonEnvironment();
     const observation = observeDiagnostics(env.diagnostics);
@@ -95,6 +137,50 @@ describe("native app semantic diagnostics", () => {
       expect(await observation.settle({
         subsystem: DiagnosticSubsystem.NativeApp,
         event: DiagnosticEvent.NativeApp.MarkdownFormatFailed,
+      })).toHaveLength(1);
+    } finally {
+      observation.dispose();
+      env.dispose();
+    }
+  });
+
+  test("reports Browser-owned shortcut interpretation but keeps direct malformed-address validation quiet", async () => {
+    const env = createHeadlessPlasmonEnvironment();
+    const observation = observeDiagnostics(env.diagnostics);
+    try {
+      await env.ready;
+      const shortcut = "[InternetShortcut]\r\nURL=javascript:private-token\r\n";
+      const fs = {
+        stat: async () => ({
+          id: "shortcut-secret",
+          parentId: "root",
+          name: "private.url",
+          kind: "shortcut",
+          mime: "application/x-mswinurl",
+          size: shortcut.length,
+          createdAt: 0,
+          modifiedAt: 0,
+          metadata: {},
+        }),
+        read: async () => new TextEncoder().encode(shortcut),
+      } as unknown as FsService;
+
+      await expect(resolveBrowserTarget({ nodeId: "shortcut-secret" }, fs)).rejects.toThrow();
+      const records = await observation.settle({
+        subsystem: DiagnosticSubsystem.NativeApp,
+        event: DiagnosticEvent.NativeApp.BrowserTargetResolveFailed,
+        level: "error",
+      });
+      expect(records).toHaveLength(1);
+      const serialized = JSON.stringify(records[0]);
+      expect(serialized).not.toContain("private.url");
+      expect(serialized).not.toContain("javascript:private-token");
+      expect(serialized).not.toContain("shortcut-secret");
+
+      await expect(resolveBrowserTarget({ url: "javascript:manual-validation" }, fs)).rejects.toThrow();
+      expect(await observation.settle({
+        subsystem: DiagnosticSubsystem.NativeApp,
+        event: DiagnosticEvent.NativeApp.BrowserTargetResolveFailed,
       })).toHaveLength(1);
     } finally {
       observation.dispose();
@@ -152,6 +238,15 @@ describe("native app semantic diagnostics", () => {
         subsystem: DiagnosticSubsystem.NativeApp,
         event: DiagnosticEvent.NativeApp.RecycleBinBatchPartialFailure,
       })).toHaveLength(1);
+
+      reportRecycleBinRefreshAfterRestoreFailure();
+      const refresh = await observation.settle({
+        subsystem: DiagnosticSubsystem.NativeApp,
+        event: DiagnosticEvent.NativeApp.RecycleBinRefreshAfterActionFailed,
+        level: "error",
+      });
+      expect(refresh).toHaveLength(1);
+      expect(refresh[0]?.context).toMatchObject({ operation: "restore" });
     } finally {
       observation.dispose();
       env.dispose();
