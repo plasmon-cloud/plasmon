@@ -69,7 +69,7 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     expect(document.activeElement).toBe(home);
     await app.user.tab();
     expect(document.activeElement).toBe(personalization);
-    await app.user.keyboard("[Enter]");
+    await app.user.keyboard("{Enter}");
     expect(personalization.getAttribute("aria-pressed")).toBe("true");
     expect(personalization.getAttribute("aria-current")).toBe("page");
     expect(within(settings).getByRole("heading", { name: "Personalization" })).toBeDefined();
@@ -112,8 +112,6 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
       (window) => window.processId === settingsProcess?.id,
     )).toBe(true);
 
-    // Settings.sys is a second generic entry point to the same singleton app,
-    // and generic activation returns the existing window to the documented home destination.
     await app.environment.os.open("/System/Settings.sys");
     const settingsProcesses = app.environment.os.processes.list().filter(
       (process) => process.handlerId === "native:settings",
