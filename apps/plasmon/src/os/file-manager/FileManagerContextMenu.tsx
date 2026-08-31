@@ -72,14 +72,7 @@ const NEW_ITEMS = [
   ["New Run Script (.run)", "newRun"],
 ] as const;
 
-function Submenu({
-  id,
-  label,
-  open,
-  disabled,
-  onOpen,
-  children,
-}: {
+function Submenu({ id, label, open, disabled, onOpen, children }: {
   id: "new" | "wallpaper";
   label: string;
   open: boolean;
@@ -89,21 +82,10 @@ function Submenu({
 }) {
   return (
     <div style={{ position: "relative" }}>
-      <button
-        role="menuitem"
-        data-fm-background-menuitem="true"
-        data-fm-submenu={id}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        disabled={disabled}
-        onMouseEnter={onOpen}
-        onClick={onOpen}
-      >{label} <span aria-hidden="true">›</span></button>
-      {open ? (
-        <div className="fm-context-menu" role="menu" aria-label={`${label} submenu`} style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}>
-          {children}
-        </div>
-      ) : null}
+      <button role="menuitem" data-fm-background-menuitem="true" data-fm-submenu={id} aria-haspopup="menu" aria-expanded={open} disabled={disabled} onMouseEnter={onOpen} onClick={onOpen}>
+        {label} <span aria-hidden="true">›</span>
+      </button>
+      {open ? <div className="fm-context-menu" role="menu" aria-label={`${label} submenu`} style={{ position: "absolute", left: "calc(100% - 2px)", top: -5 }}>{children}</div> : null}
     </div>
   );
 }
@@ -142,6 +124,10 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
       aria-label={props.node ? "File context menu" : "Folder background context menu"}
       data-fm-context-menu="true"
       style={{ left: props.state.x, top: props.state.y }}
+      onClick={(event) => {
+        const action = (event.target as HTMLElement).closest<HTMLElement>("[data-fm-action]")?.dataset.fmAction as FileManagerContextMenuAction | undefined;
+        if (action) props.onAction(action);
+      }}
       onContextMenu={(event: ReactMouseEvent<HTMLDivElement>) => {
         event.preventDefault();
         event.stopPropagation();
@@ -170,12 +156,7 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
         if (currentMenu && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
           event.preventDefault();
           if (!nested) setSubmenu(null);
-          moveFocus(
-            currentMenu,
-            target,
-            event.key === "ArrowDown" ? 1 : -1,
-            nested ? ":scope > button:not(:disabled)" : '[data-fm-background-menuitem="true"]:not(:disabled)',
-          );
+          moveFocus(currentMenu, target, event.key === "ArrowDown" ? 1 : -1, nested ? ":scope > button:not(:disabled)" : '[data-fm-background-menuitem="true"]:not(:disabled)');
         }
       }}
     >
@@ -183,44 +164,36 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
         <>
           {props.canRunScript ? (
             <>
-              <button role="menuitem" onClick={() => props.onAction("runScript")}>Run</button>
-              <button role="menuitem" disabled={!props.canEditScript} onClick={() => props.onAction("editScript")}>Edit</button>
+              <button role="menuitem" data-fm-action="runScript">Run</button>
+              <button role="menuitem" data-fm-action="editScript" disabled={!props.canEditScript}>Edit</button>
             </>
-          ) : <button role="menuitem" onClick={() => props.onAction("open")}>Open</button>}
-          {props.node.kind !== "directory" ? (
-            <button role="menuitem" disabled={!props.canOpenWith} title={props.canOpenWith ? undefined : "Association service unavailable"} onClick={() => props.onAction("openWith")}>Open With…</button>
-          ) : null}
-          {props.node.kind === "file" ? (
-            <button role="menuitem" disabled={!props.canDownload} title={props.canDownload ? undefined : "Preparing download"} onClick={() => props.onAction("download")}>Download</button>
-          ) : null}
-          {props.canTranspileCmd ? <button role="menuitem" onClick={() => props.onAction("transpileRun")}>Transpile to .run</button> : null}
+          ) : <button role="menuitem" data-fm-action="open">Open</button>}
+          {props.node.kind !== "directory" ? <button role="menuitem" data-fm-action="openWith" disabled={!props.canOpenWith} title={props.canOpenWith ? undefined : "Association service unavailable"}>Open With…</button> : null}
+          {props.node.kind === "file" ? <button role="menuitem" data-fm-action="download" disabled={!props.canDownload} title={props.canDownload ? undefined : "Preparing download"}>Download</button> : null}
+          {props.canTranspileCmd ? <button role="menuitem" data-fm-action="transpileRun">Transpile to .run</button> : null}
           <div className="fm-menu-separator" role="separator" />
-          <button role="menuitem" onClick={() => props.onAction("cut")}>Cut</button>
-          <button role="menuitem" onClick={() => props.onAction("copy")}>Copy</button>
-          <button role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("createShortcut")}>Create Shortcut</button>
-          <button role="menuitem" disabled={!props.canCreateShortcut} onClick={() => props.onAction("sendToDesktop")}>Send to Desktop (create shortcut)</button>
-          <button role="menuitem" onClick={() => props.onAction("rename")}>Rename</button>
-          <button role="menuitem" onClick={() => props.onAction("delete")}>Delete</button>
+          <button role="menuitem" data-fm-action="cut">Cut</button>
+          <button role="menuitem" data-fm-action="copy">Copy</button>
+          <button role="menuitem" data-fm-action="createShortcut" disabled={!props.canCreateShortcut}>Create Shortcut</button>
+          <button role="menuitem" data-fm-action="sendToDesktop" disabled={!props.canCreateShortcut}>Send to Desktop (create shortcut)</button>
+          <button role="menuitem" data-fm-action="rename">Rename</button>
+          <button role="menuitem" data-fm-action="delete">Delete</button>
           <div className="fm-menu-separator" role="separator" />
-          <button role="menuitem" onClick={() => props.onAction("properties")}>Properties</button>
+          <button role="menuitem" data-fm-action="properties">Properties</button>
         </>
       ) : (
         <>
           <Submenu id="new" label="New" open={submenu === "new"} onOpen={() => setSubmenu("new")}>
-            {NEW_ITEMS.map(([label, action], index) => (
-              <button key={action} autoFocus={index === 0} role="menuitem" onClick={() => { props.onAction(action); setSubmenu(null); }}>{label}</button>
-            ))}
+            {NEW_ITEMS.map(([label, action], index) => <button key={action} autoFocus={index === 0} role="menuitem" data-fm-action={action}>{label}</button>)}
           </Submenu>
           {props.desktopWallpaperMenu ? (
             <Submenu id="wallpaper" label="Change Wallpaper" open={submenu === "wallpaper"} disabled={props.desktopWallpaperMenu.disabled} onOpen={() => setSubmenu("wallpaper")}>
-              {props.desktopWallpaperMenu.choices.map((choice, index) => (
-                <button key={choice.id} autoFocus={index === 0} role="menuitemradio" aria-checked={!!choice.selected} onClick={() => { props.desktopWallpaperMenu?.onSelect(choice.id); props.onDismiss(); }}>{choice.label}</button>
-              ))}
+              {props.desktopWallpaperMenu.choices.map((choice, index) => <button key={choice.id} autoFocus={index === 0} role="menuitemradio" aria-checked={!!choice.selected} onClick={() => { props.desktopWallpaperMenu?.onSelect(choice.id); props.onDismiss(); }}>{choice.label}</button>)}
             </Submenu>
           ) : null}
-          <button role="menuitem" data-fm-background-menuitem="true" disabled={props.operationRunning} onMouseEnter={() => setSubmenu(null)} onClick={() => props.onAction("import")}>Import Files…</button>
+          <button role="menuitem" data-fm-background-menuitem="true" data-fm-action="import" disabled={props.operationRunning} onMouseEnter={() => setSubmenu(null)}>Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
-          <button role="menuitem" data-fm-background-menuitem="true" disabled={props.operationRunning || !props.canPaste} onMouseEnter={() => setSubmenu(null)} onClick={() => props.onAction("paste")}>Paste</button>
+          <button role="menuitem" data-fm-background-menuitem="true" data-fm-action="paste" disabled={props.operationRunning || !props.canPaste} onMouseEnter={() => setSubmenu(null)}>Paste</button>
         </>
       )}
     </div>
