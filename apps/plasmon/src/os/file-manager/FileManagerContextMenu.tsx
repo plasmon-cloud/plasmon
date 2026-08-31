@@ -74,12 +74,17 @@ function ContextSubmenu({
   label,
   disabled = false,
   items,
+  open,
+  onOpen,
+  onClose,
 }: {
   label: string;
   disabled?: boolean;
   items: readonly SubmenuItem[];
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const focusOnOpenRef = useRef(false);
@@ -92,7 +97,7 @@ function ContextSubmenu({
 
   const openWithFocus = () => {
     focusOnOpenRef.current = true;
-    setOpen(true);
+    onOpen();
   };
 
   const moveFocus = (event: ReactKeyboardEvent<HTMLDivElement>, delta: 1 | -1) => {
@@ -108,15 +113,10 @@ function ContextSubmenu({
   return (
     <div
       style={{ position: "relative" }}
-      onMouseEnter={() => { if (!disabled) setOpen(true); }}
-      onMouseLeave={(event) => {
-        const next = event.relatedTarget;
-        if (next instanceof Node && event.currentTarget.contains(next)) return;
-        setOpen(false);
-      }}
+      onMouseEnter={() => { if (!disabled) onOpen(); }}
       onBlur={(event) => {
         const next = event.relatedTarget;
-        if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) onClose();
       }}
     >
       <button
@@ -127,7 +127,7 @@ function ContextSubmenu({
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}
-        onClick={() => setOpen(true)}
+        onClick={onOpen}
         onKeyDown={(event) => {
           if (event.key !== "ArrowRight" && event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
@@ -155,7 +155,7 @@ function ContextSubmenu({
             if (event.key === "ArrowLeft" || event.key === "Escape") {
               event.preventDefault();
               event.stopPropagation();
-              setOpen(false);
+              onClose();
               triggerRef.current?.focus();
             }
           }}
@@ -168,7 +168,7 @@ function ContextSubmenu({
               {...(item.checked === undefined ? {} : { "aria-checked": item.checked })}
               onClick={() => {
                 item.onSelect();
-                setOpen(false);
+                onClose();
               }}
             >
               {item.label}
@@ -182,6 +182,7 @@ function ContextSubmenu({
 
 export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<"new" | "wallpaper" | null>(null);
 
   useLayoutEffect(() => {
     const menu = menuRef.current;
@@ -288,6 +289,9 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
               { id: "text", label: "New Text Document", onSelect: () => props.onAction("newText") },
               { id: "markdown", label: "New Markdown Document", onSelect: () => props.onAction("newMarkdown") },
             ]}
+            open={activeSubmenu === "new"}
+            onOpen={() => setActiveSubmenu("new")}
+            onClose={() => setActiveSubmenu(null)}
           />
           {props.desktopWallpaperMenu ? (
             <ContextSubmenu
@@ -302,6 +306,9 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
                   props.onDismiss();
                 },
               }))}
+              open={activeSubmenu === "wallpaper"}
+              onOpen={() => setActiveSubmenu("wallpaper")}
+              onClose={() => setActiveSubmenu(null)}
             />
           ) : null}
           <button
@@ -309,6 +316,7 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
             role="menuitem"
             data-fm-background-menuitem="true"
             disabled={props.operationRunning}
+            onMouseEnter={() => setActiveSubmenu(null)}
             onClick={() => props.onAction("import")}
           >Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
@@ -317,6 +325,7 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
             role="menuitem"
             data-fm-background-menuitem="true"
             disabled={props.operationRunning || !props.canPaste}
+            onMouseEnter={() => setActiveSubmenu(null)}
             onClick={() => props.onAction("paste")}
           >Paste</button>
         </>
