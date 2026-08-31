@@ -60,7 +60,8 @@ export class MonacoRunCompiler implements RunCompiler {
       configured = true;
     }
 
-    const safeName = encodeURIComponent(filename.replace(/\.run$/u, ""));
+    const basename = filename.replaceAll("\\", "/").split("/").pop() || "script.run";
+    const safeName = encodeURIComponent(basename.replace(/\.run$/u, ""));
     const uri = monaco.Uri.parse(`inmemory://plasmon-run/${++nextModelId}/${safeName}.ts`);
     const model = monaco.editor.createModel(source, "typescript", uri);
     try {

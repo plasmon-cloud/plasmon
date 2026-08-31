@@ -83,8 +83,8 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
   await expect(terminalWindow).toBeHidden({ timeout: 15_000 });
 
   await plasmon.getByRole("button", { name: "Search" }).click();
-  await plasmon.getByLabel("Search Plasmon").fill("Files");
-  const filesResult = plasmon.locator("[data-search-result]", { hasText: "Files" }).first();
+  await plasmon.getByLabel("Search Plasmon").fill("File Explorer");
+  const filesResult = plasmon.locator("[data-search-result]", { hasText: "File Explorer" }).first();
   await expect(filesResult).toBeVisible({ timeout: 15_000 });
   await filesResult.click();
 
@@ -113,10 +113,10 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
   await expect(cmdEditor.getByText("Plasmon Command (.cmd)", { exact: true })).toBeVisible();
   const cmdMonaco = cmdEditor.locator('[data-editor-engine="monaco"][aria-label="Text content"]');
   await expect(cmdMonaco).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
-  const cmdInputArea = cmdMonaco.locator("textarea.inputarea").first();
+  const cmdInputArea = cmdMonaco;
   await cmdInputArea.click();
   await cmdInputArea.press("Control+A");
-  await cmdInputArea.pressSequentially("ls -");
+  await page.keyboard.insertText("ls -");
   await cmdInputArea.press("Control+Space");
   const cmdSuggestions = cmdEditor.locator(".suggest-widget");
   await expect(cmdSuggestions).toBeVisible({ timeout: 15_000 });
@@ -125,7 +125,7 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
   await expect(cmdSuggestions).toContainText("-la");
   await cmdInputArea.press("Escape");
   await cmdInputArea.press("Control+A");
-  await cmdInputArea.pressSequentially('echo "Hello from Plasmon"');
+  await page.keyboard.insertText('echo "Hello from Plasmon"');
   await cmdInputArea.press("Control+S");
   await closeWindow(cmdEditor);
 
@@ -189,11 +189,11 @@ test("packaged scripting executes .cmd through .run and exposes script editor di
   await expect(editor).toHaveAttribute("data-editor-ready", "true", { timeout: 30_000 });
   await expect(editor).toHaveAttribute("data-editor-language", "typescript");
 
-  const inputArea = editor.locator("textarea.inputarea").first();
-  await expect(inputArea).toBeAttached();
+  const inputArea = editor;
+  await expect(inputArea).toBeVisible();
   await inputArea.click();
   await inputArea.press("Control+A");
-  await inputArea.pressSequentially("os.");
+  await page.keyboard.insertText("os.");
   await inputArea.press("Control+Space");
   const suggestions = editorWindow.locator(".suggest-widget");
   await expect(suggestions).toBeVisible({ timeout: 15_000 });
