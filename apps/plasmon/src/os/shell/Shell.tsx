@@ -74,6 +74,7 @@ import type { StartMenuReconciliationController } from "./start-menu-reconciliat
 import { parseStartShortcut, type StartShortcutTarget } from "./startMenu.ts";
 import { TaskbarGroupChooser } from "./TaskbarGroupChooser.tsx";
 import { useSearchSurfaceController } from "./use-search-surface-controller.ts";
+import { resolveFilesystemWallpaper, wallpaperEventAffectsNode } from "./wallpaperResource.ts";
 import "./shell.scss";
 
 export interface ShellProps {
@@ -128,11 +129,17 @@ export function Shell({
   const [clock, setClock] = useState(() => now());
   const [calendarAnchor, setCalendarAnchor] = useState(() => startOfCalendarMonth(now()));
   const [startFsRevision, setStartFsRevision] = useState(0);
+  const [wallpaperFsRevision, setWallpaperFsRevision] = useState(0);
+  const [filesystemWallpaperUrl, setFilesystemWallpaperUrl] = useState<string | null>(null);
   const { flyout, contextMenu, openTaskbarGroupHandlerId } = coordination;
   const { processes, windowStates, focusedWindowId } = useNativeShellSnapshots(process, windows);
   const { elements, error: neutronError } = useExternalElementSnapshot(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const effectiveWallpaperId = effectiveShellWallpaper(effectivePreferences.themeId, effectivePreferences.wallpaper);
+  const filesystemWallpaperNodeId = effectivePreferences.wallpaper.mode === "filesystem"
+    ? effectivePreferences.wallpaper.nodeId
+    : null;
+  const filesystemWallpaperActive = filesystemWallpaperNodeId !== null && filesystemWallpaperUrl !== null;
   const preferencesReady = preferences !== null;
 
   useEffect(() => {
@@ -156,6 +163,33 @@ export function Shell({
     });
     return unsubscribe;
   }, [shellPreferences]);
+
+  useEffect(() => {
+    if (!filesystemWallpaperNodeId) return undefined;
+    return fsEvents?.subscribe((event) => {
+      if (wallpaperEventAffectsNode(event, filesystemWallpaperNodeId)) {
+        setWallpaperFsRevision((value) => value + 1);
+      }
+    }) ?? (() => undefined);
+  }, [filesystemWallpaperNodeId, fsEvents]);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    setFilesystemWallpaperUrl(null);
+    if (!filesystemWallpaperNodeId) return () => { active = false; };
+
+    void resolveFilesystemWallpaper(fs, filesystemWallpaperNodeId).then((resolved) => {
+      if (!active || !resolved || typeof URL === "undefined" || typeof Blob === "undefined") return;
+      objectUrl = URL.createObjectURL(new Blob([resolved.bytes], { type: resolved.mime }));
+      if (active) setFilesystemWallpaperUrl(objectUrl);
+    }).catch(() => undefined);
+
+    return () => {
+      active = false;
+      if (objectUrl && typeof URL !== "undefined") URL.revokeObjectURL(objectUrl);
+    };
+  }, [filesystemWallpaperNodeId, fs, wallpaperFsRevision]);
 
   const nativeDefinitions = useMemo(() => nativeApps.list(), [nativeApps]);
   const nativeByHandler = useMemo(
@@ -500,15 +534,22 @@ export function Shell({
       : null;
 
   return <div
-    className={`plasmon-shell plasmon-shell--wallpaper-${effectiveWallpaperId}`}
+    className={`plasmon-shell ${filesystemWallpaperActive ? "plasmon-shell--wallpaper-filesystem" : `plasmon-shell--wallpaper-${effectiveWallpaperId}`} plasmon-shell--wallpaper-layout-${effectivePreferences.wallpaperLayout}`}
     data-plasmon-theme={effectivePreferences.themeId}
     data-plasmon-appearance={effectivePreferences.appearanceMode}
-    data-plasmon-wallpaper={effectiveWallpaperId}
+    data-plasmon-wallpaper={filesystemWallpaperActive ? "filesystem" : effectiveWallpaperId}
+    data-plasmon-wallpaper-target={filesystemWallpaperNodeId ?? undefined}
+    data-plasmon-wallpaper-layout={effectivePreferences.wallpaperLayout}
+    data-plasmon-wallpaper-source={filesystemWallpaperNodeId ? (filesystemWallpaperActive ? "filesystem" : "theme-fallback") : "built-in"}
     data-plasmon-brand-watermark={effectivePreferences.showBrandWatermark === false ? "hidden" : "visible"}
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
-    <div className="plasmon-shell__wallpaper" aria-hidden="true">
+    <div
+      className="plasmon-shell__wallpaper"
+      style={filesystemWallpaperActive ? { backgroundImage: `url(${filesystemWallpaperUrl})` } : undefined}
+      aria-hidden="true"
+    >
       <span className="plasmon-shell__aurora plasmon-shell__aurora--one" />
       <span className="plasmon-shell__aurora plasmon-shell__aurora--two" />
     </div>
