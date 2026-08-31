@@ -3,12 +3,19 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { FILE_TYPE_ICON_ASSETS, SYSTEM_ICON_ASSETS } from "./assets.ts";
 import {
+  iconPaletteCssVariables,
+  iconPaletteForTheme,
+  VISUAL_ICON_COLOR_SLOT_IDS,
+  VISUAL_ICON_SET_IDS,
+} from "./personalization.ts";
+import {
   applicationResourcePresentation,
   nativeHandlerResourcePresentation,
   plasmonOwnedAssetPresentation,
 } from "./resource-presentation.ts";
 
 const iconTokens = readFileSync(new URL("./icon-tokens.scss", import.meta.url), "utf8");
+const personalizationStyles = readFileSync(new URL("./personalization.scss", import.meta.url), "utf8");
 const primitives = readFileSync(new URL("./primitives.tsx", import.meta.url), "utf8");
 const themeIds = [
   "plasmon-graphite",
@@ -26,43 +33,45 @@ const tokenNames = [
   "--plasmon-icon-highlight",
 ] as const;
 
-function themeBlock(themeId: string): string {
-  return iconTokens.match(
-    new RegExp(`\\.plasmon-shell\\[data-plasmon-theme="${themeId}"\\]\\s*\\{([\\s\\S]*?)\\n\\s*\\}`),
-  )?.[1] ?? "";
-}
+test("all six themes derive distinct complete canonical icon palettes from one Visual registry", () => {
+  expect(VISUAL_ICON_SET_IDS).toEqual(["plasmon"]);
+  expect(VISUAL_ICON_COLOR_SLOT_IDS).toEqual([
+    "primary",
+    "secondary",
+    "accent",
+    "outline",
+    "highlight",
+  ]);
 
-function tokenValue(block: string, token: string): string {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return block.match(new RegExp(`${escaped}:\\s*([^;]+);`))?.[1]?.trim() ?? "";
-}
+  const valuesByToken = new Map<string, string[]>();
+  for (const token of tokenNames) valuesByToken.set(token, []);
 
-test("all six themes define distinct complete icon palettes", () => {
   for (const themeId of themeIds) {
-    const block = themeBlock(themeId);
-    expect(block).not.toBe("");
-    for (const token of tokenNames) expect(tokenValue(block, token)).not.toBe("");
+    const variables = iconPaletteCssVariables(iconPaletteForTheme(themeId));
+    expect(Object.keys(variables).sort()).toEqual([...tokenNames].sort());
+    for (const token of tokenNames) valuesByToken.get(token)?.push(variables[token]!);
   }
 
   for (const token of tokenNames) {
-    const values = themeIds.map((themeId) => tokenValue(themeBlock(themeId), token));
-    expect(new Set(values).size).toBe(themeIds.length);
+    expect(new Set(valuesByToken.get(token)).size).toBe(themeIds.length);
   }
 });
 
-test("active icon palette reaches body-portaled owned artwork such as drag previews", () => {
-  for (const themeId of themeIds) {
-    expect(iconTokens).toContain(
-      `:root:has(.plasmon-shell[data-plasmon-theme="${themeId}"])`,
-    );
-  }
+test("Graphite remains the CSS fallback while runtime projection owns active Follow-theme or Custom colors", () => {
+  expect(iconTokens).toContain("--plasmon-icon-primary: #2c3137;");
+  expect(iconTokens).toContain("--plasmon-icon-secondary: #747b84;");
+  expect(iconTokens).toContain("--plasmon-icon-accent: #62c5e8;");
+  expect(iconTokens).not.toContain("data-plasmon-theme");
+  expect(personalizationStyles).toContain('data-plasmon-icon-palette-projected="true"');
+  for (const token of tokenNames) expect(personalizationStyles).toContain(`${token}: inherit;`);
 });
 
-test("Graphite keeps grayscale icon structure with a colored accent", () => {
-  const graphite = themeBlock("plasmon-graphite");
-  expect(tokenValue(graphite, "--plasmon-icon-primary")).toBe("#2c3137");
-  expect(tokenValue(graphite, "--plasmon-icon-secondary")).toBe("#747b84");
-  expect(tokenValue(graphite, "--plasmon-icon-accent")).toBe("#62c5e8");
+test("active icon palette reaches body-portaled owned artwork through the document-root seam", () => {
+  const graphite = iconPaletteCssVariables(iconPaletteForTheme("plasmon-graphite"));
+  expect(graphite["--plasmon-icon-primary"]).toBe("#2c3137");
+  expect(graphite["--plasmon-icon-secondary"]).toBe("#747b84");
+  expect(graphite["--plasmon-icon-accent"]).toBe("#62c5e8");
+  expect(personalizationStyles).toContain(":root[data-plasmon-icon-palette-projected=\"true\"]");
 });
 
 test("canonical Plasmon asset references resolve to owned semantic artwork", () => {
