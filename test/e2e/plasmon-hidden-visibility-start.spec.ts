@@ -153,6 +153,8 @@ test("packaged Start follows global visibility for an existing hidden target", a
     await activateSearchResult(plasmon, "Settings", "Settings");
     const settings = plasmon.getByRole("dialog", { name: "Settings" }).last();
     await expect(settings).toBeVisible({ timeout: 20_000 });
+    await settings.getByRole("button", { name: "Files & Explorer", exact: true }).click();
+    await expect(settings.getByRole("heading", { name: "Files & Explorer", exact: true })).toBeVisible();
     const globalHidden = settings.getByRole("checkbox", { name: "Always show hidden files" });
     await expect(globalHidden).toBeEnabled();
     await expect(globalHidden).not.toBeChecked();
@@ -173,6 +175,8 @@ test("packaged Start follows global visibility for an existing hidden target", a
     // Start, so reopen it through the ordinary Search activation boundary.
     await activateSearchResult(plasmon, "Settings", "Settings");
     await expect(settings).toBeVisible({ timeout: 20_000 });
+    await settings.getByRole("button", { name: "Files & Explorer", exact: true }).click();
+    await expect(settings.getByRole("heading", { name: "Files & Explorer", exact: true })).toBeVisible();
     await globalHidden.uncheck();
     await expect(globalHidden).not.toBeChecked();
     await settings.getByRole("button", { name: "Close", exact: true }).click();
