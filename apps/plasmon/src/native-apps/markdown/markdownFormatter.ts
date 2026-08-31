@@ -1,3 +1,5 @@
+import { reportMarkdownFormatFailure } from "../semanticDiagnostics.ts";
+
 export type MarkdownFormatter = (source: string) => string;
 
 export interface MarkdownFormatAttempt {
@@ -84,6 +86,7 @@ export function applyMarkdownFormatter(
     const text = formatter(source);
     return { text, changed: text !== source, error: null };
   } catch (error) {
+    reportMarkdownFormatFailure();
     const detail = error instanceof Error ? error.message : String(error);
     return { text: source, changed: false, error: `Markdown formatting failed: ${detail}` };
   }
