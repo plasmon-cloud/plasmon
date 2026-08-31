@@ -51,17 +51,18 @@ test("Settings destination normalization falls back safely to home", () => {
   expect(normalizeSettingsDestination("taskbar")).toBe("taskbar");
   expect(normalizeSettingsDestination("stale-destination")).toBe("home");
   expect(normalizeSettingsDestination(undefined)).toBe("home");
-  expect(settingsDestinationFromTarget({ appDestination: "diagnostics" })).toBe("diagnostics");
-  expect(settingsDestinationFromTarget({ appDestination: "removed-page" })).toBe("home");
+  expect(settingsDestinationFromTarget({ url: "plasmon-settings:diagnostics" })).toBe("diagnostics");
+  expect(settingsDestinationFromTarget({ url: "plasmon-settings:removed-page" })).toBe("home");
+  expect(settingsDestinationFromTarget({ url: "https://example.invalid/not-settings" })).toBe("home");
 });
 
 test("Settings targets carry navigation state without discarding activation context", () => {
-  expect(createSettingsOpenTarget()).toEqual({ appDestination: "home" });
-  expect(createSettingsOpenTarget("personalization")).toEqual({ appDestination: "personalization" });
+  expect(createSettingsOpenTarget()).toEqual({ url: "plasmon-settings:home" });
+  expect(createSettingsOpenTarget("personalization")).toEqual({ url: "plasmon-settings:personalization" });
   expect(withSettingsDestination({ nodeId: "settings-node", readOnly: true }, "storage")).toEqual({
     nodeId: "settings-node",
     readOnly: true,
-    appDestination: "storage",
+    url: "plasmon-settings:storage",
   });
 });
 
