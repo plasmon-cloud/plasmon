@@ -8,6 +8,7 @@ export * from "./resourcePreview.ts";
 export * from "./shortcut.ts";
 export * from "./managed.ts";
 export * from "./programFiles.ts";
+export * from "./configuration.ts";
 export * from "./defaultSeeds.ts";
 export * from "./stableProjection.ts";
 export * from "./protectedService.ts";
