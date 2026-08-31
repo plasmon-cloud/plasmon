@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { act, waitFor, within } from "@testing-library/react";
+import { settingsDestinationFromTarget } from "../../src/native-apps/settings/model.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 test("Desktop background Personalize opens and retargets the singleton canonical Settings app", async () => {
@@ -10,9 +11,24 @@ test("Desktop background Personalize opens and retargets the singleton canonical
 
     await app.user.pointer({ target: desktopFiles, keys: "[MouseRight]" });
     let menu = await app.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "New Folder",
+      "New Text Document",
+      "New Markdown Document",
+      "Import Files…",
+      "Paste",
+      "Personalize",
+    ]);
+    await app.user.keyboard("{Escape}");
+    expect(app.queryByRole("menu")).toBeNull();
+
+    await app.user.pointer({ target: desktopFiles, keys: "[MouseRight]" });
+    menu = await app.findByRole("menu");
     const personalize = within(menu).getByRole("menuitem", { name: "Personalize" });
-    expect(personalize).toBeDefined();
-    await app.user.click(personalize);
+    personalize.focus();
+    expect(document.activeElement).toBe(personalize);
+    await app.user.keyboard("{Enter}");
+    expect(app.queryByRole("menu")).toBeNull();
 
     const settings = await app.findByRole("region", { name: "Settings" });
     expect(within(settings).getByRole("heading", { name: "Personalization" })).toBeDefined();
@@ -22,11 +38,11 @@ test("Desktop background Personalize opens and retargets the singleton canonical
     expect(settingsProcesses()).toHaveLength(1);
     const firstProcessId = settingsProcesses()[0]?.id;
     const firstWindowId = settingsProcesses()[0]?.windowId;
-    expect(settingsProcesses()[0]?.target.appDestination).toBe("personalization");
+    expect(settingsDestinationFromTarget(settingsProcesses()[0]!.target)).toBe("personalization");
 
     const navigation = within(settings).getByRole("navigation", { name: "Settings sections" });
     await app.user.click(within(navigation).getByRole("button", { name: "Diagnostics" }));
-    expect(settingsProcesses()[0]?.target.appDestination).toBe("diagnostics");
+    expect(settingsDestinationFromTarget(settingsProcesses()[0]!.target)).toBe("diagnostics");
     expect(within(settings).getByRole("heading", { name: "Diagnostics" })).toBeDefined();
 
     await app.user.pointer({ target: desktopFiles, keys: "[MouseRight]" });
@@ -37,7 +53,7 @@ test("Desktop background Personalize opens and retargets the singleton canonical
       expect(settingsProcesses()).toHaveLength(1);
       expect(settingsProcesses()[0]?.id).toBe(firstProcessId);
       expect(settingsProcesses()[0]?.windowId).toBe(firstWindowId);
-      expect(settingsProcesses()[0]?.target.appDestination).toBe("personalization");
+      expect(settingsDestinationFromTarget(settingsProcesses()[0]!.target)).toBe("personalization");
       expect(within(settings).getByRole("heading", { name: "Personalization" })).toBeDefined();
     });
 
