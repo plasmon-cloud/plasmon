@@ -1,0 +1,54 @@
+@layer app {
+  :root[data-plasmon-system-overrides~="desktop"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-desktop-background: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="window"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-window-background: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="titlebar"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-window-titlebar: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="panel"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-panel-background: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="raised-surface"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-panel-elevated: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="control"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-control-background: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="primary-text"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-text-primary: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="secondary-text"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-text-secondary: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="accent"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-accent: inherit;
+    --plasmon-accent-hover: inherit;
+    --plasmon-focus-ring: inherit;
+    --plasmon-selection-border: inherit;
+    --plasmon-selection: inherit;
+  }
+
+  :root[data-plasmon-system-overrides~="border"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-border-strong: inherit;
+    --plasmon-border-subtle: inherit;
+  }
+
+  :root[data-plasmon-icon-palette-projected="true"] .plasmon-shell:not([data-plasmon-palette-probe]) {
+    --plasmon-icon-primary: inherit;
+    --plasmon-icon-secondary: inherit;
+    --plasmon-icon-accent: inherit;
+    --plasmon-icon-outline: inherit;
+    --plasmon-icon-highlight: inherit;
+  }
+}
