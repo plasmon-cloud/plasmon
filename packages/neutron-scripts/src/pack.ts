@@ -35,11 +35,8 @@ export async function readFile(filePath: string): Promise<Uint8Array> {
 }
 
 export function compressFileToUint8Array(fileBuffer: Buffer): Uint8Array {
-  // Package members are independent gzip streams; stronger compression only
-  // affects packing time and preserves the exact bytes consumers gunzip.
-  const compressedBuffer = zlib.gzipSync(fileBuffer, {
-    level: zlib.constants.Z_BEST_COMPRESSION,
-  });
+  // Compress file
+  const compressedBuffer = zlib.gzipSync(fileBuffer);
 
   // Convert to Uint8Array
   const uint8Array = new Uint8Array(
