@@ -24,13 +24,24 @@ async function createDosBundle(env: ReturnType<typeof createHeadlessPlasmonEnvir
   return game;
 }
 
-test("Base with no optional runtime selection does not expose js-dos", async () => {
+async function createNesRom(env: ReturnType<typeof createHeadlessPlasmonEnvironment>) {
+  const path = "/Documents/Selection Probe.nes";
+  const contents = "NES\u001a\u0001\u0000" + "\u0000".repeat(16 + 16_384 - 6);
+  const game = await env.os.fs.writeText(path, contents);
+  expect((await env.os.fs.readText(path)).length).toBe(contents.length);
+  return game;
+}
+
+test("Base with no optional runtime selection does not expose game runtimes", async () => {
   await withRuntimeSelection({ jsDos: false, emulatorJs: false }, async (env) => {
     expect(env.services.nativeApps.getByHandler("runtime:js-dos")).toBeNull();
-    const game = await createDosBundle(env);
-    const opened = await env.os.open(game.path);
-    expect(opened.handlerId).not.toBe("runtime:js-dos");
-    expect(env.os.processes.list().some(({ handlerId }) => handlerId === "runtime:js-dos")).toBe(false);
+    expect(env.services.nativeApps.getByHandler("runtime:emulatorjs")).toBeNull();
+
+    const dos = await createDosBundle(env);
+    const nes = await createNesRom(env);
+    expect((await env.os.open(dos.path)).handlerId).not.toBe("runtime:js-dos");
+    expect((await env.os.open(nes.path)).handlerId).not.toBe("runtime:emulatorjs");
+    expect(env.os.processes.list().some(({ handlerId }) => handlerId.startsWith("runtime:"))).toBe(false);
   });
 });
 
@@ -62,6 +73,33 @@ test("selected js-dos opens through OsApi and ordinary filesystem operations", a
       state: "running",
       windowId: opened.windowId,
     }));
+    expect(env.os.windows.list()).toContainEqual(expect.objectContaining({
+      id: opened.windowId,
+      processId: opened.processId,
+    }));
+  });
+});
+
+test("selected EmulatorJS opens a .nes through OsApi and creates one canonical process/window", async () => {
+  await withRuntimeSelection({ jsDos: false, emulatorJs: true }, async (env) => {
+    expect(env.services.nativeApps.list().filter(({ handlerId }) => handlerId === "runtime:emulatorjs")).toHaveLength(1);
+    expect(env.services.nativeApps.getByHandler("runtime:js-dos")).toBeNull();
+
+    const game = await createNesRom(env);
+    const opened = await env.os.open(game.path);
+    expect(opened.handlerId).toBe("runtime:emulatorjs");
+    expect(opened.processId).toBeTruthy();
+    expect(opened.windowId).toBeTruthy();
+
+    expect(env.os.processes.list().filter(({ handlerId }) => handlerId === "runtime:emulatorjs")).toEqual([
+      expect.objectContaining({
+        id: opened.processId,
+        appId: "runtime:emulatorjs",
+        handlerId: "runtime:emulatorjs",
+        state: "running",
+        windowId: opened.windowId,
+      }),
+    ]);
     expect(env.os.windows.list()).toContainEqual(expect.objectContaining({
       id: opened.windowId,
       processId: opened.processId,

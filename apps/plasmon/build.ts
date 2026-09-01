@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
+import { materializeEmulatorJsRuntime } from "./emulatorJsRuntimeMaterializer.ts";
 import { materializeJsDosRuntime } from "./jsDosRuntimeMaterializer.ts";
 import { resolvePackageProfile } from "./packageProfilePolicy.ts";
 import {
@@ -13,6 +14,7 @@ import {
 } from "./runtimeConfiguration.ts";
 import { createPlasmonDemoGameBundle } from "./src/games/demoFixtureBundle.ts";
 import { PACKAGED_DEMO_GAME_FILENAME } from "./src/games/demoFixtureContract.ts";
+import { createPlasmonNesTestRom, PACKAGED_EMULATORJS_TEST_FILENAME } from "./src/games/emulatorJsFixture.ts";
 import { assertMatureNativeAppBundle, cacheBustEntryAssets } from "./src/native-apps/packaging.ts";
 
 const mainOutfile = "./dist/web/main.js";
@@ -34,26 +36,25 @@ function booleanEnvironment(name: string): boolean {
 }
 
 const demoGameFixtureSelected = booleanEnvironment("PLASMON_DEMO_GAME_FIXTURE");
-if (packagePolicy.isSlim && demoGameFixtureSelected) {
-  throw new Error("PLASMON_DEMO_GAME_FIXTURE cannot be enabled for the Slim package tier.");
+const emulatorJsTestFixtureSelected = booleanEnvironment("PLASMON_EMULATORJS_TEST_FIXTURE");
+if (packagePolicy.isSlim && (demoGameFixtureSelected || emulatorJsTestFixtureSelected)) {
+  throw new Error("Game acceptance fixtures cannot be enabled for the Slim package tier.");
 }
 
 const runtimeSelectionValue = process.env.PLASMON_RUNTIME_CONFIGURATION ?? "none";
 const runtimeSelection = runtimeSelectionValue === "js-dos"
   ? fileURLToPath(new URL("./runtime-configurations/js-dos.json", import.meta.url))
-  : runtimeSelectionValue;
+  : runtimeSelectionValue === "emulatorjs"
+    ? fileURLToPath(new URL("./runtime-configurations/emulatorjs.json", import.meta.url))
+    : runtimeSelectionValue;
 const runtimePolicy = await resolveRuntimeConfiguration(runtimeSelection, {
   packageTier: packagePolicy.packageTier,
   demoOverlay,
 });
-const unsupportedRuntimeConsumers = runtimePolicy.configuration.runtimes.filter((id) => id !== "js-dos");
-if (unsupportedRuntimeConsumers.length > 0) {
-  throw new Error(
-    `Selected optional runtime consumer(s) are not restored yet: ${unsupportedRuntimeConsumers.join(", ")}`,
-  );
-}
 const jsDosRuntimeSelected = runtimePolicy.configuration.runtimes.includes("js-dos");
-const runtimePreparation = jsDosRuntimeSelected
+const emulatorJsRuntimeSelected = runtimePolicy.configuration.runtimes.includes("emulatorjs");
+const gameRuntimeSelected = jsDosRuntimeSelected || emulatorJsRuntimeSelected;
+const runtimePreparation = runtimePolicy.configuration.runtimes.length > 0
   ? await prepareRuntimeConfiguration(runtimePolicy, {
     cacheRoot: process.env.PLASMON_RUNTIME_CACHE
       ?? fileURLToPath(new URL("./.plasmon/runtime-cache/", import.meta.url)),
@@ -81,12 +82,29 @@ async function mergeApplicationStyles(): Promise<void> {
   await rm(bundledCss, { force: true });
 }
 
-async function materializeDemoGameFixture(): Promise<void> {
+async function materializeAcceptanceFixtures(): Promise<void> {
   const fixturesRoot = "./dist/web/fixtures";
   await rm(fixturesRoot, { recursive: true, force: true });
-  if (!demoGameFixtureSelected) return;
+  if (!demoGameFixtureSelected && !emulatorJsTestFixtureSelected) return;
   await mkdir(fixturesRoot, { recursive: true });
-  await writeFile(`${fixturesRoot}/${PACKAGED_DEMO_GAME_FILENAME}`, createPlasmonDemoGameBundle());
+  if (demoGameFixtureSelected) {
+    await writeFile(`${fixturesRoot}/${PACKAGED_DEMO_GAME_FILENAME}`, createPlasmonDemoGameBundle());
+  }
+  if (emulatorJsTestFixtureSelected) {
+    await writeFile(`${fixturesRoot}/${PACKAGED_EMULATORJS_TEST_FILENAME}`, createPlasmonNesTestRom());
+  }
+}
+
+async function materializeEmulatorJsHost(): Promise<void> {
+  if (!emulatorJsRuntimeSelected) return;
+  const [html, script] = await Promise.all([
+    readFile(new URL("./src/native-apps/emulatorjs/emulatorjs-host.html", import.meta.url)),
+    readFile(new URL("./src/native-apps/emulatorjs/emulatorjs-host.js", import.meta.url)),
+  ]);
+  await Promise.all([
+    writeFile("./dist/web/emulatorjs-host.html", html),
+    writeFile("./dist/web/emulatorjs-host.js", script),
+  ]);
 }
 
 async function fingerprintEntryAssets(): Promise<void> {
@@ -149,9 +167,9 @@ const config: BuildOptions = {
   platform: "browser",
   define: {
     __PLASMON_SLIM_PROFILE__: JSON.stringify(packagePolicy.isSlim),
-    __PLASMON_GAME_RUNTIME__: JSON.stringify(jsDosRuntimeSelected),
+    __PLASMON_GAME_RUNTIME__: JSON.stringify(gameRuntimeSelected),
     __PLASMON_RUNTIME_JSDOS__: JSON.stringify(jsDosRuntimeSelected),
-    __PLASMON_RUNTIME_EMULATORJS__: JSON.stringify(false),
+    __PLASMON_RUNTIME_EMULATORJS__: JSON.stringify(emulatorJsRuntimeSelected),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(demoOverlay),
     __PLASMON_DEMO_GAME_FIXTURE__: JSON.stringify(demoGameFixtureSelected),
@@ -181,10 +199,14 @@ const config: BuildOptions = {
             monacoProfile: packagePolicy.monacoProfile,
           });
           await mergeApplicationStyles();
-          if (runtimePreparation) {
+          if (runtimePreparation && jsDosRuntimeSelected) {
             await materializeJsDosRuntime(runtimePolicy, runtimePreparation, "./dist/web");
           }
-          await materializeDemoGameFixture();
+          if (runtimePreparation && emulatorJsRuntimeSelected) {
+            await materializeEmulatorJsRuntime(runtimePolicy, runtimePreparation, "./dist/web");
+          }
+          await materializeEmulatorJsHost();
+          await materializeAcceptanceFixtures();
           if (!devMode) await stripRemoteDiagnostics();
           await fingerprintEntryAssets();
         });

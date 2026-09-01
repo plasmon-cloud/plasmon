@@ -28,6 +28,7 @@ const distWebUrl = new URL("../dist/web/", import.meta.url);
 const packagePolicy = resolvePackageProfile();
 const runtimeConfiguration = process.env.PLASMON_RUNTIME_CONFIGURATION ?? "none";
 const jsDosRuntimeSelected = runtimeConfiguration === "js-dos";
+const emulatorJsRuntimeSelected = runtimeConfiguration === "emulatorjs";
 const monacoWorkers = packagePolicy.monacoProfile === "slim"
   ? ["editor.worker.js"]
   : ["editor.worker.js", "json.worker.js", "css.worker.js", "html.worker.js", "ts.worker.js"];
@@ -83,6 +84,8 @@ test("plasmon package output matches the source manifest archive identity", asyn
     expect(archiveStats.size).toBeLessThan(SLIM_HEADROOM_TARGET_BYTES);
   } else if (jsDosRuntimeSelected) {
     console.log(`Base + js-dos package test size: ${archiveStats.size} bytes`);
+  } else if (emulatorJsRuntimeSelected) {
+    console.log(`Base + EmulatorJS package test size: ${archiveStats.size} bytes`);
   }
 });
 
@@ -157,14 +160,49 @@ test("package runtime inventory matches the explicit optional-runtime selection"
     || [".jsdos", ".dosz", ".nes", ".rom"].some((extension) => file.toLowerCase().endsWith(extension)));
   expect(gamePayloads).toEqual([]);
 
-  const emulatorJsPaths = archiveFiles.filter((file) => file.includes("emulatorjs")
-    || file.includes("EmulatorJS")
-    || file.startsWith("module/emulatorjs/")
-    || file.startsWith("module/emulatorjs-shim/")
-    || file.startsWith("module/emulatorjs-runtime/")
-    || file.startsWith("module/native-apps/games/game-libraries/")
-    || file.startsWith("module/native-apps/games/game-runtime/"));
-  expect(emulatorJsPaths).toEqual([]);
+  const emulatorJsRoots = [
+    "System/Program Files/EmulatorJS/data",
+    "runtime/emulatorjs/data",
+  ] as const;
+  const emulatorJsPaths = webFiles.filter((file) => file.includes("EmulatorJS") || file.includes("emulatorjs"));
+  if (!emulatorJsRuntimeSelected) {
+    expect(emulatorJsPaths).toEqual([]);
+  } else {
+    expect(packagePolicy).toMatchObject({ packageTier: "base", isSlim: false, demoOverlay: false });
+    const definition = OPTIONAL_RUNTIME_CATALOG.emulatorjs;
+    const expectedAssets = emulatorJsRoots
+      .flatMap((root) => definition.requiredAssets.map((asset) => `${root}/${asset}`))
+      .sort();
+    const actualAssets = webFiles
+      .filter((file) => emulatorJsRoots.some((root) => file.startsWith(`${root}/`)))
+      .sort();
+    expect(actualAssets).toEqual(expectedAssets);
+    expect(webFiles).toContain("emulatorjs-host.html");
+    expect(webFiles).toContain("emulatorjs-host.js");
+    expect(webFiles).toContain("System/Program Files/EmulatorJS/runtime.json");
+
+    let logicalBytes = 0;
+    for (const asset of definition.requiredAssets) {
+      const managed = await readFile(new URL(`../dist/web/System/Program Files/EmulatorJS/data/${asset}`, import.meta.url));
+      const runtime = await readFile(new URL(`../dist/web/runtime/emulatorjs/data/${asset}`, import.meta.url));
+      expect(managed.length, `${asset} must contain runtime bytes`).toBeGreaterThan(0);
+      expect(runtime, `${asset} browser mirror must match Program Files authority`).toEqual(managed);
+      logicalBytes += managed.length;
+    }
+    const metadata = JSON.parse(await readFile(
+      new URL("../dist/web/System/Program Files/EmulatorJS/runtime.json", import.meta.url),
+      "utf8",
+    )) as Record<string, unknown>;
+    expect(metadata).toMatchObject({
+      runtime: "EmulatorJS",
+      version: definition.version,
+      revision: definition.revision,
+      core: "fceumm",
+      resourceType: ".nes",
+      browserDataRoot: "runtime/emulatorjs/data/",
+    });
+    console.log(`EmulatorJS selected runtime logical bytes: ${logicalBytes}; emitted mirrored bytes: ${logicalBytes * 2}`);
+  }
 
   const jsDosRoots = ["System/Program Files/js-dos", "runtime/jsdos"] as const;
   if (!jsDosRuntimeSelected) {

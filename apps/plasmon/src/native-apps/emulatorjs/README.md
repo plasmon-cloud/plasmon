@@ -1,41 +1,51 @@
 # EmulatorJS runtime host
 
+This directory integrates EmulatorJS 4.2.3 as an association-backed optional Plasmon runtime. EmulatorJS selection is separate from the Plasmon package tier: ordinary Base with no runtime configuration and Slim contain no EmulatorJS runtime payload, while a Base/custom configuration can select `emulatorjs` and Demo selects it through the canonical `demo-games` runtime configuration. Slim rejects non-empty optional-runtime selections.
 
-This directory integrates EmulatorJS as an association-backed Plasmon runtime.
-Every shipped Plasmon package profile omits this optional runtime and its ROM
-payload; this source remains deferred runtime/test evidence rather than a
-package request path. It is a runtime host, not a Games launcher or a `.sys`
-application.
+The supported resource is an iNES `.nes` ROM. Association matching selects `runtime:emulatorjs`; the normal filesystem, AssociationRegistry, OpenService, Process, and Windowing authorities create the host. `EmulatorJsPlayer.tsx` reads and validates the selected filesystem node through `FsService`, then gives the ROM bytes to an isolated child iframe running the package-local EmulatorJS browser engine. There is no game-title or basename dispatcher.
 
-The initial supported resource is an iNES `.nes` ROM. Association matching selects `runtime:emulatorjs`; the normal OpenService, process, and window authorities create the host. `EmulatorJsPlayer.tsx` reads and validates the selected filesystem node through `FsService`, then gives the ROM bytes to an isolated child iframe running the packaged EmulatorJS browser engine.
+## Canonical runtime authority
 
-## Runtime assets and lifecycle
+`runtimeConfiguration.ts` is the sole runtime-definition authority. The selected EmulatorJS definition is pinned to:
 
-No shipped package profile registers EmulatorJS or materializes
-`/System/Program Files/EmulatorJS` or `/runtime/emulatorjs/data/`, so missing
-runtime requests cannot occur in an installed package.
+- runtime id: `emulatorjs`
+- version: `4.2.3`
+- upstream revision: `e150dc0491ae747028919fb82d6598954976ede6`
+- `@emulatorjs/emulatorjs` artifact: `https://registry.npmjs.org/@emulatorjs/emulatorjs/-/emulatorjs-4.2.3.tgz`
+- artifact integrity: `sha512-7z3qaA4LwyurhuGvdMUDF9xJpEbxC3SNy9+E9tSaOsRo8FCS2QXam/0k/lc9kqHWRFIlLKWahNjPAStyL0rFnw==`
+- `@emulatorjs/core-fceumm` artifact: `https://registry.npmjs.org/@emulatorjs/core-fceumm/-/core-fceumm-4.2.3.tgz`
+- core integrity: `sha512-XX9Vv2N/hzp0TstNMCTSppEs+sg+1lpJpPdSDuRqIO/cwdt7dUcF+WjNX1yQJLRbP5+XwcNHZ6K4BKy8CJpndQ==`
+- selected NES core: `fceumm`
 
-The iframe navigates to the package-local `emulatorjs-host.html`; that child host loads `emulatorjs-host.js`, creates the ROM Blob URL in its own browsing context, sets the `EJS_*` globals, and injects `/runtime/emulatorjs/data/loader.js`. `EJS_pathtodata` points at that same package-local URL-safe mirror, so EmulatorJS JavaScript, CSS, fceumm core data, compression worker, and optional core report all resolve from the installed package without remote fallback.
+Required package-local runtime assets are `loader.js`, `emulator.min.js`, `emulator.min.css`, `compression/extract7z.js`, `cores/fceumm-wasm.data`, and `cores/fceumm-legacy-wasm.data`. Preparation uses the generic content-addressed runtime cache, verifies the pinned artifact integrities, and fails closed when required source/core inputs or compatible runtime metadata are missing. EmulatorJS 4.2.3's npm source artifact intentionally omits the generated minified outputs: the runtime materializer therefore derives the package-local `emulator.min.js` deterministically from the verified `data/src` files in the upstream loader's fallback order and emits the verified `data/emulator.css` bytes as `emulator.min.css`. No mutable release/CDN fetch is used to fill those generated filenames. The resulting delivery files are mirrored under managed Program Files and the URL-safe `/runtime/emulatorjs/` browser transport.
 
-EmulatorJS 4.2.3 uses browser-global `EJS_*` configuration. Each process therefore gets its own iframe so runtime globals, WASM, audio, timers, and engine state remain isolated per native window. Plasmon does not inspect or mutate the iframe document: Neutron can isolate the outer application browsing context, so direct `contentDocument` access is not a valid runtime contract. Instead, the parent and packaged child exchange token-validated `postMessage` lifecycle messages. The child reports `loaded` only from the real `EJS_ready` callback and `ready` only from the real `EJS_onGameStart` callback; tests must not synthesize those states.
+Useful package commands are:
 
-The full optional profile keeps the approved daedalOS-style one-iframe-per-
-runtime-instance boundary while adapting bootstrap to Neutron's application
-isolation and app-host routing. Required EmulatorJS scripts, styles, fceumm
-core data, and the generated proof ROM remain package-local. Do not replace the
-real child runtime with a test-only frame, readiness flag, filename dispatch,
-or generic emulator framework.
+```text
+npm --workspace neutron-plasmon run package:emulatorjs
+npm --workspace neutron-plasmon run test:package:emulatorjs
+```
 
-Unmounting the host sends a terminate command to the exact child runtime and removes its iframe. No shared emulator framework is introduced.
+Ordinary Base uses no optional runtime unless `PLASMON_RUNTIME_CONFIGURATION` selects one. Demo uses `PLASMON_RUNTIME_CONFIGURATION=demo-games`, which resolves through the same canonical definitions rather than duplicating EmulatorJS metadata.
 
-The host disables EmulatorJS local settings/database caches where the public configuration supports it. Plasmon's filesystem remains authoritative for the ROM resource and any durable product state. Neutron's outer application sandbox remains `allow-scripts` with an opaque origin: the host does not add `allow-same-origin` merely to satisfy runtime probes. Because EmulatorJS 4.2.3 probes localStorage/IndexedDB despite its disable flags, the child shadows those browser-persistence capabilities as unavailable before loading upstream code.
+## Browser assets and lifecycle
 
-RetroArch's Emscripten platform layer also treats Screen Wake Lock as optional. Neutron intentionally does not delegate that permission to the sandboxed application document, while Chromium can still expose `navigator.wakeLock` and reject `request("screen")` by permissions policy. The child therefore masks only that denied capability before EmulatorJS loads, allowing the runtime's normal no-wake-lock fallback. Do not grant `screen-wake-lock`, weaken the Kernel sandbox, or fabricate a successful wake-lock object for this runtime.
+The iframe navigates to package-local `emulatorjs-host.html`; that child loads `emulatorjs-host.js`, creates the ROM Blob URL in its own browsing context, sets the `EJS_*` globals, and injects `/runtime/emulatorjs/data/loader.js`. `EJS_pathtodata` points at the same package-local mirror, so EmulatorJS JavaScript, CSS, fceumm core data, the compression worker, and optional core report remain inside the prepared package authority.
+
+EmulatorJS uses browser-global `EJS_*` configuration. Each Process therefore receives its own iframe so runtime globals, WASM, audio, timers, and engine state remain isolated per native window. Plasmon does not rely on direct `contentDocument` access. The parent and packaged child instead exchange token-validated `postMessage` lifecycle messages. The child reports loaded state from real `EJS_ready` and `game-started` only from real `EJS_onGameStart`; elapsed time or successful requests are not readiness authority.
+
+Unmounting the host sends a terminate command to the exact child runtime and removes its iframe. A second Process receives a separate child iframe and separate runtime globals.
+
+## Sandbox and browser persistence
+
+Neutron's outer application sandbox remains `allow-scripts` with an opaque origin. EmulatorJS restoration does not add `allow-same-origin` or broaden the Kernel sandbox. Because EmulatorJS 4.2.3 probes localStorage and IndexedDB despite disable flags, the child exposes those browser-persistence capabilities as unavailable before upstream code starts. They are not Plasmon persistence authority.
+
+Screen Wake Lock is also optional for the runtime. When Neutron's permissions policy denies it, the child masks the denied capability before EmulatorJS loads so the normal no-wake-lock fallback can proceed. Do not grant `screen-wake-lock`, weaken the sandbox, or fabricate a successful wake-lock object.
 
 ## Saves
 
-The legal packaged acceptance ROM is a generated mapper-0 NES test image with no battery-backed save RAM, so this first runtime proof intentionally does not claim durable save-file support. EmulatorJS exposes save callbacks, but its engine also has browser-side save internals. Before Plasmon advertises durable saves for save-producing ROMs, those bytes must be bridged explicitly through `FsService`; browser storage must not become authoritative user state.
+The deterministic mapper-0 acceptance ROM has no battery-backed save RAM, so this restoration intentionally makes no durable EmulatorJS save-state claim. Any future save-producing ROM must bridge authoritative save bytes explicitly through `FsService`; browser storage must not become durable user-state authority.
 
 ## Testing
 
-Use fast Bun tests for `.nes` association matching, ROM validation, URL-safe package-relative browser resolution, and the canonical headless filesystem -> association -> OpenService -> process/window path. Package acceptance verifies the managed Program Files assets and URL-safe browser mirror are byte-identical and verifies the production child host keeps persistence and Screen Wake Lock unavailable without granting sandbox permissions. Use the packaged browser lane only to prove the installed child host boots, the actual package-local loader/core starts the generated NES fixture, no required runtime asset leaves the package, and iframe teardown works in a real browser.
+Fast tests cover `.nes` association matching, iNES validation including malformed/truncated input, deterministic mapper-0 fixture properties, selected/unselected production composition, and the canonical filesystem -> AssociationRegistry/OpenService -> Process/Window path. Package tests verify selected runtime inventory and the managed/URL-safe runtime assets. The Specialist browser lane is reserved for facts that require a real packaged browser: production `game-started` readiness, visible non-zero canvas rendering, approved runtime requests, sandbox/storage compatibility, per-process iframe isolation, and exact iframe teardown. Specialist retries remain zero and readiness uses production-owned events rather than fixed sleeps.

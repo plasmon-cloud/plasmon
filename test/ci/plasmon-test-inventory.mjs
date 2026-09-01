@@ -21,6 +21,7 @@ export const browserLanes = Object.freeze({
     "test/e2e/plasmon-drag-preview.spec.ts",
     "test/e2e/plasmon-taskbar-context-menu.spec.ts",
     "test/e2e/plasmon-demo-game.spec.ts",
+    "test/e2e/plasmon-emulatorjs-proof.spec.ts",
     "test/e2e/plasmon-scripting-runtime.spec.ts",
   ]),
   demo: Object.freeze([
@@ -46,7 +47,6 @@ export const optionalCoreBrowserTests = Object.freeze([
   "test/e2e/plasmon-golden-path.spec.ts",
   "test/e2e/plasmon-demo-review.spec.ts",
   "test/e2e/plasmon-demo-monaco-packaged.spec.ts",
-  "test/e2e/plasmon-emulatorjs-proof.spec.ts",
   "test/e2e/plasmon-demo-markdown-commands.spec.ts",
   "test/e2e/plasmon-demo-native-app-chrome.spec.ts",
   "test/e2e/plasmon-demo-photos-expand.spec.ts",
