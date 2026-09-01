@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -21,7 +22,7 @@ test("— List flows compact entries across columns and navigates spatially", as
   const desktopBox = await desktop.boundingBox();
   if (!desktopBox) throw new Error("Desktop FileManager has no bounds");
   await desktop.click({ button: "right", position: { x: Math.max(120, desktopBox.width / 2), y: Math.max(120, desktopBox.height / 2) }});
-  await app.getByRole("menu").last().getByRole("menuitem", { name: "New Text Document" }).click();
+  await clickNewContextMenuItem(app, "New Text Document");
   await app.getByRole("textbox", { name: "Rename New Text Document.txt" }).press("Escape");
   const root = app.locator("[data-fm-node-id]", { hasText: "Root" }).first();
   await expect(root).toBeVisible();

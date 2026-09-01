@@ -3,6 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { activateLocalPlaywrightIdentity } from "./local-playwright-identity.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -61,9 +62,9 @@ async function openFileManagerBackgroundMenu(explorer: Locator): Promise<Locator
   if (!position) throw new Error("Explorer FileManager has no exposed background point for its context menu");
 
   await files.click({ button: "right", position });
-  const menu = explorer.getByRole("menu").last();
+  const menu = explorer.getByRole("menu", { name: "Folder background context menu" });
   await expect(menu).toBeVisible();
-  return menu;
+  return explorer;
 }
 
 function hiddenEntry(explorer: Locator, name: string): Locator {
@@ -102,8 +103,8 @@ test("packaged Explorer persists Show hidden files through reopen and reload", a
     // the same FsService-backed preference authority under test.
     await setShowHiddenFiles(explorer, false);
 
-    const menu = await openFileManagerBackgroundMenu(explorer);
-    await menu.getByRole("menuitem", { name: "New Folder" }).click();
+    const menuScope = await openFileManagerBackgroundMenu(explorer);
+    await clickNewContextMenuItem(menuScope, "New Folder");
     const rename = explorer.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(rename).toBeVisible();
     await rename.fill(hiddenName);

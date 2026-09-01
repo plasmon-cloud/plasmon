@@ -4,6 +4,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
 import { installPackagedDiagnosticArtifact } from "./plasmon-diagnostic-artifact.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const PLASMON_SELECTOR = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 const ACTION_TIMEOUT = 5_000;
@@ -84,7 +85,7 @@ async function importFiles(page: Page, explorer: Locator) {
 async function createTextDocument(explorer: Locator, name: string) {
   const files = explorer.getByRole("listbox", { name: "Files" });
   const toolbar = files.getByRole("toolbar", { name: "File commands" });
-  await toolbar.getByRole("button", { name: "New Text Document", exact: true }).click();
+  await chooseFileManagerBackgroundAction(files, "New Text Document");
   const rename = files.getByRole("textbox", { name: /^Rename New Text Document/ }).last();
   await expect(rename).toBeVisible();
   await rename.fill(name);

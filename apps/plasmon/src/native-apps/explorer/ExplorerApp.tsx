@@ -28,6 +28,7 @@ import {
   FileManagerPreferenceStore,
   FileManagerVisibilityFsService,
   FileOperationClipboard,
+  resourceIconPresentationForFile,
   type FileManagerOpenAuthority,
   type FileManagerPreferences,
   type FileManagerPresentation,
@@ -35,6 +36,10 @@ import {
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
 import { reportExplorerFavoritesRefreshFailure } from "../semanticDiagnostics.ts";
+import {
+  applicationResourcePresentation,
+  ResourceIcon,
+} from "../../os/visual/index.ts";
 import { explorerFavoritesAffectedByEvent, readDefaultExplorerFavorites } from "./favorites.ts";
 import type { ExplorerLocation } from "./history.ts";
 import { FILE_MANAGER_NAME, fileManagerWindowTitle } from "./identity.ts";
@@ -53,6 +58,7 @@ export interface ExplorerAppProps {
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
   diagnostics?: DiagnosticService;
+  transpileCmdFile?: (nodeId: NodeId) => Promise<void>;
 }
 
 function breadcrumbPaths(path: string): Array<{ label: string; path: string }> {
@@ -90,6 +96,7 @@ export function ExplorerApp({
   clipboard: providedClipboard,
   hiddenVisibility,
   diagnostics,
+  transpileCmdFile,
 }: ExplorerAppProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
   const preferenceStore = useMemo(() => new FileManagerPreferenceStore(fs), [fs]);
@@ -108,6 +115,7 @@ export function ExplorerApp({
     () => hiddenVisibility.getSnapshot().alwaysShowHiddenFiles,
   );
   const [favorites, setFavorites] = useState<FsNode[]>([]);
+  const [favoriteAppsId, setFavoriteAppsId] = useState<NodeId | null>(null);
   const [itemCount, setItemCount] = useState(0);
   const [selectedCount, setSelectedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -192,11 +200,13 @@ export function ExplorerApp({
         const snapshot = await readDefaultExplorerFavorites(fs);
         if (!active) return null;
         setFavorites(snapshot.nodes);
+        setFavoriteAppsId(snapshot.appsId);
         return snapshot.rootId;
       } catch {
         if (active) {
           reportExplorerFavoritesRefreshFailure();
           setFavorites([]);
+          setFavoriteAppsId(null);
         }
         return null;
       }
@@ -337,11 +347,24 @@ export function ExplorerApp({
       <div className="explorer-app__body">
         <aside className="explorer-app__sidebar" aria-label="Favorites">
           <h2>Favorites</h2>
-          {favorites.map((favorite) => (
-            <button type="button" key={favorite.id} className={location?.nodeId === favorite.id ? "is-current" : ""} onClick={() => void navigate(favorite.id)}>
-              <span aria-hidden="true">▰</span>{favorite.name}
-            </button>
-          ))}
+          {favorites.map((favorite) => {
+            const isCurrent = location?.nodeId === favorite.id;
+            const iconPresentation = favorite.id === favoriteAppsId
+              ? applicationResourcePresentation()
+              : resourceIconPresentationForFile(favorite);
+            return (
+              <button
+                type="button"
+                key={favorite.id}
+                className={isCurrent ? "is-current" : ""}
+                aria-current={isCurrent ? "page" : undefined}
+                onClick={() => void navigate(favorite.id)}
+              >
+                <ResourceIcon context="file-list" presentation={iconPresentation} />
+                {favorite.name}
+              </button>
+            );
+          })}
         </aside>
 
         <main className="explorer-app__main">
@@ -388,6 +411,7 @@ export function ExplorerApp({
               sort={sort}
               filterQuery={query}
               onOpenDirectory={(node) => navigate(node.id)}
+              {...(transpileCmdFile ? { onTranspileCmd: (node: FsNode) => transpileCmdFile(node.id) } : {})}
               onSnapshot={handleSnapshot}
             />
           ) : <p className="fm-empty">Loading folder…</p>}
