@@ -83,7 +83,7 @@ export interface ShellPreferences {
 
 export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   version: 1,
-  pinnedNative: [],
+  pinnedNative: ["native:terminal"],
   pinnedElements: [],
   themeId: "plasmon-graphite",
   appearanceMode: "dark",

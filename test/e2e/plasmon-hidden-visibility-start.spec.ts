@@ -3,6 +3,7 @@ import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { activateLocalPlaywrightIdentity } from "./local-playwright-identity.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const PLASMON_FRAME = 'iframe[data-app-id="plasmon"][data-tile-id="main"]';
 const HIDDEN_TARGET_NAME = ".Start Hidden Fixture.txt";
@@ -88,7 +89,7 @@ test("packaged Start follows global visibility for an existing hidden target", a
     const address = explorer.getByRole("textbox", { name: "Address" });
     await expect(address).toHaveValue("/");
 
-    await toolbar.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(files, "New Text Document");
     const targetRename = files.locator('textarea[aria-label^="Rename "]').first();
     await expect(targetRename).toBeVisible();
     await targetRename.fill(HIDDEN_TARGET_NAME);

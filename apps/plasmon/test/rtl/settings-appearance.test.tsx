@@ -9,8 +9,11 @@ test("Settings changes Light/Dark independently from theme and wallpaper", async
       await app.environment.os.open("/System/Settings.sys");
     });
 
-    await app.user.click(await app.findByRole("button", { name: "Personalization" }));
-    const personalizationHeading = await app.findByRole("heading", { name: "Personalization" });
+    const settings = await app.findByRole("region", { name: "Settings" });
+    const navigation = within(settings).getByRole("navigation", { name: "Settings sections" });
+    await app.user.click(within(navigation).getByRole("button", { name: "Personalization" }));
+
+    const personalizationHeading = await within(settings).findByRole("heading", { name: "Personalization" });
     const personalizationPanel = personalizationHeading.closest("section");
     if (!personalizationPanel) throw new Error("Personalization panel is unavailable");
     const controls = within(personalizationPanel);

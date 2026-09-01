@@ -382,7 +382,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                       <h3 style={styles.sectionHeading}>Appearance mode</h3>
                       <div style={styles.optionGrid}>
                         {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
-                          <NativeAppButton
+                          <button
                             key={appearanceMode}
                             type="button"
                             disabled={!shellPreferencesReady}
@@ -390,7 +390,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                             onClick={() => updateShellPreferences({ appearanceMode })}
                           >
                             {appearanceMode === "dark" ? "Dark" : "Light"}
-                          </NativeAppButton>
+                          </button>
                         ))}
                       </div>
                       <h3 style={styles.sectionHeading}>Wallpaper</h3>

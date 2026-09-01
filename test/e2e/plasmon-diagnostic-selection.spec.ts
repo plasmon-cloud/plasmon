@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -66,19 +67,19 @@ test("diagnostic text selects without stealing FileEntry drag", async ({ page })
       });
       if (!position) throw new Error("FileManager has no exposed background point for context menu");
       await fileManager.click({ button: "right", position });
-      const menu = explorerWindow.getByRole("menu").last();
+      const menu = explorerWindow.getByRole("menu", { name: "Folder background context menu" });
       await expect(menu).toBeVisible();
-      return menu;
+      return explorerWindow;
     };
 
-    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Text Document" }).click();
+    await clickNewContextMenuItem(await openFileManagerMenu(), "New Text Document");
     const sourceRename = explorerWindow.getByRole("textbox", { name: /^Rename New Text Document(?: \(\d+\))?\.txt$/ }).last();
     await expect(sourceRename).toBeVisible();
     const sourceDocumentName = await sourceRename.inputValue();
     await sourceRename.press("Escape");
     await expect(sourceRename).toHaveCount(0);
 
-    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Folder" }).click();
+    await clickNewContextMenuItem(await openFileManagerMenu(), "New Folder");
     const folderRename = explorerWindow.getByRole("textbox", { name: /^Rename New Folder(?: \(\d+\))?$/ }).last();
     await expect(folderRename).toBeVisible();
     const collisionFolderName = await folderRename.inputValue();
@@ -90,7 +91,7 @@ test("diagnostic text selects without stealing FileEntry drag", async ({ page })
     await collisionFolder.dblclick();
     await expect(address).toHaveValue(`/${collisionFolderName}`);
 
-    await (await openFileManagerMenu()).getByRole("menuitem", { name: "New Text Document" }).click();
+    await clickNewContextMenuItem(await openFileManagerMenu(), "New Text Document");
     const nestedRename = explorerWindow.getByRole("textbox", { name: /^Rename New Text Document(?: \(\d+\))?\.txt$/ }).last();
     await expect(nestedRename).toBeVisible();
     await nestedRename.fill(sourceDocumentName);

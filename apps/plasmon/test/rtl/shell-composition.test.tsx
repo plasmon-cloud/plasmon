@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { act, waitFor, within } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import type { ExternalElement } from "../../src/os/contracts/index.ts";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
@@ -15,6 +15,11 @@ const trayElement: ExternalElement = {
 
 test("Shell composes calendar and tray coordination with canonical Settings activation", async () => {
   const app = await renderPlasmon({ elements: [trayElement] });
+  const shellPreferences = app.environment.services.shellPreferences;
+  await shellPreferences.save({
+    ...shellPreferences.getSnapshot(),
+    wallpaper: { mode: "follow-theme" },
+  });
 
   try {
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
@@ -112,9 +117,7 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
       (window) => window.processId === settingsProcess?.id,
     )).toBe(true);
 
-    await act(async () => {
-      await app.environment.os.open("/System/Settings.sys");
-    });
+    await app.environment.os.open("/System/Settings.sys");
     const settingsProcesses = app.environment.os.processes.list().filter(
       (process) => process.handlerId === "native:settings",
     );

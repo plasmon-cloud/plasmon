@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -116,7 +117,10 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await expect(explorer).toHaveAccessibleName("Documents — File Explorer");
 
     const generatedName = `Theme Probe ${Date.now()}.md`;
-    await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      explorer.getByRole("listbox", { name: "Files" }),
+      "New Markdown Document",
+    );
     const generatedRename = explorer.locator('textarea[aria-label^="Rename New Markdown Document"]').last();
     await expect(generatedRename).toBeVisible();
     await generatedRename.fill(generatedName);
