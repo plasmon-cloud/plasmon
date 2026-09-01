@@ -6,6 +6,7 @@ const EDITING_SELECTOR = [
   "select",
   "[contenteditable]:not([contenteditable='false'])",
   "[role='textbox']",
+  "[role^='menuitem']",
   ".monaco-editor",
 ].join(",");
 

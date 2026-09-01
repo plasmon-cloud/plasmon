@@ -1,4 +1,8 @@
 @layer plasmon-shell {
+  .plasmon-shell__start-panel {
+    animation: none;
+  }
+
   .plasmon-shell__start-status {
     align-content: start;
     display: grid;
