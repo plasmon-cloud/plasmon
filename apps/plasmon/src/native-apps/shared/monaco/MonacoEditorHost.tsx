@@ -11,6 +11,7 @@ import {
   syncEditorModelValue,
   type OwnedEditorModel,
 } from "./editorModel.ts";
+import { updateMonacoEditorOptions } from "./editorOptions.ts";
 import { isSlimMonacoProfile } from "../../../os/integration/packageProfile.ts";
 import { installMonacoEnvironment } from "./monacoEnvironment.ts";
 import { ensureRunContextTypes } from "../../../scripting/run/monacoTypes.ts";
@@ -276,12 +277,9 @@ export function MonacoEditorHost({
   }, [language]);
 
   useEffect(() => {
-    editorRef.current?.updateOptions({
-      readOnly,
-      ariaLabel,
-      minimap: { enabled: minimap },
-      wordWrap: wordWrap ? "on" : "off",
-    });
+    const editor = editorRef.current;
+    if (!editor) return;
+    updateMonacoEditorOptions(editor, { readOnly, ariaLabel, minimap, wordWrap });
   }, [ariaLabel, minimap, readOnly, wordWrap]);
 
   useEffect(() => {

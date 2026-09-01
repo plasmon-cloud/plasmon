@@ -46,14 +46,22 @@ Classification does not choose handlers or presentation. `AssociationRegistry` a
 
 `/System/Program Files` is the canonical filesystem location for curated packaged runtime/application resources. Filesystem owns the durable directory identity, managed/protected semantics, and versioned root reconciliation; it does **not** own runtime asset semantics or application installation state.
 
-Runtime owners use `FilesystemCoreServices.programFiles` rather than recreating `/System/Program Files` policy themselves. The narrow filesystem seam is:
+Runtime owners use `FilesystemCoreServices.programFiles` rather than recreating `/System/Program Files` policy themselves. The narrow filesystem seams are:
 
 ```ts
 await filesystem.programFiles.root();
 await filesystem.programFiles.ensureRuntimeDirectory("MonacoEditor");
+await filesystem.programFiles.ensureRuntimeFile("MonacoEditor", "config.json", {
+  initialBytes,
+  mime: "application/json",
+});
 ```
 
-`ensureRuntimeDirectory()` creates or repairs one direct managed child while preserving an existing directory's `NodeId`, metadata, and contents. The runtime/native-app Area remains responsible for what that subtree means and whether packaged HTTP assets are projected into it.
+`ensureRuntimeDirectory()` creates or repairs one direct managed child while preserving an existing directory's `NodeId`, metadata, and contents. `ensureRuntimeFile()` is a privileged **create-if-missing** seam for a runtime-owned durable file beneath that protected directory. Existing file identity, metadata, and bytes are returned unchanged; reconciliation does not normalize or overwrite user-authored content.
+
+The parent runtime directory remains `system-required`, so ordinary callers cannot create arbitrary children or relocate resources into it. A runtime configuration file may intentionally remain ordinary user-writable content when its owning runtime chooses that contract. In that case the runtime first creates the file through `ProgramFilesService`, while later edits use normal public `FsService.write`/Text-editor persistence. Do not mark such a file `system-required`, because that ownership would prohibit the very user edits the runtime schema promises.
+
+This writable-file seam is **not** permission to make packaged executable runtime assets mutable. Worker/library/WASM/package bytes retain their package/runtime authority and protection. Runtime owners must distinguish user-editable configuration from immutable executable resources explicitly.
 
 Program Files is **not** a Neutron Element installation database. `/Apps/*.neutron` remains the filesystem projection of Kernel-authoritative installation state. A Program Files subtree does not imply a `.sys` application, and runtime resources such as js-dos or EmulatorJS must not acquire fake `DOS.sys`, `Emulator.sys`, or similar wrappers merely because they have Program Files resources.
 

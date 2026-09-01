@@ -219,6 +219,7 @@ export class FsRpcClient implements FsService, FsEventSource {
   private readonly listeners = new Set<(event: FsEvent) => void>();
   private unsubscribeState: (() => void) | null = null;
   private resetPending = false;
+  private lastResetRevision: Revision | null = null;
 
   constructor(
     private readonly callTool: FsToolCaller,
@@ -259,11 +260,15 @@ export class FsRpcClient implements FsService, FsEventSource {
   }
 
   async mkdir(parentId: NodeId, name: string): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.mkdir, { parentId, name }));
+    const node = parseNode(await this.callTool(FS_TOOLS.mkdir, { parentId, name }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async createFile(parentId: NodeId, name: string, options: CreateFileOptions = {}): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.createFile, { parentId, name, options: compactJson(options) }));
+    const node = parseNode(await this.callTool(FS_TOOLS.createFile, { parentId, name, options: compactJson(options) }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async read(id: NodeId, range?: FsReadRange): Promise<Uint8Array> {
@@ -319,7 +324,9 @@ export class FsRpcClient implements FsService, FsEventSource {
         });
         index += 1;
       }
-      return parseNode(await this.callTool(FS_TOOLS.writeCommit, { uploadId }));
+      const node = parseNode(await this.callTool(FS_TOOLS.writeCommit, { uploadId }));
+      await this.invalidateAfterMutation();
+      return node;
     } catch (error) {
       await this.callTool(FS_TOOLS.writeAbort, { uploadId }).catch(() => undefined);
       throw error;
@@ -327,23 +334,32 @@ export class FsRpcClient implements FsService, FsEventSource {
   }
 
   async rename(id: NodeId, newName: string): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.rename, { id, newName }));
+    const node = parseNode(await this.callTool(FS_TOOLS.rename, { id, newName }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async move(id: NodeId, newParentId: NodeId): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.move, { id, newParentId }));
+    const node = parseNode(await this.callTool(FS_TOOLS.move, { id, newParentId }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async copy(id: NodeId, newParentId: NodeId, name?: string): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.copy, { id, newParentId, ...(name === undefined ? {} : { name }) }));
+    const node = parseNode(await this.callTool(FS_TOOLS.copy, { id, newParentId, ...(name === undefined ? {} : { name }) }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async remove(id: NodeId, options: { recursive?: boolean } = {}): Promise<void> {
     await this.callTool(FS_TOOLS.remove, { id, recursive: options.recursive ?? false });
+    await this.invalidateAfterMutation();
   }
 
   async setMetadata(id: NodeId, patch: Record<string, JsonValue | null>): Promise<FsNode> {
-    return parseNode(await this.callTool(FS_TOOLS.metadataPatch, { id, patch: patch as JsonValue }));
+    const node = parseNode(await this.callTool(FS_TOOLS.metadataPatch, { id, patch: patch as JsonValue }));
+    await this.invalidateAfterMutation();
+    return node;
   }
 
   async revision(): Promise<Revision> {
@@ -351,13 +367,23 @@ export class FsRpcClient implements FsService, FsEventSource {
     return BigInt(requiredString(response, "revision"));
   }
 
+  private async invalidateAfterMutation(): Promise<void> {
+    await this.publishReset().catch(() => undefined);
+  }
+
+  private async publishReset(): Promise<void> {
+    if (this.listeners.size === 0) return;
+    const revision = await this.revision();
+    if (revision === this.lastResetRevision) return;
+    this.lastResetRevision = revision;
+    for (const listener of this.listeners) listener({ type: "reset", revision });
+  }
+
   private queueReset(): void {
     if (this.resetPending) return;
     this.resetPending = true;
     queueMicrotask(() => {
-      void this.revision().then((revision) => {
-        for (const listener of this.listeners) listener({ type: "reset", revision });
-      }).catch(() => undefined).finally(() => { this.resetPending = false; });
+      void this.publishReset().catch(() => undefined).finally(() => { this.resetPending = false; });
     });
   }
 }

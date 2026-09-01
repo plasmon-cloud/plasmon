@@ -76,6 +76,10 @@ import {
   explorerAppDefinition,
 } from "../../native-apps/explorer/index.ts";
 import {
+  MonacoRuntimeConfigService,
+  type MonacoRuntimeConfigStore,
+} from "../../native-apps/monaco-runtime-config/runtimeConfig.ts";
+import {
   createPropertiesNativeLoader,
   propertiesAppDefinition,
 } from "../../native-apps/properties/index.ts";
@@ -114,6 +118,7 @@ export interface PlasmonServices {
   startMenu: StartMenuReconciliationController;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
   shellPreferences: ShellPreferencesController;
+  monacoRuntimeConfig: MonacoRuntimeConfigStore;
 }
 
 export interface CreatePlasmonServicesOptions {
@@ -285,6 +290,7 @@ export function createPlasmonServices(
   const nativeAppLog = diagnostics.for(DiagnosticSubsystem.NativeApp);
   const shellLog = diagnostics.for(DiagnosticSubsystem.Shell);
   const neutronLog = diagnostics.for(DiagnosticSubsystem.Neutron);
+  const monacoRuntimeConfigLog = diagnostics.for(DiagnosticSubsystem.RuntimeMonaco);
 
   if (typeof window !== "undefined" && !isCoreProfile) {
     installMonacoEnvironment(globalThis, diagnostics.for(DiagnosticSubsystem.RuntimeMonaco));
@@ -311,9 +317,10 @@ export function createPlasmonServices(
           ? DiagnosticEvent.Windowing.PlacementReadFailed
           : DiagnosticEvent.Windowing.PlacementWriteFailed,
         {
-        message: `Window placement ${stage} failed`,
-        errorType: diagnosticErrorType(error),
-      });
+          message: `Window placement ${stage} failed`,
+          errorType: diagnosticErrorType(error),
+        },
+      );
     },
   });
   const neutron = options.neutron ?? createNeutronBridge({
@@ -449,6 +456,22 @@ export function createPlasmonServices(
         error,
       });
     });
+  const monacoRuntimeConfig = new MonacoRuntimeConfigService({
+    fs,
+    fsEvents: fs,
+    programFiles: filesystem.programFiles,
+    onDiagnostic: (item) => {
+      const event = item.code === "filesystem-read-failed"
+        ? DiagnosticEvent.RuntimeMonaco.ConfigReadFailed
+        : item.code === "filesystem-write-failed"
+          ? DiagnosticEvent.RuntimeMonaco.ConfigWriteFailed
+          : DiagnosticEvent.RuntimeMonaco.ConfigInvalid;
+      monacoRuntimeConfigLog.warn(event, {
+        message: "Monaco runtime configuration fell back safely",
+        reason: item.code,
+      });
+    },
+  });
   nativeApps.setLoader(
     recycleBinAppDefinition.id,
     createRecycleBinNativeLoader({ trash: filesystem.trash, fsEvents: fs }),
@@ -474,6 +497,7 @@ export function createPlasmonServices(
     startMenu,
     hiddenVisibility,
     shellPreferences,
+    monacoRuntimeConfig,
   };
 
   if (isSlimProfile) return services;

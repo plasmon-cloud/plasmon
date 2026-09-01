@@ -84,6 +84,10 @@ export function createHeadlessPlasmonEnvironment(
     windows,
   });
   const os = createPlasmonOsApi({ services });
+  const ready = services.filesystem.ready.then(async (initialization) => {
+    await services.monacoRuntimeConfig.ready;
+    return initialization;
+  });
 
   const node = (path: string): Promise<FsNode | null> => services.fs.resolvePath(path);
 
@@ -94,7 +98,7 @@ export function createHeadlessPlasmonEnvironment(
     repository,
     neutron,
     neutronMessages,
-    ready: services.filesystem.ready,
+    ready,
     node,
     open: async (path) => {
       await os.open(path);
@@ -102,6 +106,7 @@ export function createHeadlessPlasmonEnvironment(
     processes: () => services.process.list(),
     windows: () => services.windows.list(),
     dispose: () => {
+      services.monacoRuntimeConfig.dispose();
       services.startMenu.dispose();
       for (const process of services.process.list()) services.process.close(process.id);
       services.filesystem.dispose();

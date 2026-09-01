@@ -132,6 +132,15 @@
       }
     },
     {
+      "path": "apps/plasmon/src/native-apps/monaco-runtime-config",
+      "kind": "runtime-config",
+      "readme": "local",
+      "agents": {
+        "mode": "inherited",
+        "from": "apps/plasmon/src/native-apps/AGENTS.md"
+      }
+    },
+    {
       "path": "apps/plasmon/src/native-apps/photos",
       "kind": "native-app",
       "readme": "local",

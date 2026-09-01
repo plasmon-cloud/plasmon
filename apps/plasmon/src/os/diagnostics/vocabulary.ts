@@ -158,6 +158,9 @@ export const DiagnosticEvent = {
   },
   RuntimeMonaco: {
     WorkerFailed: event("runtime.monaco.worker.failed"),
+    ConfigInvalid: event("runtime.monaco.config.invalid"),
+    ConfigReadFailed: event("runtime.monaco.config.read.failed"),
+    ConfigWriteFailed: event("runtime.monaco.config.write.failed"),
   },
   RuntimeJsDos: {
     StartFailed: event("runtime.js-dos.start.failed"),
