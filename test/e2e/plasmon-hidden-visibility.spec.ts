@@ -53,6 +53,8 @@ async function openSettings(plasmon: FrameLocator) {
   await activateSearchResult(plasmon, "Settings", "Settings");
   const dialog = plasmon.getByRole("dialog", { name: "Settings" }).last();
   await expect(dialog).toBeVisible({ timeout: 20_000 });
+  await dialog.getByRole("button", { name: "Files & Explorer", exact: true }).click();
+  await expect(dialog.getByRole("heading", { name: "Files & Explorer", exact: true })).toBeVisible();
   return dialog;
 }
 

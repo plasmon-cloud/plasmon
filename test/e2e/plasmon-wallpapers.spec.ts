@@ -142,8 +142,10 @@ test("six wallpapers are visible, follow themes, pin independently, and share a 
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Settings" }).last();
+    const settings = app.getByRole("region", { name: "Settings", exact: true }).last();
     await expect(settings).toBeVisible({ timeout: 20_000 });
+    await settings.getByRole("button", { name: "Personalization", exact: true }).click();
+    await expect(settings.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
 
     const watermarkToggle = settings.getByRole("button", { name: "Show Plasmon watermark", exact: true });
     await expect(watermarkToggle).toHaveAttribute("aria-pressed", "true");

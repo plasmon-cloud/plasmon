@@ -29,7 +29,11 @@ import {
 } from "../../os/visual/index.ts";
 import {
   formatBytes,
+  SETTINGS_SECTIONS,
+  settingsDestinationFromTarget,
   summarizeStorage,
+  withSettingsDestination,
+  type SettingsDestinationId,
   type StorageSummary,
 } from "./model.ts";
 
@@ -52,7 +56,7 @@ export interface SettingsHostProps {
 }
 
 export function createSettingsComponent(dependencies: SettingsDependencies = {}) {
-  return function Settings({ processId, fs, process }: SettingsHostProps) {
+  return function Settings({ processId, target, fs, process }: SettingsHostProps) {
     const [storage, setStorage] = useState<StorageSummary | null>(null);
     const [alwaysShowHiddenFiles, setAlwaysShowHiddenFiles] = useState(
       () => dependencies.hiddenVisibility?.getSnapshot().alwaysShowHiddenFiles ?? false,
@@ -71,6 +75,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
     );
     const [diagnosticSettingsReady, setDiagnosticSettingsReady] = useState(!dependencies.diagnosticSettings);
     const [diagnosticSettingsError, setDiagnosticSettingsError] = useState<string | null>(null);
+    const activeDestination = settingsDestinationFromTarget(target);
 
     useEffect(() => {
       process.setTitle(processId, "Settings");
@@ -138,6 +143,11 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
       };
     }, []);
 
+    const navigate = (destination: SettingsDestinationId): void => {
+      process.setTarget(processId, withSettingsDestination(target, destination));
+      process.focus(processId);
+    };
+
     const updateShellPreferences = (patch: Partial<Exclude<typeof shellSnapshot, null>>) => {
       const authority = dependencies.shellPreferences;
       if (!authority || !shellSnapshot || !shellPreferencesReady) return;
@@ -172,247 +182,318 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
     return (
       <NativeAppContentSurface style={styles.root} aria-label="Settings">
         <h1 style={styles.heading}>Settings</h1>
-
-        <NativeAppPanel style={styles.card} aria-labelledby="storage-heading">
-          <h2 id="storage-heading" style={styles.subheading}>Storage</h2>
-          {!storage ? (
-            <p>Calculating local storage…</p>
-          ) : storage.unavailableReason ? (
-            <p role="status">Storage summary unavailable: {storage.unavailableReason}</p>
-          ) : (
-            <p>{storage.files} files · {storage.directories} folders · {formatBytes(storage.bytes)} logical file data</p>
-          )}
-        </NativeAppPanel>
-
-        <NativeAppPanel style={styles.card} aria-labelledby="files-heading">
-          <h2 id="files-heading" style={styles.subheading}>Files & Explorer</h2>
-          {dependencies.hiddenVisibility ? (
-            <>
-              <label style={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={alwaysShowHiddenFiles}
-                  disabled={!hiddenVisibilityReady}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                    const store = dependencies.hiddenVisibility;
-                    if (!store) return;
-                    const next = event.currentTarget.checked;
-                    setAlwaysShowHiddenFiles(next);
-                    setHiddenVisibilityError(null);
-                    void store.setAlwaysShowHiddenFiles(next)
-                      .catch((cause: unknown) => {
-                        setAlwaysShowHiddenFiles(store.getSnapshot().alwaysShowHiddenFiles);
-                        setHiddenVisibilityError(cause instanceof Error ? cause.message : String(cause));
-                      });
-                  }}
-                />
-                Always show hidden files
-              </label>
-              <p style={styles.helpText}>Show hidden resources across Search, Start, and File Explorer.</p>
-              {hiddenVisibilityError ? <p role="alert">Hidden-file setting could not be saved: {hiddenVisibilityError}</p> : null}
-            </>
-          ) : (
-            <p>Global hidden-file visibility is unavailable.</p>
-          )}
-        </NativeAppPanel>
-
-        <NativeAppPanel style={styles.card} aria-labelledby="diagnostics-heading">
-          <h2 id="diagnostics-heading" style={styles.subheading}>Diagnostics</h2>
-          {dependencies.diagnosticSettings && diagnosticSettings ? (
-            <>
-              <label style={styles.controlRow}>
-                System log minimum level
-                <select
-                  aria-label="System log minimum level"
-                  style={styles.select}
-                  value={diagnosticSettings.fileMinLevel}
-                  disabled={!diagnosticSettingsReady}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                    const store = dependencies.diagnosticSettings;
-                    if (!store) return;
-                    const fileMinLevel = event.currentTarget.value as DiagnosticLevel;
-                    saveDiagnosticSetting(
-                      { ...diagnosticSettings, fileMinLevel },
-                      store.setFileMinLevel(fileMinLevel),
-                    );
-                  }}
-                >
-                  {DIAGNOSTIC_LEVELS.map((level) => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
-              </label>
-              <label style={styles.controlRow}>
-                Browser console minimum level
-                <select
-                  aria-label="Browser console minimum level"
-                  style={styles.select}
-                  value={diagnosticSettings.consoleMinLevel}
-                  disabled={!diagnosticSettingsReady}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                    const store = dependencies.diagnosticSettings;
-                    if (!store) return;
-                    const consoleMinLevel = event.currentTarget.value as DiagnosticLevel;
-                    saveDiagnosticSetting(
-                      { ...diagnosticSettings, consoleMinLevel },
-                      store.setConsoleMinLevel(consoleMinLevel),
-                    );
-                  }}
-                >
-                  {DIAGNOSTIC_LEVELS.map((level) => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
-                </select>
-              </label>
-              <p style={styles.helpText}>
-                Missing or invalid values use safe defaults: info for /System/system.log and warn for the browser console.
-              </p>
-              {remoteReportingAvailable && diagnosticSettings.remoteReportingEnabled !== undefined ? (
-                <>
-                  <label style={styles.checkboxRow}>
-                    <input
-                      type="checkbox"
-                      checked={diagnosticSettings.remoteReportingEnabled}
-                      disabled={!diagnosticSettingsReady}
-                      onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                        const store = dependencies.diagnosticSettings;
-                        if (!store) return;
-                        const remoteReportingEnabled = event.currentTarget.checked;
-                        saveDiagnosticSetting(
-                          { ...diagnosticSettings, remoteReportingEnabled },
-                          store.setRemoteReportingEnabled(remoteReportingEnabled),
-                        );
-                      }}
-                    />
-                    Enable remote incident reporting
-                  </label>
-                  <p style={styles.helpText}>
-                    This controls only the separately provided remote incident sink. Local diagnostics remain enabled.
-                  </p>
-                </>
-              ) : null}
-              {diagnosticSettingsError ? (
-                <p role="alert">Diagnostic setting could not be saved: {diagnosticSettingsError}</p>
-              ) : null}
-            </>
-          ) : (
-            <p>Diagnostic sink controls are unavailable.</p>
-          )}
-        </NativeAppPanel>
-
-        <NativeAppPanel style={styles.card} aria-labelledby="appearance-heading">
-          <h2 id="appearance-heading" style={styles.subheading}>Appearance</h2>
-          {shellSnapshot ? (
-            <>
-              <h3 style={styles.sectionHeading}>Theme</h3>
-              <div style={styles.optionGrid}>
-                {SHELL_THEME_IDS.map((themeId) => (
-                  <NativeAppButton
-                    key={themeId}
-                    type="button"
-                    disabled={!shellPreferencesReady}
-                    aria-pressed={shellSnapshot.themeId === themeId}
-                    onClick={() => updateShellPreferences({ themeId })}
-                  >
-                    {SHELL_THEME_LABELS[themeId]}
-                  </NativeAppButton>
-                ))}
-              </div>
-              <h3 style={styles.sectionHeading}>Appearance mode</h3>
-              <div style={styles.optionGrid}>
-                {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
-                  <button
-                    key={appearanceMode}
-                    type="button"
-                    disabled={!shellPreferencesReady}
-                    aria-pressed={shellSnapshot.appearanceMode === appearanceMode}
-                    onClick={() => updateShellPreferences({ appearanceMode })}
-                  >
-                    {appearanceMode === "dark" ? "Dark" : "Light"}
-                  </button>
-                ))}
-              </div>
-              <h3 style={styles.sectionHeading}>Wallpaper</h3>
-              <div style={styles.optionGrid}>
+        <div style={styles.layout}>
+          <nav aria-label="Settings sections" style={styles.navigation}>
+            {SETTINGS_SECTIONS.map((section) => {
+              const selected = activeDestination === section.id;
+              return (
                 <NativeAppButton
+                  key={section.id}
                   type="button"
-                  disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
-                  aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
-                  onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
+                  aria-pressed={selected}
+                  aria-current={selected ? "page" : undefined}
+                  aria-controls={`settings-section-${section.id}`}
+                  style={styles.navigationButton}
+                  onClick={() => navigate(section.id)}
                 >
-                  Follow theme
+                  {section.label}
                 </NativeAppButton>
-                {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
-                  <NativeAppButton
-                    key={wallpaperId}
-                    type="button"
-                    disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
-                    aria-pressed={shellSnapshot.wallpaper.mode === "pinned" && shellSnapshot.wallpaper.id === wallpaperId}
-                    onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
-                  >
-                    {SHELL_WALLPAPER_LABELS[wallpaperId]}
-                  </NativeAppButton>
-                ))}
-              </div>
-              <h3 style={styles.sectionHeading}>Desktop overlay</h3>
-              <NativeAppButton
-                type="button"
-                disabled={!shellPreferencesReady}
-                aria-label="Show Plasmon watermark"
-                aria-pressed={shellSnapshot.showBrandWatermark !== false}
-                onClick={() => updateShellPreferences({ showBrandWatermark: shellSnapshot.showBrandWatermark === false })}
-              >
-                Plasmon watermark: {shellSnapshot.showBrandWatermark !== false ? "On" : "Off"}
-              </NativeAppButton>
-              <p style={styles.helpText}>The Plasmon SVG watermark is layered over every wallpaper and can be hidden independently.</p>
-              <h3 style={styles.sectionHeading}>Taskbar alignment</h3>
-              <div style={styles.optionGrid}>
-                <NativeAppButton type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "left"} onClick={() => updateShellPreferences({ taskbarAlignment: "left" })}>Left</NativeAppButton>
-                <NativeAppButton type="button" disabled={!shellPreferencesReady} aria-pressed={shellSnapshot.taskbarAlignment === "center"} onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}>Center</NativeAppButton>
-              </div>
-              {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
-            </>
-          ) : dependencies.setThemeName ? (
-            <label style={styles.controlRow}>
-              Theme
-              <select
-                style={styles.select}
-                value={theme ?? "system"}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => dependencies.setThemeName?.(event.currentTarget.value)}
-              >
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </label>
-          ) : (
-            <p>Theme controls will become available when Shell provides its settings callback.</p>
-          )}
-          {!shellSnapshot && (dependencies.setTaskbarMode ? (
-            <label style={styles.controlRow}>
-              Taskbar
-              <select
-                style={styles.select}
-                value={taskbar ?? "default"}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => dependencies.setTaskbarMode?.(event.currentTarget.value)}
-              >
-                <option value="default">Default</option>
-                <option value="compact">Compact</option>
-              </select>
-            </label>
-          ) : (
-            <p>Taskbar preferences will become available when Shell provides its settings callback.</p>
-          ))}
-        </NativeAppPanel>
+              );
+            })}
+          </nav>
 
-        <NativeAppPanel style={styles.card} aria-labelledby="associations-heading">
-          <h2 id="associations-heading" style={styles.subheading}>File associations</h2>
-          <p>
-            {dependencies.associations
-              ? "Per-resource defaults are available through Open With. A global default-enumeration API is not exposed by the current contract."
-              : "File association changes are available per resource through Properties / Open With."}
-          </p>
-        </NativeAppPanel>
+          <div style={styles.sectionContent}>
+            {activeDestination === "home" ? (
+              <section id="settings-section-home" aria-labelledby="settings-home-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="settings-home-heading" style={styles.subheading}>Settings home</h2>
+                  <p>Choose a section to manage a currently available Plasmon capability.</p>
+                </NativeAppPanel>
+                <NativeAppPanel style={styles.card} aria-labelledby="associations-heading">
+                  <h2 id="associations-heading" style={styles.subheading}>File associations</h2>
+                  <p>
+                    {dependencies.associations
+                      ? "Per-resource defaults are available through Open With. A global default-enumeration API is not exposed by the current contract."
+                      : "File association changes are available per resource through Properties / Open With."}
+                  </p>
+                </NativeAppPanel>
+              </section>
+            ) : null}
+
+            {activeDestination === "storage" ? (
+              <section id="settings-section-storage" aria-labelledby="storage-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="storage-heading" style={styles.subheading}>Storage</h2>
+                  {!storage ? (
+                    <p>Calculating local storage…</p>
+                  ) : storage.unavailableReason ? (
+                    <p role="status">Storage summary unavailable: {storage.unavailableReason}</p>
+                  ) : (
+                    <p>{storage.files} files · {storage.directories} folders · {formatBytes(storage.bytes)} logical file data</p>
+                  )}
+                </NativeAppPanel>
+              </section>
+            ) : null}
+
+            {activeDestination === "files" ? (
+              <section id="settings-section-files" aria-labelledby="files-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="files-heading" style={styles.subheading}>Files & Explorer</h2>
+                  {dependencies.hiddenVisibility ? (
+                    <>
+                      <label style={styles.checkboxRow}>
+                        <input
+                          type="checkbox"
+                          checked={alwaysShowHiddenFiles}
+                          disabled={!hiddenVisibilityReady}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                            const store = dependencies.hiddenVisibility;
+                            if (!store) return;
+                            const next = event.currentTarget.checked;
+                            setAlwaysShowHiddenFiles(next);
+                            setHiddenVisibilityError(null);
+                            void store.setAlwaysShowHiddenFiles(next)
+                              .catch((cause: unknown) => {
+                                setAlwaysShowHiddenFiles(store.getSnapshot().alwaysShowHiddenFiles);
+                                setHiddenVisibilityError(cause instanceof Error ? cause.message : String(cause));
+                              });
+                          }}
+                        />
+                        Always show hidden files
+                      </label>
+                      <p style={styles.helpText}>Show hidden resources across Search, Start, and File Explorer.</p>
+                      {hiddenVisibilityError ? <p role="alert">Hidden-file setting could not be saved: {hiddenVisibilityError}</p> : null}
+                    </>
+                  ) : (
+                    <p>Global hidden-file visibility is unavailable.</p>
+                  )}
+                </NativeAppPanel>
+              </section>
+            ) : null}
+
+            {activeDestination === "diagnostics" ? (
+              <section id="settings-section-diagnostics" aria-labelledby="diagnostics-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="diagnostics-heading" style={styles.subheading}>Diagnostics</h2>
+                  {dependencies.diagnosticSettings && diagnosticSettings ? (
+                    <>
+                      <label style={styles.controlRow}>
+                        System log minimum level
+                        <select
+                          aria-label="System log minimum level"
+                          style={styles.select}
+                          value={diagnosticSettings.fileMinLevel}
+                          disabled={!diagnosticSettingsReady}
+                          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                            const store = dependencies.diagnosticSettings;
+                            if (!store) return;
+                            const fileMinLevel = event.currentTarget.value as DiagnosticLevel;
+                            saveDiagnosticSetting(
+                              { ...diagnosticSettings, fileMinLevel },
+                              store.setFileMinLevel(fileMinLevel),
+                            );
+                          }}
+                        >
+                          {DIAGNOSTIC_LEVELS.map((level) => (
+                            <option key={level} value={level}>{level}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label style={styles.controlRow}>
+                        Browser console minimum level
+                        <select
+                          aria-label="Browser console minimum level"
+                          style={styles.select}
+                          value={diagnosticSettings.consoleMinLevel}
+                          disabled={!diagnosticSettingsReady}
+                          onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                            const store = dependencies.diagnosticSettings;
+                            if (!store) return;
+                            const consoleMinLevel = event.currentTarget.value as DiagnosticLevel;
+                            saveDiagnosticSetting(
+                              { ...diagnosticSettings, consoleMinLevel },
+                              store.setConsoleMinLevel(consoleMinLevel),
+                            );
+                          }}
+                        >
+                          {DIAGNOSTIC_LEVELS.map((level) => (
+                            <option key={level} value={level}>{level}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <p style={styles.helpText}>
+                        Missing or invalid values use safe defaults: info for /System/system.log and warn for the browser console.
+                      </p>
+                      {remoteReportingAvailable && diagnosticSettings.remoteReportingEnabled !== undefined ? (
+                        <>
+                          <label style={styles.checkboxRow}>
+                            <input
+                              type="checkbox"
+                              checked={diagnosticSettings.remoteReportingEnabled}
+                              disabled={!diagnosticSettingsReady}
+                              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                                const store = dependencies.diagnosticSettings;
+                                if (!store) return;
+                                const remoteReportingEnabled = event.currentTarget.checked;
+                                saveDiagnosticSetting(
+                                  { ...diagnosticSettings, remoteReportingEnabled },
+                                  store.setRemoteReportingEnabled(remoteReportingEnabled),
+                                );
+                              }}
+                            />
+                            Enable remote incident reporting
+                          </label>
+                          <p style={styles.helpText}>
+                            This controls only the separately provided remote incident sink. Local diagnostics remain enabled.
+                          </p>
+                        </>
+                      ) : null}
+                      {diagnosticSettingsError ? (
+                        <p role="alert">Diagnostic setting could not be saved: {diagnosticSettingsError}</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p>Diagnostic sink controls are unavailable.</p>
+                  )}
+                </NativeAppPanel>
+              </section>
+            ) : null}
+
+            {activeDestination === "personalization" ? (
+              <section id="settings-section-personalization" aria-labelledby="personalization-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="personalization-heading" style={styles.subheading}>Personalization</h2>
+                  {shellSnapshot ? (
+                    <>
+                      <h3 style={styles.sectionHeading}>Theme</h3>
+                      <div style={styles.optionGrid}>
+                        {SHELL_THEME_IDS.map((themeId) => (
+                          <NativeAppButton
+                            key={themeId}
+                            type="button"
+                            disabled={!shellPreferencesReady}
+                            aria-pressed={shellSnapshot.themeId === themeId}
+                            onClick={() => updateShellPreferences({ themeId })}
+                          >
+                            {SHELL_THEME_LABELS[themeId]}
+                          </NativeAppButton>
+                        ))}
+                      </div>
+                      <h3 style={styles.sectionHeading}>Appearance mode</h3>
+                      <div style={styles.optionGrid}>
+                        {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
+                          <button
+                            key={appearanceMode}
+                            type="button"
+                            disabled={!shellPreferencesReady}
+                            aria-pressed={shellSnapshot.appearanceMode === appearanceMode}
+                            onClick={() => updateShellPreferences({ appearanceMode })}
+                          >
+                            {appearanceMode === "dark" ? "Dark" : "Light"}
+                          </button>
+                        ))}
+                      </div>
+                      <h3 style={styles.sectionHeading}>Wallpaper</h3>
+                      <div style={styles.optionGrid}>
+                        <NativeAppButton
+                          type="button"
+                          disabled={!shellPreferencesReady || shellSnapshot.wallpaper.mode === "follow-theme"}
+                          aria-pressed={shellSnapshot.wallpaper.mode === "follow-theme"}
+                          onClick={() => updateShellPreferences({ wallpaper: { mode: "follow-theme" } })}
+                        >
+                          Follow theme
+                        </NativeAppButton>
+                        {SHELL_WALLPAPER_IDS.map((wallpaperId) => (
+                          <NativeAppButton
+                            key={wallpaperId}
+                            type="button"
+                            disabled={!shellPreferencesReady || effectiveShellWallpaper(shellSnapshot.themeId, shellSnapshot.wallpaper) === wallpaperId}
+                            aria-pressed={shellSnapshot.wallpaper.mode === "pinned" && shellSnapshot.wallpaper.id === wallpaperId}
+                            onClick={() => updateShellPreferences({ wallpaper: { mode: "pinned", id: wallpaperId } })}
+                          >
+                            {SHELL_WALLPAPER_LABELS[wallpaperId]}
+                          </NativeAppButton>
+                        ))}
+                      </div>
+                      <h3 style={styles.sectionHeading}>Desktop overlay</h3>
+                      <NativeAppButton
+                        type="button"
+                        disabled={!shellPreferencesReady}
+                        aria-label="Show Plasmon watermark"
+                        aria-pressed={shellSnapshot.showBrandWatermark !== false}
+                        onClick={() => updateShellPreferences({ showBrandWatermark: shellSnapshot.showBrandWatermark === false })}
+                      >
+                        Plasmon watermark: {shellSnapshot.showBrandWatermark !== false ? "On" : "Off"}
+                      </NativeAppButton>
+                      <p style={styles.helpText}>The Plasmon SVG watermark is layered over every wallpaper and can be hidden independently.</p>
+                      {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
+                    </>
+                  ) : dependencies.setThemeName ? (
+                    <label style={styles.controlRow}>
+                      Theme
+                      <select
+                        style={styles.select}
+                        value={theme ?? "system"}
+                        onChange={(event: ChangeEvent<HTMLSelectElement>) => dependencies.setThemeName?.(event.currentTarget.value)}
+                      >
+                        <option value="system">System</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </label>
+                  ) : (
+                    <p>Theme controls will become available when Shell provides its settings callback.</p>
+                  )}
+                </NativeAppPanel>
+              </section>
+            ) : null}
+
+            {activeDestination === "taskbar" ? (
+              <section id="settings-section-taskbar" aria-labelledby="taskbar-heading">
+                <NativeAppPanel style={styles.card}>
+                  <h2 id="taskbar-heading" style={styles.subheading}>Taskbar</h2>
+                  {shellSnapshot ? (
+                    <>
+                      <div style={styles.optionGrid}>
+                        <NativeAppButton
+                          type="button"
+                          disabled={!shellPreferencesReady}
+                          aria-pressed={shellSnapshot.taskbarAlignment === "left"}
+                          onClick={() => updateShellPreferences({ taskbarAlignment: "left" })}
+                        >
+                          Left
+                        </NativeAppButton>
+                        <NativeAppButton
+                          type="button"
+                          disabled={!shellPreferencesReady}
+                          aria-pressed={shellSnapshot.taskbarAlignment === "center"}
+                          onClick={() => updateShellPreferences({ taskbarAlignment: "center" })}
+                        >
+                          Center
+                        </NativeAppButton>
+                      </div>
+                      {shellPreferencesError ? <p role="alert">Appearance settings could not be saved: {shellPreferencesError}</p> : null}
+                    </>
+                  ) : dependencies.setTaskbarMode ? (
+                    <label style={styles.controlRow}>
+                      Taskbar
+                      <select
+                        style={styles.select}
+                        value={taskbar ?? "default"}
+                        onChange={(event: ChangeEvent<HTMLSelectElement>) => dependencies.setTaskbarMode?.(event.currentTarget.value)}
+                      >
+                        <option value="default">Default</option>
+                        <option value="compact">Compact</option>
+                      </select>
+                    </label>
+                  ) : (
+                    <p>Taskbar preferences will become available when Shell provides its settings callback.</p>
+                  )}
+                </NativeAppPanel>
+              </section>
+            ) : null}
+          </div>
+        </div>
       </NativeAppContentSurface>
     );
   };
@@ -429,6 +510,25 @@ const styles: Record<string, CSSProperties> = {
     margin: "0 0 18px",
     color: "var(--plasmon-text-primary)",
     fontSize: 24,
+  },
+  layout: {
+    display: "grid",
+    gridTemplateColumns: "minmax(170px, 210px) minmax(0, 1fr)",
+    gap: 16,
+    alignItems: "start",
+  },
+  navigation: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  navigationButton: {
+    width: "100%",
+    justifyContent: "flex-start",
+    textAlign: "left",
+  },
+  sectionContent: {
+    minWidth: 0,
   },
   subheading: {
     margin: "0 0 8px",
