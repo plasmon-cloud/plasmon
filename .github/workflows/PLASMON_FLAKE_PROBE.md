@@ -34,6 +34,17 @@ The targeted 3 observations use one prepared packet/setup. The broad observation
 
 Post-merge evidence is diagnostic. It cannot retroactively undo a completed merge.
 
+## Probe modes
+
+Probe mode controls **when and how much evidence is collected**, not the quality of the summary.
+
+- `merge-validation` is the approval-stage broad probe.
+- `baseline` is the integrated release broad probe.
+- `characterization` is targeted repeated evidence for deterministically selected Playwright scope.
+- `manual` is an explicitly dispatched diagnostic probe.
+
+All four modes use the same canonical human/machine summarizer. A 1-iteration approval probe must identify and classify a failing test just as clearly as a 3-, 10-, or 50-iteration probe. Iteration counts are secondary metadata; they are never a substitute for naming what failed.
+
 ## Target selection
 
 Automatic characterization uses `test/ci/select-plasmon-flake-characterization.mjs` as the impact authority. It selects exact changed Playwright files or statically resolved Plasmon consumers. Uncertain shared inputs fail closed rather than broadening into a whole-Specialist characterization sweep.
@@ -53,8 +64,62 @@ Without an explicit directive, the label may infer a target only when exactly on
 
 Removing the label stops future synchronize-triggered requests; it does not cancel evidence already dispatched for an earlier exact SHA.
 
+## Summary contract
+
+The summary is primarily a diagnostic answer for humans and coding agents. When a probe fails, the useful first question is **what failed and how confidently can the repository relate that failure to this PR?** A line such as `0/1` or `8/10` is only supporting evidence and belongs under probe metadata.
+
+Every applicable probe mode therefore uses the same mature failure parser. For every uniquely failing test that can be parsed, the summary records:
+
+1. the exact test file and Playwright `line:column` when available;
+2. objective PR file relation: `CHANGED IN PR` or `UNCHANGED IN PR`;
+3. deterministic relatedness: `DIRECT`, `STRONG`, `RELATED`, or `UNKNOWN`;
+4. the evidence supporting that relatedness classification;
+5. occurrence count and the probe iterations where the failure appeared.
+
+The machine-readable `summary.json` carries the same failure identities, classifications, evidence, and iteration provenance as the human step summary.
+
+### Objective PR relation
+
+`CHANGED IN PR` and `UNCHANGED IN PR` are facts derived only from the PR changed-file set. They do not themselves decide whether a failure is caused by the PR.
+
+For example, an unchanged Search acceptance can still fail because the PR changed Search implementation. Conversely, changing an acceptance file does not prove the product change caused the observed failure.
+
+For non-PR events such as integrated release pushes or ordinary manual probes, the summary reports `PR RELATION N/A` instead of inventing a PR relationship.
+
+### Deterministic relatedness
+
+Relatedness is deliberately discrete. The summarizer does not use AI, probabilities, fuzzy text similarity, or a synthetic `0-100` confidence score.
+
+| Relatedness | Emitted only when the repository can establish |
+| --- | --- |
+| `DIRECT` | The exact failing Playwright location overlaps a line changed by the PR. This is intentionally strict; if the summarizer cannot prove exact overlap it falls back to a weaker classification. |
+| `STRONG` | The failing test file changed, or the retained failure output directly references another file changed by the PR. |
+| `RELATED` | The failing E2E test statically imports, directly or transitively, changed E2E support code. |
+| `UNKNOWN` | None of the deterministic relationships above can be established confidently. |
+
+There is intentionally **no `UNRELATED` classification**. Failure to prove a relationship is not proof that the failure is unrelated or flaky. `UNKNOWN` must remain a valid and common answer.
+
+A representative failure summary is:
+
+```text
+### Failure summary
+
+- **UNCHANGED IN PR** `test/e2e/plasmon-search-geometry.spec.ts:99:1`
+  - Test: `Search › preserves geometry`
+  - Relatedness: **UNKNOWN**
+  - Occurrences: 1; probe iteration(s): 1
+  - Evidence: no deterministic relationship to the PR was established; UNKNOWN does not mean unrelated or flaky
+
+### Probe metadata
+
+- Probe mode: `merge-validation`
+- Retry-free passes: 0/1
+```
+
+If the PR directly changed the failing location, the same summary instead reports `CHANGED IN PR` and `DIRECT`. If the test itself stayed unchanged but its failure stack/output names a changed source file, it reports `UNCHANGED IN PR` and `STRONG`.
+
 ## Evidence semantics
 
-Every result records exact SHA, mode, scope, target, configured iteration count, workflow run number, workflow run attempt, and probe iteration.
+Every result records exact SHA, mode, scope, target, configured iteration count, workflow run number, workflow run attempt, and probe iteration. Failed iteration-result artifacts also retain the bounded probe command output needed by the canonical summarizer, while the existing dedicated diagnostics artifact continues to retain the richer browser/PocketIC evidence.
 
 A clean sample is evidence, not proof that a target cannot flake. An observed failure must remain visible and be classified rather than hidden with retries, sleeps, timeout inflation, broad skips, or weaker assertions.
