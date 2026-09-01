@@ -57,6 +57,14 @@ await filesystem.programFiles.ensureRuntimeDirectory("MonacoEditor");
 
 Program Files is **not** a Neutron Element installation database. `/Apps/*.neutron` remains the filesystem projection of Kernel-authoritative installation state. A Program Files subtree does not imply a `.sys` application, and runtime resources such as js-dos or EmulatorJS must not acquire fake `DOS.sys`, `Emulator.sys`, or similar wrappers merely because they have Program Files resources.
 
+## Subsystem-owned configuration documents
+
+Non-runtime advanced OS configuration lives in subsystem-owned documents below the managed `/System/Configuration` root. This is a filesystem location and reconciliation convention, not a monolithic settings file, Registry clone, or universal key/value service. Each owner declares its own file name, schema identity/version, defaults, validation/effective-value derivation, migrations, and truthful reload class.
+
+`ManagedConfigurationService` creates an owner directory and declared file once, marks the containers as system-managed, and preserves existing file bytes and unknown metadata on later boot/reconcile. `ProtectedManagedFsService` blocks arbitrary child creation, rename/move/copy/removal, and metadata tampering in those containers, while permitting ordinary writes to a valid declared configuration file. This exception applies only to file contents; it does not make configuration containers, packaged runtime source, or arbitrary children writable.
+
+`FilesystemConfigurationDocumentStore` is the reusable owner-file contract: malformed or unsupported documents use the last-known-good effective value while running and canonical defaults on cold start, invalid known fields use owner-defined safe defaults, migrations are explicit and preserve the document unless the owner changes it, and restore-defaults is an explicit filesystem write. It subscribes once to the filesystem invalidation seam and re-reads authoritative bytes; it does not poll or maintain per-property watchers. Runtime/application configuration remains under its owner-specific `/System/Program Files` seam, including Monaco's runtime configuration, and ordinary Shell, Visual, association, hidden-visibility, and diagnostic preferences remain in their existing authorities.
+
 ## Refactor direction
 
 Keep storage mechanics, managed-resource policy, projection reconciliation, Trash, and open dispatch as separable responsibilities even when composed by one filesystem core. Avoid growing `FsService` into a catch-all for unrelated desktop/application state.

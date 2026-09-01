@@ -25,6 +25,11 @@ import {
 } from "./managed.ts";
 import { FilesystemOpenDispatcher } from "./openDispatcher.ts";
 import {
+  ManagedConfigurationService,
+  reconcileConfigurationRoot,
+  type ConfigurationService,
+} from "./configuration.ts";
+import {
   ManagedProgramFilesService,
   reconcileProgramFilesRuntimeDirectory,
   type ProgramFilesService,
@@ -60,6 +65,7 @@ export interface FilesystemCoreServices {
   fs: ProtectedManagedFsService;
   ready: Promise<FilesystemCoreInitialization>;
   programFiles: ProgramFilesService;
+  configuration: ConfigurationService;
   trash: FilesystemTrashService;
   open: FilesystemOpenDispatcher;
   projections: StableNeutronProjectionService;
@@ -124,10 +130,12 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
   // barrier so an early runtime consumer cannot race the same directory create.
   const ready = initialize().then(async (initialization) => {
     await reconcileProgramFilesRuntimeDirectory(options.fs, "MonacoEditor");
+    await reconcileConfigurationRoot(options.fs);
     return initialization;
   });
   managed.setInitialization(ready);
   const programFiles = new ManagedProgramFilesService(options.fs, ready);
+  const configuration = new ManagedConfigurationService(options.fs, options.fs, ready);
 
   stopNeutron = options.neutron.subscribe(() => {
     if (disposed) return;
@@ -212,6 +220,7 @@ export function createFilesystemCore(options: FilesystemCoreOptions): Filesystem
     fs: managed,
     ready,
     programFiles,
+    configuration,
     trash,
     open,
     projections,
