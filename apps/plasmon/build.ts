@@ -2,10 +2,17 @@ import esbuild from "esbuild";
 import copyStaticFiles from "esbuild-copy-static-files";
 import { sassPlugin } from "esbuild-sass-plugin";
 import { createHash } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { BuildOptions } from "esbuild";
+import { materializeJsDosRuntime } from "./jsDosRuntimeMaterializer.ts";
 import { resolvePackageProfile } from "./packageProfilePolicy.ts";
+import {
+  prepareRuntimeConfiguration,
+  resolveRuntimeConfiguration,
+} from "./runtimeConfiguration.ts";
+import { createPlasmonDemoGameBundle } from "./src/games/demoFixtureBundle.ts";
+import { PACKAGED_DEMO_GAME_FILENAME } from "./src/games/demoFixtureContract.ts";
 import { assertMatureNativeAppBundle, cacheBustEntryAssets } from "./src/native-apps/packaging.ts";
 
 const mainOutfile = "./dist/web/main.js";
@@ -18,6 +25,41 @@ const devMode = args[0] === "dev";
 const packagePolicy = resolvePackageProfile();
 const isSlimMonacoProfile = packagePolicy.monacoProfile === "slim";
 const demoOverlay = packagePolicy.demoOverlay;
+
+function booleanEnvironment(name: string): boolean {
+  const value = process.env[name];
+  if (value === undefined || value === "" || value === "0" || value === "false") return false;
+  if (value === "1" || value === "true") return true;
+  throw new Error(`Invalid ${name} "${value}". Expected one of: 0, 1, false, true.`);
+}
+
+const demoGameFixtureSelected = booleanEnvironment("PLASMON_DEMO_GAME_FIXTURE");
+if (packagePolicy.isSlim && demoGameFixtureSelected) {
+  throw new Error("PLASMON_DEMO_GAME_FIXTURE cannot be enabled for the Slim package tier.");
+}
+
+const runtimeSelectionValue = process.env.PLASMON_RUNTIME_CONFIGURATION ?? "none";
+const runtimeSelection = runtimeSelectionValue === "js-dos"
+  ? fileURLToPath(new URL("./runtime-configurations/js-dos.json", import.meta.url))
+  : runtimeSelectionValue;
+const runtimePolicy = await resolveRuntimeConfiguration(runtimeSelection, {
+  packageTier: packagePolicy.packageTier,
+  demoOverlay,
+});
+const unsupportedRuntimeConsumers = runtimePolicy.configuration.runtimes.filter((id) => id !== "js-dos");
+if (unsupportedRuntimeConsumers.length > 0) {
+  throw new Error(
+    `Selected optional runtime consumer(s) are not restored yet: ${unsupportedRuntimeConsumers.join(", ")}`,
+  );
+}
+const jsDosRuntimeSelected = runtimePolicy.configuration.runtimes.includes("js-dos");
+const runtimePreparation = jsDosRuntimeSelected
+  ? await prepareRuntimeConfiguration(runtimePolicy, {
+    cacheRoot: process.env.PLASMON_RUNTIME_CACHE
+      ?? fileURLToPath(new URL("./.plasmon/runtime-cache/", import.meta.url)),
+    offline: process.env.PLASMON_RUNTIME_OFFLINE === "1" || process.env.PLASMON_RUNTIME_OFFLINE === "true",
+  })
+  : null;
 
 const [demoTextSource, demoMarkdownSource, demoSvgSource] = demoOverlay
   ? await Promise.all([
@@ -33,16 +75,18 @@ async function stripRemoteDiagnostics(): Promise<void> {
   if (sanitized !== source) await writeFile(mainOutfile, sanitized);
 }
 
-/**
- * Plasmon's application styles are imported by src/index.tsx. Monaco's ESM
- * modules contribute additional CSS to the same esbuild output. esbuild emits
- * that complete stylesheet as main.bundle.css; publish it as main.css because
- * public/index.html references that stable package path.
- */
 async function mergeApplicationStyles(): Promise<void> {
   const generated = await readFile(bundledCss, "utf8");
   await writeFile(outputCss, generated);
   await rm(bundledCss, { force: true });
+}
+
+async function materializeDemoGameFixture(): Promise<void> {
+  const fixturesRoot = "./dist/web/fixtures";
+  await rm(fixturesRoot, { recursive: true, force: true });
+  if (!demoGameFixtureSelected) return;
+  await mkdir(fixturesRoot, { recursive: true });
+  await writeFile(`${fixturesRoot}/${PACKAGED_DEMO_GAME_FILENAME}`, createPlasmonDemoGameBundle());
 }
 
 async function fingerprintEntryAssets(): Promise<void> {
@@ -105,9 +149,12 @@ const config: BuildOptions = {
   platform: "browser",
   define: {
     __PLASMON_SLIM_PROFILE__: JSON.stringify(packagePolicy.isSlim),
-    __PLASMON_GAME_RUNTIME__: JSON.stringify(false),
+    __PLASMON_GAME_RUNTIME__: JSON.stringify(jsDosRuntimeSelected),
+    __PLASMON_RUNTIME_JSDOS__: JSON.stringify(jsDosRuntimeSelected),
+    __PLASMON_RUNTIME_EMULATORJS__: JSON.stringify(false),
     __PLASMON_MONACO_SLIM__: JSON.stringify(isSlimMonacoProfile),
     __PLASMON_DEMO__: JSON.stringify(demoOverlay),
+    __PLASMON_DEMO_GAME_FIXTURE__: JSON.stringify(demoGameFixtureSelected),
     __PLASMON_DEMO_TEXT__: demoTextSource === undefined ? "undefined" : JSON.stringify(demoTextSource),
     __PLASMON_DEMO_MARKDOWN__: demoMarkdownSource === undefined ? "undefined" : JSON.stringify(demoMarkdownSource),
     __PLASMON_DEMO_SVG__: demoSvgSource === undefined ? "undefined" : JSON.stringify(demoSvgSource),
@@ -134,6 +181,10 @@ const config: BuildOptions = {
             monacoProfile: packagePolicy.monacoProfile,
           });
           await mergeApplicationStyles();
+          if (runtimePreparation) {
+            await materializeJsDosRuntime(runtimePolicy, runtimePreparation, "./dist/web");
+          }
+          await materializeDemoGameFixture();
           if (!devMode) await stripRemoteDiagnostics();
           await fingerprintEntryAssets();
         });

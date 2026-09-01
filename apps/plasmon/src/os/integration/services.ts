@@ -89,7 +89,12 @@ import {
   UnavailableResourceAuthorizationService,
 } from "./authorizationFakes.ts";
 import { IntegratedOpenService } from "./openService.ts";
-import { isCoreProfile, isGameRuntimeProfile, isSlimProfile } from "./packageProfile.ts";
+import {
+  isCoreProfile,
+  isSlimProfile,
+  packagedRuntimeSelection,
+  type PackagedRuntimeSelection,
+} from "./packageProfile.ts";
 import {
   terminalAppDefinition,
   terminalAssociationRules,
@@ -125,6 +130,8 @@ export interface CreatePlasmonServicesOptions {
   windows?: WindowManager;
   /** Explicit development/acceptance content only. Normal production boot omits demo seeds. */
   demoSeeds?: readonly FilesystemSeedSpec[];
+  /** Explicit package-composition input. Production callers use the build-defined packaged selection. */
+  runtimeSelection?: PackagedRuntimeSelection;
   /**
    * Capability seam for the separately owned remote incident sink. This layer
    * never installs a provider; callers may enable policy only when that sink exists.
@@ -191,6 +198,7 @@ function registerNativeApplications(
   trashAuthority: FileManagerTrashAuthority,
   clipboard: FileOperationClipboard,
   hiddenVisibility: HiddenVisibilityPreferenceStore,
+  runtimeSelection: PackagedRuntimeSelection,
   shellPreferences: ShellPreferencesController,
   diagnostics: DiagnosticService,
   diagnosticSettings: DiagnosticSettingsStore,
@@ -199,14 +207,16 @@ function registerNativeApplications(
   for (const handler of contentHandlerDefinitions) associations.registerHandler(handler);
   for (const rule of contentAssociationRules) associations.registerRule(rule);
 
-  if (isGameRuntimeProfile) {
+  if (runtimeSelection.emulatorJs) {
     associations.registerHandler(emulatorJsHandler);
     for (const rule of emulatorJsAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(
       emulatorJsRuntimeDefinition,
       createEmulatorJsRuntimeLoader(diagnostics.for(DiagnosticSubsystem.RuntimeEmulatorJs)),
     );
+  }
 
+  if (runtimeSelection.jsDos) {
     associations.registerHandler(jsDosHandler);
     for (const rule of jsDosAssociationRules) associations.registerRule(rule);
     nativeApps.registerWithLoader(
@@ -393,6 +403,7 @@ export function createPlasmonServices(
     fileManagerTrashAuthority,
     fileClipboard,
     hiddenVisibility,
+    options.runtimeSelection ?? packagedRuntimeSelection,
     shellPreferences,
     diagnostics,
     diagnosticSettings,

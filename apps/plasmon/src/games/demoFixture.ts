@@ -3,7 +3,7 @@ import {
   DEMO_GAME_MIME,
   DEMO_GAME_RESOURCE_NAME,
   PACKAGED_DEMO_GAME_FILENAME,
-} from "./demoFixtureBundle.ts";
+} from "./demoFixtureContract.ts";
 
 export const DEMO_GAME_FIXTURE_PARAM = "plasmon-fixture";
 export const DEMO_GAME_FIXTURE_VALUE = "demo-game";

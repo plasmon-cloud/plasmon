@@ -3,6 +3,7 @@ import {
   createDemoSeeds,
   reconcileDemoDesktopShortcuts,
 } from "./demo/demoContent.ts";
+import { loadPackagedDemoGameSeeds } from "./games/demoFixture.ts";
 import { installAppIconFallbacks } from "./iconFallback.ts";
 import { PlasmonOS } from "./os/PlasmonOS.tsx";
 import { installRuntimeDiagnosticCapture } from "./os/diagnostics/runtimeCapture.ts";
@@ -19,7 +20,11 @@ const container = document.getElementById("root");
 if (!container) throw new Error("Root element not found");
 
 async function start(): Promise<void> {
-  const demoSeeds = isDemoProfile ? createDemoSeeds() : [];
+  const explicitGameSeeds = await loadPackagedDemoGameSeeds(window.location.href);
+  const demoSeeds = [
+    ...(isDemoProfile ? createDemoSeeds() : []),
+    ...explicitGameSeeds,
+  ];
   const services = createPlasmonServices({ ...(demoSeeds.length > 0 ? { demoSeeds } : {}) });
   const runtimeDiagnostics = installRuntimeDiagnosticCapture(services.diagnostics);
   if (isDemoProfile) {

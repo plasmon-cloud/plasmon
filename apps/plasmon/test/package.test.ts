@@ -14,6 +14,7 @@ import {
   SLIM_MAX_BYTES,
 } from "../slimPackageGate.ts";
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
+import { OPTIONAL_RUNTIME_CATALOG } from "../runtimeConfiguration.ts";
 
 const SLIM_HEADROOM_TARGET_BYTES = 1_850_000;
 const manifestUrl = new URL("../neutron.json", import.meta.url);
@@ -25,6 +26,8 @@ const appDirectoryUrl = new URL("../", import.meta.url);
 const distRootUrl = new URL("../dist/", import.meta.url);
 const distWebUrl = new URL("../dist/web/", import.meta.url);
 const packagePolicy = resolvePackageProfile();
+const runtimeConfiguration = process.env.PLASMON_RUNTIME_CONFIGURATION ?? "none";
+const jsDosRuntimeSelected = runtimeConfiguration === "js-dos";
 const monacoWorkers = packagePolicy.monacoProfile === "slim"
   ? ["editor.worker.js"]
   : ["editor.worker.js", "json.worker.js", "css.worker.js", "html.worker.js", "ts.worker.js"];
@@ -73,11 +76,13 @@ test("plasmon package output matches the source manifest archive identity", asyn
     .sort();
 
   expect(archives).toEqual([expectedArchive]);
+  const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
   if (packagePolicy.isSlim) {
-    const archiveStats = await stat(new URL(expectedArchive, appDirectoryUrl));
     console.log(`Slim package test size: ${archiveStats.size} bytes`);
     expect(SLIM_HEADROOM_TARGET_BYTES).toBeLessThan(SLIM_MAX_BYTES);
     expect(archiveStats.size).toBeLessThan(SLIM_HEADROOM_TARGET_BYTES);
+  } else if (jsDosRuntimeSelected) {
+    console.log(`Base + js-dos package test size: ${archiveStats.size} bytes`);
   }
 });
 
@@ -142,26 +147,50 @@ test("Slim package input rejects repository-only artifacts and permits runtime a
   }
 });
 
-test("Base and Slim exclude heavyweight game/demo payloads and emit the exact requested Monaco worker set", async () => {
+test("package runtime inventory matches the explicit optional-runtime selection", async () => {
   expect(packagePolicy.demoOverlay).toBe(false);
 
   const archiveFiles = (await readdir(distRootUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
   const webFiles = (await readdir(distWebUrl, { recursive: true })).map((file) => file.replaceAll("\\", "/"));
-  const forbiddenGamePaths = archiveFiles.filter((file) => file.includes("jsdos")
-    || file.includes("emulatorjs")
-    || file.includes("emulatorjs-host")
-    || file.includes("Program Files/js-dos")
-    || file.includes("Program Files/EmulatorJS")
+  const gamePayloads = archiveFiles.filter((file) => file.startsWith("web/fixtures/")
+    || file.startsWith("web/Games/")
+    || [".jsdos", ".dosz", ".nes", ".rom"].some((extension) => file.toLowerCase().endsWith(extension)));
+  expect(gamePayloads).toEqual([]);
+
+  const emulatorJsPaths = archiveFiles.filter((file) => file.includes("emulatorjs")
+    || file.includes("EmulatorJS")
     || file.startsWith("module/emulatorjs/")
     || file.startsWith("module/emulatorjs-shim/")
     || file.startsWith("module/emulatorjs-runtime/")
     || file.startsWith("module/native-apps/games/game-libraries/")
-    || file.startsWith("module/native-apps/games/game-runtime/")
-    || file.startsWith("web/fixtures/")
-    || file.startsWith("web/Games/")
-    || [".jsdos", ".dosz", ".nes", ".rom"].some((extension) => file.toLowerCase().endsWith(extension)));
+    || file.startsWith("module/native-apps/games/game-runtime/"));
+  expect(emulatorJsPaths).toEqual([]);
 
-  expect(forbiddenGamePaths).toEqual([]);
+  const jsDosRoots = ["System/Program Files/js-dos", "runtime/jsdos"] as const;
+  if (!jsDosRuntimeSelected) {
+    const jsDosPaths = webFiles.filter((file) => jsDosRoots.some((root) => file === root || file.startsWith(`${root}/`)));
+    expect(jsDosPaths).toEqual([]);
+  } else {
+    expect(packagePolicy).toMatchObject({ packageTier: "base", isSlim: false, demoOverlay: false });
+    const requiredAssets = OPTIONAL_RUNTIME_CATALOG["js-dos"].requiredAssets;
+    const expected = jsDosRoots.flatMap((root) => requiredAssets.map((asset) => `${root}/${asset}`)).sort();
+    const runtimePaths = webFiles.filter((file) => jsDosRoots.some((root) => file.startsWith(`${root}/`)));
+    const actual: string[] = [];
+    for (const file of runtimePaths) {
+      if ((await stat(new URL(file, distWebUrl))).isFile()) actual.push(file);
+    }
+    expect(actual.sort()).toEqual(expected);
+
+    let logicalBytes = 0;
+    for (const asset of requiredAssets) {
+      const managed = await readFile(new URL(`../dist/web/System/Program Files/js-dos/${asset}`, import.meta.url));
+      const runtime = await readFile(new URL(`../dist/web/runtime/jsdos/${asset}`, import.meta.url));
+      expect(managed.length, `${asset} must contain runtime bytes`).toBeGreaterThan(0);
+      expect(runtime, `${asset} browser mirror must match Program Files authority`).toEqual(managed);
+      logicalBytes += managed.length;
+    }
+    console.log(`js-dos selected runtime logical bytes: ${logicalBytes}; emitted mirrored bytes: ${logicalBytes * 2}`);
+  }
 
   const workerPaths = webFiles.filter((file) => (file.includes("MonacoEditor/") || file.includes("runtime/monaco/")) && file.endsWith(".worker.js")).sort();
   expect(workerPaths).toEqual([

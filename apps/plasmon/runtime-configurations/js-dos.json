@@ -1,0 +1,5 @@
+{
+  "format": "plasmon-runtime-config-v1",
+  "id": "js-dos",
+  "runtimes": ["js-dos"]
+}
