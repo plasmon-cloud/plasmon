@@ -91,6 +91,7 @@ export interface FileManagerProps {
   onOpenDirectory?: (node: FsNode) => void | Promise<void>;
   onTranspileCmd?: (node: FsNode) => void | Promise<void>;
   onSnapshot?: (snapshot: FileManagerSnapshot) => void;
+  onPersonalize?: () => void | Promise<void>;
   confirmDelete?: (nodes: readonly FsNode[]) => boolean | Promise<boolean>;
   className?: string;
 }
@@ -117,6 +118,7 @@ export function FileManager({
   onOpenDirectory,
   onTranspileCmd,
   onSnapshot,
+  onPersonalize,
   confirmDelete,
   className,
 }: FileManagerProps) {
@@ -258,6 +260,7 @@ export function FileManager({
   );
   const operationPresentation = presentFileOperation(operation);
   const canPaste = Boolean(clipboard.snapshot());
+  const showPersonalize = presentation === "desktop" && Boolean(onPersonalize);
   const scriptExtension = contextNode?.kind === "file"
     ? contextNode.name.toLowerCase().match(/\.(cmd|run)$/u)?.[1] ?? null
     : null;
@@ -293,6 +296,12 @@ export function FileManager({
     if (action === "paste") {
       closeContextMenu();
       void commands.paste();
+      return;
+    }
+    if (action === "personalize") {
+      if (!showPersonalize || !onPersonalize) return;
+      closeContextMenu();
+      void onPersonalize();
       return;
     }
     if (action === "createShortcut") {
@@ -514,6 +523,7 @@ export function FileManager({
           canCreateShortcut={commands.canCreateShortcut}
           operationRunning={operationPresentation.running}
           canPaste={canPaste}
+          showPersonalize={showPersonalize}
           {...(presentation === "desktop" && desktopWallpaperMenu ? { desktopWallpaperMenu } : {})}
           onAction={menuAction}
           onDismiss={closeContextMenu}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { activateSettings } from "../native-apps/settings/activation.ts";
 import { Desktop } from "./desktop/index.ts";
 import { NativeProcessHost } from "./process/index.ts";
 import { AltTabBoundary } from "./shell/AltTabBoundary.tsx";
@@ -66,6 +67,7 @@ export function PlasmonOS({ services: provided }: PlasmonOSProps) {
               associations={services.associations}
               openService={services.openService}
               clipboard={services.fileClipboard}
+              onPersonalize={() => activateSettings(services.process, "personalization")}
             />
           </div>
 

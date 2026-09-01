@@ -38,6 +38,7 @@ function renderMenu(node: FsNode | null, overrides: Partial<ComponentProps<typeo
         canCreateShortcut={true}
         operationRunning={false}
         canPaste={false}
+        showPersonalize={false}
         onAction={(action) => actions.push(action)}
         {...overrides}
       />

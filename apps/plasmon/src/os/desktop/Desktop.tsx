@@ -103,6 +103,7 @@ export interface DesktopProps {
   associations?: AssociationRegistry;
   openService?: OpenService;
   clipboard?: FileOperationClipboard;
+  onPersonalize?: () => void | Promise<void>;
   className?: string;
 }
 
@@ -116,6 +117,7 @@ export function Desktop({
   associations,
   openService,
   clipboard: providedClipboard,
+  onPersonalize,
   className,
 }: DesktopProps) {
   const clipboard = useMemo(() => providedClipboard ?? new FileOperationClipboard(), [providedClipboard]);
@@ -249,6 +251,7 @@ export function Desktop({
           },
         }}
         onSnapshot={handleSnapshot}
+        {...(onPersonalize ? { onPersonalize } : {})}
         onIncomingDropPlacement={async (intent) => {
           const next = applyIncomingDesktopDropPositions(
             resolvedPositions,

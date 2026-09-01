@@ -28,7 +28,8 @@ export type FileManagerContextMenuAction =
   | "newCmd"
   | "newRun"
   | "import"
-  | "paste";
+  | "paste"
+  | "personalize";
 
 export interface FileManagerContextMenuState {
   x: number;
@@ -59,6 +60,7 @@ interface FileManagerContextMenuProps {
   canCreateShortcut: boolean;
   operationRunning: boolean;
   canPaste: boolean;
+  showPersonalize: boolean;
   desktopWallpaperMenu?: FileManagerDesktopWallpaperMenu;
   onAction: (action: FileManagerContextMenuAction) => void;
   onDismiss: () => void;
@@ -96,8 +98,13 @@ function moveFocus(menu: HTMLElement, target: HTMLElement, delta: number, select
   items[(index + delta + items.length) % items.length]?.focus();
 }
 
+export function shouldShowPersonalizeMenuItem(node: FsNode | null, enabled: boolean): boolean {
+  return node === null && enabled;
+}
+
 export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const showPersonalize = shouldShowPersonalizeMenuItem(props.node, props.showPersonalize);
   const [submenu, setSubmenu] = useState<"new" | "wallpaper" | null>(null);
 
   useLayoutEffect(() => {
@@ -194,6 +201,12 @@ export function FileManagerContextMenu(props: FileManagerContextMenuProps) {
           <button role="menuitem" data-fm-background-menuitem="true" data-fm-action="import" disabled={props.operationRunning} onMouseEnter={() => setSubmenu(null)}>Import Files…</button>
           <div className="fm-menu-separator" role="separator" />
           <button role="menuitem" data-fm-background-menuitem="true" data-fm-action="paste" disabled={props.operationRunning || !props.canPaste} onMouseEnter={() => setSubmenu(null)}>Paste</button>
+          {showPersonalize ? (
+            <>
+              <div className="fm-menu-separator" role="separator" />
+              <button type="button" role="menuitem" onClick={() => props.onAction("personalize")}>Personalize</button>
+            </>
+          ) : null}
         </>
       )}
     </div>
