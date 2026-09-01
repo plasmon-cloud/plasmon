@@ -2,17 +2,18 @@ import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
 
 const THEMES = [
-  { id: "plasmon-graphite", label: "Graphite", scheme: "dark" },
-  { id: "plasmon-verdant", label: "Verdant", scheme: "dark" },
-  { id: "plasmon-midnight", label: "Midnight", scheme: "dark" },
-  { id: "plasmon-ember", label: "Ember", scheme: "dark" },
-  { id: "plasmon-glacier", label: "Glacier", scheme: "light" },
-  { id: "plasmon-rosewood", label: "Rosewood", scheme: "dark" },
+  { id: "plasmon-graphite", label: "Graphite" },
+  { id: "plasmon-verdant", label: "Verdant" },
+  { id: "plasmon-midnight", label: "Midnight" },
+  { id: "plasmon-ember", label: "Ember" },
+  { id: "plasmon-glacier", label: "Glacier" },
+  { id: "plasmon-rosewood", label: "Rosewood" },
 ] as const;
 
 // PocketIC and the installed app have an external startup boundary; all later
@@ -116,7 +117,10 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await expect(explorer).toHaveAccessibleName("Documents — File Explorer");
 
     const generatedName = `Theme Probe ${Date.now()}.md`;
-    await explorer.getByRole("button", { name: "New Markdown Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      explorer.getByRole("listbox", { name: "Files" }),
+      "New Markdown Document",
+    );
     const generatedRename = explorer.locator('textarea[aria-label^="Rename New Markdown Document"]').last();
     await expect(generatedRename).toBeVisible();
     await generatedRename.fill(generatedName);
@@ -165,6 +169,11 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
     await settings.getByRole("button", { name: "Personalization", exact: true }).click();
     await expect(settings.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
 
+    const darkAppearance = settings.getByRole("button", { name: "Dark", exact: true });
+    await darkAppearance.click();
+    await expect(darkAppearance).toHaveAttribute("aria-pressed", "true");
+    await expect(shell).toHaveAttribute("data-plasmon-appearance", "dark");
+
     const observed = {
       desktop: new Set<string>(),
       titlebar: new Set<string>(),
@@ -182,6 +191,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
       await choice.click();
       await expect(choice).toHaveAttribute("aria-pressed", "true");
       await expect(shell).toHaveAttribute("data-plasmon-theme", theme.id);
+      await expect(shell).toHaveAttribute("data-plasmon-appearance", "dark");
 
       const desktop = await resolvedToken(shell, "--plasmon-desktop-background");
       const titlebar = await resolvedToken(shell, "--plasmon-window-titlebar");
@@ -217,7 +227,7 @@ test("all six themes reach Shell, Desktop, Windowing, and representative native-
       observed.nativeSettings.add(await computed(nativeSettingsSurface, "backgroundColor"));
 
       const scheme = await computed(shell, "colorScheme");
-      expect(scheme).toContain(theme.scheme);
+      expect(scheme).toContain("dark");
       await testInfo.attach(`theme-${theme.id}.png`, {
         body: await page.locator(appSelector).screenshot({ animations: "disabled" }),
         contentType: "image/png",
