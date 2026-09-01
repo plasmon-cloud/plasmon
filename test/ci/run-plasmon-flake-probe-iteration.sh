@@ -45,7 +45,7 @@ else
   outcome=failure
 fi
 
-cat > "$result_dir/result.txt" <<EOF
+cat > "$result_dir/result.txt" <<EOF_RESULT
 run_id=$run_id
 run_number=$run_number
 run_attempt=$run_attempt
@@ -59,9 +59,14 @@ scope=$scope
 test_file=$test_file
 test_grep=$test_grep
 test_files_json=$test_files_json
-EOF
+EOF_RESULT
 
 if [ "$status" -ne 0 ]; then
+  # The summary job already downloads the iteration-result artifacts. Keep the
+  # bounded failed command output beside result.txt so every probe mode can use
+  # the same human diagnostic summarizer without a second artifact dependency.
+  cp "$output_path" "$result_dir/probe-output.log"
+
   mkdir -p "$diagnostic_dir"
   cp "$result_dir/result.txt" "$diagnostic_dir/result.txt"
   cp "$output_path" "$diagnostic_dir/probe-output.log"

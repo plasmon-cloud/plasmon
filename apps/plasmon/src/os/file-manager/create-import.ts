@@ -1,12 +1,21 @@
 import type { FsNode, FsService, NodeId } from "../contracts/index.ts";
 import { collisionFreeName, normalizedSiblingName } from "./naming.ts";
 
-export type NewDocumentKind = "text" | "markdown";
+export type NewDocumentKind = "text" | "markdown" | "cmd" | "run";
 
 const DOCUMENT_NAMES: Record<NewDocumentKind, string> = {
   text: "New Text Document.txt",
   markdown: "New Markdown Document.md",
+  cmd: "New Command Script.cmd",
+  run: "New Run Script.run",
 };
+
+const DOCUMENT_TEMPLATES: Partial<Record<NewDocumentKind, string>> = {
+  cmd: "# Plasmon command script\n# Try: help\necho \"Hello from Plasmon\"\n",
+  run: "// Plasmon executable TypeScript (.run)\nprint(\"Hello from Plasmon\");\n",
+};
+
+const textEncoder = new TextEncoder();
 
 async function siblingNames(fs: FsService, directoryId: NodeId): Promise<Set<string>> {
   return new Set((await fs.list(directoryId)).map((node) => normalizedSiblingName(node.name)));
@@ -35,7 +44,10 @@ export async function createDocument(
   kind: NewDocumentKind,
 ): Promise<FsNode> {
   const name = collisionFreeName(DOCUMENT_NAMES[kind], false, await siblingNames(fs, directoryId));
-  return fs.createFile(directoryId, name);
+  let created = await fs.createFile(directoryId, name);
+  const template = DOCUMENT_TEMPLATES[kind];
+  if (template) created = await fs.write(created.id, textEncoder.encode(template), { offset: 0, truncate: true });
+  return created;
 }
 
 export const IMPORT_CHUNK_BYTES = 256 * 1024;

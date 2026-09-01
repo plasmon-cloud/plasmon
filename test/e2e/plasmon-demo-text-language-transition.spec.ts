@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -93,7 +94,10 @@ test("[demo profile] Text classifies FileManager rename and Save As language tra
     // Reproduce the screenshot boundary: FileManager creates a blank text document,
     // immediately renames the same NodeId to .js, and Text must open real JavaScript.
     const generatedName = `Generated JavaScript ${Date.now()}.js`;
-    await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      documentsExplorer.getByRole("listbox", { name: "Files" }),
+      "New Text Document",
+    );
     const generatedRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(generatedRename).toBeVisible();
     await generatedRename.fill(generatedName);

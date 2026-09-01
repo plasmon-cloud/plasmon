@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -77,8 +78,7 @@ test("first-party context ownership preserves editable and foreign boundaries", 
       y: Math.max(120, Math.floor(bounds.height * 0.55)),
     },
   });
-  const desktopMenu = app.getByRole("menu").last();
-  await desktopMenu.getByRole("menuitem", { name: "New Text Document" }).click();
+  await clickNewContextMenuItem(app, "New Text Document");
   const rename = app.getByRole("textbox", { name: "Rename New Text Document.txt" });
   await expect(rename).toBeVisible();
   expect(await contextMenuDefaultPrevented(rename)).toBe(false);
