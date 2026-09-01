@@ -68,6 +68,12 @@ export type ShellWallpaperPreference =
 export const SHELL_TASKBAR_ALIGNMENTS = ["center", "left"] as const;
 export type ShellTaskbarAlignment = (typeof SHELL_TASKBAR_ALIGNMENTS)[number];
 
+export const SHELL_TASKBAR_PLACEMENTS = ["bottom", "top"] as const;
+export type ShellTaskbarPlacement = (typeof SHELL_TASKBAR_PLACEMENTS)[number];
+
+export const SHELL_TASKBAR_ICON_SIZES = ["small", "medium", "large"] as const;
+export type ShellTaskbarIconSize = (typeof SHELL_TASKBAR_ICON_SIZES)[number];
+
 export interface ShellPreferences {
   version: 1;
   pinnedNative: string[];
@@ -79,6 +85,12 @@ export interface ShellPreferences {
   /** Defaults to true for legacy v1 preference objects that predate the watermark preference. */
   showBrandWatermark?: boolean;
   taskbarAlignment: ShellTaskbarAlignment;
+  /** Defaults to bottom for v1 preference objects that predate taskbar placement. */
+  taskbarPlacement: ShellTaskbarPlacement;
+  /** Defaults to medium, matching the pre-setting task icon scale. */
+  taskbarIconSize: ShellTaskbarIconSize;
+  /** Presentation-only visibility for the aggregate Neutron-trays entry point. */
+  showNeutronTray: boolean;
 }
 
 export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
@@ -90,6 +102,9 @@ export const DEFAULT_SHELL_PREFERENCES: ShellPreferences = Object.freeze({
   wallpaper: Object.freeze({ mode: "pinned" as const, id: "rosewood-bloom" as const }),
   showBrandWatermark: true,
   taskbarAlignment: "center",
+  taskbarPlacement: "bottom",
+  taskbarIconSize: "medium",
+  showNeutronTray: true,
 });
 
 export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SHELL_PREFERENCES): ShellPreferences {
@@ -104,6 +119,9 @@ export function cloneShellPreferences(preferences: ShellPreferences = DEFAULT_SH
       : { mode: "follow-theme" },
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
+    taskbarPlacement: preferences.taskbarPlacement ?? "bottom",
+    taskbarIconSize: preferences.taskbarIconSize ?? "medium",
+    showNeutronTray: preferences.showNeutronTray !== false,
   };
 }
 
@@ -170,6 +188,14 @@ function isTaskbarAlignment(value: unknown): value is ShellTaskbarAlignment {
   return typeof value === "string" && (SHELL_TASKBAR_ALIGNMENTS as readonly string[]).includes(value);
 }
 
+function isTaskbarPlacement(value: unknown): value is ShellTaskbarPlacement {
+  return typeof value === "string" && (SHELL_TASKBAR_PLACEMENTS as readonly string[]).includes(value);
+}
+
+function isTaskbarIconSize(value: unknown): value is ShellTaskbarIconSize {
+  return typeof value === "string" && (SHELL_TASKBAR_ICON_SIZES as readonly string[]).includes(value);
+}
+
 export function validateShellPreferences(value: unknown): ShellPreferences | null {
   if (!isRecord(value) || value.version !== 1) return null;
   const pinnedNative = stringList(value.pinnedNative);
@@ -177,6 +203,9 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
   const themeId = normalizeTheme(value.themeId);
   const appearanceMode = value.appearanceMode === undefined ? "dark" : value.appearanceMode;
   const taskbarAlignment = value.taskbarAlignment === undefined ? "center" : value.taskbarAlignment;
+  const taskbarPlacement = value.taskbarPlacement === undefined ? "bottom" : value.taskbarPlacement;
+  const taskbarIconSize = value.taskbarIconSize === undefined ? "medium" : value.taskbarIconSize;
+  const showNeutronTray = value.showNeutronTray === undefined ? true : value.showNeutronTray;
   const showBrandWatermark = value.showBrandWatermark === undefined ? true : value.showBrandWatermark;
   if (
     !pinnedNative
@@ -185,6 +214,9 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     || !isAppearanceMode(appearanceMode)
     || typeof showBrandWatermark !== "boolean"
     || !isTaskbarAlignment(taskbarAlignment)
+    || !isTaskbarPlacement(taskbarPlacement)
+    || !isTaskbarIconSize(taskbarIconSize)
+    || typeof showNeutronTray !== "boolean"
   ) {
     return null;
   }
@@ -197,6 +229,9 @@ export function validateShellPreferences(value: unknown): ShellPreferences | nul
     wallpaper: normalizeWallpaperPreference(value.wallpaper),
     showBrandWatermark,
     taskbarAlignment,
+    taskbarPlacement,
+    taskbarIconSize,
+    showNeutronTray,
   };
 }
 
@@ -220,6 +255,9 @@ function preferenceMetadataValue(preferences: ShellPreferences): JsonValue {
       : { mode: "follow-theme" },
     showBrandWatermark: preferences.showBrandWatermark !== false,
     taskbarAlignment: preferences.taskbarAlignment,
+    taskbarPlacement: preferences.taskbarPlacement,
+    taskbarIconSize: preferences.taskbarIconSize,
+    showNeutronTray: preferences.showNeutronTray,
   };
 }
 

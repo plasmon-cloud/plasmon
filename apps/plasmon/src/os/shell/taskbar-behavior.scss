@@ -1,0 +1,45 @@
+@layer plasmon-shell {
+  .plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__workspace {
+    bottom: 0;
+    top: var(--plasmon-taskbar-height);
+  }
+
+  .plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__taskbar {
+    border-bottom: 1px solid var(--plasmon-border-subtle);
+    border-top: 0;
+    bottom: auto;
+    top: 0;
+  }
+
+  .plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__panel:not(.plasmon-shell__context-menu),
+  .plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__error,
+  .plasmon-shell[data-taskbar-placement="top"] .plasmon-shell__notice {
+    bottom: auto;
+    top: calc(var(--plasmon-taskbar-height) + 10px);
+  }
+
+  .plasmon-shell__taskbar[data-taskbar-alignment="left"] {
+    justify-content: flex-start;
+  }
+
+  .plasmon-shell[data-task-icon-size="small"] {
+    --plasmon-shell-task-icon-size: 26px;
+  }
+
+  .plasmon-shell[data-task-icon-size="medium"] {
+    --plasmon-shell-task-icon-size: 34px;
+  }
+
+  .plasmon-shell[data-task-icon-size="large"] {
+    --plasmon-shell-task-icon-size: 40px;
+  }
+
+  .plasmon-shell .plasmon-shell__taskbar .plasmon-shell__app-icon {
+    height: var(--plasmon-shell-task-icon-size, 34px);
+    width: var(--plasmon-shell-task-icon-size, 34px);
+  }
+
+  .plasmon-shell[data-neutron-tray-visible="false"] .plasmon-shell__tray-button {
+    display: none;
+  }
+}

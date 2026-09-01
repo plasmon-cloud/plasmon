@@ -45,6 +45,9 @@ function stored(wallpaper: unknown, themeId: unknown = "plasmon-midnight") {
     appearanceMode: "dark",
     wallpaper,
     taskbarAlignment: "left",
+    taskbarPlacement: "bottom",
+    taskbarIconSize: "medium",
+    showNeutronTray: true,
   };
 }
 

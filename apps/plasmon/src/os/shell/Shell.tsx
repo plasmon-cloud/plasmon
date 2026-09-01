@@ -72,9 +72,11 @@ import type { StartItemPresentation } from "./StartSurface.tsx";
 import { StartSurfaceController } from "./StartSurfaceController.tsx";
 import type { StartMenuReconciliationController } from "./start-menu-reconciliation-controller.ts";
 import { parseStartShortcut, type StartShortcutTarget } from "./startMenu.ts";
+import { deriveShellTaskbarLayout } from "./taskbar-layout.ts";
 import { TaskbarGroupChooser } from "./TaskbarGroupChooser.tsx";
 import { useSearchSurfaceController } from "./use-search-surface-controller.ts";
 import "./shell.scss";
+import "./taskbar-behavior.scss";
 
 export interface ShellProps {
   process: ProcessController;
@@ -133,6 +135,7 @@ export function Shell({
   const { elements, error: neutronError } = useExternalElementSnapshot(neutron);
   const effectivePreferences = preferences ?? DEFAULT_SHELL_PREFERENCES;
   const effectiveWallpaperId = effectiveShellWallpaper(effectivePreferences.themeId, effectivePreferences.wallpaper);
+  const taskbarLayout = deriveShellTaskbarLayout(effectivePreferences);
   const preferencesReady = preferences !== null;
 
   useEffect(() => {
@@ -205,6 +208,12 @@ export function Shell({
       dispatchCoordination({ type: "dismiss-taskbar-group" });
     }
   }, [openTaskbarGroup, openTaskbarGroupHandlerId]);
+
+  useEffect(() => {
+    if (!taskbarLayout.showNeutronTray && flyout === "tray") {
+      dispatchCoordination({ type: "dismiss-flyout" });
+    }
+  }, [flyout, taskbarLayout.showNeutronTray]);
 
   useEffect(
     () => fsEvents?.subscribe(() => setStartFsRevision((value) => value + 1)) ?? (() => undefined),
@@ -505,6 +514,9 @@ export function Shell({
     data-plasmon-appearance={effectivePreferences.appearanceMode}
     data-plasmon-wallpaper={effectiveWallpaperId}
     data-plasmon-brand-watermark={effectivePreferences.showBrandWatermark === false ? "hidden" : "visible"}
+    data-taskbar-placement={taskbarLayout.placement}
+    data-task-icon-size={taskbarLayout.taskIconSize}
+    data-neutron-tray-visible={taskbarLayout.showNeutronTray ? "true" : "false"}
     aria-busy={!preferencesReady}
     onContextMenu={onShellContextMenu}
   >
@@ -557,7 +569,7 @@ export function Shell({
       onToday={() => setCalendarAnchor(startOfCalendarMonth(clock))}
     /> : null}
 
-    {flyout === "tray" ? <TraySurface
+    {flyout === "tray" && taskbarLayout.showNeutronTray ? <TraySurface
       entries={trayEntries}
       elementsById={elementsById}
       onOpenElement={(elementId) => { void openElement(elementId); }}
