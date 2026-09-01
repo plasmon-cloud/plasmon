@@ -138,9 +138,9 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       return (await services.fs.resolvePath(path)) !== null;
     },
 
-    list: async (path: string): Promise<readonly OsResource[]> => {
+    list: async (path: string, listOptions?: { includeHidden?: boolean }): Promise<readonly OsResource[]> => {
       const directory = await requireDirectory(services, path);
-      const children = await services.fs.list(directory.id);
+      const children = await services.fs.list(directory.id, { includeHidden: listOptions?.includeHidden === true });
       return Promise.all(children.map((node) => toResource(services, node)));
     },
 
@@ -180,11 +180,36 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
       return toResource(services, await services.fs.move(source.id, destination.id));
     },
 
+    rename: async (resourcePath: string, newName: string): Promise<OsResource> => {
+      const source = await requireNode(services, resourcePath);
+      return toResource(services, await services.fs.rename(source.id, newName));
+    },
+
     remove: async (path: string): Promise<void> => {
       const node = await requireNode(services, path);
       await services.filesystem.trash.trash(node.id);
     },
   } satisfies OsApi["fs"];
+
+  const openResult = async (
+    path: string,
+    opener: (node: FsNode) => Promise<void>,
+    explicitHandlerId?: string,
+  ): Promise<OpenResult> => {
+    const node = await requireNode(services, path);
+    const resource = await toResource(services, node);
+    const before = services.process.list();
+    await opener(node);
+    const process = processForRequestedResource(before, services.process.list(), node.id);
+    return {
+      resource,
+      ...(explicitHandlerId ? { handlerId: explicitHandlerId } : process ? { handlerId: process.handlerId } : {}),
+      ...(process ? {
+        processId: process.id,
+        ...(process.windowId ? { windowId: process.windowId } : {}),
+      } : {}),
+    };
+  };
 
   return {
     fs,
@@ -194,20 +219,14 @@ export function createPlasmonOsApi(options: CreatePlasmonOsApiOptions): OsApi {
     windows: {
       list: () => services.windows.list().map(toWindow),
     },
-    open: async (path: string): Promise<OpenResult> => {
-      const node = await requireNode(services, path);
-      const resource = await toResource(services, node);
-      const before = services.process.list();
-      await services.filesystem.open.openNode(node.id);
-      const process = processForRequestedResource(before, services.process.list(), node.id);
-      return {
-        resource,
-        ...(process ? {
-          handlerId: process.handlerId,
-          processId: process.id,
-          ...(process.windowId ? { windowId: process.windowId } : {}),
-        } : {}),
-      };
-    },
+    open: (path: string) => openResult(
+      path,
+      async (node) => { await services.filesystem.open.openNode(node.id); },
+    ),
+    openWith: (path: string, handlerId: string) => openResult(
+      path,
+      async (node) => { await services.openService.open(handlerId, { nodeId: node.id }); },
+      handlerId,
+    ),
   };
 }

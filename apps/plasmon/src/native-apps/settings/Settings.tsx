@@ -15,6 +15,7 @@ import {
 import type { HiddenVisibilityPreferenceStore } from "../../os/hiddenVisibility.ts";
 import {
   effectiveShellWallpaper,
+  SHELL_APPEARANCE_MODES,
   SHELL_THEME_IDS,
   SHELL_THEME_LABELS,
   SHELL_WALLPAPER_IDS,
@@ -376,6 +377,20 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                           >
                             {SHELL_THEME_LABELS[themeId]}
                           </NativeAppButton>
+                        ))}
+                      </div>
+                      <h3 style={styles.sectionHeading}>Appearance mode</h3>
+                      <div style={styles.optionGrid}>
+                        {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
+                          <button
+                            key={appearanceMode}
+                            type="button"
+                            disabled={!shellPreferencesReady}
+                            aria-pressed={shellSnapshot.appearanceMode === appearanceMode}
+                            onClick={() => updateShellPreferences({ appearanceMode })}
+                          >
+                            {appearanceMode === "dark" ? "Dark" : "Light"}
+                          </button>
                         ))}
                       </div>
                       <h3 style={styles.sectionHeading}>Wallpaper</h3>

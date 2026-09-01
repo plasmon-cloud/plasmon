@@ -12,9 +12,8 @@ test("Desktop background Personalize opens and retargets the singleton canonical
     await app.user.pointer({ target: desktopFiles, keys: "[MouseRight]" });
     let menu = await app.findByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
-      "New Folder",
-      "New Text Document",
-      "New Markdown Document",
+      "New ›",
+      "Change Wallpaper ›",
       "Import Files…",
       "Paste",
       "Personalize",
@@ -32,7 +31,7 @@ test("Desktop background Personalize opens and retargets the singleton canonical
 
     const settings = await app.findByRole("region", { name: "Settings" });
     expect(within(settings).getByRole("heading", { name: "Personalization" })).toBeDefined();
-    const settingsProcesses = () => app.environment.os.processes.list().filter(
+    const settingsProcesses = () => app.environment.services.process.list().filter(
       (process) => process.handlerId === "native:settings",
     );
     expect(settingsProcesses()).toHaveLength(1);

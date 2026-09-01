@@ -17,6 +17,13 @@ import {
   type FileManagerTrashAuthority,
 } from "../file-manager/index.ts";
 import {
+  effectiveShellWallpaper,
+  SHELL_WALLPAPER_IDS,
+  SHELL_WALLPAPER_LABELS,
+  type ShellPreferencesAuthority,
+  type ShellWallpaperId,
+} from "../shell/preferences.ts";
+import {
   applyDesktopDragDelta,
   applyIncomingDesktopDropPositions,
   desktopPositionsEqual,
@@ -39,6 +46,10 @@ function jsonObject(value: JsonValue | undefined): Record<string, JsonValue> | n
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, JsonValue>
     : null;
+}
+
+function errorMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 export function parseDesktopPositions(value: JsonValue | undefined): DesktopPositions {
@@ -88,6 +99,7 @@ export interface DesktopProps {
   trashAuthority: FileManagerTrashAuthority;
   fsEvents?: FsEventSource;
   process: ProcessController;
+  shellPreferences: ShellPreferencesAuthority;
   associations?: AssociationRegistry;
   openService?: OpenService;
   clipboard?: FileOperationClipboard;
@@ -101,6 +113,7 @@ export function Desktop({
   trashAuthority,
   fsEvents,
   process,
+  shellPreferences,
   associations,
   openService,
   clipboard: providedClipboard,
@@ -125,7 +138,7 @@ export function Desktop({
       setPositions(layout);
       setError(null);
     } catch (cause: unknown) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorMessage(cause));
     }
   }, [fs]);
 
@@ -154,7 +167,7 @@ export function Desktop({
       if (event.type === "reset" || event.type === "changed" && event.node.id === desktop.id) {
         void readDesktopPositions(fs, desktop.id)
           .then(setPositions)
-          .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+          .catch((cause: unknown) => setError(errorMessage(cause)));
       }
     });
   }, [desktop, fs, fsEvents]);
@@ -169,7 +182,7 @@ export function Desktop({
     setPositions(resolvedPositions);
     void persistDesktopPositions(fs, desktop.id, resolvedPositions)
       .then(() => setError(null))
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+      .catch((cause: unknown) => setError(errorMessage(cause)));
   }, [desktop, fs, orderedIds.length, positions, resolvedPositions]);
 
   const handleSnapshot = useCallback((snapshot: FileManagerSnapshot) => {
@@ -213,6 +226,30 @@ export function Desktop({
         clipboard={clipboard}
         presentation="desktop"
         positions={resolvedPositions}
+        desktopWallpaperMenu={{
+          get choices() {
+            const snapshot = shellPreferences.getSnapshot();
+            const active = effectiveShellWallpaper(snapshot.themeId, snapshot.wallpaper);
+            return SHELL_WALLPAPER_IDS.map((id) => ({
+              id,
+              label: SHELL_WALLPAPER_LABELS[id],
+              selected: active === id,
+            }));
+          },
+          get disabled() { return !shellPreferences.isReady(); },
+          async onSelect(id) {
+            try {
+              const outcome = await shellPreferences.save({
+                ...shellPreferences.getSnapshot(),
+                wallpaper: { mode: "pinned", id: id as ShellWallpaperId },
+              });
+              if (!outcome.saved) throw outcome.error;
+              setError(null);
+            } catch (cause: unknown) {
+              setError(`Wallpaper preference could not be saved: ${errorMessage(cause)}`);
+            }
+          },
+        }}
         onSnapshot={handleSnapshot}
         {...(onPersonalize ? { onPersonalize } : {})}
         onIncomingDropPlacement={async (intent) => {
@@ -227,7 +264,7 @@ export function Desktop({
             setPositions(next);
             setError(null);
           } catch (cause: unknown) {
-            setError(cause instanceof Error ? cause.message : String(cause));
+            setError(errorMessage(cause));
             throw cause;
           }
         }}
@@ -241,7 +278,7 @@ export function Desktop({
             await persistDesktopPositions(fs, desktop.id, next);
             setError(null);
           } catch (cause: unknown) {
-            setError(cause instanceof Error ? cause.message : String(cause));
+            setError(errorMessage(cause));
           }
         }}
       />

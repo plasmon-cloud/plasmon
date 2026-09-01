@@ -111,9 +111,11 @@ test("package guard rejects the retired top-level Monaco worker path", () => {
 });
 
 test("entry asset fingerprint replaces stale query values deterministically", () => {
-  const html = '<link rel="stylesheet" href="./main.css?v=old"><script type="module" src="./main.js"></script>';
+  const html = '<link rel="stylesheet" href="./main.css?v=old"><script src="./runtime/monaco/worker-sources.js?v=older"></script><script type="module" src="./main.js"></script>';
   const fingerprinted = cacheBustEntryAssets(html, "0123456789abcdef");
   expect(fingerprinted).toContain("./main.css?v=0123456789abcdef");
+  expect(fingerprinted).toContain("./runtime/monaco/worker-sources.js?v=0123456789abcdef");
   expect(fingerprinted).toContain("./main.js?v=0123456789abcdef");
   expect(fingerprinted).not.toContain("?v=old");
+  expect(fingerprinted).not.toContain("?v=older");
 });

@@ -15,6 +15,11 @@ const trayElement: ExternalElement = {
 
 test("Shell composes calendar and tray coordination with canonical Settings activation", async () => {
   const app = await renderPlasmon({ elements: [trayElement] });
+  const shellPreferences = app.environment.services.shellPreferences;
+  await shellPreferences.save({
+    ...shellPreferences.getSnapshot(),
+    wallpaper: { mode: "follow-theme" },
+  });
 
   try {
     const taskbar = app.getByRole("navigation", { name: "Taskbar" });
@@ -120,8 +125,11 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     expect(settingsProcesses[0]?.id).toBe(settingsProcess?.id);
     const settingsAfterLauncher = app.getByRole("region", { name: "Settings" });
     const navigationAfterLauncher = within(settingsAfterLauncher).getByRole("navigation", { name: "Settings sections" });
-    expect(within(navigationAfterLauncher).getByRole("button", { name: "Home" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(settingsAfterLauncher).getByRole("heading", { name: "Settings home" })).toBeDefined();
+    const homeAfterLauncher = within(navigationAfterLauncher).getByRole("button", { name: "Home" });
+    await waitFor(() => {
+      expect(homeAfterLauncher.getAttribute("aria-pressed")).toBe("true");
+      expect(within(settingsAfterLauncher).getByRole("heading", { name: "Settings home" })).toBeDefined();
+    });
     expect(within(settingsAfterLauncher).queryByRole("heading", { name: "Backup & sharing" })).toBeNull();
     expect(app.queryByRole("region", { name: "Shell settings" })).toBeNull();
   } finally {

@@ -145,6 +145,7 @@ export function NativeProcessHost({
   }, [appId, hasLoader, onMissingLoader]);
 
   if (!record || !HostedApplication) return <>{missingFallback}</>;
+  if (record.state !== "running") return <>{fallback}</>;
 
   return (
     <NativeHostErrorBoundary

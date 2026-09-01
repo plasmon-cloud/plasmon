@@ -20,6 +20,19 @@
   text-shadow: var(--plasmon-wallpaper-label-shadow);
 }
 
+/*
+ * Selected light-mode Desktop entries sit on a semantic selection surface, not
+ * directly on arbitrary wallpaper. Use the selection ink there and suppress
+ * the normal wallpaper contrast shadow so the selected label does not gain the
+ * inappropriate white outline/stroke reported in #748. Unselected labels keep
+ * the #620 wallpaper treatment above unchanged.
+ */
+.plasmon-shell[data-plasmon-appearance="light"] .fm-entry--desktop.is-selected:not(.is-renaming) .fm-entry__name,
+.plasmon-shell[data-plasmon-appearance="light"] .fm-entry--desktop.is-selected .fm-entry__expanded-name {
+  color: var(--plasmon-selection-text);
+  text-shadow: none;
+}
+
 .plasmon-icon-frame--thumbnail,
 .plasmon-native-app-surface[data-photos-display-mode] img {
   background-color: var(--plasmon-transparency-surface);

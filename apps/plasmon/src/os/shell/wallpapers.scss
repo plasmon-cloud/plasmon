@@ -1,7 +1,7 @@
 @layer plasmon-shell {
   // Every wallpaper is a packaged image. Graphite uses the supplied JPG;
-  // the other theme companions are authored SVG artwork. The watermark is a
-  // separate Shell overlay so it can be toggled without changing the artwork.
+  // the other theme companions are authored SVG artwork. The independently
+  // toggleable watermark is composed above that artwork by the wallpaper layer.
   .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
     background: url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
   }
