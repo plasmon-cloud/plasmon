@@ -96,7 +96,9 @@ export function classifyPlasmonTest(path) {
   if (path.includes("/test/tdd/.red/") || path.includes("/test/.red/")) {
     return { layer: "excluded-red", reason: "intentionally RED TDD staging is not production regression coverage" };
   }
-  if (path === "apps/plasmon/test/package.test.ts") return { layer: "package" };
+  if (path === "apps/plasmon/test/package.test.ts" || path === "apps/plasmon/test/demoPackage.test.ts") {
+    return { layer: "package" };
+  }
   if (path.startsWith("apps/plasmon/test/rtl/")) return { layer: "rtl" };
   if (path.startsWith("apps/plasmon/src/") || path.startsWith("apps/plasmon/test/")) return { layer: "fast" };
   if (browserSpecPattern.test(path)) {
