@@ -89,7 +89,7 @@ test("six wallpapers are visible, follow themes, pin independently, and share a 
     })).toBe("rgba(0, 0, 0, 0)|none");
 
     await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
-    const watermark = await shell.evaluate(async (element, assetPath) => {
+    const watermark = await wallpaper.evaluate(async (element, assetPath) => {
       const style = getComputedStyle(element, "::after");
       const image = new Image();
       image.src = new URL(assetPath, document.baseURI).href;
@@ -115,10 +115,10 @@ test("six wallpapers are visible, follow themes, pin independently, and share a 
     expect(watermark.backgroundImage).toContain("plasmon-watermark.svg");
     expect(watermark.backgroundSize).toContain("contain");
     expect(watermark.content).not.toBe("none");
-    expect(Number.parseFloat(watermark.height)).toBeGreaterThan(0);
+    expect(Number.parseFloat(watermark.height)).toBeGreaterThan(42);
     expect(watermark.right).not.toBe("auto");
-    expect(Number.parseFloat(watermark.width)).toBeGreaterThan(0);
-    expect(Number(watermark.zIndex)).toBeGreaterThan(0);
+    expect(Number.parseFloat(watermark.width)).toBeGreaterThan(176);
+    expect(watermark.zIndex).toBe("auto");
     expect(watermark.naturalWidth).toBeGreaterThan(0);
     expect(watermark.naturalHeight).toBeGreaterThan(0);
 
@@ -142,20 +142,26 @@ test("six wallpapers are visible, follow themes, pin independently, and share a 
     const start = app.getByRole("region", { name: "Start menu" });
     await expect(start).toBeVisible();
     await start.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = app.getByRole("region", { name: "Settings" }).last();
+    const settings = app.getByRole("region", { name: "Settings", exact: true }).last();
     await expect(settings).toBeVisible({ timeout: 20_000 });
+    await settings.getByRole("button", { name: "Personalization", exact: true }).click();
+    await expect(settings.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
 
     const watermarkToggle = settings.getByRole("button", { name: "Show Plasmon watermark", exact: true });
     await expect(watermarkToggle).toHaveAttribute("aria-pressed", "true");
     await watermarkToggle.click();
     await expect(watermarkToggle).toHaveAttribute("aria-pressed", "false");
     await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "hidden");
-    expect(await shell.evaluate((element) => getComputedStyle(element, "::after").backgroundImage)).toBe("none");
+    expect(await wallpaper.evaluate((element) => getComputedStyle(element, "::after").backgroundImage)).toBe("none");
     await watermarkToggle.click();
     await expect(watermarkToggle).toHaveAttribute("aria-pressed", "true");
     await expect(shell).toHaveAttribute("data-plasmon-brand-watermark", "visible");
 
     const follow = settings.getByRole("button", { name: "Follow theme", exact: true });
+    await expect(follow).toHaveAttribute("aria-pressed", "false");
+    await expect(follow).toBeEnabled();
+    await expect(shell).toHaveAttribute("data-plasmon-wallpaper", "rosewood-bloom");
+    await follow.click();
     await expect(follow).toHaveAttribute("aria-pressed", "true");
     await expect(follow).toBeDisabled();
     await expect(settings.getByRole("button", { name: "Graphite Sand", exact: true })).toBeDisabled();

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { act } from "@testing-library/react";
+import { act, within } from "@testing-library/react";
 import { renderPlasmon } from "../renderPlasmon.tsx";
 
 /**
@@ -40,7 +40,9 @@ test("representative native apps consume shared content chrome", async () => {
     });
     const settingsSurface = await app.findByRole("region", { name: "Settings" });
     expect(settingsSurface.classList.contains("plasmon-native-app-surface")).toBe(true);
-    const storageHeading = await app.findByRole("heading", { name: "Storage" });
+    const navigation = within(settingsSurface).getByRole("navigation", { name: "Settings sections" });
+    await app.user.click(within(navigation).getByRole("button", { name: "Storage" }));
+    const storageHeading = within(settingsSurface).getByRole("heading", { name: "Storage" });
     expect(storageHeading.closest("section")?.classList.contains("plasmon-native-app-panel")).toBe(true);
   } finally {
     app.dispose();

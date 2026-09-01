@@ -19,8 +19,10 @@ test("Personalization exposes real thumbnails, Follow theme, filesystem choice, 
   const app = await renderPlasmon();
   try {
     await act(async () => {
-      await app.environment.os.fs.createDirectory("/Pictures");
-      await app.environment.os.fs.writeText("/Pictures/My Wallpaper.svg", SVG);
+      const pictures = await app.environment.services.fs.resolvePath("/Pictures");
+      if (!pictures || pictures.kind !== "directory") throw new Error("Pictures directory is unavailable");
+      const wallpaper = await app.environment.services.fs.createFile(pictures.id, "My Wallpaper.svg", { mime: "image/svg+xml" });
+      await app.environment.services.fs.write(wallpaper.id, new TextEncoder().encode(SVG), { truncate: true });
     });
     const controls = await openPersonalization(app);
     const shell = app.container.querySelector<HTMLElement>(".plasmon-shell");

@@ -114,6 +114,8 @@ const TYPE_BY_EXTENSION: Readonly<Record<string, TypeHint>> = Object.freeze({
   ".cts": { mime: "text/typescript", contentKind: "source", language: "typescript" },
   ".mts": { mime: "text/typescript", contentKind: "source", language: "typescript" },
   ".tsx": { mime: "text/typescript", contentKind: "source", language: "typescript" },
+  ".run": { mime: "text/typescript", contentKind: "source", language: "typescript" },
+  ".cmd": { mime: "application/x-sh", contentKind: "source", language: "shell" },
   ".css": { mime: "text/css", contentKind: "source", language: "css" },
   ".scss": { mime: "text/x-scss", contentKind: "source", language: "scss" },
   ".html": { mime: "text/html", contentKind: "source", language: "html" },

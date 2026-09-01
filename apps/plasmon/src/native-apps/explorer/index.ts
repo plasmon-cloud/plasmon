@@ -3,6 +3,7 @@ import type {
   AssociationRegistry,
   FsEventSource,
   NativeAppDefinition,
+  NodeId,
   OpenService,
 } from "../../os/contracts/index.ts";
 import type { DiagnosticService } from "../../os/diagnostics/index.ts";
@@ -39,6 +40,7 @@ export interface ExplorerNativeDependencies {
   clipboard?: FileOperationClipboard;
   hiddenVisibility: HiddenVisibilityPreferenceStore;
   diagnostics?: DiagnosticService;
+  transpileCmdFile?: (nodeId: NodeId) => Promise<void>;
 }
 
 export function createExplorerNativeLoader(dependencies: ExplorerNativeDependencies): NativeAppLoader {
@@ -54,6 +56,7 @@ export function createExplorerNativeLoader(dependencies: ExplorerNativeDependenc
       ...(dependencies.fsEvents ? { fsEvents: dependencies.fsEvents } : {}),
       ...(dependencies.clipboard ? { clipboard: dependencies.clipboard } : {}),
       ...(dependencies.diagnostics ? { diagnostics: dependencies.diagnostics } : {}),
+      ...(dependencies.transpileCmdFile ? { transpileCmdFile: dependencies.transpileCmdFile } : {}),
     });
     return { default: Component };
   };

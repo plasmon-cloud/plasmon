@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -68,14 +69,20 @@ test("Text classifies FileManager rename and Save As language transitions in liv
     const plainName = `Plain Text Fixture ${Date.now()}.txt`;
 
     // Create both resources through the production FileManager boundary.
-    await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      documentsExplorer.getByRole("listbox", { name: "Files" }),
+      "New Text Document",
+    );
     const generatedRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(generatedRename).toBeVisible();
     await generatedRename.fill(generatedName);
     await generatedRename.press("Enter");
     await expect(documentsExplorer.locator("[data-fm-node-id]", { hasText: generatedName }).first()).toBeVisible({ timeout: 20_000 });
 
-    await documentsExplorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      documentsExplorer.getByRole("listbox", { name: "Files" }),
+      "New Text Document",
+    );
     const plainRename = documentsExplorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(plainRename).toBeVisible();
     await plainRename.fill(plainName);

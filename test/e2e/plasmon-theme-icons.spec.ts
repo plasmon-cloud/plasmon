@@ -115,8 +115,10 @@ test("visible, native-window, and dragged owned icons actually recolor across al
       await start.getByRole("button", { name: "Settings", exact: true }).click();
       const window = app.getByRole("dialog", { name: "Settings" }).last();
       await expect(window).toBeVisible({ timeout: 20_000 });
-      const settings = window.getByRole("region", { name: "Settings" });
+      const settings = window.getByRole("region", { name: "Settings", exact: true });
       await expect(settings).toBeVisible();
+      await settings.getByRole("button", { name: "Personalization", exact: true }).click();
+      await expect(settings.getByRole("heading", { name: "Personalization", exact: true })).toBeVisible();
       return { settings, window };
     };
 

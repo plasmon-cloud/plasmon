@@ -378,6 +378,7 @@ export function createSettingsComponent(dependencies: SettingsDependencies = {})
                         ))}
                       </div>
                       <h3 style={styles.sectionHeading}>Appearance mode</h3>
+
                       <div style={styles.optionGrid}>
                         {SHELL_APPEARANCE_MODES.map((appearanceMode) => (
                           <NativeAppButton
