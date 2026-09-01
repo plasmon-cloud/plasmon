@@ -1,5 +1,6 @@
 @layer plasmon-shell {
   .plasmon-shell__panel.plasmon-shell__search-panel {
+    animation: none;
     display: flex;
     flex-direction: column;
     height: min(76vh, 620px);
@@ -9,21 +10,6 @@
   .plasmon-shell__search-panel > .plasmon-shell__search-box,
   .plasmon-shell__search-panel > .plasmon-shell__tabs {
     flex: 0 0 auto;
-  }
-
-  .plasmon-shell__search-panel > .plasmon-shell__search-box {
-    transition:
-      border-color var(--plasmon-motion-fast) ease,
-      box-shadow var(--plasmon-motion-fast) ease;
-  }
-
-  .plasmon-shell__search-panel > .plasmon-shell__search-box:focus-within {
-    border-color: var(--plasmon-focus-ring);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--plasmon-focus-ring) 34%, transparent);
-  }
-
-  .plasmon-shell__search-box input:focus-visible {
-    outline: none;
   }
 
   .plasmon-shell__search-panel > .plasmon-shell__results {

@@ -95,6 +95,11 @@ import {
   packagedRuntimeSelection,
   type PackagedRuntimeSelection,
 } from "./packageProfile.ts";
+import {
+  terminalAppDefinition,
+  terminalAssociationRules,
+  terminalHandler,
+} from "../../native-apps/terminal/definition.ts";
 
 export interface PlasmonServices {
   fs: FsService;
@@ -404,6 +409,11 @@ export function createPlasmonServices(
     diagnosticSettings,
     nativeAppLog,
   );
+  if (!isCoreProfile && !isSlimProfile) {
+    associations.registerHandler(terminalHandler);
+    for (const rule of terminalAssociationRules) associations.registerRule(rule);
+    nativeApps.register(terminalAppDefinition);
+  }
 
   const filesystemCore = createFilesystemCore({
     fs: rawFs,
@@ -457,8 +467,7 @@ export function createPlasmonServices(
   const startMenu = new StartMenuReconciliationController(fs, nativeApps, neutron, {
     diagnostics: shellLog,
   });
-
-  return {
+  const services: PlasmonServices = {
     fs,
     fsEvents: fs,
     filesystem,
@@ -477,4 +486,36 @@ export function createPlasmonServices(
     hiddenVisibility,
     shellPreferences,
   };
+
+  if (isSlimProfile) return services;
+
+  let scriptingIntegration: Promise<import("../../scripting/integration.ts").ScriptingIntegration> | null = null;
+  const getScriptingIntegration = () => scriptingIntegration ??= import("../../scripting/integration.ts")
+    .then(({ createScriptingIntegration }) => createScriptingIntegration(services));
+
+  nativeApps.setLoader(
+    explorerAppDefinition.id,
+    createExplorerNativeLoader({
+      fsEvents: fs,
+      associations,
+      openService,
+      openAuthority: fileManagerOpenAuthority,
+      trashAuthority: fileManagerTrashAuthority,
+      clipboard: fileClipboard,
+      hiddenVisibility,
+      diagnostics,
+      transpileCmdFile: async (nodeId) => {
+        const { scripting } = await getScriptingIntegration();
+        return scripting.transpileCmdFile(await fs.pathOf(nodeId));
+      },
+    }),
+  );
+  if (!isCoreProfile) {
+    nativeApps.setLoader(
+      terminalAppDefinition.id,
+      async () => (await getScriptingIntegration()).terminalLoader(),
+    );
+  }
+
+  return services;
 }

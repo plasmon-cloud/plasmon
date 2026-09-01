@@ -15,6 +15,7 @@ import { isDemoProfile } from "./os/integration/packageProfile.ts";
 import "./style.scss";
 import "./os/integration/visual-tokens.scss";
 import "./os/integration/theme-graphite.scss";
+import "./os/integration/theme-appearance.scss";
 
 installAppIconFallbacks();
 

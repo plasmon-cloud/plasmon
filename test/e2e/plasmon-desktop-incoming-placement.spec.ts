@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 async function launchPlasmon(page: import("@playwright/test").Page) {
   const runtime = resolveLocalNeutronRuntime();
@@ -50,8 +51,7 @@ test("Explorer to Desktop drop commits the icon where the ghost is released", as
     await favorites.getByRole("button", { name: "Documents", exact: true }).click();
     await expect(address).toHaveValue("/Documents");
 
-    const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
-    await commandBar.getByRole("button", { name: "New Text Document" }).click();
+    await chooseFileManagerBackgroundAction(explorerFiles, "New Text Document");
     const rename = explorerFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
     await expect(rename).toBeVisible();
     const sourceName = await rename.inputValue();

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 test("active multi-selection drag preview is above windows and transparent to hit testing", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
@@ -91,8 +92,7 @@ test("active multi-selection drag preview is above windows and transparent to hi
     // through Explorer, then move it into the existing Documents directory using
     // that same Explorer FileManager's canonical pointer path.
     const explorerFiles = explorerWindow.getByRole("listbox", { name: "Files" });
-    const commandBar = explorerFiles.getByRole("toolbar", { name: "File commands" });
-    await commandBar.getByRole("button", { name: "New Text Document" }).click();
+    await chooseFileManagerBackgroundAction(explorerFiles, "New Text Document");
     const rename = explorerFiles.getByRole("textbox", { name: /^Rename New Text Document/ });
     await expect(rename).toBeVisible();
     const createdName = await rename.inputValue();

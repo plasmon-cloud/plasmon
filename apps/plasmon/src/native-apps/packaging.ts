@@ -135,7 +135,11 @@ export function assertMatureNativeAppBundle(
   }
 }
 
-function replaceEntryAsset(html: string, asset: "main.js" | "main.css", fingerprint: string): string {
+function replaceEntryAsset(
+  html: string,
+  asset: "main.js" | "main.css" | "runtime/monaco/worker-sources.js",
+  fingerprint: string,
+): string {
   const pattern = new RegExp(`(\\./${asset.replace(".", "\\.")})(?:\\?v=[A-Za-z0-9_-]+)?`, "gu");
   const replaced = html.replace(pattern, `$1?v=${fingerprint}`);
   if (replaced === html) throw new Error(`Packaged index.html does not reference ./${asset}`);
@@ -144,10 +148,19 @@ function replaceEntryAsset(html: string, asset: "main.js" | "main.css", fingerpr
 
 /**
  * Keep stable package filenames while making each built frontend point at the
- * exact JS/CSS bytes that were produced with it. This prevents a hosted browser
- * cache from mixing an older application engine with a newly installed package.
+ * exact JS/CSS/worker bytes that were produced with it. This prevents a hosted
+ * browser cache from mixing an older application engine with a newly installed
+ * package.
  */
 export function cacheBustEntryAssets(html: string, fingerprint: string): string {
   if (!/^[a-f0-9]{12,64}$/u.test(fingerprint)) throw new Error("Invalid frontend build fingerprint");
-  return replaceEntryAsset(replaceEntryAsset(html, "main.js", fingerprint), "main.css", fingerprint);
+  return replaceEntryAsset(
+    replaceEntryAsset(
+      replaceEntryAsset(html, "main.js", fingerprint),
+      "main.css",
+      fingerprint,
+    ),
+    "runtime/monaco/worker-sources.js",
+    fingerprint,
+  );
 }
