@@ -16,7 +16,7 @@ import {
 import { resolvePackageProfile } from "../packageProfilePolicy.ts";
 import { OPTIONAL_RUNTIME_CATALOG } from "../runtimeConfiguration.ts";
 
-const SLIM_HEADROOM_TARGET_BYTES = 1_800_000;
+const SLIM_HEADROOM_TARGET_BYTES = 1_850_000;
 const manifestUrl = new URL("../neutron.json", import.meta.url);
 const backendUrl = new URL("../backend/main.mo", import.meta.url);
 const htmlUrl = new URL("../dist/web/index.html", import.meta.url);

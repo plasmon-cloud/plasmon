@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 const APP_ID = "plasmon";
 const TILE_ID = "main";
@@ -50,7 +51,10 @@ test(
     await explorer.getByRole("listbox", { name: "Files" }).press("Enter");
     await expect(address).toHaveValue("/Documents", { timeout: 20_000 });
     const markdownName = `Markdown Commands ${Date.now()}.md`;
-    await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(
+      explorer.getByRole("listbox", { name: "Files" }),
+      "New Text Document",
+    );
     const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
     await expect(rename).toBeVisible();
     await rename.fill(markdownName);

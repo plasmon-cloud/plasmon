@@ -20,6 +20,7 @@ import { assertMatureNativeAppBundle, cacheBustEntryAssets } from "./src/native-
 const mainOutfile = "./dist/web/main.js";
 const bundledCss = "./dist/web/main.bundle.css";
 const outputCss = "./dist/web/main.css";
+const monacoWorkerTransport = "./dist/web/runtime/monaco/worker-sources.js";
 const outputIndex = "./dist/web/index.html";
 const args = process.argv.slice(2);
 const devMode = args[0] === "dev";
@@ -107,14 +108,16 @@ async function materializeEmulatorJsHost(): Promise<void> {
 }
 
 async function fingerprintEntryAssets(): Promise<void> {
-  const [javascript, css, index] = await Promise.all([
+  const [javascript, css, workerTransport, index] = await Promise.all([
     readFile(mainOutfile),
     readFile(outputCss),
+    readFile(monacoWorkerTransport),
     readFile(outputIndex, "utf8"),
   ]);
   const fingerprint = createHash("sha256")
     .update(javascript)
     .update(css)
+    .update(workerTransport)
     .digest("hex")
     .slice(0, 16);
   await writeFile(outputIndex, cacheBustEntryAssets(index, fingerprint));
@@ -153,6 +156,9 @@ const config: BuildOptions = {
   external: [
     "/static/*",
     "static/*",
+    // Slim has no Terminal registration; keep its browser-only dependency out
+    // of the small package even though the full-profile loader remains shared.
+    ...(packagePolicy.isSlim ? ["./src/scripting/integration.ts"] : []),
   ],
   format: "esm",
   jsx: "automatic",

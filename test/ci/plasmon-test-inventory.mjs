@@ -22,6 +22,7 @@ export const browserLanes = Object.freeze({
     "test/e2e/plasmon-taskbar-context-menu.spec.ts",
     "test/e2e/plasmon-demo-game.spec.ts",
     "test/e2e/plasmon-emulatorjs-proof.spec.ts",
+    "test/e2e/plasmon-scripting-runtime.spec.ts",
   ]),
   demo: Object.freeze([
     "test/e2e/plasmon-demo-content.spec.ts",

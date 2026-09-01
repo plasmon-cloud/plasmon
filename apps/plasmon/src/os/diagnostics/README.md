@@ -69,7 +69,7 @@ Tests may use console output as test infrastructure when appropriate; the produc
 - The file is line-oriented and human-readable, while retaining stable severity/subsystem/event/correlation/context fields.
 - Retention is bounded by bytes. When the high-water mark is exceeded, the oldest complete lines are removed until the retained target is reached. A single oversized newest record preserves its prefix/event identity, truncates on Unicode-safe boundaries, and carries an explicit truncation marker.
 - Sensitive context keys and common bearer/query-token forms are redacted before any sink or subscriber receives the normalized record. Diagnostics are not permission to dump private state.
-- File and console minimum levels are separate policy so dogfood/test builds can be more verbose without changing event producers.
+- File and console minimum levels are separate policy so development and test builds can be more verbose without changing event producers.
 
 ## Testing contract
 
