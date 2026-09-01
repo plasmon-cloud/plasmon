@@ -35,6 +35,7 @@ import {
   type FileManagerSnapshot,
   type FileManagerTrashAuthority,
 } from "../../os/file-manager/index.ts";
+import { reportExplorerFavoritesRefreshFailure } from "../semanticDiagnostics.ts";
 import {
   applicationResourcePresentation,
   ResourceIcon,
@@ -203,6 +204,7 @@ export function ExplorerApp({
         return snapshot.rootId;
       } catch {
         if (active) {
+          reportExplorerFavoritesRefreshFailure();
           setFavorites([]);
           setFavoriteAppsId(null);
         }

@@ -8,6 +8,7 @@ import {
   NativeAppStatusStrip,
   NativeAppToolbar,
 } from "../../os/visual/index.ts";
+import { reportPhotosDecodeFailure } from "../semanticDiagnostics.ts";
 import { exitFullscreenSafely, requestFullscreenSafely } from "./fullscreen.ts";
 import { adjacentImageNode, createImageObjectUrlLease, inferImageMime } from "./media.ts";
 import {
@@ -282,6 +283,7 @@ export default function Photos({ processId, target, fs, process, nativeWindow }:
               setError(null);
             }}
             onError={() => {
+              reportPhotosDecodeFailure();
               setImageReady(false);
               setError(`Photos could not display ${source.title}. The file may be corrupt or unsupported by this browser.`);
             }}

@@ -1,5 +1,9 @@
 import type { FsEventSource, FsNodeKind, NodeId } from "../../os/contracts/index.ts";
 import type { FilesystemTrashService, TrashEntry } from "../../os/fs/index.ts";
+import {
+  reportRecycleBinDeletePartialFailure,
+  reportRecycleBinRestorePartialFailure,
+} from "../semanticDiagnostics.ts";
 
 export interface RecycleBinItem {
   id: NodeId;
@@ -52,25 +56,39 @@ export class RecycleBinModel {
   }
 
   async restore(ids: readonly NodeId[]): Promise<RecycleBinRestoreResult[]> {
+    const requested = uniqueIds(ids);
     const restored: RecycleBinRestoreResult[] = [];
-    for (const itemId of uniqueIds(ids)) {
-      const result = await this.trash.restore(itemId);
-      restored.push({
-        itemId,
-        nodeId: result.node.id,
-        name: result.node.name,
-        usedFallback: result.usedFallback,
-        renamed: result.renamed,
-      });
+    for (const itemId of requested) {
+      try {
+        const result = await this.trash.restore(itemId);
+        restored.push({
+          itemId,
+          nodeId: result.node.id,
+          name: result.node.name,
+          usedFallback: result.usedFallback,
+          renamed: result.renamed,
+        });
+      } catch (error) {
+        if (restored.length > 0) {
+          reportRecycleBinRestorePartialFailure(requested.length, restored.length);
+        }
+        throw error;
+      }
     }
     return restored;
   }
 
   async permanentlyDelete(ids: readonly NodeId[]): Promise<number> {
+    const requested = uniqueIds(ids);
     let removed = 0;
-    for (const itemId of uniqueIds(ids)) {
-      await this.trash.permanentlyDelete(itemId);
-      removed += 1;
+    for (const itemId of requested) {
+      try {
+        await this.trash.permanentlyDelete(itemId);
+        removed += 1;
+      } catch (error) {
+        if (removed > 0) reportRecycleBinDeletePartialFailure(requested.length, removed);
+        throw error;
+      }
     }
     return removed;
   }

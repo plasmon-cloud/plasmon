@@ -2,6 +2,7 @@ import type {
   ProcessCloseDecision,
   ProcessCloseRequest,
 } from "../../os/contracts/index.ts";
+import { reportDocumentCloseSaveUnexpectedFailure } from "../semanticDiagnostics.ts";
 import type { DocumentSnapshot } from "./document.ts";
 
 export interface DocumentCloseSession {
@@ -64,6 +65,7 @@ export class DocumentCloseModel {
     try {
       saved = await this.session.save();
     } catch {
+      reportDocumentCloseSaveUnexpectedFailure();
       saved = false;
     }
 

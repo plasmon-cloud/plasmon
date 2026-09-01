@@ -8,6 +8,11 @@ import {
   NativeAppStatusStrip,
 } from "../../os/visual/index.ts";
 import {
+  reportVideoPlaybackError,
+  reportVideoPlaybackStartFailure,
+  reportVideoSourceResolveFailure,
+} from "../semanticDiagnostics.ts";
+import {
   createObjectUrlLease,
   inferVideoMime,
   nativeVideoSupportForMime,
@@ -27,6 +32,11 @@ type Source =
   | { kind: "video"; url: string; title: string; local: boolean; mime: string }
   | { kind: "youtube"; url: string; externalUrl: string; title: string };
 
+export function isExpectedVideoPlayRejection(reason: unknown): boolean {
+  if (!reason || typeof reason !== "object" || !("name" in reason)) return false;
+  return reason.name === "NotAllowedError" || reason.name === "AbortError";
+}
+
 async function resolveVideoSource(
   target: OpenTarget,
   fs: FsService,
@@ -39,7 +49,10 @@ async function resolveVideoSource(
     title = node.name || title;
     if (!url && (node.kind === "shortcut" || node.name.toLowerCase().endsWith(".url"))) {
       const shortcut = tryParseInternetShortcut(await fs.read(node.id));
-      if (!shortcut.ok) throw new Error(shortcut.error.message);
+      if (!shortcut.ok) {
+        reportVideoSourceResolveFailure();
+        throw new Error(shortcut.error.message);
+      }
       url = shortcut.shortcut.url;
     } else if (!url) {
       const bytes = await fs.read(node.id);
@@ -55,7 +68,10 @@ async function resolveVideoSource(
 
   if (!url) throw new Error("No video target was supplied");
   const safe = safeHttpUrl(url);
-  if (!safe) throw new Error("Video URL must use http:// or https://");
+  if (!safe) {
+    reportVideoSourceResolveFailure();
+    throw new Error("Video URL must use http:// or https://");
+  }
   if (title === "Video Player") title = new URL(safe).hostname || title;
   const embed = youtubeEmbedUrl(safe);
   if (embed) {
@@ -145,7 +161,13 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
 
     if (event.key === " " || event.key.toLowerCase() === "k") {
       event.preventDefault();
-      video.paused ? void video.play() : video.pause();
+      if (video.paused) {
+        void video.play().catch((reason: unknown) => {
+          if (!isExpectedVideoPlayRejection(reason)) reportVideoPlaybackStartFailure();
+        });
+      } else {
+        video.pause();
+      }
     } else if (event.key === "ArrowLeft") {
       video.currentTime = Math.max(0, video.currentTime - 5);
     } else if (event.key === "ArrowRight") {
@@ -190,6 +212,7 @@ export default function VideoPlayer({ processId, target, fs, process }: VideoPla
           style={styles.video}
           onCanPlay={() => setUnsupported(null)}
           onError={() => {
+            reportVideoPlaybackError();
             setUnsupported(videoPlaybackErrorMessage(
               source.title,
               source.mime,

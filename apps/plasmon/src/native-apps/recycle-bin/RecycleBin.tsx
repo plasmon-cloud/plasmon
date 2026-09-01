@@ -16,6 +16,10 @@ import type {
 } from "../../os/contracts/index.ts";
 import type { FilesystemTrashService } from "../../os/fs/index.ts";
 import {
+  reportRecycleBinRefreshAfterDeleteFailure,
+  reportRecycleBinRefreshAfterRestoreFailure,
+} from "../semanticDiagnostics.ts";
+import {
   RecycleBinModel,
   recycleBinKindLabel,
   subscribeRecycleBinInvalidation,
@@ -85,20 +89,22 @@ export function RecycleBin({
     process.setTitle(processId, "Recycle Bin");
   }, [process, processId]);
 
-  const refresh = useCallback(async (showLoading = false): Promise<void> => {
+  const refresh = useCallback(async (showLoading = false): Promise<boolean> => {
     const generation = ++refreshGeneration.current;
     if (showLoading) setLoading(true);
     try {
       const next = await model.list();
-      if (generation !== refreshGeneration.current) return;
+      if (generation !== refreshGeneration.current) return true;
       setItems(next);
       const available = new Set(next.map((item) => item.id));
       setSelected((current) => new Set([...current].filter((id) => available.has(id))));
       setError(null);
+      return true;
     } catch (cause: unknown) {
       if (generation === refreshGeneration.current) {
         setError(cause instanceof Error ? cause.message : String(cause));
       }
+      return false;
     } finally {
       if (showLoading && generation === refreshGeneration.current) setLoading(false);
     }
@@ -149,7 +155,7 @@ export function RecycleBin({
       ].filter(Boolean);
       setNotice(`Restored ${countLabel(results.length)}${details.length ? `. ${details.join("; ")}.` : "."}`);
       setSelected(new Set());
-      await refresh(false);
+      if (!await refresh(false)) reportRecycleBinRefreshAfterRestoreFailure();
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -165,7 +171,7 @@ export function RecycleBin({
       const removed = await model.permanentlyDelete(ids);
       setNotice(`Permanently deleted ${countLabel(removed)}.`);
       setSelected(new Set());
-      await refresh(false);
+      if (!await refresh(false)) reportRecycleBinRefreshAfterDeleteFailure();
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -192,7 +198,7 @@ export function RecycleBin({
       const removed = await model.empty();
       setNotice(`Recycle Bin emptied. Permanently deleted ${countLabel(removed)}.`);
       setSelected(new Set());
-      await refresh(false);
+      if (!await refresh(false)) reportRecycleBinRefreshAfterDeleteFailure();
     } catch (cause: unknown) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

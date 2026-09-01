@@ -83,6 +83,7 @@ import {
   createRecycleBinNativeLoader,
   recycleBinAppDefinition,
 } from "../../native-apps/recycle-bin/index.ts";
+import { setNativeAppSemanticDiagnosticLogger } from "../../native-apps/semanticDiagnostics.ts";
 import { installMonacoEnvironment } from "../../native-apps/shared/monaco/monacoEnvironment.ts";
 import {
   FakeResourceAuthorizationService,
@@ -283,6 +284,7 @@ export function createPlasmonServices(
   const processLog = diagnostics.for(DiagnosticSubsystem.Process);
   const windowLog = diagnostics.for(DiagnosticSubsystem.Windowing);
   const nativeAppLog = diagnostics.for(DiagnosticSubsystem.NativeApp);
+  setNativeAppSemanticDiagnosticLogger(nativeAppLog);
   const shellLog = diagnostics.for(DiagnosticSubsystem.Shell);
   const neutronLog = diagnostics.for(DiagnosticSubsystem.Neutron);
 
