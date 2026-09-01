@@ -109,6 +109,7 @@ test("Desktop Change Wallpaper submenu uses canonical built-ins and preserves un
         themeId: expected.themeId,
         appearanceMode: expected.appearanceMode,
         wallpaper: expected.wallpaper,
+        wallpaperLayout: expected.wallpaperLayout,
         showBrandWatermark: expected.showBrandWatermark,
         taskbarAlignment: expected.taskbarAlignment,
       });

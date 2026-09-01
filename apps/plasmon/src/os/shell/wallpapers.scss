@@ -1,29 +1,59 @@
 @layer plasmon-shell {
-  // Every wallpaper is a packaged image. Graphite uses the supplied JPG;
-  // the other theme companions are authored SVG artwork. The independently
-  // toggleable watermark is composed above that artwork by the wallpaper layer.
+  // Built-ins and filesystem images share the same bounded layout semantics.
+  // The filesystem object URL itself is supplied by Shell only for the active
+  // resolved NodeId and is never durable preference state.
   .plasmon-shell--wallpaper-graphite-sand .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/graphite-sand.jpg") center 50% / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/graphite-sand.jpg");
   }
 
   .plasmon-shell--wallpaper-plasmon-lattice .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/plasmon-lattice.svg") center / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/plasmon-lattice.svg");
   }
 
   .plasmon-shell--wallpaper-midnight-orbit .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/midnight-orbit.svg") center / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/midnight-orbit.svg");
   }
 
   .plasmon-shell--wallpaper-ember-horizon .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/ember-horizon.svg") center / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/ember-horizon.svg");
   }
 
   .plasmon-shell--wallpaper-glacier-prism .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/glacier-prism.svg") center / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/glacier-prism.svg");
   }
 
   .plasmon-shell--wallpaper-rosewood-bloom .plasmon-shell__wallpaper {
-    background: url("static/plasmon/wallpapers/rosewood-bloom.svg") center / cover no-repeat;
+    background-image: url("static/plasmon/wallpapers/rosewood-bloom.svg");
+  }
+
+  .plasmon-shell--wallpaper-layout-fill .plasmon-shell__wallpaper {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
+
+  .plasmon-shell--wallpaper-layout-fit .plasmon-shell__wallpaper {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
+  .plasmon-shell--wallpaper-layout-stretch .plasmon-shell__wallpaper {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  .plasmon-shell--wallpaper-layout-tile .plasmon-shell__wallpaper {
+    background-position: left top;
+    background-repeat: repeat;
+    background-size: auto;
+  }
+
+  .plasmon-shell--wallpaper-layout-center .plasmon-shell__wallpaper {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: auto;
   }
 
   .plasmon-shell[class*="plasmon-shell--wallpaper-"] .plasmon-shell__aurora {

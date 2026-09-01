@@ -96,6 +96,7 @@ function preferences(patch: Partial<ShellPreferences> = {}): ShellPreferences {
     themeId: "plasmon-graphite",
     appearanceMode: "dark",
     wallpaper: { mode: "follow-theme" },
+    wallpaperLayout: "fill",
     showBrandWatermark: true,
     taskbarAlignment: "center",
     ...patch,
@@ -109,11 +110,12 @@ test("fresh Shell preferences are Graphite Dark with Rosewood Bloom pinned", asy
   expect(loaded.themeId).toBe("plasmon-graphite");
   expect(loaded.appearanceMode).toBe("dark");
   expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
+  expect(loaded.wallpaperLayout).toBe("fill");
   expect(effectiveShellWallpaper(loaded.themeId, loaded.wallpaper)).toBe("rosewood-bloom");
   expect(fs.metadataWrites).toBe(0);
 });
 
-test("legacy v1 Shell preferences preserve existing values and migrate appearance to Dark", async () => {
+test("legacy v1 Shell preferences preserve existing values and migrate appearance and layout defaults", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = {
     version: 1,
@@ -159,6 +161,7 @@ test("preview Plasmon Dark and Aurora values migrate to Verdant and Plasmon Latt
   expect(loaded.themeId).toBe("plasmon-verdant");
   expect(loaded.appearanceMode).toBe("dark");
   expect(loaded.wallpaper).toEqual({ mode: "pinned", id: "plasmon-lattice" });
+  expect(loaded.wallpaperLayout).toBe("fill");
   expect(loaded.showBrandWatermark).toBe(true);
 });
 
@@ -201,22 +204,22 @@ test("appearance mode persists through FsService root metadata", async () => {
   expect(fs.root.metadata[SHELL_PREFERENCES_KEY]).toEqual(preferences({ appearanceMode: "light" }));
 });
 
-test("appearance-only controller saves preserve theme and effective wallpaper", async () => {
+test("appearance-only controller saves preserve theme wallpaper target and layout", async () => {
   const fs = new PreferenceFs();
   fs.root.metadata[SHELL_PREFERENCES_KEY] = preferences({
     themeId: "plasmon-midnight",
-    wallpaper: { mode: "pinned", id: "rosewood-bloom" },
+    wallpaper: { mode: "filesystem", nodeId: "image-node" },
+    wallpaperLayout: "fit",
   }) as unknown as JsonValue;
   const controller = new ShellPreferencesController(new ShellPreferenceStore(fs));
   const before = await controller.load();
-  const wallpaperBefore = effectiveShellWallpaper(before.themeId, before.wallpaper);
 
   const outcome = await controller.save({ ...before, appearanceMode: "light" });
   expect(outcome.saved).toBe(true);
   expect(outcome.preferences.themeId).toBe("plasmon-midnight");
   expect(outcome.preferences.appearanceMode).toBe("light");
-  expect(outcome.preferences.wallpaper).toEqual({ mode: "pinned", id: "rosewood-bloom" });
-  expect(effectiveShellWallpaper(outcome.preferences.themeId, outcome.preferences.wallpaper)).toBe(wallpaperBefore);
+  expect(outcome.preferences.wallpaper).toEqual({ mode: "filesystem", nodeId: "image-node" });
+  expect(outcome.preferences.wallpaperLayout).toBe("fit");
 });
 
 test("pinned generated wallpaper persists through FsService root metadata", async () => {
@@ -229,6 +232,23 @@ test("pinned Graphite Sand JPG wallpaper persists through FsService root metadat
   const fs = new PreferenceFs();
   await new ShellPreferenceStore(fs).save(preferences({ wallpaper: { mode: "pinned", id: "graphite-sand" } }));
   expect((await new ShellPreferenceStore(fs).load()).wallpaper).toEqual({ mode: "pinned", id: "graphite-sand" });
+});
+
+test("filesystem wallpaper NodeId and layout persist independently through FsService root metadata", async () => {
+  const fs = new PreferenceFs();
+  const selected = preferences({
+    themeId: "plasmon-rosewood",
+    appearanceMode: "light",
+    wallpaper: { mode: "filesystem", nodeId: "node-42" },
+    wallpaperLayout: "tile",
+  });
+  await new ShellPreferenceStore(fs).save(selected);
+  const loaded = await new ShellPreferenceStore(fs).load();
+  expect(loaded).toEqual(selected);
+  expect(loaded.wallpaper).toEqual({ mode: "filesystem", nodeId: "node-42" });
+  expect(loaded.wallpaperLayout).toBe("tile");
+  expect(loaded.themeId).toBe("plasmon-rosewood");
+  expect(loaded.appearanceMode).toBe("light");
 });
 
 test("Plasmon watermark visibility persists through FsService root metadata", async () => {
@@ -276,6 +296,7 @@ test("invalid wallpaper falls back only that dimension without discarding valid 
     themeId: "plasmon-rosewood",
     appearanceMode: "light",
     wallpaper: { mode: "pinned", id: "not-a-wallpaper" },
+    wallpaperLayout: "fill",
     taskbarAlignment: "left",
   };
   expect(await new ShellPreferenceStore(fs).load()).toEqual(preferences({
@@ -306,7 +327,8 @@ test("write failure keeps the selected in-memory preference outcome", async () =
   const selected = preferences({
     pinnedElements: ["mail"],
     appearanceMode: "light",
-    wallpaper: { mode: "pinned", id: "glacier-prism" },
+    wallpaper: { mode: "filesystem", nodeId: "node-failing-save" },
+    wallpaperLayout: "center",
     taskbarAlignment: "left",
   });
   const outcome = await saveShellPreferencesNonDestructive(new ShellPreferenceStore(fs), selected);

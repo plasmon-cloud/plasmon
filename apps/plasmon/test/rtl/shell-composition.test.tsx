@@ -93,7 +93,7 @@ test("Shell composes calendar and tray coordination with canonical Settings acti
     });
 
     const followTheme = within(settings).getByRole("button", { name: "Follow theme" });
-    expect(followTheme.hasAttribute("disabled")).toBe(true);
+    expect(followTheme.hasAttribute("disabled")).toBe(false);
     expect(followTheme.getAttribute("aria-pressed")).toBe("true");
     expect(followTheme.classList.contains("plasmon-native-app-button")).toBe(true);
 
