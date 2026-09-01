@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 
 test("— packaged non-empty Recycle Bin confirms and empties canonical Trash", async ({ page }) => {
   const runtime = resolveLocalNeutronRuntime();
@@ -38,7 +39,7 @@ test("— packaged non-empty Recycle Bin confirms and empties canonical Trash", 
     const toolbar = files.getByRole("toolbar", { name: "File commands" });
     await expect(toolbar).toBeVisible();
 
-    await toolbar.getByRole("button", { name: "New Text Document", exact: true }).click();
+    await chooseFileManagerBackgroundAction(files, "New Text Document");
     const rename = files.getByRole("textbox", { name: /^Rename New Text Document/ }).last();
     await expect(rename).toBeVisible();
     const itemName = `Recycle Bin Empty ${Date.now()}.txt`;

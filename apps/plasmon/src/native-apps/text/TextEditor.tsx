@@ -46,6 +46,9 @@ export default function TextEditor({ processId, target, fs, process }: TextEdito
   const readOnly = target.readOnly === true;
   const language = editorLanguageForResource(snapshot.name, snapshot.mime ?? undefined);
   const minimap = runtimeConfig.editor.minimap.enabled;
+  const lowerName = snapshot.name.toLowerCase();
+  const runContextTypes = lowerName.endsWith(".run");
+  const cmdLanguageSupport = lowerName.endsWith(".cmd");
 
   useEffect(() => {
     process.setTitle(processId, textEditorWindowTitle(snapshot.name));

@@ -1,5 +1,6 @@
 import { expect, test, type FrameLocator, type Page } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
+import { chooseFileManagerBackgroundAction } from "./file-manager-test-helpers.ts";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 
 const APP_ID = "plasmon";
@@ -50,7 +51,10 @@ test("Explorer activates the standard Documents directory", async ({ page }) => 
   // Create the observed resource in the destination, proving that the
   // directory is live and user-editable.
   const fileName = `Explorer Documents ${Date.now()}.txt`;
-  await explorer.getByRole("button", { name: "New Text Document", exact: true }).click();
+  await chooseFileManagerBackgroundAction(
+    explorer.getByRole("listbox", { name: "Files" }),
+    "New Text Document",
+  );
   const rename = explorer.locator('textarea[aria-label^="Rename New Text Document"]').last();
   await expect(rename).toBeVisible();
   await rename.fill(fileName);

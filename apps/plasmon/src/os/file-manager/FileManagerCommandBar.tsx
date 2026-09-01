@@ -20,9 +20,6 @@ export function FileManagerCommandBar(props: FileManagerCommandBarProps) {
   const hasSelection = props.selectionCount > 0;
   return (
     <div className="fm-commandbar" role="toolbar" aria-label="File commands">
-      <button type="button" onClick={props.onNewFolder}>New Folder</button>
-      <button type="button" onClick={props.onNewText}>New Text Document</button>
-      <button type="button" onClick={props.onNewMarkdown}>New Markdown Document</button>
       <button type="button" onClick={props.onImport} disabled={props.operationRunning}>Import Files…</button>
       <button type="button" onClick={props.onCopy} disabled={!hasSelection}>Copy</button>
       <button type="button" onClick={props.onCut} disabled={!hasSelection}>Cut</button>

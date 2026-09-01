@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { localCanisterOrigin } from "neutron-tools/src/runtime.js";
 import { resolveLocalNeutronRuntime } from "../../packages/neutron-provision/src/local_session.ts";
 import { installPlasmonBrowserHealth } from "./plasmon-browser-health.ts";
+import { clickNewContextMenuItem } from "./plasmon-context-menu.ts";
 
 const ORDINARY_NAME = "New folder (2)";
 const ORDINARY_DISPLAY_NAME = "New Folder (1)";
@@ -52,7 +53,7 @@ test("— packaged Desktop filename and rename surfaces stay tile-bounded", asyn
         y: Math.max(96, Math.floor(desktopBounds.height * 0.35)),
       },
     });
-    await plasmon.getByRole("menu").last().getByRole("menuitem", { name: "New Folder" }).click();
+    await clickNewContextMenuItem(plasmon, "New Folder");
 
     const rename = plasmon.getByRole("textbox", { name: /^Rename New Folder/ });
     await expect(rename).toBeVisible();

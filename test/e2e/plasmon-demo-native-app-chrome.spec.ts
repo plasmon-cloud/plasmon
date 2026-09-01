@@ -69,8 +69,8 @@ test("[demo profile] — packaged representative apps expose shared chrome for v
     await expect(settings).toBeVisible({ timeout: 20_000 });
     const settingsSurface = settings.locator(".plasmon-native-app-surface");
     await expect(settingsSurface).toBeVisible();
-    // The global hidden-files preference and diagnostic sink controls add panels.
-    await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(6);
+    // The canonical Settings surface has five shipped capability panels.
+    await expect(settings.locator(".plasmon-native-app-panel")).toHaveCount(5);
     const sharedPalette = await surfacePalette(settingsSurface);
     await testInfo.attach("112-settings-current-theme.png", { body: await settings.screenshot(), contentType: "image/png" });
     await settings.getByRole("button", { name: "Close", exact: true }).click();
