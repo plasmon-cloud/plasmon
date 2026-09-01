@@ -151,6 +151,7 @@ test("Start and Search overlays do not move Desktop resources or normal/maximize
     await expect(nativeWindows).toHaveCount(initialWindowCount + 1, { timeout: 20_000 });
     const nativeWindow = nativeWindows.last();
     await expect(nativeWindow).toBeVisible();
+    await finishElementAnimations(nativeWindow);
 
     const desktopBaseline = await desktopResource.boundingBox();
     const normalWindowBaseline = await nativeWindow.boundingBox();
